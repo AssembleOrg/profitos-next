@@ -9,7 +9,11 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-
+.agents/
+.agent/
+.claude/
+.windsurf/
+.inspirations/
 # testing
 /coverage
 
