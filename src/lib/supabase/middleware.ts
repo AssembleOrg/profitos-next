@@ -30,6 +30,14 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // If a Supabase auth code arrives at any path, forward it to the callback handler
+  const code = request.nextUrl.searchParams.get("code");
+  if (code && !request.nextUrl.pathname.startsWith("/api/auth")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/api/auth/callback";
+    return NextResponse.redirect(url);
+  }
+
   if (
     !user &&
     !request.nextUrl.pathname.startsWith("/login") &&

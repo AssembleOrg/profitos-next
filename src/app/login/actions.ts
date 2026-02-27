@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { isEmailWhitelisted } from "@/lib/auth/whitelist";
 import { upsertUser } from "@/lib/auth/user-service";
@@ -46,8 +47,11 @@ export async function signInWithEmail(
 
 export async function signInWithGoogle(): Promise<LoginState> {
   const supabase = await createClient();
+  const headersList = await headers();
   const origin =
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    headersList.get("origin") ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "http://localhost:3000";
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
