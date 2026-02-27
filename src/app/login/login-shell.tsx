@@ -1,32 +1,24 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { AnimatePresence } from "framer-motion";
-import type { LoginVariant } from "./animation-constants";
+import { useSearchParams } from "next/navigation";
 import { useLoginAnimation } from "./use-login-animation";
-import { VariantSelector } from "./variant-selector";
-import { LoginV1 } from "./login-v1";
 import { LoginV4 } from "./login-v4";
+import { AUTH_ERRORS } from "@/lib/domain/types";
+
+function mapUrlError(error: string | null): string | undefined {
+  if (error === "not_whitelisted") return AUTH_ERRORS.NOT_WHITELISTED;
+  if (error === "auth_failed") return AUTH_ERRORS.OAUTH_ERROR;
+  return undefined;
+}
 
 export function LoginShell() {
-  const [variant, setVariant] = useState<LoginVariant>("v1");
   const step = useLoginAnimation();
-
-  const handleSwitch = useCallback((v: LoginVariant) => {
-    setVariant(v);
-  }, []);
+  const searchParams = useSearchParams();
+  const urlError = mapUrlError(searchParams.get("error"));
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-bg">
-      <VariantSelector current={variant} onChange={handleSwitch} step={step} />
-
-      <AnimatePresence mode="wait">
-        {variant === "v1" ? (
-          <LoginV1 key="v1" step={step} />
-        ) : (
-          <LoginV4 key="v4" step={step} />
-        )}
-      </AnimatePresence>
+      <LoginV4 step={step} urlError={urlError} />
     </div>
   );
 }

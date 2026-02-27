@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Whitelist {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("jp_whitelist")
+}
+
+model User {
+  id                 String     @id
+  email              String     @unique
+  fullName           String?    @map("full_name")
+  avatarUrl          String?    @map("avatar_url")
+  role               String     @default("user")
+  googleAccessToken  String?    @map("google_access_token")
+  googleRefreshToken String?    @map("google_refresh_token")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+  visitas            Visit[]
+  properties         Property[]
+  clients            Client[]
+
+  @@map("jp_users")
+}
+
+model Property {
+  id        String   @id @default(cuid())
+  address   String
+  city      String?
+  zone      String?
+  type      String?  // departamento, casa, local, terreno, oficina, etc
+  status    String   @default("activa") // activa, vendida, alquilada, suspendida
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  visitas   Visit[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("jp_propiedades")
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  notes     String?
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  visitas   Visit[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("jp_clientes")
+}
+
+model Visit {
+  id              String    @id @default(cuid())
+  title           String
+  description     String?
+  date            DateTime
+  startTime       String    @map("start_time")
+  endTime         String    @map("end_time")
+  type            String    @default("visita")
+  propertyId      String?   @map("property_id")
+  property        Property? @relation(fields: [propertyId], references: [id])
+  clientId        String?   @map("client_id")
+  client          Client?   @relation(fields: [clientId], references: [id])
+  googleEventId   String?   @map("google_event_id")
+  userId          String    @map("user_id")
+  user            User      @relation(fields: [userId], references: [id])
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("jp_visitas")
+}

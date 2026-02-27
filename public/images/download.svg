@@ -1,0 +1,11 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="black"></rect>
+
+  <!-- Techo -->
+  <polygon points="150,230 256,150 362,230" fill="white"></polygon>
+
+  <!-- JP -->
+  <text x="50%" y="68%" text-anchor="middle" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="160" font-weight="700">
+    JP
+  </text>
+</svg>

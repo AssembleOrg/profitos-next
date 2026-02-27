@@ -14,6 +14,8 @@
 .claude/
 .windsurf/
 .inspirations/
+skills-lock.json
+
 # testing
 /coverage
 
@@ -39,6 +41,9 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# prisma
+src/generated/
 
 # typescript
 *.tsbuildinfo

@@ -1,14 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useActionState, useTransition } from "react";
 import { motion } from "framer-motion";
 import { LUXURY_EASE, TIMING } from "./animation-constants";
 import type { AnimationStep } from "./use-login-animation";
 import { GoogleIcon } from "./google-icon";
+import {
+  signInWithEmail,
+  signInWithGoogle,
+  type LoginState,
+} from "./actions";
 
 interface Props {
   step: AnimationStep;
   inputStyle: "underline" | "pill";
+  urlError?: string;
 }
 
 const staggerContainer = {
@@ -33,9 +39,16 @@ const staggerChild = {
   },
 };
 
-export function LoginForm({ step, inputStyle }: Props) {
+export function LoginForm({ step, inputStyle, urlError }: Props) {
   const [showPassword, setShowPassword] = useState(false);
+  const [state, formAction, isPending] = useActionState<LoginState, FormData>(
+    signInWithEmail,
+    {}
+  );
+  const [googlePending, startGoogleTransition] = useTransition();
   const isVisible = step === 2;
+
+  const error = state?.error ?? urlError;
 
   const inputUnderline =
     "w-full bg-transparent border-b border-border pb-3 pt-1 text-[14px] font-light text-text placeholder:text-white/20 focus:border-secondary focus:outline-none transition-colors";
@@ -51,7 +64,7 @@ export function LoginForm({ step, inputStyle }: Props) {
       initial="hidden"
       animate={isVisible ? "visible" : "hidden"}
       className="flex flex-col gap-7"
-      onSubmit={(e) => e.preventDefault()}
+      action={formAction}
     >
       {/* Title */}
       <motion.div variants={staggerChild}>
@@ -63,15 +76,28 @@ export function LoginForm({ step, inputStyle }: Props) {
         </p>
       </motion.div>
 
+      {/* Error message */}
+      {error && (
+        <motion.p
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-[13px] font-light text-red-400"
+        >
+          {error}
+        </motion.p>
+      )}
+
       {/* Email */}
       <motion.div variants={staggerChild} className="flex flex-col gap-2.5">
         <label className="text-[10px] font-semibold uppercase tracking-[0.4em] text-secondary drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]">
           CORREO
         </label>
         <input
+          name="email"
           type="email"
           placeholder="tu@correo.com"
           autoComplete="email"
+          required
           className={inputClass}
         />
       </motion.div>
@@ -83,9 +109,11 @@ export function LoginForm({ step, inputStyle }: Props) {
         </label>
         <div className="relative">
           <input
+            name="password"
             type={showPassword ? "text" : "password"}
             placeholder="••••••••"
             autoComplete="current-password"
+            required
             className={`${inputClass} pr-10`}
           />
           <button
@@ -128,9 +156,10 @@ export function LoginForm({ step, inputStyle }: Props) {
       <motion.button
         variants={staggerChild}
         type="submit"
-        className="w-full rounded-2xl bg-primary py-4 text-[11px] font-bold uppercase tracking-[0.3em] text-text shadow-[0_18px_60px_rgba(75,83,64,0.25)] transition-all hover:bg-primary-hover hover:shadow-[0_22px_70px_rgba(75,83,64,0.35)] active:scale-[0.99]"
+        disabled={isPending}
+        className="w-full rounded-2xl bg-primary py-4 text-[11px] font-bold uppercase tracking-[0.3em] text-text shadow-[0_18px_60px_rgba(75,83,64,0.25)] transition-all hover:bg-primary-hover hover:shadow-[0_22px_70px_rgba(75,83,64,0.35)] active:scale-[0.99] disabled:opacity-60"
       >
-        INGRESAR
+        {isPending ? "INGRESANDO..." : "INGRESAR"}
       </motion.button>
 
       {/* Divider */}
@@ -149,10 +178,16 @@ export function LoginForm({ step, inputStyle }: Props) {
       <motion.button
         variants={staggerChild}
         type="button"
-        className="flex w-full items-center justify-center gap-3 rounded-2xl border border-border bg-white/[0.03] py-3.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-text transition-colors hover:bg-white/[0.07]"
+        disabled={googlePending}
+        onClick={() =>
+          startGoogleTransition(async () => {
+            await signInWithGoogle();
+          })
+        }
+        className="flex w-full items-center justify-center gap-3 rounded-2xl border border-border bg-white/[0.03] py-3.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-text transition-colors hover:bg-white/[0.07] disabled:opacity-60"
       >
         <GoogleIcon />
-        GOOGLE
+        {googlePending ? "REDIRIGIENDO..." : "GOOGLE"}
       </motion.button>
     </motion.form>
   );

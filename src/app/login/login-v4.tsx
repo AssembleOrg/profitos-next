@@ -9,11 +9,12 @@ import { LoginForm } from "./login-form";
 
 interface Props {
   step: AnimationStep;
+  urlError?: string;
 }
 
 const SERVICE_TAGS = ["Compra", "Venta", "Alquiler"];
 
-export function LoginV4({ step }: Props) {
+export function LoginV4({ step, urlError }: Props) {
   return (
     <motion.div
       className="relative flex h-full w-full flex-col"
@@ -131,7 +132,7 @@ export function LoginV4({ step }: Props) {
             ease: LUXURY_EASE,
           }}
         >
-          <LoginForm step={step} inputStyle="pill" />
+          <LoginForm step={step} inputStyle="pill" urlError={urlError} />
         </motion.div>
       </div>
     </motion.div>

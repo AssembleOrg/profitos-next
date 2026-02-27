@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { LoginShell } from "./login-shell";
 
 export const metadata: Metadata = {
-  title: "Iniciar sesi\u00f3n | Juliana Profitos Propiedades",
+  title: "Iniciar sesión | Juliana Profitos Propiedades",
   description:
-    "Ingres\u00e1 a tu plataforma de gesti\u00f3n inmobiliaria.",
+    "Ingresá a tu plataforma de gestión inmobiliaria.",
 };
 
 export default function LoginPage() {
-  return <LoginShell />;
+  return (
+    <Suspense>
+      <LoginShell />
+    </Suspense>
+  );
 }
