@@ -11,6 +11,10 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
+    if (error) {
+      console.error("[Auth Callback] exchangeCodeForSession error:", error.message);
+    }
+
     if (!error && data.user) {
       const whitelisted = await isEmailWhitelisted(data.user.email!);
 
@@ -34,5 +38,6 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+  const reason = code ? "code_exchange_failed" : "no_code";
+  return NextResponse.redirect(`${origin}/login?error=${reason}`);
 }
