@@ -32,12 +32,10 @@ interface ConsultantsClientProps {
   filters: {
     q: string;
     agent: string;
-    lead: string;
     from: string;
     to: string;
     sort: string;
   };
-  leadOptions: string[];
   agentOptions: string[];
 }
 
@@ -64,7 +62,6 @@ export function ConsultantsClient({
   totalAll,
   lastSyncRunAt,
   filters,
-  leadOptions,
   agentOptions,
 }: ConsultantsClientProps) {
   const router = useRouter();
@@ -72,7 +69,6 @@ export function ConsultantsClient({
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(filters.q);
   const [agentFilter, setAgentFilter] = useState(filters.agent);
-  const [leadFilter, setLeadFilter] = useState(filters.lead);
   const [fromFilter, setFromFilter] = useState(filters.from);
   const [toFilter, setToFilter] = useState(filters.to);
   const [sortFilter, setSortFilter] = useState(filters.sort || "created_desc");
@@ -91,7 +87,6 @@ export function ConsultantsClient({
 
     setOrDelete("q", query);
     setOrDelete("agent", agentFilter);
-    setOrDelete("lead", leadFilter);
     setOrDelete("from", fromFilter);
     setOrDelete("to", toFilter);
     setOrDelete("sort", sortFilter);
@@ -106,7 +101,6 @@ export function ConsultantsClient({
   function resetFilters() {
     setQuery("");
     setAgentFilter("");
-    setLeadFilter("");
     setFromFilter("");
     setToFilter("");
     setSortFilter("created_desc");
@@ -116,7 +110,6 @@ export function ConsultantsClient({
   const activeFilters = [
     query && `Búsqueda: ${query}`,
     agentFilter && `Agente: ${agentFilter}`,
-    leadFilter && `Lead: ${leadFilter}`,
     fromFilter && `Desde: ${fromFilter}`,
     toFilter && `Hasta: ${toFilter}`,
   ].filter(Boolean) as string[];
@@ -278,17 +271,6 @@ export function ConsultantsClient({
             <option value="">Todos los agentes</option>
             {agentOptions.map((agent) => (
               <option key={agent} value={agent}>{agent}</option>
-            ))}
-          </select>
-
-          <select
-            value={leadFilter}
-            onChange={(e) => setLeadFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
-          >
-            <option value="">Todos los lead status</option>
-            {leadOptions.map((lead) => (
-              <option key={lead} value={lead}>{lead}</option>
             ))}
           </select>
 

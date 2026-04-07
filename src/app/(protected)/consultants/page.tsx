@@ -11,7 +11,6 @@ interface Props {
     page?: string;
     q?: string;
     agent?: string;
-    lead?: string;
     from?: string;
     to?: string;
     sort?: string;
@@ -26,7 +25,6 @@ export default async function ConsultantsPage({ searchParams }: Props) {
   const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
   const q = (sp.q ?? "").trim();
   const agent = (sp.agent ?? "").trim();
-  const lead = (sp.lead ?? "").trim();
   const from = (sp.from ?? "").trim();
   const to = (sp.to ?? "").trim();
   const sort = (sp.sort ?? "created_desc").trim();
@@ -43,7 +41,6 @@ export default async function ConsultantsPage({ searchParams }: Props) {
     });
   }
   if (agent) andFilters.push({ agentName: { equals: agent, mode: "insensitive" } });
-  if (lead) andFilters.push({ leadStatus: { equals: lead, mode: "insensitive" } });
   if (from) andFilters.push({ tokkoCreatedAt: { gte: new Date(`${from}T00:00:00`) } });
   if (to) andFilters.push({ tokkoCreatedAt: { lte: new Date(`${to}T23:59:59`) } });
   const where: Prisma.RecentContactWhereInput = andFilters.length > 0 ? { AND: andFilters } : {};
@@ -57,7 +54,7 @@ export default async function ConsultantsPage({ searchParams }: Props) {
           ? [{ name: "desc" }]
           : [{ tokkoCreatedAt: "desc" }, { tokkoContactId: "desc" }];
 
-  const [items, total, totalAll, syncState, leadOptions, agentOptions] = await Promise.all([
+  const [items, total, totalAll, syncState, agentOptions] = await Promise.all([
     prisma.recentContact.findMany({
       where,
       orderBy,
@@ -69,13 +66,6 @@ export default async function ConsultantsPage({ searchParams }: Props) {
     prisma.integrationSyncState.findUnique({
       where: { integrationKey: "tokko_contacts" },
       select: { lastRunAt: true },
-    }),
-    prisma.recentContact.findMany({
-      where: { leadStatus: { not: null } },
-      distinct: ["leadStatus"],
-      select: { leadStatus: true },
-      orderBy: { leadStatus: "asc" },
-      take: 100,
     }),
     prisma.recentContact.findMany({
       where: { agentName: { not: null } },
@@ -122,8 +112,7 @@ export default async function ConsultantsPage({ searchParams }: Props) {
       totalAll={totalAll}
       totalPages={Math.ceil(total / PAGE_SIZE)}
       lastSyncRunAt={syncState?.lastRunAt ? syncState.lastRunAt.toISOString() : null}
-      filters={{ q, agent, lead, from, to, sort }}
-      leadOptions={leadOptions.map((x) => x.leadStatus).filter((x): x is string => !!x)}
+      filters={{ q, agent, from, to, sort }}
       agentOptions={agentOptions.map((x) => x.agentName).filter((x): x is string => !!x)}
     />
   );

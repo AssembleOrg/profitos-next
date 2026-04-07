@@ -7,7 +7,7 @@ import { signOut } from "@/app/login/actions";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
 interface NotificationItem {
-  kind: "contact" | "followup_assignment" | "property";
+  kind: "contact" | "followup_assignment" | "contact_followup" | "property";
   eventAt: string;
   id: string;
   name?: string;
@@ -24,6 +24,7 @@ interface NotificationItem {
   status?: string;
   updatedAt?: string;
   property?: { id: string; address: string };
+  recentContact?: { id: string; name: string; email: string | null; cellphone: string | null };
   assignedToUser?: { id: string; fullName: string | null; email: string };
   assignedByUser?: { id: string; fullName: string | null; email: string };
   address?: string;
@@ -76,6 +77,18 @@ const navItems = [
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 12h-4l-3 7-4-14-3 7H2" />
+      </svg>
+    ),
+  },
+  {
+    href: "/consultants-followups",
+    label: "Seg. consultas",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 4h18v12H3z" />
+        <path d="M7 20h10" />
+        <path d="M9 16v4" />
+        <path d="M15 16v4" />
       </svg>
     ),
   },
@@ -202,6 +215,28 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
           event: "INSERT",
           schema,
           table: "jp_ultimos_contactos",
+        },
+        () => {
+          void loadNotifications();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema,
+          table: "jp_contact_followups",
+        },
+        () => {
+          void loadNotifications();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema,
+          table: "jp_contact_followups",
         },
         () => {
           void loadNotifications();
@@ -342,6 +377,8 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
                           ? "border-sky-500/30 bg-sky-500/10"
                           : item.kind === "followup_assignment"
                             ? "border-amber-500/30 bg-amber-500/10"
+                            : item.kind === "contact_followup"
+                              ? "border-fuchsia-500/30 bg-fuchsia-500/10"
                             : "border-emerald-500/30 bg-emerald-500/10"
                       }`}
                     >
@@ -352,6 +389,8 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
                               ? "bg-sky-500/20 text-sky-300"
                               : item.kind === "followup_assignment"
                                 ? "bg-amber-500/20 text-amber-300"
+                                : item.kind === "contact_followup"
+                                  ? "bg-fuchsia-500/20 text-fuchsia-300"
                                 : "bg-emerald-500/20 text-emerald-300"
                           }`}
                         >
@@ -359,6 +398,8 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
                             ? "Nuevo contacto"
                             : item.kind === "followup_assignment"
                               ? "Seguimiento"
+                              : item.kind === "contact_followup"
+                                ? "Seg. consulta"
                               : "Propiedad nueva"}
                         </span>
                         <span className="text-[11px] text-text-muted/80">{formatNotificationDate(item.eventAt)}</span>
@@ -377,6 +418,18 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
                         <>
                           <p className="text-sm font-medium leading-tight text-text">
                             {item.property?.address ?? "Propiedad sin dirección"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-text-muted">
+                            Responsable: {item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}
+                          </p>
+                          <p className="text-xs text-text-muted">
+                            Estado: {item.status ?? "pendiente"}
+                          </p>
+                        </>
+                      ) : item.kind === "contact_followup" ? (
+                        <>
+                          <p className="text-sm font-medium leading-tight text-text">
+                            {item.recentContact?.name ?? "Consulta"}
                           </p>
                           <p className="mt-0.5 text-xs text-text-muted">
                             Responsable: {item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}
@@ -415,7 +468,16 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
                   onClick={() => setShowNotifications(false)}
                   className="block px-3 py-2.5 text-xs font-medium text-secondary transition-colors hover:bg-bg"
                 >
-                  Ver seguimientos
+                  Ver seg. propiedades
+                </Link>
+              </div>
+              <div className="border-t border-border bg-bg/20">
+                <Link
+                  href="/consultants-followups"
+                  onClick={() => setShowNotifications(false)}
+                  className="block px-3 py-2.5 text-xs font-medium text-secondary transition-colors hover:bg-bg"
+                >
+                  Ver seg. consultas
                 </Link>
               </div>
             </div>

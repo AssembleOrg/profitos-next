@@ -51,6 +51,17 @@ const navItems: { label: string; href: string; icon: ReactNode }[] = [
     ),
   },
   {
+    label: "Seguimientos consultas", href: "/consultants-followups",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
+        <path d="M3 4h18v12H3z" />
+        <path d="M7 20h10" />
+        <path d="M9 16v4" />
+        <path d="M15 16v4" />
+      </svg>
+    ),
+  },
+  {
     label: "Agenda", href: "/agenda",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>

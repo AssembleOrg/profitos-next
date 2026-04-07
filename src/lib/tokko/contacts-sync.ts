@@ -23,6 +23,7 @@ interface SyncOptions {
 }
 
 const SYNC_KEY = "tokko_contacts";
+const CONTACT_FOLLOWUP_AUTO_NOTE = "Cambio automático por actualización de estado desde Tokko";
 
 function toInt(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
@@ -52,6 +53,13 @@ function toBoolean(value: unknown): boolean | null {
 
 function safeArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
+}
+
+function inferInitialFollowUpStatus(leadStatus: string | null): "pendiente" | "iniciada" {
+  const value = (leadStatus ?? "").trim().toLowerCase();
+  if (!value) return "pendiente";
+  if (value.includes("esperando respuesta")) return "iniciada";
+  return "pendiente";
 }
 
 function getContactsLimit(): number {
@@ -127,6 +135,90 @@ async function upsertContacts(items: TokkoObject[]) {
   let created = 0;
   let updated = 0;
   let skipped = 0;
+  let followUpsCreated = 0;
+  let followUpsStatusUpdated = 0;
+
+  async function resolveAssigneeUserId(agentEmail: string | null) {
+    if (!agentEmail) return null;
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: agentEmail, mode: "insensitive" } },
+      select: { id: true },
+    });
+    return user?.id ?? null;
+  }
+
+  async function upsertContactFollowUpFromTokko(params: {
+    recentContactId: string;
+    leadStatus: string | null;
+    agentEmail: string | null;
+  }) {
+    const desiredStatus = inferInitialFollowUpStatus(params.leadStatus);
+    const assignedToUserId = await resolveAssigneeUserId(params.agentEmail);
+
+    const existing = await prisma.contactFollowUp.findUnique({
+      where: { recentContactId: params.recentContactId },
+      select: { id: true, status: true, assignedToUserId: true },
+    });
+
+    if (!existing) {
+      const createdFollowUp = await prisma.contactFollowUp.create({
+        data: {
+          recentContactId: params.recentContactId,
+          status: desiredStatus,
+          assignedToUserId,
+          notes: "Seguimiento creado automáticamente al ingresar consulta desde Tokko",
+        },
+        select: { id: true },
+      });
+
+      await prisma.contactFollowUpStatusChange.create({
+        data: {
+          followUpId: createdFollowUp.id,
+          fromStatus: null,
+          toStatus: desiredStatus,
+          note: "Estado inicial automático por alta de consulta en Tokko",
+        },
+      });
+
+      followUpsCreated += 1;
+      return;
+    }
+
+    const nextData: {
+      assignedToUserId?: string | null;
+      status?: string;
+    } = {};
+
+    if (existing.assignedToUserId !== assignedToUserId) {
+      nextData.assignedToUserId = assignedToUserId;
+    }
+
+    const canAutoUpdateStatus = existing.status === "pendiente" || existing.status === "iniciada";
+    const shouldChangeStatus = canAutoUpdateStatus && existing.status !== desiredStatus;
+
+    if (shouldChangeStatus) {
+      nextData.status = desiredStatus;
+    }
+
+    if (Object.keys(nextData).length > 0) {
+      await prisma.contactFollowUp.update({
+        where: { id: existing.id },
+        data: nextData,
+      });
+    }
+
+    if (shouldChangeStatus) {
+      await prisma.contactFollowUpStatusChange.create({
+        data: {
+          followUpId: existing.id,
+          fromStatus: existing.status,
+          toStatus: desiredStatus,
+          note: CONTACT_FOLLOWUP_AUTO_NOTE,
+        },
+      });
+      followUpsStatusUpdated += 1;
+    }
+  }
 
   for (const raw of items) {
     const mapped = mapContact(raw);
@@ -139,23 +231,33 @@ async function upsertContacts(items: TokkoObject[]) {
 
     const existing = await prisma.recentContact.findUnique({
       where: { tokkoContactId },
-      select: { id: true },
+      select: { id: true, leadStatus: true, agentEmail: true },
     });
 
     if (!existing) {
-      await prisma.recentContact.create({ data });
+      const createdContact = await prisma.recentContact.create({ data });
+      await upsertContactFollowUpFromTokko({
+        recentContactId: createdContact.id,
+        leadStatus: createdContact.leadStatus,
+        agentEmail: createdContact.agentEmail,
+      });
       created += 1;
       continue;
     }
 
-    await prisma.recentContact.update({
+    const updatedContact = await prisma.recentContact.update({
       where: { id: existing.id },
       data,
+    });
+    await upsertContactFollowUpFromTokko({
+      recentContactId: updatedContact.id,
+      leadStatus: updatedContact.leadStatus,
+      agentEmail: updatedContact.agentEmail,
     });
     updated += 1;
   }
 
-  return { created, updated, skipped };
+  return { created, updated, skipped, followUpsCreated, followUpsStatusUpdated };
 }
 
 async function getOrCreateState() {
