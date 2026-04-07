@@ -115,6 +115,7 @@ export default async function ConsultantsPage({ searchParams }: Props) {
   return (
     <ConsultantsClient
       isAdmin={user.role === "admin"}
+      currentUserEmail={user.email}
       items={serialized}
       page={page}
       total={total}

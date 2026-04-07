@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
+import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
 interface ConsultantItem {
   id: string;
@@ -21,6 +22,7 @@ interface ConsultantItem {
 
 interface ConsultantsClientProps {
   isAdmin: boolean;
+  currentUserEmail: string;
   items: ConsultantItem[];
   page: number;
   totalPages: number;
@@ -41,6 +43,7 @@ interface ConsultantsClientProps {
 
 export function ConsultantsClient({
   isAdmin,
+  currentUserEmail,
   items,
   page,
   totalPages,
@@ -61,6 +64,9 @@ export function ConsultantsClient({
   const [toFilter, setToFilter] = useState(filters.to);
   const [sortFilter, setSortFilter] = useState(filters.sort || "created_desc");
   const [syncing, setSyncing] = useState(false);
+  const [pendingRealtimeCount, setPendingRealtimeCount] = useState(0);
+  const toastShownRef = useRef(false);
+  const userEmailNormalized = useMemo(() => currentUserEmail.trim().toLowerCase(), [currentUserEmail]);
 
   function applyFilters(nextPage = 1) {
     const params = new URLSearchParams(searchParams.toString());
@@ -112,30 +118,89 @@ export function ConsultantsClient({
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.message ?? "No se pudo sincronizar consultants");
+        toast.error(data.message ?? "No se pudo sincronizar últimos contactos");
         return;
       }
       if (data.data?.noChanges) {
-        toast.success("Consultants al día. No hay nuevos registros.");
+        toast.success("Últimos contactos al día. No hay nuevos registros.");
         router.refresh();
         return;
       }
       toast.success(
-        `Consultants sincronizados · nuevos: ${data.data?.created ?? 0}, actualizados: ${data.data?.updated ?? 0}`
+        `Últimos contactos sincronizados · nuevos: ${data.data?.created ?? 0}, actualizados: ${data.data?.updated ?? 0}`
       );
       router.refresh();
     } catch {
-      toast.error("Error de conexión al sincronizar consultants");
+      toast.error("Error de conexión al sincronizar últimos contactos");
     } finally {
       setSyncing(false);
     }
   }
 
+  useEffect(() => {
+    const supabase = createSupabaseClient();
+    const channelKey = currentUserEmail.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const channel = supabase
+      .channel(`recent-contacts-${channelKey}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: process.env.NEXT_PUBLIC_DB_SCHEMA ?? "profitos",
+          table: "jp_ultimos_contactos",
+        },
+        (payload) => {
+          const row = payload.new as {
+            agent_email?: string | null;
+            name?: string | null;
+            lead_status?: string | null;
+          };
+          const agentEmail = (row.agent_email ?? "").trim().toLowerCase();
+          const isAssignedToCurrentUser = !!agentEmail && agentEmail === userEmailNormalized;
+
+          if (!isAdmin && !isAssignedToCurrentUser) return;
+
+          setPendingRealtimeCount((prev) => prev + 1);
+          const contactName = row.name?.trim() || "Nuevo contacto";
+          const leadStatus = row.lead_status?.trim();
+          const extra = leadStatus ? ` · ${leadStatus}` : "";
+          toast.info(`${contactName}${extra}`, {
+            description: isAdmin
+              ? "Nuevo contacto detectado por sincronización"
+              : "Tenés un nuevo contacto asignado",
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [currentUserEmail, isAdmin, userEmailNormalized]);
+
+  useEffect(() => {
+    if (pendingRealtimeCount <= 0 || toastShownRef.current) return;
+    toastShownRef.current = true;
+    toast.message(`Nuevos contactos en tiempo real: ${pendingRealtimeCount}`, {
+      action: {
+        label: "Actualizar",
+        onClick: () => {
+          setPendingRealtimeCount(0);
+          toastShownRef.current = false;
+          router.refresh();
+        },
+      },
+      onDismiss: () => {
+        toastShownRef.current = false;
+      },
+    });
+  }, [pendingRealtimeCount, router]);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-text">Consultants</h1>
+          <h1 className="text-lg font-medium text-text">Últimos contactos</h1>
           <p className="text-sm text-text-muted">
             Mostrando {items.length} de {total} resultado{total !== 1 ? "s" : ""} · Total global: {totalAll}
           </p>
@@ -153,10 +218,29 @@ export function ConsultantsClient({
               <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
               <polyline points="21 3 21 8 16 8" />
             </svg>
-            {syncing ? "Sincronizando..." : "Actualizar consultants"}
+            {syncing ? "Sincronizando..." : "Actualizar últimos contactos"}
           </button>
         )}
       </div>
+
+      {pendingRealtimeCount > 0 && (
+        <div className="flex items-center justify-between rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-2 text-sm">
+          <p className="text-secondary">
+            Hay {pendingRealtimeCount} contacto{pendingRealtimeCount !== 1 ? "s" : ""} nuevo
+            {pendingRealtimeCount !== 1 ? "s" : ""} en tiempo real.
+          </p>
+          <button
+            onClick={() => {
+              setPendingRealtimeCount(0);
+              toastShownRef.current = false;
+              router.refresh();
+            }}
+            className="rounded-lg border border-secondary/50 px-3 py-1 text-secondary transition-colors hover:bg-secondary/15"
+          >
+            Actualizar lista
+          </button>
+        </div>
+      )}
 
       <div className="rounded-2xl border border-border bg-surface/30 p-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -263,7 +347,7 @@ export function ConsultantsClient({
               {items.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="px-5 py-12 text-center text-sm text-text-muted">
-                    No hay consultants para los filtros seleccionados
+                    No hay últimos contactos para los filtros seleccionados
                   </td>
                 </tr>
               ) : (

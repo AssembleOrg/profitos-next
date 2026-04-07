@@ -43,7 +43,7 @@ const navItems: { label: string; href: string; icon: ReactNode }[] = [
     ),
   },
   {
-    label: "Consultants", href: "/consultants",
+    label: "Últimos contactos", href: "/consultants",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
         <path d="M22 12h-4l-3 7-4-14-3 7H2" />

@@ -44,7 +44,7 @@ const navItems = [
   },
   {
     href: "/consultants",
-    label: "Consultants",
+    label: "Últimos contactos",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 12h-4l-3 7-4-14-3 7H2" />

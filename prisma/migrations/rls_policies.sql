@@ -148,3 +148,33 @@ CREATE POLICY "visitas_delete_own"
   FOR DELETE
   TO authenticated
   USING (user_id = auth.uid()::text);
+
+-- ---------------------------------------------------------------------------
+-- 6. jp_ultimos_contactos — admins see all, user sees assigned by agent_email
+-- ---------------------------------------------------------------------------
+ALTER TABLE "jp_ultimos_contactos" ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "recent_contacts_select_admin_or_assigned" ON "jp_ultimos_contactos";
+CREATE POLICY "recent_contacts_select_admin_or_assigned"
+  ON "jp_ultimos_contactos"
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM "jp_users" u
+      WHERE u.id = auth.uid()::text
+        AND lower(coalesce(u.role, '')) = 'admin'
+    )
+    OR lower(coalesce(agent_email, '')) = lower(
+      coalesce(
+        (
+          SELECT u2.email
+          FROM "jp_users" u2
+          WHERE u2.id = auth.uid()::text
+          LIMIT 1
+        ),
+        ''
+      )
+    )
+  );
