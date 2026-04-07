@@ -29,22 +29,68 @@ model User {
   visitas            Visit[]
   properties         Property[]
   clients            Client[]
+  assignedFollowUps  PropertyFollowUp[] @relation("FollowUpAssignedTo")
+  createdFollowUps   PropertyFollowUp[] @relation("FollowUpAssignedBy")
+  followUpActions    FollowUpAction[]   @relation("FollowUpActionCreatedBy")
 
   @@map("jp_users")
 }
 
 model Property {
-  id        String   @id @default(cuid())
-  address   String
-  city      String?
-  zone      String?
-  type      String?  // departamento, casa, local, terreno, oficina, etc
-  status    String   @default("activa") // activa, vendida, alquilada, suspendida
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id])
-  visitas   Visit[]
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                String    @id @default(cuid())
+  tokkoId           Int?      @unique @map("tokko_id")
+  source            String    @default("manual")
+  address           String
+  realAddress       String?   @map("real_address")
+  addressComplement String?   @map("address_complement")
+  city              String?
+  zone              String?
+  type              String?   // departamento, casa, local, terreno, oficina, etc
+  status            String    @default("activa") // activa, vendida, alquilada, suspendida
+  publicationTitle  String?   @map("publication_title")
+  referenceCode     String?   @map("reference_code")
+  publicUrl         String?   @map("public_url")
+  description       String?
+  richDescription   String?   @map("rich_description")
+  age               Int?
+  roomAmount        Int?      @map("room_amount")
+  bathroomAmount    Int?      @map("bathroom_amount")
+  suiteAmount       Int?      @map("suite_amount")
+  parkingLotAmount  Int?      @map("parking_lot_amount")
+  floorsAmount      Int?      @map("floors_amount")
+  orientation       String?
+  disposition       String?
+  totalSurface      Float?    @map("total_surface")
+  roofedSurface     Float?    @map("roofed_surface")
+  surface           Float?
+  surfaceMeasurement String?  @map("surface_measurement")
+  expenses          Float?
+  operationType     String?   @map("operation_type")
+  operationPrice    Float?    @map("operation_price")
+  operationCurrency String?   @map("operation_currency")
+  locationFull      String?   @map("location_full")
+  locationShort     String?   @map("location_short")
+  branchName        String?   @map("branch_name")
+  branchOffice      String?   @map("branch_office")
+  producerName      String?   @map("producer_name")
+  geoLat            Float?    @map("geo_lat")
+  geoLong           Float?    @map("geo_long")
+  coverImageUrl     String?   @map("cover_image_url")
+  photos            Json?
+  videos            Json?
+  tags              Json?
+  extraAttributes   Json?     @map("extra_attributes")
+  deletedAt         DateTime? @map("deleted_at")
+  tokkoCreatedAt    DateTime? @map("tokko_created_at")
+  tokkoUpdatedAt    DateTime? @map("tokko_updated_at")
+  rawPayload        Json?     @map("raw_payload")
+  syncAt            DateTime? @map("sync_at")
+  userId            String?   @map("user_id")
+  user              User?     @relation(fields: [userId], references: [id])
+  visitas           Visit[]
+  followUps         PropertyFollowUp[]
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   @@map("jp_propiedades")
 }
@@ -83,4 +129,79 @@ model Visit {
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   @@map("jp_visitas")
+}
+
+model PropertyFollowUp {
+  id               String           @id @default(cuid())
+  title            String?
+  notes            String?
+  status           String           @default("pendiente")
+  dueDate          DateTime?        @map("due_date")
+  propertyId       String           @map("property_id")
+  property         Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  assignedToUserId String           @map("assigned_to_user_id")
+  assignedToUser   User             @relation("FollowUpAssignedTo", fields: [assignedToUserId], references: [id], onDelete: Cascade)
+  assignedByUserId String           @map("assigned_by_user_id")
+  assignedByUser   User             @relation("FollowUpAssignedBy", fields: [assignedByUserId], references: [id], onDelete: Cascade)
+  actions          FollowUpAction[]
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  @@map("jp_property_followups")
+}
+
+model FollowUpAction {
+  id              String           @id @default(cuid())
+  followUpId      String           @map("followup_id")
+  followUp        PropertyFollowUp @relation(fields: [followUpId], references: [id], onDelete: Cascade)
+  type            String           @default("nota")
+  description     String
+  actionAt        DateTime         @map("action_at")
+  shownToName     String?          @map("shown_to_name")
+  scheduledDate   DateTime?        @map("scheduled_date")
+  scheduledTime   String?          @map("scheduled_time")
+  metadata        Json?
+  createdByUserId String           @map("created_by_user_id")
+  createdByUser   User             @relation("FollowUpActionCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  @@map("jp_followup_actions")
+}
+
+model RecentContact {
+  id               String    @id @default(cuid())
+  tokkoContactId   Int       @unique @map("tokko_contact_id")
+  source           String    @default("tokko")
+  name             String
+  email            String?
+  phone            String?
+  cellphone        String?
+  leadStatus       String?   @map("lead_status")
+  isCompany        Boolean?  @map("is_company")
+  isOwner          Boolean?  @map("is_owner")
+  agentId          Int?      @map("agent_id")
+  agentName        String?   @map("agent_name")
+  agentEmail       String?   @map("agent_email")
+  agentPhone       String?   @map("agent_phone")
+  tags             Json?
+  tokkoCreatedAt   DateTime? @map("tokko_created_at")
+  tokkoDeletedAt   DateTime? @map("tokko_deleted_at")
+  rawPayload       Json?     @map("raw_payload")
+  syncAt           DateTime? @map("sync_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@map("jp_ultimos_contactos")
+}
+
+model IntegrationSyncState {
+  id             String   @id @default(cuid())
+  integrationKey String   @unique @map("integration_key")
+  lastOffset     Int      @default(0) @map("last_offset")
+  lastTotalCount Int      @default(0) @map("last_total_count")
+  lastRunAt      DateTime @default(now()) @map("last_run_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("jp_integration_sync_states")
 }

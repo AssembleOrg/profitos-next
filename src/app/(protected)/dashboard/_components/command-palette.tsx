@@ -43,6 +43,14 @@ const navItems: { label: string; href: string; icon: ReactNode }[] = [
     ),
   },
   {
+    label: "Consultants", href: "/consultants",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
+        <path d="M22 12h-4l-3 7-4-14-3 7H2" />
+      </svg>
+    ),
+  },
+  {
     label: "Agenda", href: "/agenda",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
@@ -59,6 +67,15 @@ const navItems: { label: string; href: string; icon: ReactNode }[] = [
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
         <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
         <polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+    ),
+  },
+  {
+    label: "Seguimientos", href: "/seguimientos",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
+        <path d="M9 11l3 3L22 4" />
+        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
       </svg>
     ),
   },
@@ -105,6 +122,15 @@ const quickActions: { label: string; href: string; icon: ReactNode }[] = [
         <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
         <line x1="12" y1="11" x2="12" y2="17" />
         <line x1="9" y1="14" x2="15" y2="14" />
+      </svg>
+    ),
+  },
+  {
+    label: "Nuevo seguimiento", href: "/seguimientos",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={icoAccent}>
+        <path d="M9 11l3 3L22 4" />
+        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
       </svg>
     ),
   },

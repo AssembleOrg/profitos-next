@@ -3,6 +3,9 @@ import { withHandler, AppError } from "@/lib/api/handler";
 import { ok, created, paginated } from "@/lib/api/response";
 import { parsePagination, buildPaginatedResult, paginationToSkip } from "@/lib/api/pagination";
 import { prisma } from "@/lib/prisma/client";
+import { resolveRoleFromEmail } from "@/lib/auth/roles";
+import { getAuthContext } from "@/lib/api/auth";
+import { assertAdmin } from "@/lib/api/followups";
 
 /**
  * GET /api/users — Paginated list of users.
@@ -20,6 +23,8 @@ import { prisma } from "@/lib/prisma/client";
  */
 export const GET = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
+  const auth = await getAuthContext();
+  assertAdmin(auth);
   const { page, limit } = parsePagination(request.nextUrl.searchParams);
 
   const [users, total] = await Promise.all([
@@ -60,6 +65,8 @@ export const GET = withHandler(async (request: NextRequest) => {
  */
 export const POST = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
+  const auth = await getAuthContext();
+  assertAdmin(auth);
   const body = await request.json();
 
   const { id, email, fullName } = body as {
@@ -79,7 +86,7 @@ export const POST = withHandler(async (request: NextRequest) => {
       id,
       email,
       fullName: fullName ?? null,
-      role: "user",
+      role: resolveRoleFromEmail(email),
     },
   });
 

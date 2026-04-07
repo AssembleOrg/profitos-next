@@ -16,7 +16,7 @@ export default async function ContactosPage({ searchParams }: Props) {
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
 
-  const where = { userId: user.id };
+  const where = user.role === "admin" ? {} : { userId: user.id };
 
   const [clients, total] = await Promise.all([
     prisma.client.findMany({
@@ -29,7 +29,15 @@ export default async function ContactosPage({ searchParams }: Props) {
     prisma.client.count({ where }),
   ]);
 
-  const serialized = clients.map((c) => ({
+  const serialized = clients.map((c: {
+    id: string;
+    name: string;
+    phone: string | null;
+    email: string | null;
+    notes: string | null;
+    createdAt: Date;
+    _count: { visitas: number };
+  }) => ({
     id: c.id,
     name: c.name,
     phone: c.phone,

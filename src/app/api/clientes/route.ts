@@ -1,26 +1,19 @@
 import type { NextRequest } from "next/server";
 import { withHandler, AppError } from "@/lib/api/handler";
-import { ok, created, paginated } from "@/lib/api/response";
+import { created, paginated } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
-import { createClient } from "@/lib/supabase/server";
-
-async function getAuthUserId(): Promise<string> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new AppError(401, "No autenticado");
-  return user.id;
-}
+import { getAuthContext } from "@/lib/api/auth";
 
 export const GET = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
-  const userId = await getAuthUserId();
+  const { userId, isAdmin } = await getAuthContext();
   const sp = request.nextUrl.searchParams;
   const q = sp.get("q")?.trim() ?? "";
   const page = Math.max(1, parseInt(sp.get("page") ?? "1", 10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(sp.get("limit") ?? "20", 10) || 20));
 
   const where = {
-    userId,
+    ...(isAdmin ? {} : { userId }),
     ...(q && {
       OR: [
         { name: { contains: q, mode: "insensitive" as const } },
@@ -50,7 +43,7 @@ export const GET = withHandler(async (request: NextRequest) => {
 
 export const POST = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
-  const userId = await getAuthUserId();
+  const { userId } = await getAuthContext();
   const body = await request.json();
 
   const { name, phone, email, notes } = body as Record<string, string | undefined>;

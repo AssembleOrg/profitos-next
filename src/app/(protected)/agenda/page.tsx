@@ -9,12 +9,24 @@ export default async function AgendaPage() {
   if (!user) redirect("/login");
 
   const visitas = await prisma.visit.findMany({
-    where: { userId: user.id },
+    where: user.role === "admin" ? {} : { userId: user.id },
     include: { client: true, property: true },
     orderBy: { date: "asc" },
   });
 
-  const events: CalendarEvent[] = visitas.map((v) => ({
+  const events: CalendarEvent[] = visitas.map((v: {
+    id: string;
+    title: string;
+    date: Date;
+    startTime: string;
+    endTime: string;
+    type: string;
+    description: string | null;
+    client: { name: string } | null;
+    clientId: string | null;
+    property: { address: string } | null;
+    propertyId: string | null;
+  }) => ({
     id: v.id,
     title: v.title,
     date: v.date.toISOString().split("T")[0],

@@ -2,34 +2,27 @@ import type { NextRequest } from "next/server";
 import { withHandler, AppError } from "@/lib/api/handler";
 import { ok } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
-import { createClient } from "@/lib/supabase/server";
 import { updateCalendarEvent, deleteCalendarEvent, getValidGoogleToken } from "@/lib/google/calendar";
-
-async function getAuthUserId(): Promise<string> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new AppError(401, "No autenticado");
-  return user.id;
-}
+import { getAuthContext } from "@/lib/api/auth";
 
 export const GET = withHandler(async (request: NextRequest, context) => {
   const path = request.nextUrl.pathname;
-  const userId = await getAuthUserId();
+  const { userId, isAdmin } = await getAuthContext();
   const { id } = await context!.params;
 
   const visit = await prisma.visit.findUnique({ where: { id } });
-  if (!visit || visit.userId !== userId) throw new AppError(404, "Visita no encontrada");
+  if (!visit || (!isAdmin && visit.userId !== userId)) throw new AppError(404, "Visita no encontrada");
 
   return ok(visit, "Visita obtenida correctamente", path);
 });
 
 export const PATCH = withHandler(async (request: NextRequest, context) => {
   const path = request.nextUrl.pathname;
-  const userId = await getAuthUserId();
+  const { userId, isAdmin } = await getAuthContext();
   const { id } = await context!.params;
 
   const existing = await prisma.visit.findUnique({ where: { id } });
-  if (!existing || existing.userId !== userId) throw new AppError(404, "Visita no encontrada");
+  if (!existing || (!isAdmin && existing.userId !== userId)) throw new AppError(404, "Visita no encontrada");
 
   const body = await request.json();
   const { title, description, date, startTime, endTime, type, propertyId, clientId } = body as Record<string, string | undefined>;
@@ -74,11 +67,11 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
 
 export const DELETE = withHandler(async (request: NextRequest, context) => {
   const path = request.nextUrl.pathname;
-  const userId = await getAuthUserId();
+  const { userId, isAdmin } = await getAuthContext();
   const { id } = await context!.params;
 
   const visit = await prisma.visit.findUnique({ where: { id } });
-  if (!visit || visit.userId !== userId) throw new AppError(404, "Visita no encontrada");
+  if (!visit || (!isAdmin && visit.userId !== userId)) throw new AppError(404, "Visita no encontrada");
 
   // Delete from Google Calendar if linked
   if (visit.googleEventId) {

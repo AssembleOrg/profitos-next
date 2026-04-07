@@ -1,24 +1,17 @@
 import type { NextRequest } from "next/server";
 import { withHandler, AppError } from "@/lib/api/handler";
-import { ok, created, paginated } from "@/lib/api/response";
+import { created, paginated } from "@/lib/api/response";
 import { parsePagination, buildPaginatedResult, paginationToSkip } from "@/lib/api/pagination";
 import { prisma } from "@/lib/prisma/client";
-import { createClient } from "@/lib/supabase/server";
 import { createCalendarEvent, getValidGoogleToken } from "@/lib/google/calendar";
-
-async function getAuthUserId(): Promise<string> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new AppError(401, "No autenticado");
-  return user.id;
-}
+import { getAuthContext } from "@/lib/api/auth";
 
 export const GET = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
-  const userId = await getAuthUserId();
+  const { userId, isAdmin } = await getAuthContext();
   const { page, limit } = parsePagination(request.nextUrl.searchParams);
 
-  const where = { userId };
+  const where = isAdmin ? {} : { userId };
 
   const [visitas, total] = await Promise.all([
     prisma.visit.findMany({
@@ -36,7 +29,7 @@ export const GET = withHandler(async (request: NextRequest) => {
 
 export const POST = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
-  const userId = await getAuthUserId();
+  const { userId } = await getAuthContext();
   const body = await request.json();
 
   const { title, description, date, startTime, endTime, type, propertyId, clientId } = body as {

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma/client";
 import type { AppUser } from "@/lib/domain/types";
+import { resolveRoleFromEmail } from "@/lib/auth/roles";
 
 interface UpsertUserParams {
   id: string;
@@ -11,10 +12,13 @@ interface UpsertUserParams {
 }
 
 export async function upsertUser(params: UpsertUserParams): Promise<AppUser> {
+  const role = resolveRoleFromEmail(params.email);
+
   const user = await prisma.user.upsert({
     where: { id: params.id },
     update: {
       email: params.email,
+      role,
       fullName: params.fullName ?? undefined,
       avatarUrl: params.avatarUrl ?? undefined,
       ...(params.googleAccessToken !== undefined && {
@@ -29,7 +33,7 @@ export async function upsertUser(params: UpsertUserParams): Promise<AppUser> {
       email: params.email,
       fullName: params.fullName ?? null,
       avatarUrl: params.avatarUrl ?? null,
-      role: "user",
+      role,
       googleAccessToken: params.googleAccessToken ?? null,
       googleRefreshToken: params.googleRefreshToken ?? null,
     },

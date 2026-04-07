@@ -15,12 +15,17 @@ export type PropertyStatus = "activa" | "vendida" | "alquilada" | "suspendida";
 
 export interface AppProperty {
   id: string;
+  tokkoId?: number | null;
+  source?: string;
   address: string;
+  publicationTitle?: string | null;
+  referenceCode?: string | null;
+  publicUrl?: string | null;
   city: string | null;
   zone: string | null;
   type: string | null;
   status: string;
-  userId: string;
+  userId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +42,8 @@ export interface AppClient {
 }
 
 export type VisitType = "visita" | "firma" | "tasacion" | "otro";
+export type FollowUpStatus = "pendiente" | "en_progreso" | "hecho" | "cancelado";
+export type FollowUpActionType = "nota" | "visita" | "llamada" | "mensaje" | "otro";
 
 export interface AppVisit {
   id: string;
@@ -52,6 +59,33 @@ export interface AppVisit {
   userId: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface PropertyFollowUp {
+  id: string;
+  title: string | null;
+  notes: string | null;
+  status: FollowUpStatus | string;
+  dueDate: Date | null;
+  propertyId: string;
+  assignedToUserId: string;
+  assignedByUserId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface FollowUpAction {
+  id: string;
+  followUpId: string;
+  type: FollowUpActionType | string;
+  description: string;
+  actionAt: Date;
+  shownToName: string | null;
+  scheduledDate: Date | null;
+  scheduledTime: string | null;
+  metadata: unknown;
+  createdByUserId: string;
+  createdAt: Date;
 }
 
 export interface WhitelistEntry {
