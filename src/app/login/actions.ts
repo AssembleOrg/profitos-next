@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isEmailWhitelisted } from "@/lib/auth/whitelist";
 import { upsertUser } from "@/lib/auth/user-service";
 import { AUTH_ERRORS } from "@/lib/domain/types";
+import { resolvePublicOrigin } from "@/lib/server/public-origin";
 
 export interface LoginState {
   error?: string;
@@ -48,10 +49,7 @@ export async function signInWithEmail(
 export async function signInWithGoogle(): Promise<LoginState> {
   const supabase = await createClient();
   const headersList = await headers();
-  const origin =
-    headersList.get("origin") ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "http://localhost:3000";
+  const origin = resolvePublicOrigin(headersList);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",

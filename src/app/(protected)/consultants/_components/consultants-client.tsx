@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 
@@ -25,6 +25,18 @@ interface ConsultantsClientProps {
   page: number;
   totalPages: number;
   total: number;
+  totalAll: number;
+  lastSyncRunAt: string | null;
+  filters: {
+    q: string;
+    agent: string;
+    lead: string;
+    from: string;
+    to: string;
+    sort: string;
+  };
+  leadOptions: string[];
+  agentOptions: string[];
 }
 
 export function ConsultantsClient({
@@ -33,23 +45,62 @@ export function ConsultantsClient({
   page,
   totalPages,
   total,
+  totalAll,
+  lastSyncRunAt,
+  filters,
+  leadOptions,
+  agentOptions,
 }: ConsultantsClientProps) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(filters.q);
+  const [agentFilter, setAgentFilter] = useState(filters.agent);
+  const [leadFilter, setLeadFilter] = useState(filters.lead);
+  const [fromFilter, setFromFilter] = useState(filters.from);
+  const [toFilter, setToFilter] = useState(filters.to);
+  const [sortFilter, setSortFilter] = useState(filters.sort || "created_desc");
   const [syncing, setSyncing] = useState(false);
 
-  const filtered = items.filter((item) => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      item.name.toLowerCase().includes(q) ||
-      item.email?.toLowerCase().includes(q) ||
-      item.cellphone?.toLowerCase().includes(q) ||
-      item.phone?.toLowerCase().includes(q) ||
-      item.leadStatus?.toLowerCase().includes(q) ||
-      item.agentName?.toLowerCase().includes(q)
-    );
-  });
+  function applyFilters(nextPage = 1) {
+    const params = new URLSearchParams(searchParams.toString());
+    const setOrDelete = (key: string, value: string) => {
+      const clean = value.trim();
+      if (clean) params.set(key, clean);
+      else params.delete(key);
+    };
+
+    setOrDelete("q", query);
+    setOrDelete("agent", agentFilter);
+    setOrDelete("lead", leadFilter);
+    setOrDelete("from", fromFilter);
+    setOrDelete("to", toFilter);
+    setOrDelete("sort", sortFilter);
+
+    if (nextPage <= 1) params.delete("page");
+    else params.set("page", String(nextPage));
+
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  }
+
+  function resetFilters() {
+    setQuery("");
+    setAgentFilter("");
+    setLeadFilter("");
+    setFromFilter("");
+    setToFilter("");
+    setSortFilter("created_desc");
+    router.push(pathname);
+  }
+
+  const activeFilters = [
+    query && `Búsqueda: ${query}`,
+    agentFilter && `Agente: ${agentFilter}`,
+    leadFilter && `Lead: ${leadFilter}`,
+    fromFilter && `Desde: ${fromFilter}`,
+    toFilter && `Hasta: ${toFilter}`,
+  ].filter(Boolean) as string[];
 
   async function handleSync(mode: "auto" | "api") {
     setSyncing(true);
@@ -86,7 +137,10 @@ export function ConsultantsClient({
         <div>
           <h1 className="text-lg font-medium text-text">Consultants</h1>
           <p className="text-sm text-text-muted">
-            {total} contacto{total !== 1 ? "s" : ""} sincronizado{total !== 1 ? "s" : ""}
+            Mostrando {items.length} de {total} resultado{total !== 1 ? "s" : ""} · Total global: {totalAll}
+          </p>
+          <p className="text-xs text-text-muted/80">
+            Última ejecución cron: {lastSyncRunAt ? new Date(lastSyncRunAt).toLocaleString("es-AR") : "sin registros"}
           </p>
         </div>
         {isAdmin && (
@@ -104,17 +158,95 @@ export function ConsultantsClient({
         )}
       </div>
 
-      <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="11" cy="11" r="8" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input
-          placeholder="Buscar por nombre, email, estado, agente..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-xl border border-border bg-surface/40 py-2.5 pl-10 pr-4 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
-        />
+      <div className="rounded-2xl border border-border bg-surface/30 p-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="relative xl:col-span-2">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              placeholder="Buscar por nombre, email, teléfono..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full rounded-xl border border-border bg-bg py-2.5 pl-10 pr-4 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+            />
+          </div>
+
+          <select
+            value={agentFilter}
+            onChange={(e) => setAgentFilter(e.target.value)}
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          >
+            <option value="">Todos los agentes</option>
+            {agentOptions.map((agent) => (
+              <option key={agent} value={agent}>{agent}</option>
+            ))}
+          </select>
+
+          <select
+            value={leadFilter}
+            onChange={(e) => setLeadFilter(e.target.value)}
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          >
+            <option value="">Todos los lead status</option>
+            {leadOptions.map((lead) => (
+              <option key={lead} value={lead}>{lead}</option>
+            ))}
+          </select>
+
+          <input
+            type="date"
+            value={fromFilter}
+            onChange={(e) => setFromFilter(e.target.value)}
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          />
+
+          <input
+            type="date"
+            value={toFilter}
+            onChange={(e) => setToFilter(e.target.value)}
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          />
+
+          <select
+            value={sortFilter}
+            onChange={(e) => setSortFilter(e.target.value)}
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          >
+            <option value="created_desc">Más recientes</option>
+            <option value="created_asc">Más antiguos</option>
+            <option value="name_asc">Nombre A-Z</option>
+            <option value="name_desc">Nombre Z-A</option>
+          </select>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => applyFilters(1)}
+            className="rounded-xl bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30"
+          >
+            Aplicar filtros
+          </button>
+          <button
+            onClick={resetFilters}
+            className="rounded-xl border border-border px-4 py-2 text-sm text-text-muted transition-colors hover:bg-bg hover:text-text"
+          >
+            Limpiar filtros
+          </button>
+          {activeFilters.length > 0 && (
+            <div className="ml-1 flex flex-wrap items-center gap-2">
+              {activeFilters.map((chip) => (
+                <span
+                  key={chip}
+                  className="rounded-full border border-border bg-bg px-3 py-1 text-xs text-text-muted"
+                >
+                  {chip}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-surface/30">
@@ -123,21 +255,19 @@ export function ConsultantsClient({
             <thead>
               <tr className="border-b border-border text-xs font-semibold uppercase tracking-widest text-text-muted">
                 <th className="px-5 py-3">Contacto</th>
-                <th className="px-5 py-3">Lead</th>
                 <th className="px-5 py-3">Agente</th>
                 <th className="px-5 py-3">Creado</th>
-                <th className="px-5 py-3">Sync</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {items.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-text-muted">
-                    {search ? "Sin resultados para la búsqueda" : "No hay consultants cargados"}
+                  <td colSpan={3} className="px-5 py-12 text-center text-sm text-text-muted">
+                    No hay consultants para los filtros seleccionados
                   </td>
                 </tr>
               ) : (
-                filtered.map((item) => (
+                items.map((item) => (
                   <tr key={item.id} className="border-b border-border/50 last:border-b-0">
                     <td className="px-5 py-3.5">
                       <p className="font-medium text-text">{item.name}</p>
@@ -145,7 +275,6 @@ export function ConsultantsClient({
                         #{item.tokkoContactId} · {item.email ?? item.cellphone ?? item.phone ?? "Sin dato"}
                       </p>
                     </td>
-                    <td className="px-5 py-3.5 text-text-muted">{item.leadStatus ?? "—"}</td>
                     <td className="px-5 py-3.5">
                       <p className="text-text-muted">{item.agentName ?? "—"}</p>
                       {item.agentEmail && (
@@ -154,9 +283,6 @@ export function ConsultantsClient({
                     </td>
                     <td className="px-5 py-3.5 text-text-muted">
                       {item.tokkoCreatedAt ? new Date(item.tokkoCreatedAt).toLocaleString("es-AR") : "—"}
-                    </td>
-                    <td className="px-5 py-3.5 text-text-muted">
-                      {item.syncAt ? new Date(item.syncAt).toLocaleString("es-AR") : "—"}
                     </td>
                   </tr>
                 ))

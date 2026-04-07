@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
@@ -34,9 +34,26 @@ interface PropiedadesClientProps {
   page: number;
   totalPages: number;
   total: number;
+  totalAll: number;
   isAdmin: boolean;
   usersForAssignments: Array<{ id: string; fullName: string | null; email: string }>;
   propertiesForAssignments: Array<{ id: string; address: string }>;
+  filters: {
+    q: string;
+    status: string;
+    operation: string;
+    type: string;
+    city: string;
+    currency: string;
+    minPrice: string;
+    maxPrice: string;
+    sort: string;
+  };
+  priceBounds: {
+    min: number;
+    max: number;
+    step: number;
+  };
 }
 
 const PROPERTY_TYPES = [
@@ -73,12 +90,34 @@ export function PropiedadesClient({
   page,
   totalPages,
   total,
+  totalAll,
   isAdmin,
   usersForAssignments,
   propertiesForAssignments,
+  filters,
+  priceBounds,
 }: PropiedadesClientProps) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(filters.q);
+  const [statusFilter, setStatusFilter] = useState(filters.status);
+  const [operationFilter, setOperationFilter] = useState(filters.operation);
+  const [typeFilter, setTypeFilter] = useState(filters.type);
+  const [cityFilter, setCityFilter] = useState(filters.city);
+  const [currencyFilter, setCurrencyFilter] = useState(filters.currency);
+  const parseBoundedPrice = (value: string, fallback: number) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(priceBounds.max, Math.max(priceBounds.min, parsed));
+  };
+  const [minPriceFilter, setMinPriceFilter] = useState(
+    filters.minPrice ? parseBoundedPrice(filters.minPrice, priceBounds.min) : priceBounds.min
+  );
+  const [maxPriceFilter, setMaxPriceFilter] = useState(
+    filters.maxPrice ? parseBoundedPrice(filters.maxPrice, priceBounds.max) : priceBounds.max
+  );
+  const [sortFilter, setSortFilter] = useState(filters.sort || "created_desc");
   const [modalOpen, setModalOpen] = useState(false);
   const [editProperty, setEditProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(false);
@@ -88,18 +127,60 @@ export function PropiedadesClient({
   const [assigning, setAssigning] = useState(false);
   const [syncingTokko, setSyncingTokko] = useState(false);
 
-  const filtered = properties.filter((p) => {
-    const q = search.toLowerCase();
-    if (!q) return true;
-    return (
-      p.address.toLowerCase().includes(q) ||
-      p.publicationTitle?.toLowerCase().includes(q) ||
-      p.referenceCode?.toLowerCase().includes(q) ||
-      p.city?.toLowerCase().includes(q) ||
-      p.zone?.toLowerCase().includes(q) ||
-      p.type?.toLowerCase().includes(q)
-    );
-  });
+  function applyFilters(nextPage = 1) {
+    const params = new URLSearchParams(searchParams.toString());
+    const setOrDelete = (key: string, value: string) => {
+      const clean = value.trim();
+      if (clean) params.set(key, clean);
+      else params.delete(key);
+    };
+
+    setOrDelete("q", query);
+    setOrDelete("status", statusFilter);
+    setOrDelete("operation", operationFilter);
+    setOrDelete("type", typeFilter);
+    setOrDelete("city", cityFilter);
+    setOrDelete("currency", currencyFilter);
+    const minValue = minPriceFilter <= priceBounds.min ? "" : String(minPriceFilter);
+    const maxValue = maxPriceFilter >= priceBounds.max ? "" : String(maxPriceFilter);
+    setOrDelete("minPrice", minValue);
+    setOrDelete("maxPrice", maxValue);
+    setOrDelete("sort", sortFilter);
+
+    if (nextPage <= 1) params.delete("page");
+    else params.set("page", String(nextPage));
+
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  }
+
+  function resetFilters() {
+    setQuery("");
+    setStatusFilter("");
+    setOperationFilter("");
+    setTypeFilter("");
+    setCityFilter("");
+    setCurrencyFilter("");
+    setMinPriceFilter(priceBounds.min);
+    setMaxPriceFilter(priceBounds.max);
+    setSortFilter("created_desc");
+    router.push(pathname);
+  }
+
+  const activeFilters = [
+    query && `Búsqueda: ${query}`,
+    statusFilter && `Estado: ${getStatusLabel(statusFilter)}`,
+    operationFilter && `Operación: ${operationFilter}`,
+    typeFilter && `Tipo: ${typeFilter}`,
+    cityFilter && `Ciudad: ${cityFilter}`,
+    currencyFilter && `Moneda: ${currencyFilter}`,
+    minPriceFilter > priceBounds.min && `Mín: ${minPriceFilter.toLocaleString("es-AR")}`,
+    maxPriceFilter < priceBounds.max && `Máx: ${maxPriceFilter.toLocaleString("es-AR")}`,
+  ].filter(Boolean) as string[];
+
+  const priceRange = Math.max(1, priceBounds.max - priceBounds.min);
+  const leftPercent = ((minPriceFilter - priceBounds.min) / priceRange) * 100;
+  const rightPercent = ((maxPriceFilter - priceBounds.min) / priceRange) * 100;
 
   function handleNew() {
     setEditProperty(null);
@@ -270,7 +351,7 @@ export function PropiedadesClient({
         <div>
           <h1 className="text-lg font-medium text-text">Propiedades</h1>
           <p className="text-sm text-text-muted">
-            {total} propiedad{total !== 1 ? "es" : ""} registrada{total !== 1 ? "s" : ""}
+            Mostrando {properties.length} de {total} resultado{total !== 1 ? "s" : ""} · Total global: {totalAll}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -312,18 +393,153 @@ export function PropiedadesClient({
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="11" cy="11" r="8" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input
-          placeholder="Buscar por dirección, código, título..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-xl border border-border bg-surface/40 py-2.5 pl-10 pr-4 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
-        />
+      {/* Filters */}
+      <div className="rounded-2xl border border-border bg-surface/30 p-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="relative xl:col-span-2">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              placeholder="Buscar por dirección, código, título..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full rounded-xl border border-border bg-bg py-2.5 pl-10 pr-4 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+            />
+          </div>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          >
+            <option value="">Todos los estados</option>
+            {PROPERTY_STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+
+          <select
+            value={operationFilter}
+            onChange={(e) => setOperationFilter(e.target.value)}
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          >
+            <option value="">Todas las operaciones</option>
+            <option value="venta">Venta</option>
+            <option value="alquiler">Alquiler</option>
+          </select>
+
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          >
+            <option value="">Todos los tipos</option>
+            {PROPERTY_TYPES.filter((t) => t.value).map((t) => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+
+          <input
+            value={cityFilter}
+            onChange={(e) => setCityFilter(e.target.value)}
+            placeholder="Ciudad"
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+          />
+
+          <select
+            value={currencyFilter}
+            onChange={(e) => setCurrencyFilter(e.target.value)}
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          >
+            <option value="">Moneda</option>
+            <option value="USD">USD</option>
+            <option value="ARS">ARS</option>
+          </select>
+
+          <div className="rounded-xl border border-border bg-bg px-3 py-2.5 md:col-span-2">
+            <div className="mb-2 flex items-center justify-between text-xs text-text-muted">
+              <span>Precio mínimo: {minPriceFilter.toLocaleString("es-AR")}</span>
+              <span>Precio máximo: {maxPriceFilter.toLocaleString("es-AR")}</span>
+            </div>
+            <div className="relative h-8">
+              <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-border" />
+              <div
+                className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-secondary/70"
+                style={{
+                  left: `${leftPercent}%`,
+                  width: `${Math.max(0, rightPercent - leftPercent)}%`,
+                }}
+              />
+              <input
+                type="range"
+                min={priceBounds.min}
+                max={priceBounds.max}
+                step={priceBounds.step}
+                value={minPriceFilter}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  const next = Math.min(value, Math.max(priceBounds.min, maxPriceFilter - priceBounds.step));
+                  setMinPriceFilter(next);
+                }}
+                className="pointer-events-none absolute left-0 top-1/2 h-1 w-full -translate-y-1/2 appearance-none bg-transparent [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-secondary/60 [&::-webkit-slider-thumb]:bg-secondary [&::-webkit-slider-thumb]:shadow"
+              />
+              <input
+                type="range"
+                min={priceBounds.min}
+                max={priceBounds.max}
+                step={priceBounds.step}
+                value={maxPriceFilter}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  const next = Math.max(value, Math.min(priceBounds.max, minPriceFilter + priceBounds.step));
+                  setMaxPriceFilter(next);
+                }}
+                className="pointer-events-none absolute left-0 top-1/2 h-1 w-full -translate-y-1/2 appearance-none bg-transparent [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-secondary/60 [&::-webkit-slider-thumb]:bg-secondary [&::-webkit-slider-thumb]:shadow"
+              />
+            </div>
+          </div>
+
+          <select
+            value={sortFilter}
+            onChange={(e) => setSortFilter(e.target.value)}
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          >
+            <option value="created_desc">Más recientes</option>
+            <option value="price_asc">Precio menor</option>
+            <option value="price_desc">Precio mayor</option>
+            <option value="surface_desc">Mayor superficie</option>
+            <option value="tokko_newest">Más nuevas Tokko</option>
+          </select>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => applyFilters(1)}
+            className="rounded-xl bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30"
+          >
+            Aplicar filtros
+          </button>
+          <button
+            onClick={resetFilters}
+            className="rounded-xl border border-border px-4 py-2 text-sm text-text-muted transition-colors hover:bg-bg hover:text-text"
+          >
+            Limpiar filtros
+          </button>
+          {activeFilters.length > 0 && (
+            <div className="ml-1 flex flex-wrap items-center gap-2">
+              {activeFilters.map((chip) => (
+                <span
+                  key={chip}
+                  className="rounded-full border border-border bg-bg px-3 py-1 text-xs text-text-muted"
+                >
+                  {chip}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -342,14 +558,14 @@ export function PropiedadesClient({
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {properties.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-12 text-center text-sm text-text-muted">
-                    {search ? "Sin resultados para la búsqueda" : "No hay propiedades registradas"}
+                    No hay propiedades para los filtros seleccionados
                   </td>
                 </tr>
               ) : (
-                filtered.map((p) => (
+                properties.map((p) => (
                   <tr
                     key={p.id}
                     onClick={() => handleEdit(p)}

@@ -2,11 +2,23 @@ import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { PropiedadesClient } from "./_components/propiedades-client";
+import { Prisma } from "@/generated/prisma/client";
 
 const PAGE_SIZE = 20;
 
 interface Props {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    q?: string;
+    status?: string;
+    operation?: string;
+    type?: string;
+    city?: string;
+    currency?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    sort?: string;
+  }>;
 }
 
 export default async function PropiedadesPage({ searchParams }: Props) {
@@ -16,17 +28,64 @@ export default async function PropiedadesPage({ searchParams }: Props) {
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
 
-  const where = {};
+  const q = (sp.q ?? "").trim();
+  const status = (sp.status ?? "").trim().toLowerCase();
+  const operation = (sp.operation ?? "").trim().toLowerCase();
+  const type = (sp.type ?? "").trim().toLowerCase();
+  const city = (sp.city ?? "").trim();
+  const currency = (sp.currency ?? "").trim().toUpperCase();
+  const parseOptionalNumber = (value?: string): number | null => {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  const minPrice = parseOptionalNumber(sp.minPrice);
+  const maxPrice = parseOptionalNumber(sp.maxPrice);
+  const sort = (sp.sort ?? "created_desc").trim();
 
-  const [properties, total, usersForAssignments, propertiesForAssignments] = await Promise.all([
+  const andFilters: Prisma.PropertyWhereInput[] = [];
+
+  if (q) {
+    andFilters.push({
+      OR: [
+        { address: { contains: q, mode: "insensitive" } },
+        { publicationTitle: { contains: q, mode: "insensitive" } },
+        { referenceCode: { contains: q, mode: "insensitive" } },
+        { realAddress: { contains: q, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  if (status) andFilters.push({ status });
+  if (operation) andFilters.push({ operationType: { contains: operation, mode: "insensitive" } });
+  if (type) andFilters.push({ type: { contains: type, mode: "insensitive" } });
+  if (city) andFilters.push({ city: { contains: city, mode: "insensitive" } });
+  if (currency) andFilters.push({ operationCurrency: { equals: currency, mode: "insensitive" } });
+  if (minPrice !== null) andFilters.push({ operationPrice: { gte: minPrice } });
+  if (maxPrice !== null) andFilters.push({ operationPrice: { lte: maxPrice } });
+
+  const where: Prisma.PropertyWhereInput = andFilters.length > 0 ? { AND: andFilters } : {};
+
+  const orderBy: Prisma.PropertyOrderByWithRelationInput[] = (() => {
+    if (sort === "price_asc") return [{ operationPrice: "asc" }, { createdAt: "desc" }];
+    if (sort === "price_desc") return [{ operationPrice: "desc" }, { createdAt: "desc" }];
+    if (sort === "surface_desc") return [{ totalSurface: "desc" }, { createdAt: "desc" }];
+    if (sort === "tokko_newest") return [{ tokkoCreatedAt: "desc" }, { createdAt: "desc" }];
+    return [{ createdAt: "desc" }];
+  })();
+
+  const [properties, total, totalAll, usersForAssignments, propertiesForAssignments, priceAgg] = await Promise.all([
     prisma.property.findMany({
       where,
       include: { _count: { select: { visitas: true } } },
-      orderBy: { createdAt: "desc" },
+      orderBy,
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
     prisma.property.count({ where }),
+    prisma.property.count(),
     user.role === "admin"
       ? prisma.user.findMany({
           select: { id: true, fullName: true, email: true },
@@ -40,7 +99,21 @@ export default async function PropiedadesPage({ searchParams }: Props) {
           take: 300,
         })
       : Promise.resolve([]),
+    prisma.property.aggregate({
+      _min: { operationPrice: true },
+      _max: { operationPrice: true },
+    }),
   ]);
+
+  const priceMin = Math.max(0, Math.floor(priceAgg._min.operationPrice ?? 0));
+  const priceMaxBase = Math.max(priceMin + 1, Math.ceil(priceAgg._max.operationPrice ?? 1));
+  const priceRange = priceMaxBase - priceMin;
+  const priceStep =
+    priceRange <= 1000 ? 10 :
+    priceRange <= 10000 ? 100 :
+    priceRange <= 100000 ? 1000 :
+    priceRange <= 1000000 ? 5000 :
+    10000;
 
   const serialized = properties.map((p: {
     id: string;
@@ -92,9 +165,22 @@ export default async function PropiedadesPage({ searchParams }: Props) {
       page={page}
       totalPages={Math.ceil(total / PAGE_SIZE)}
       total={total}
+      totalAll={totalAll}
       isAdmin={user.role === "admin"}
       usersForAssignments={usersForAssignments}
       propertiesForAssignments={propertiesForAssignments}
+      filters={{
+        q,
+        status,
+        operation,
+        type,
+        city,
+        currency,
+        minPrice: minPrice !== null ? String(minPrice) : "",
+        maxPrice: maxPrice !== null ? String(maxPrice) : "",
+        sort,
+      }}
+      priceBounds={{ min: priceMin, max: priceMaxBase, step: priceStep }}
     />
   );
 }

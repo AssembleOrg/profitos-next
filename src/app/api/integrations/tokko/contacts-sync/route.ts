@@ -1,9 +1,10 @@
 import type { NextRequest } from "next/server";
-import { AppError, withHandler } from "@/lib/api/handler";
+import { withHandler } from "@/lib/api/handler";
 import { ok } from "@/lib/api/response";
 import { getAuthContext } from "@/lib/api/auth";
 import { assertAdmin } from "@/lib/api/followups";
 import { syncTokkoContacts } from "@/lib/tokko/contacts-sync";
+import { assertCronAuthorized } from "@/lib/server/cron-auth";
 
 export const POST = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
@@ -18,13 +19,8 @@ export const POST = withHandler(async (request: NextRequest) => {
 
 export const GET = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
-  const authHeader = request.headers.get("authorization");
   const secret = process.env.TOKKO_CONTACTS_CRON_SECRET ?? process.env.CRON_SECRET;
-  const expected = secret ? `Bearer ${secret}` : null;
-
-  if (!expected || authHeader !== expected) {
-    throw new AppError(401, "No autorizado para ejecutar cron");
-  }
+  assertCronAuthorized(request.headers, secret, request.nextUrl.searchParams.get("secret"));
 
   const result = await syncTokkoContacts({ mode: "api" });
   return ok(result, "Cron de contactos ejecutado correctamente", path);
