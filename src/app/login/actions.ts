@@ -58,7 +58,7 @@ export async function signInWithGoogle(): Promise<LoginState> {
       scopes: "https://www.googleapis.com/auth/calendar.events",
       queryParams: {
         access_type: "offline",
-        prompt: "consent",
+        include_granted_scopes: "true",
       },
     },
   });

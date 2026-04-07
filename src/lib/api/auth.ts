@@ -5,6 +5,7 @@ import { resolveRoleFromEmail } from "@/lib/auth/roles";
 
 export interface AuthContext {
   userId: string;
+  email: string;
   role: "admin" | "user" | "viewer";
   isAdmin: boolean;
 }
@@ -27,10 +28,12 @@ export async function getAuthContext(): Promise<AuthContext> {
     select: { role: true, email: true },
   });
 
-  const role = normalizeRole(appUser?.role, appUser?.email ?? user.email);
+  const email = appUser?.email ?? user.email ?? "";
+  const role = normalizeRole(appUser?.role, email);
 
   return {
     userId: user.id,
+    email,
     role,
     isAdmin: role === "admin",
   };

@@ -41,6 +41,19 @@ interface ConsultantsClientProps {
   agentOptions: string[];
 }
 
+function formatDateTime24(value: string | null) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yy = String(date.getFullYear()).slice(-2);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  return `${dd}/${mm}/${yy} ${hh}:${min}:${ss}`;
+}
+
 export function ConsultantsClient({
   isAdmin,
   currentUserEmail,
@@ -366,7 +379,7 @@ export function ConsultantsClient({
                       )}
                     </td>
                     <td className="px-5 py-3.5 text-text-muted">
-                      {item.tokkoCreatedAt ? new Date(item.tokkoCreatedAt).toLocaleString("es-AR") : "—"}
+                      {formatDateTime24(item.tokkoCreatedAt)}
                     </td>
                   </tr>
                 ))

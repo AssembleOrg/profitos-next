@@ -4,6 +4,34 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/app/login/actions";
+import { createClient as createSupabaseClient } from "@/lib/supabase/client";
+
+interface NotificationItem {
+  kind: "contact" | "followup_assignment" | "property";
+  eventAt: string;
+  id: string;
+  name?: string;
+  email?: string | null;
+  cellphone?: string | null;
+  phone?: string | null;
+  leadStatus?: string | null;
+  agentName?: string | null;
+  agentEmail?: string | null;
+  tokkoCreatedAt?: string | null;
+  createdAt?: string;
+  tokkoContactId?: number;
+  title?: string | null;
+  status?: string;
+  updatedAt?: string;
+  property?: { id: string; address: string };
+  assignedToUser?: { id: string; fullName: string | null; email: string };
+  assignedByUser?: { id: string; fullName: string | null; email: string };
+  address?: string;
+  publicationTitle?: string | null;
+  operationType?: string | null;
+  operationPrice?: number | null;
+  operationCurrency?: string | null;
+}
 
 const navItems = [
   {
@@ -99,20 +127,125 @@ interface SidebarProps {
   avatarUrl?: string | null;
 }
 
+function formatNotificationDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yy = String(date.getFullYear()).slice(-2);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yy} · ${hh}:${min}`;
+}
+
 export function Sidebar({ avatarUrl }: SidebarProps) {
   const pathname = usePathname();
   const [showMenu, setShowMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+
+  async function loadNotifications() {
+    try {
+      const res = await fetch("/api/notifications/recent-contacts?limit=15", {
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const body = await res.json();
+      const items = (body?.data?.items ?? []) as NotificationItem[];
+      setNotifications(items);
+
+      const lastSeen = localStorage.getItem("jp_last_notifications_seen_at");
+      if (!lastSeen) {
+        setUnreadCount(items.length > 0 ? 1 : 0);
+        return;
+      }
+      const lastSeenMs = new Date(lastSeen).getTime();
+      const count = items.filter((item) => {
+        const eventAt = item.eventAt ?? item.tokkoCreatedAt ?? item.createdAt;
+        if (!eventAt) return false;
+        return new Date(eventAt).getTime() > lastSeenMs;
+      }).length;
+      setUnreadCount(count);
+    } catch {
+      // silent
+    }
+  }
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setShowMenu(false);
       }
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
     }
-    if (showMenu) document.addEventListener("mousedown", handleClickOutside);
+    if (showMenu || showNotifications) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showMenu]);
+  }, [showMenu, showNotifications]);
+
+  useEffect(() => {
+    void loadNotifications();
+  }, []);
+
+  useEffect(() => {
+    const supabase = createSupabaseClient();
+    const schema = process.env.NEXT_PUBLIC_DB_SCHEMA ?? "profitos";
+    const channel = supabase
+      .channel("sidebar-last-contacts")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema,
+          table: "jp_ultimos_contactos",
+        },
+        () => {
+          void loadNotifications();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema,
+          table: "jp_propiedades",
+        },
+        () => {
+          void loadNotifications();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema,
+          table: "jp_property_followups",
+        },
+        () => {
+          void loadNotifications();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema,
+          table: "jp_property_followups",
+        },
+        () => {
+          void loadNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, []);
 
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-dvh w-16 flex-col items-center border-r border-border bg-bg py-4">
@@ -149,12 +282,145 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
       {/* Bottom */}
       <div className="flex flex-col items-center gap-3">
         {/* Notifications */}
-        <button className="flex h-10 w-10 items-center justify-center rounded-lg text-white/30 transition-colors hover:bg-surface hover:text-white/60">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 01-3.46 0" />
-          </svg>
-        </button>
+        <div className="relative" ref={notificationsRef}>
+          <button
+            onClick={() => {
+              const next = !showNotifications;
+              setShowNotifications(next);
+              if (next) {
+                void loadNotifications();
+                const now = new Date().toISOString();
+                localStorage.setItem("jp_last_notifications_seen_at", now);
+                setUnreadCount(0);
+              }
+            }}
+            className="relative flex h-10 w-10 items-center justify-center rounded-lg text-white/30 transition-colors hover:bg-surface hover:text-white/60"
+            title="Notificaciones"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 01-3.46 0" />
+            </svg>
+            {unreadCount > 0 && (
+              <span className="absolute right-1 top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-semibold text-black">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {showNotifications && (
+            <div className="absolute bottom-0 left-14 z-50 w-[390px] overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
+              <div className="flex items-center justify-between gap-3 border-b border-border bg-bg/30 px-3 py-2.5">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">Notificaciones</p>
+                  <p className="mt-0.5 text-xs text-text-muted/70">
+                    Últimos {notifications.length} evento{notifications.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    const now = new Date().toISOString();
+                    localStorage.setItem("jp_last_notifications_seen_at", now);
+                    setUnreadCount(0);
+                  }}
+                  className="rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-text-muted transition-colors hover:bg-bg hover:text-text"
+                >
+                  Marcar leídas
+                </button>
+              </div>
+              <div className="max-h-[380px] space-y-2 overflow-y-auto p-2">
+                {notifications.length === 0 ? (
+                  <p className="rounded-lg border border-border/70 bg-bg/30 px-3 py-4 text-sm text-text-muted">
+                    Sin notificaciones.
+                  </p>
+                ) : (
+                  notifications.map((item) => (
+                    <div
+                      key={`${item.kind}-${item.id}`}
+                      className={`rounded-lg border px-3 py-2.5 ${
+                        item.kind === "contact"
+                          ? "border-sky-500/30 bg-sky-500/10"
+                          : item.kind === "followup_assignment"
+                            ? "border-amber-500/30 bg-amber-500/10"
+                            : "border-emerald-500/30 bg-emerald-500/10"
+                      }`}
+                    >
+                      <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                            item.kind === "contact"
+                              ? "bg-sky-500/20 text-sky-300"
+                              : item.kind === "followup_assignment"
+                                ? "bg-amber-500/20 text-amber-300"
+                                : "bg-emerald-500/20 text-emerald-300"
+                          }`}
+                        >
+                          {item.kind === "contact"
+                            ? "Nuevo contacto"
+                            : item.kind === "followup_assignment"
+                              ? "Seguimiento"
+                              : "Propiedad nueva"}
+                        </span>
+                        <span className="text-[11px] text-text-muted/80">{formatNotificationDate(item.eventAt)}</span>
+                      </div>
+
+                      {item.kind === "contact" ? (
+                        <>
+                          <p className="text-sm font-medium leading-tight text-text">
+                            {item.name ?? "Contacto sin nombre"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-text-muted">
+                            Estado: {item.leadStatus ?? "Sin estado"} · Agente: {item.agentName ?? "Sin agente"}
+                          </p>
+                        </>
+                      ) : item.kind === "followup_assignment" ? (
+                        <>
+                          <p className="text-sm font-medium leading-tight text-text">
+                            {item.property?.address ?? "Propiedad sin dirección"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-text-muted">
+                            Responsable: {item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}
+                          </p>
+                          <p className="text-xs text-text-muted">
+                            Estado: {item.status ?? "pendiente"}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm font-medium leading-tight text-text">
+                            {item.address ?? item.publicationTitle ?? "Propiedad nueva"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-text-muted">
+                            {item.operationType ?? "Operación no informada"} · Estado: {item.status ?? "activa"}
+                          </p>
+                          <p className="text-xs text-text-muted">
+                            {item.operationCurrency ?? ""} {item.operationPrice?.toLocaleString("es-AR") ?? "Precio no informado"}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="grid grid-cols-2 border-t border-border bg-bg/30">
+                <Link
+                  href="/consultants"
+                  onClick={() => setShowNotifications(false)}
+                  className="block border-r border-border px-3 py-2.5 text-xs font-medium text-secondary transition-colors hover:bg-bg"
+                >
+                  Ver últimos contactos
+                </Link>
+                <Link
+                  href="/seguimientos"
+                  onClick={() => setShowNotifications(false)}
+                  className="block px-3 py-2.5 text-xs font-medium text-secondary transition-colors hover:bg-bg"
+                >
+                  Ver seguimientos
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
         {/* Avatar + Logout menu */}
         <div className="relative" ref={menuRef}>
           <button
