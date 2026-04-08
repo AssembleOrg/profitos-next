@@ -588,23 +588,37 @@ export function PropiedadesClient({
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      {p.publicUrl ? (
+                      <div className="inline-flex items-center gap-2">
                         <a
-                          href={p.publicUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          href={`/api/propiedades/${p.id}/pdf`}
                           onClick={(event) => event.stopPropagation()}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:bg-bg hover:text-text"
+                        >
+                          PDF
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                          </svg>
+                        </a>
+                        {p.publicUrl ? (
+                          <a
+                            href={p.publicUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(event) => event.stopPropagation()}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-secondary/40 bg-secondary/15 px-3 py-1.5 text-xs font-medium text-secondary transition-colors hover:bg-secondary/25"
                         >
-                          Ver ficha
+                          Ver en Tokko
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M7 17L17 7" />
                             <path d="M7 7h10v10" />
-                          </svg>
-                        </a>
-                      ) : (
-                        <span className="text-xs text-text-muted">—</span>
-                      )}
+                            </svg>
+                          </a>
+                        ) : (
+                          <span className="text-xs text-text-muted">—</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
