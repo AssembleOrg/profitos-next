@@ -45,14 +45,7 @@ interface PropiedadesClientProps {
     type: string;
     city: string;
     currency: string;
-    minPrice: string;
-    maxPrice: string;
     sort: string;
-  };
-  priceBounds: {
-    min: number;
-    max: number;
-    step: number;
   };
 }
 
@@ -95,7 +88,6 @@ export function PropiedadesClient({
   usersForAssignments,
   propertiesForAssignments,
   filters,
-  priceBounds,
 }: PropiedadesClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -106,18 +98,8 @@ export function PropiedadesClient({
   const [typeFilter, setTypeFilter] = useState(filters.type);
   const [cityFilter, setCityFilter] = useState(filters.city);
   const [currencyFilter, setCurrencyFilter] = useState(filters.currency);
-  const parseBoundedPrice = (value: string, fallback: number) => {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) return fallback;
-    return Math.min(priceBounds.max, Math.max(priceBounds.min, parsed));
-  };
-  const [minPriceFilter, setMinPriceFilter] = useState(
-    filters.minPrice ? parseBoundedPrice(filters.minPrice, priceBounds.min) : priceBounds.min
-  );
-  const [maxPriceFilter, setMaxPriceFilter] = useState(
-    filters.maxPrice ? parseBoundedPrice(filters.maxPrice, priceBounds.max) : priceBounds.max
-  );
   const [sortFilter, setSortFilter] = useState(filters.sort || "created_desc");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editProperty, setEditProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(false);
@@ -147,10 +129,6 @@ export function PropiedadesClient({
     setOrDelete("type", typeFilter);
     setOrDelete("city", cityFilter);
     setOrDelete("currency", currencyFilter);
-    const minValue = minPriceFilter <= priceBounds.min ? "" : String(minPriceFilter);
-    const maxValue = maxPriceFilter >= priceBounds.max ? "" : String(maxPriceFilter);
-    setOrDelete("minPrice", minValue);
-    setOrDelete("maxPrice", maxValue);
     setOrDelete("sort", sortFilter);
 
     if (nextPage <= 1) params.delete("page");
@@ -167,8 +145,6 @@ export function PropiedadesClient({
     setTypeFilter("");
     setCityFilter("");
     setCurrencyFilter("");
-    setMinPriceFilter(priceBounds.min);
-    setMaxPriceFilter(priceBounds.max);
     setSortFilter("created_desc");
     router.push(pathname);
   }
@@ -180,13 +156,10 @@ export function PropiedadesClient({
     typeFilter && `Tipo: ${typeFilter}`,
     cityFilter && `Ciudad: ${cityFilter}`,
     currencyFilter && `Moneda: ${currencyFilter}`,
-    minPriceFilter > priceBounds.min && `Mín: ${minPriceFilter.toLocaleString("es-AR")}`,
-    maxPriceFilter < priceBounds.max && `Máx: ${maxPriceFilter.toLocaleString("es-AR")}`,
   ].filter(Boolean) as string[];
 
-  const priceRange = Math.max(1, priceBounds.max - priceBounds.min);
-  const leftPercent = ((minPriceFilter - priceBounds.min) / priceRange) * 100;
-  const rightPercent = ((maxPriceFilter - priceBounds.min) / priceRange) * 100;
+  // Filtros "extra" (los del panel colapsable mobile, excluyendo búsqueda y estado)
+  const extraActiveCount = [operationFilter, typeFilter, cityFilter, currencyFilter, sortFilter !== "created_desc" ? sortFilter : ""].filter(Boolean).length;
 
   function handleNew() {
     setEditProperty(null);
@@ -332,6 +305,14 @@ export function PropiedadesClient({
         toast.error(data.message ?? "No se pudo sincronizar con Tokko");
         return;
       }
+      if (data.data?.skipped) {
+        if (data.data.reason === "sync_in_progress") {
+          toast.info("Sincronización ya en curso, esperá un momento");
+        } else if (data.data.reason === "cooldown") {
+          toast.info(`Tokko actualizado recientemente. Disponible en ${data.data.minutesLeft} min`);
+        }
+        return;
+      }
       if (data.data?.noChanges) {
         toast.success("Tokko al día. No se detectaron nuevas propiedades.");
         router.refresh();
@@ -353,55 +334,151 @@ export function PropiedadesClient({
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-lg font-medium text-text">Propiedades</h1>
           <p className="text-sm text-text-muted">
             Mostrando {properties.length} de {total} resultado{total !== 1 ? "s" : ""} · Total global: {totalAll}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {isAdmin && (
             <button
               onClick={() => setAssignModalOpen(true)}
-              className="flex items-center gap-2 rounded-xl border border-secondary/30 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/10"
+              className="flex items-center gap-2 rounded-xl border border-secondary/30 px-3 py-2 text-sm font-medium text-secondary active:bg-secondary/10"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 11l3 3L22 4" />
                 <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
               </svg>
-              Asignar seguimiento
+              <span className="hidden sm:inline">Asignar seguimiento</span>
+              <span className="sm:hidden">Asignar</span>
             </button>
           )}
           {isAdmin && (
             <button
               onClick={() => handleSyncTokko("auto")}
               disabled={syncingTokko}
-              className="flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-surface hover:text-text disabled:opacity-50"
+              className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text-muted active:bg-surface disabled:opacity-50"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
                 <polyline points="21 3 21 8 16 8" />
               </svg>
-              {syncingTokko ? "Sincronizando..." : "Actualizar Tokko"}
+              <span className="hidden sm:inline">{syncingTokko ? "Sincronizando..." : "Actualizar Tokko"}</span>
+              <span className="sm:hidden">{syncingTokko ? "..." : "Tokko"}</span>
             </button>
           )}
           <button
             onClick={handleNew}
-            className="flex items-center gap-2 rounded-xl bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30"
+            className="flex items-center gap-2 rounded-xl bg-secondary/20 px-3 py-2 text-sm font-medium text-secondary active:bg-secondary/30"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            Nueva propiedad
+            <span className="hidden sm:inline">Nueva propiedad</span>
+            <span className="sm:hidden">Nueva</span>
           </button>
         </div>
       </div>
 
       {/* Filters */}
       <div className="rounded-2xl border border-border bg-surface/30 p-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+
+        {/* Mobile: búsqueda + botón filtros siempre visibles */}
+        <div className="flex gap-2 sm:hidden">
+          <div className="relative flex-1">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              placeholder="Buscar..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && applyFilters(1)}
+              className="w-full rounded-xl border border-border bg-bg py-2.5 pl-10 pr-4 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+            />
+          </div>
+          <button
+            onClick={() => setFiltersOpen((f) => !f)}
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${filtersOpen || extraActiveCount > 0 ? "border-secondary/40 bg-secondary/10 text-secondary" : "border-border text-text-muted"}`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
+            </svg>
+            {extraActiveCount > 0 ? `Filtros (${extraActiveCount})` : "Filtros"}
+          </button>
+        </div>
+
+        {/* Mobile: estado siempre visible */}
+        <div className="mt-2 sm:hidden">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          >
+            <option value="">Todos los estados</option>
+            {PROPERTY_STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Mobile: panel colapsable */}
+        {filtersOpen && (
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:hidden">
+            <select
+              value={operationFilter}
+              onChange={(e) => setOperationFilter(e.target.value)}
+              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            >
+              <option value="">Todas las operaciones</option>
+              <option value="venta">Venta</option>
+              <option value="alquiler">Alquiler</option>
+            </select>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            >
+              <option value="">Todos los tipos</option>
+              {PROPERTY_TYPES.filter((t) => t.value).map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+            <input
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              placeholder="Ciudad"
+              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+            />
+            <select
+              value={currencyFilter}
+              onChange={(e) => setCurrencyFilter(e.target.value)}
+              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            >
+              <option value="">Moneda</option>
+              <option value="USD">USD</option>
+              <option value="ARS">ARS</option>
+            </select>
+            <select
+              value={sortFilter}
+              onChange={(e) => setSortFilter(e.target.value)}
+              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            >
+              <option value="created_desc">Más recientes</option>
+              <option value="price_asc">Precio menor</option>
+              <option value="price_desc">Precio mayor</option>
+              <option value="surface_desc">Mayor superficie</option>
+              <option value="tokko_newest">Más nuevas Tokko</option>
+            </select>
+          </div>
+        )}
+
+        {/* Desktop: todos los filtros en grid */}
+        <div className="hidden sm:grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="relative xl:col-span-2">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
@@ -414,7 +491,6 @@ export function PropiedadesClient({
               className="w-full rounded-xl border border-border bg-bg py-2.5 pl-10 pr-4 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
             />
           </div>
-
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -425,7 +501,6 @@ export function PropiedadesClient({
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
-
           <select
             value={operationFilter}
             onChange={(e) => setOperationFilter(e.target.value)}
@@ -435,7 +510,6 @@ export function PropiedadesClient({
             <option value="venta">Venta</option>
             <option value="alquiler">Alquiler</option>
           </select>
-
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
@@ -446,14 +520,12 @@ export function PropiedadesClient({
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
           </select>
-
           <input
             value={cityFilter}
             onChange={(e) => setCityFilter(e.target.value)}
             placeholder="Ciudad"
             className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
           />
-
           <select
             value={currencyFilter}
             onChange={(e) => setCurrencyFilter(e.target.value)}
@@ -463,50 +535,6 @@ export function PropiedadesClient({
             <option value="USD">USD</option>
             <option value="ARS">ARS</option>
           </select>
-
-          <div className="rounded-xl border border-border bg-bg px-3 py-2.5 md:col-span-2">
-            <div className="mb-2 flex items-center justify-between text-xs text-text-muted">
-              <span>Precio mínimo: {minPriceFilter.toLocaleString("es-AR")}</span>
-              <span>Precio máximo: {maxPriceFilter.toLocaleString("es-AR")}</span>
-            </div>
-            <div className="relative h-8">
-              <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-border" />
-              <div
-                className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-secondary/70"
-                style={{
-                  left: `${leftPercent}%`,
-                  width: `${Math.max(0, rightPercent - leftPercent)}%`,
-                }}
-              />
-              <input
-                type="range"
-                min={priceBounds.min}
-                max={priceBounds.max}
-                step={priceBounds.step}
-                value={minPriceFilter}
-                onChange={(e) => {
-                  const value = Number(e.target.value);
-                  const next = Math.min(value, Math.max(priceBounds.min, maxPriceFilter - priceBounds.step));
-                  setMinPriceFilter(next);
-                }}
-                className="pointer-events-none absolute left-0 top-1/2 h-1 w-full -translate-y-1/2 appearance-none bg-transparent [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-secondary/60 [&::-webkit-slider-thumb]:bg-secondary [&::-webkit-slider-thumb]:shadow"
-              />
-              <input
-                type="range"
-                min={priceBounds.min}
-                max={priceBounds.max}
-                step={priceBounds.step}
-                value={maxPriceFilter}
-                onChange={(e) => {
-                  const value = Number(e.target.value);
-                  const next = Math.max(value, Math.min(priceBounds.max, minPriceFilter + priceBounds.step));
-                  setMaxPriceFilter(next);
-                }}
-                className="pointer-events-none absolute left-0 top-1/2 h-1 w-full -translate-y-1/2 appearance-none bg-transparent [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-secondary/60 [&::-webkit-slider-thumb]:bg-secondary [&::-webkit-slider-thumb]:shadow"
-              />
-            </div>
-          </div>
-
           <select
             value={sortFilter}
             onChange={(e) => setSortFilter(e.target.value)}

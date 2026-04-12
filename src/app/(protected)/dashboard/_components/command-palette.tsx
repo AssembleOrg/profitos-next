@@ -179,7 +179,7 @@ export function CommandPalette() {
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
         <span>Buscar...</span>
-        <kbd className="ml-4 rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
+        <kbd className="ml-4 hidden rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] font-medium text-text-muted sm:inline">
           Ctrl+K
         </kbd>
       </button>
@@ -212,7 +212,7 @@ export function CommandPalette() {
               className="w-full bg-transparent text-sm text-text placeholder:text-text-muted/50 focus:outline-none"
             />
             <kbd
-              className="shrink-0 cursor-pointer rounded border border-border bg-bg px-1.5 py-0.5 text-[10px] text-text-muted"
+              className="hidden shrink-0 cursor-pointer rounded border border-border bg-bg px-1.5 py-0.5 text-[10px] text-text-muted sm:inline"
               onClick={() => setOpen(false)}
             >
               ESC

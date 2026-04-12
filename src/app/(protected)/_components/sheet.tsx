@@ -22,6 +22,7 @@ interface SheetProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   maxWidth?: string; // ej: "sm:max-w-md", "sm:max-w-xl"
+  avatarInitial?: string; // avatar letter for header
 }
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -33,6 +34,7 @@ export function Sheet({
   children,
   footer,
   maxWidth = "sm:max-w-md",
+  avatarInitial,
 }: SheetProps) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -83,7 +85,25 @@ export function Sheet({
 
             {/* Header */}
             <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
-              <h2 className="text-base font-medium text-text">{title}</h2>
+              <div className="flex items-center gap-3">
+                {avatarInitial && (
+                  <motion.div
+                    layoutId={`contact-avatar-${avatarInitial}`}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 30,
+                      delay: 0.05,
+                    }}
+                    className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary/15 text-sm font-semibold text-secondary"
+                  >
+                    {avatarInitial}
+                  </motion.div>
+                )}
+                <h2 className="text-base font-medium text-text">{title}</h2>
+              </div>
               <button
                 onClick={onClose}
                 className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted active:bg-bg"

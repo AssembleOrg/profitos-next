@@ -1,18 +1,39 @@
 @import "tailwindcss";
 
 :root {
-  --color-bg: #0f1115;
-  --color-surface: #1f2227;
-  --color-surface-elevated: #252830;
-  --color-primary: #4b5340;
-  --color-primary-hover: #606c5d;
-  --color-primary-subtle: rgba(75, 83, 64, 0.15);
-  --color-secondary: #869477;
-  --color-text: #f2f2f2;
-  --color-text-muted: rgba(255, 255, 255, 0.4);
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-accent: #c5c5b5;
-  /* Safe area para notch/home bar */
+  /* Backgrounds */
+  --color-bg: #0d0f12;
+  --color-surface: #161a1f;
+  --color-surface-elevated: #1e232a;
+  --color-surface-overlay: #242930;
+
+  /* Olive scale */
+  --color-olive-deep: #2e3427;
+  --color-olive-mid: #4b5340;
+  --color-olive-vivid: #6b7a5c;
+  --color-olive-bright: #8fa870;
+  --color-olive-light: #b8cc9e;
+  --color-olive-subtle: rgba(107, 122, 92, 0.15);
+
+  /* Legacy tokens — preserved for zero breaking changes */
+  --color-primary: var(--color-olive-mid);
+  --color-primary-hover: var(--color-olive-vivid);
+  --color-primary-subtle: var(--color-olive-subtle);
+  --color-secondary: var(--color-olive-bright);
+  --color-secondary-subtle: rgba(143, 168, 128, 0.12);
+  --color-accent: var(--color-olive-light);
+
+  /* Text */
+  --color-text: #f0ede8;
+  --color-text-muted: rgba(240, 237, 232, 0.5);
+  --color-text-faint: rgba(240, 237, 232, 0.28);
+
+  /* Borders */
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+  --color-border-olive: rgba(143, 168, 112, 0.20);
+
+  /* Safe area */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -21,15 +42,27 @@
   --color-bg: var(--color-bg);
   --color-surface: var(--color-surface);
   --color-surface-elevated: var(--color-surface-elevated);
+  --color-surface-overlay: var(--color-surface-overlay);
+  --color-olive-deep: var(--color-olive-deep);
+  --color-olive-mid: var(--color-olive-mid);
+  --color-olive-vivid: var(--color-olive-vivid);
+  --color-olive-bright: var(--color-olive-bright);
+  --color-olive-light: var(--color-olive-light);
+  --color-olive-subtle: var(--color-olive-subtle);
   --color-primary: var(--color-primary);
   --color-primary-hover: var(--color-primary-hover);
   --color-primary-subtle: var(--color-primary-subtle);
   --color-secondary: var(--color-secondary);
+  --color-secondary-subtle: var(--color-secondary-subtle);
+  --color-accent: var(--color-accent);
   --color-text: var(--color-text);
   --color-text-muted: var(--color-text-muted);
+  --color-text-faint: var(--color-text-faint);
   --color-border: var(--color-border);
-  --color-accent: var(--color-accent);
+  --color-border-strong: var(--color-border-strong);
+  --color-border-olive: var(--color-border-olive);
   --font-sans: var(--font-montserrat);
+  --font-display: var(--font-playfair);
 }
 
 * {
@@ -42,6 +75,12 @@ html {
 
 body {
   background: var(--color-bg);
+  background-image: radial-gradient(
+    ellipse 80% 50% at 50% -10%,
+    rgba(107, 122, 92, 0.05) 0%,
+    transparent 70%
+  );
+  background-attachment: fixed;
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

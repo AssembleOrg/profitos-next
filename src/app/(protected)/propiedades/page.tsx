@@ -76,7 +76,7 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     return [{ createdAt: "desc" }];
   })();
 
-  const [properties, total, totalAll, usersForAssignments, propertiesForAssignments, priceAgg] = await Promise.all([
+  const [properties, total, totalAll, usersForAssignments, propertiesForAssignments] = await Promise.all([
     prisma.property.findMany({
       where,
       include: { _count: { select: { visitas: true } } },
@@ -99,21 +99,7 @@ export default async function PropiedadesPage({ searchParams }: Props) {
           take: 300,
         })
       : Promise.resolve([]),
-    prisma.property.aggregate({
-      _min: { operationPrice: true },
-      _max: { operationPrice: true },
-    }),
   ]);
-
-  const priceMin = Math.max(0, Math.floor(priceAgg._min.operationPrice ?? 0));
-  const priceMaxBase = Math.max(priceMin + 1, Math.ceil(priceAgg._max.operationPrice ?? 1));
-  const priceRange = priceMaxBase - priceMin;
-  const priceStep =
-    priceRange <= 1000 ? 10 :
-    priceRange <= 10000 ? 100 :
-    priceRange <= 100000 ? 1000 :
-    priceRange <= 1000000 ? 5000 :
-    10000;
 
   const serialized = properties.map((p: {
     id: string;
@@ -176,11 +162,8 @@ export default async function PropiedadesPage({ searchParams }: Props) {
         type,
         city,
         currency,
-        minPrice: minPrice !== null ? String(minPrice) : "",
-        maxPrice: maxPrice !== null ? String(maxPrice) : "",
         sort,
       }}
-      priceBounds={{ min: priceMin, max: priceMaxBase, step: priceStep }}
     />
   );
 }

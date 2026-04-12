@@ -38,7 +38,35 @@ export function Pagination({ page, totalPages, total }: PaginationProps) {
       <span className="text-xs font-medium text-text-muted">
         {total} resultado{total !== 1 ? "s" : ""} · Página {page} de {totalPages}
       </span>
-      <div className="flex items-center gap-1.5">
+      {/* Mobile: solo anterior / siguiente */}
+      <div className="flex items-center gap-2 sm:hidden">
+        <button
+          onClick={() => goTo(page - 1)}
+          disabled={page <= 1}
+          className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border bg-bg px-3 text-xs font-medium text-text-muted transition-all hover:border-secondary/40 hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          Ant.
+        </button>
+        <span className="flex-1 text-center text-xs text-text-muted">
+          Pág {page} de {totalPages}
+        </span>
+        <button
+          onClick={() => goTo(page + 1)}
+          disabled={page >= totalPages}
+          className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border bg-bg px-3 text-xs font-medium text-text-muted transition-all hover:border-secondary/40 hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Sig.
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Desktop: botones numéricos */}
+      <div className="hidden sm:flex items-center gap-1.5">
         <button
           onClick={() => goTo(page - 1)}
           disabled={page <= 1}

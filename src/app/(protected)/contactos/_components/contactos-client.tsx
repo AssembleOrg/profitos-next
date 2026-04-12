@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
 
@@ -164,23 +165,38 @@ export function ContactosClient({ clients, page, totalPages, total }: ContactosC
       </div>
 
       {/* Cards grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.length === 0 ? (
-          <div className="col-span-full py-12 text-center text-sm text-text-muted">
-            {search ? "Sin resultados para la búsqueda" : "No hay clientes registrados"}
-          </div>
-        ) : (
-          filtered.map((c) => (
-            <div
-              key={c.id}
-              onClick={() => handleEdit(c)}
-              className="cursor-pointer rounded-2xl border border-border bg-surface/30 p-5 transition-colors active:bg-surface/60"
-            >
+      <AnimatePresence mode="popLayout">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.length === 0 ? (
+            <div className="col-span-full py-12 text-center text-sm text-text-muted">
+              {search ? "Sin resultados para la búsqueda" : "No hay clientes registrados"}
+            </div>
+          ) : (
+            filtered.map((c, index) => (
+              <motion.div
+                key={c.id}
+                layoutId={`contact-card-${c.id}`}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 30,
+                  delay: index * 0.03,
+                }}
+                whileTap={{ scale: 0.96, opacity: 0.8 }}
+                onClick={() => handleEdit(c)}
+                className="cursor-pointer rounded-2xl border border-border bg-surface/30 p-5"
+              >
               <div className="flex items-start gap-3">
                 {/* Avatar circle */}
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-secondary/15 text-sm font-semibold text-secondary">
+                <motion.div
+                  layoutId={`contact-avatar-${c.id}`}
+                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-secondary/15 text-sm font-semibold text-secondary"
+                >
                   {c.name.charAt(0).toUpperCase()}
-                </div>
+                </motion.div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-text">{c.name}</p>
                   {c.email && (
@@ -204,10 +220,11 @@ export function ContactosClient({ clients, page, totalPages, total }: ContactosC
                   {c._count?.visitas ?? 0} visita{(c._count?.visitas ?? 0) !== 1 ? "s" : ""}
                 </span>
               </div>
-            </div>
-          ))
-        )}
-      </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      </AnimatePresence>
 
       {/* Pagination */}
       <Pagination page={page} totalPages={totalPages} total={total} />
@@ -217,6 +234,7 @@ export function ContactosClient({ clients, page, totalPages, total }: ContactosC
         open={modalOpen}
         onClose={handleClose}
         title={isEdit ? "Editar cliente" : "Nuevo cliente"}
+        avatarInitial={editClient?.name.charAt(0).toUpperCase()}
         footer={
           <>
             {isEdit ? (

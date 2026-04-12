@@ -24,9 +24,9 @@ export const GET = withHandler(async (request: NextRequest) => {
   const contactFollowUpWhere = auth.isAdmin ? {} : { assignedToUserId: auth.userId };
 
   const [
-    propertiesTotal,
-    propertiesNew7d,
-    contactsNew7d,
+    propertiesActive,
+    propertiesNewPeriod,
+    contactsNewPeriod,
     pendingPropertyFollowUps,
     overduePropertyFollowUps,
     pendingContactFollowUps,
@@ -38,7 +38,9 @@ export const GET = withHandler(async (request: NextRequest) => {
     propertyActionsRaw,
     contactActionsRaw,
   ] = await Promise.all([
-    prisma.property.count(),
+    prisma.property.count({
+      where: { status: "activa" },
+    }),
     prisma.property.count({
       where: { createdAt: { gte: sinceDate } },
     }),
@@ -236,9 +238,9 @@ export const GET = withHandler(async (request: NextRequest) => {
     generatedAt: new Date().toISOString(),
     days,
     kpis: {
-      propertiesTotal,
-      propertiesNew7d,
-      contactsNew7d,
+      propertiesActive,
+      propertiesNewPeriod,
+      contactsNewPeriod,
       pendingPropertyFollowUps,
       pendingContactFollowUps,
       overduePropertyFollowUps,

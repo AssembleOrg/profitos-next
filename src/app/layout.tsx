@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Montserrat } from "next/font/google";
+import { Montserrat, Playfair_Display } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -10,13 +10,20 @@ const montserrat = Montserrat({
   display: "swap",
 });
 
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Juliana Profitos | Propiedades",
   description: "Tu patrimonio, nuestra prioridad.",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f1115",
+  themeColor: "#0d0f12",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -28,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={montserrat.variable}>
+    <html lang="es" className={`${montserrat.variable} ${playfair.variable}`}>
       <body className="font-sans antialiased" suppressHydrationWarning>
         {children}
         <Toaster

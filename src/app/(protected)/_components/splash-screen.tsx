@@ -18,7 +18,7 @@ export function SplashScreen() {
     <AnimatePresence>
       {visible && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f1115]"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-bg"
           exit={{
             opacity: 0,
             scale: 1.15,
@@ -32,7 +32,7 @@ export function SplashScreen() {
           <div className="relative flex flex-col items-start">
             {/* "Juliana" — slides in from the left */}
             <motion.h1
-              className="text-[72px] font-bold leading-none tracking-tight text-text"
+              className="font-display text-[72px] font-medium leading-none tracking-tight text-text"
               initial={{ x: -150, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{
@@ -46,7 +46,7 @@ export function SplashScreen() {
 
             {/* "Profitos" — slides in from the right */}
             <motion.h1
-              className="self-end text-[72px] font-bold leading-none tracking-tight text-text"
+              className="font-display self-end text-[72px] font-medium leading-none tracking-tight text-text"
               initial={{ x: 150, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{

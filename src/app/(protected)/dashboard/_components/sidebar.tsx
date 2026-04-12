@@ -302,10 +302,10 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
               key={item.href}
               href={item.href}
               title={item.label}
-              className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+              className={`relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
                 isActive
-                  ? "bg-surface text-accent"
-                  : "text-white/30 hover:bg-surface hover:text-white/60"
+                  ? "bg-olive-deep text-accent shadow-[inset_2px_0_0_var(--color-olive-bright)]"
+                  : "text-text-faint hover:bg-surface hover:text-text-muted"
               }`}
             >
               {item.icon}
@@ -337,7 +337,7 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
               <path d="M13.73 21a2 2 0 01-3.46 0" />
             </svg>
             {unreadCount > 0 && (
-              <span className="absolute right-1 top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-semibold text-black">
+              <span className="absolute right-1 top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-olive-bright px-1 text-[10px] font-semibold text-bg">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}

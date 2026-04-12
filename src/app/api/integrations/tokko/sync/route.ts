@@ -6,20 +6,37 @@ import { assertAdmin } from "@/lib/api/followups";
 import { syncTokkoProperties } from "@/lib/tokko/sync";
 import { assertCronAuthorized } from "@/lib/server/cron-auth";
 
+const g = globalThis as { _tokkoSyncing?: boolean; _tokkoLastSync?: number };
+const COOLDOWN_MS = 10 * 60 * 1000;
+
 export const POST = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
   const auth = await getAuthContext();
   assertAdmin(auth);
 
+  const now = Date.now();
+
+  if (g._tokkoSyncing) {
+    return ok({ skipped: true, reason: "sync_in_progress" }, "Sincronización ya en curso", path);
+  }
+
+  if (g._tokkoLastSync && now - g._tokkoLastSync < COOLDOWN_MS) {
+    const minutesLeft = Math.ceil((COOLDOWN_MS - (now - g._tokkoLastSync)) / 60000);
+    return ok({ skipped: true, reason: "cooldown", minutesLeft }, `Cooldown activo (${minutesLeft} min restantes)`, path);
+  }
+
   const body = (await request.json().catch(() => ({}))) as {
     mode?: "auto" | "api";
   };
 
-  const result = await syncTokkoProperties({
-    mode: body.mode ?? "auto",
-  });
-
-  return ok(result, "Sincronización Tokko completada", path);
+  g._tokkoSyncing = true;
+  try {
+    const result = await syncTokkoProperties({ mode: body.mode ?? "auto" });
+    g._tokkoLastSync = Date.now();
+    return ok(result, "Sincronización Tokko completada", path);
+  } finally {
+    g._tokkoSyncing = false;
+  }
 });
 
 export const GET = withHandler(async (request: NextRequest) => {
