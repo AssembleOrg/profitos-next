@@ -4,6 +4,7 @@ import { now } from "@/lib/datetime";
 import { Sidebar } from "./dashboard/_components/sidebar";
 import { CommandPalette } from "./dashboard/_components/command-palette";
 import { SplashScreen } from "./_components/splash-screen";
+import { BottomNav } from "./_components/bottom-nav";
 
 export default async function ProtectedLayout({
   children,
@@ -20,9 +21,9 @@ export default async function ProtectedLayout({
     <div className="flex min-h-dvh bg-bg">
       <SplashScreen />
       <Sidebar avatarUrl={user.avatarUrl} />
-      <main className="ml-16 flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto md:ml-16">
         {/* Top bar */}
-        <header className="flex flex-col gap-3 px-8 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <header className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between md:px-8 md:py-5">
           <div className="flex items-center gap-3">
             <h2 className="whitespace-nowrap text-base font-medium text-text">
               Hola, {user.fullName?.split(" ")[0] ?? user.email.split("@")[0]}
@@ -34,8 +35,9 @@ export default async function ProtectedLayout({
           </div>
           <CommandPalette />
         </header>
-        <div className="px-8 pb-8">{children}</div>
+        <div className="px-5 pb-nav md:px-8 md:pb-8">{children}</div>
       </main>
+      <BottomNav />
     </div>
   );
 }

@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 interface DashboardOverview {
   scope: "admin" | "user";
@@ -170,36 +173,23 @@ export function DashboardOverviewClient() {
       </div>
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        <KpiCard
-          label="Propiedades"
-          value={data.kpis.propertiesTotal}
-          hint={`+${data.kpis.propertiesNew7d} en los últimos ${selectedDays} día${selectedDays === 1 ? "" : "s"}`}
-        />
-        <KpiCard
-          label="Contactos"
-          value={data.kpis.contactsNew7d}
-          hint={`Nuevos en los últimos ${selectedDays} día${selectedDays === 1 ? "" : "s"}`}
-        />
-        <KpiCard
-          label="Seguimientos Prop."
-          value={data.kpis.pendingPropertyFollowUps}
-          hint={`${data.kpis.overduePropertyFollowUps} vencidos`}
-        />
-        <KpiCard
-          label="Seg. Consultas"
-          value={data.kpis.pendingContactFollowUps}
-          hint="Pendiente + iniciada + activa"
-        />
-        <KpiCard
-          label="Consultas Activas"
-          value={data.statusBreakdown.activa}
-          hint={`Pend: ${data.statusBreakdown.pendiente} · Ini: ${data.statusBreakdown.iniciada}`}
-        />
-        <KpiCard
-          label="Consultas Cerradas"
-          value={data.statusBreakdown.cerrada}
-          hint="Cierre total en seguimiento de consultas"
-        />
+        {[
+          { label: "Propiedades", value: data.kpis.propertiesTotal, hint: `+${data.kpis.propertiesNew7d} en los últimos ${selectedDays} día${selectedDays === 1 ? "" : "s"}` },
+          { label: "Contactos", value: data.kpis.contactsNew7d, hint: `Nuevos en los últimos ${selectedDays} día${selectedDays === 1 ? "" : "s"}` },
+          { label: "Seguimientos Prop.", value: data.kpis.pendingPropertyFollowUps, hint: `${data.kpis.overduePropertyFollowUps} vencidos` },
+          { label: "Seg. Consultas", value: data.kpis.pendingContactFollowUps, hint: "Pendiente + iniciada + activa" },
+          { label: "Consultas Activas", value: data.statusBreakdown.activa, hint: `Pend: ${data.statusBreakdown.pendiente} · Ini: ${data.statusBreakdown.iniciada}` },
+          { label: "Consultas Cerradas", value: data.statusBreakdown.cerrada, hint: "Cierre total en seguimiento de consultas" },
+        ].map((kpi, i) => (
+          <motion.div
+            key={kpi.label}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: EASE, delay: i * 0.05 }}
+          >
+            <KpiCard label={kpi.label} value={kpi.value} hint={kpi.hint} />
+          </motion.div>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">

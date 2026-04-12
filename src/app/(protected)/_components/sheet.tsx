@@ -1,0 +1,118 @@
+"use client";
+
+/**
+ * Sheet — bottom sheet en mobile, dialog centrado en desktop.
+ *
+ * Mobile  (< 640px): slide desde abajo, max-h-[90dvh], drag handle
+ * Desktop (≥ 640px): centrado, max-w configurable, max-h-[85vh]
+ *
+ * Uso:
+ *   <Sheet open={open} onClose={close} title="Título" footer={<Botones />}>
+ *     <Contenido scrolleable />
+ *   </Sheet>
+ */
+
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+interface SheetProps {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+  maxWidth?: string; // ej: "sm:max-w-md", "sm:max-w-xl"
+}
+
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+export function Sheet({
+  open,
+  onClose,
+  title,
+  children,
+  footer,
+  maxWidth = "sm:max-w-md",
+}: SheetProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 640);
+  }, []);
+
+  // Lock body scroll cuando el sheet está abierto
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Overlay */}
+          <motion.div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+          />
+
+          {/* Panel */}
+          <motion.div
+            className={`fixed z-50 flex flex-col border border-border bg-surface shadow-2xl
+              bottom-0 left-0 right-0 max-h-[90dvh] rounded-t-2xl
+              sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full ${maxWidth}
+              sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-h-[85vh] sm:rounded-2xl`}
+            initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96, y: "-48%" }}
+            animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: "-50%" }}
+            exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96, y: "-48%" }}
+            transition={{ duration: 0.28, ease: EASE }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drag handle — solo mobile */}
+            <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-border sm:hidden" />
+
+            {/* Header */}
+            <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
+              <h2 className="text-base font-medium text-text">{title}</h2>
+              <button
+                onClick={onClose}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted active:bg-bg"
+                aria-label="Cerrar"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body — scrolleable */}
+            <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+              {children}
+            </div>
+
+            {/* Footer — siempre visible, respeta safe area */}
+            {footer && (
+              <div
+                className="flex flex-shrink-0 items-center justify-between border-t border-border px-5 py-4"
+                style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+              >
+                {footer}
+              </div>
+            )}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}

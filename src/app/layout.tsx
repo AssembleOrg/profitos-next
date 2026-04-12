@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -13,6 +13,13 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "Juliana Profitos | Propiedades",
   description: "Tu patrimonio, nuestra prioridad.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f1115",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   SearchableSelect,
   type SearchableSelectOption,
 } from "./searchable-select";
+import { Sheet } from "../../_components/sheet";
 
 interface NuevaVisitaModalProps {
   open: boolean;
@@ -144,39 +144,23 @@ export function NuevaVisitaModal({
   }
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={handleClose}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ duration: 0.2 }}
-            onClick={(e) => e.stopPropagation()}
-            className="mx-4 w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-2xl"
-          >
-            {/* Header */}
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-medium text-text">Nueva visita</h2>
-              <button
-                onClick={handleClose}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-bg hover:text-text"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-
+    <Sheet
+      open={open}
+      onClose={handleClose}
+      title="Nueva visita"
+      maxWidth="sm:max-w-lg"
+      footer={
+        <div className="ml-auto flex gap-3">
+          <button type="button" onClick={handleClose} className="rounded-lg px-4 py-2 text-sm text-text-muted active:text-text">Cancelar</button>
+          <button type="submit" form="nueva-visita-form" disabled={loading}
+            className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary active:bg-secondary/30 disabled:opacity-50">
+            {loading ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-secondary/30 border-t-secondary" />Guardando...</> : "Guardar visita"}
+          </button>
+        </div>
+      }
+    >
             {/* Form */}
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <form id="nueva-visita-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
               {/* Title */}
               <div>
                 <label className="mb-1 block text-xs font-medium text-text-muted">
@@ -290,34 +274,7 @@ export function NuevaVisitaModal({
                 </p>
               )}
 
-              {/* Actions */}
-              <div className="mt-2 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="rounded-lg px-4 py-2 text-sm text-text-muted transition-colors hover:text-text"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30 disabled:opacity-50"
-                >
-                  {loading ? (
-                    <>
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-secondary/30 border-t-secondary" />
-                      Guardando...
-                    </>
-                  ) : (
-                    "Guardar visita"
-                  )}
-                </button>
-              </div>
             </form>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    </Sheet>
   );
 }

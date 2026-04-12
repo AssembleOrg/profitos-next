@@ -283,7 +283,7 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
   }, []);
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-dvh w-16 flex-col items-center border-r border-border bg-bg py-4">
+    <aside className="fixed left-0 top-0 z-40 hidden h-dvh w-16 flex-col items-center border-r border-border bg-bg py-4 md:flex">
       {/* Logo */}
       <div className="mb-8 flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg">
         <img

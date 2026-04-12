@@ -328,7 +328,28 @@ export function ConsultantsClient({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-surface/30">
+      {/* Cards — solo mobile */}
+      <div className="sm:hidden space-y-2">
+        {items.length === 0 ? (
+          <p className="py-8 text-center text-sm text-text-muted">Sin resultados</p>
+        ) : (
+          items.map((item) => (
+            <div key={item.id} className="rounded-xl border border-border bg-surface/30 p-4">
+              <p className="font-medium text-text">{item.name}</p>
+              <p className="mt-0.5 text-xs text-text-muted">
+                {item.email ?? item.cellphone ?? item.phone ?? "Sin dato"}
+              </p>
+              <div className="mt-2 flex items-center justify-between text-xs text-text-muted">
+                <span>{item.agentName ?? "—"}</span>
+                <span>{formatDateTime24(item.tokkoCreatedAt)}</span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Tabla — solo desktop */}
+      <div className="hidden sm:block overflow-hidden rounded-2xl border border-border bg-surface/30">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>

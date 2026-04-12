@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
+import { Sheet } from "../../_components/sheet";
 
 interface UserOption {
   id: string;
@@ -316,6 +316,30 @@ export function ConsultantsFollowUpsClient({
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-surface/30">
+      {/* Cards — solo mobile */}
+      <div className="sm:hidden space-y-2">
+        {items.length === 0 ? (
+          <p className="py-8 text-center text-sm text-text-muted">Sin resultados</p>
+        ) : (
+          items.map((item) => (
+            <div key={item.id}
+              className="cursor-pointer rounded-xl border border-border bg-surface/30 p-4 active:bg-surface/60"
+              onClick={() => loadDetail(item.id)}>
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-medium text-text">{item.recentContact.name}</p>
+                <span className="rounded-full border border-border bg-bg px-2 py-0.5 text-[10px] text-text flex-shrink-0">{item.status}</span>
+              </div>
+              <p className="mt-0.5 text-xs text-text-muted">
+                {item.recentContact.email ?? item.recentContact.cellphone ?? "Sin dato"}
+              </p>
+              <p className="mt-2 text-xs text-text-muted">{userLabel(item.assignedToUser)} · {formatDateTime(item.updatedAt)}</p>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Tabla ya existente — solo desktop */}
+      <div className="hidden sm:block">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -365,40 +389,21 @@ export function ConsultantsFollowUpsClient({
           </table>
         </div>
       </div>
+      </div>
 
       <Pagination page={page} totalPages={totalPages} total={total} />
 
-      <AnimatePresence>
-        {detailOpen && detail && (
-          <>
-            <motion.div
-              className="fixed inset-0 z-50 bg-black/60"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setDetailOpen(false)}
-            />
-            <motion.div
-              className="fixed right-0 top-0 z-50 h-dvh w-full max-w-2xl overflow-y-auto border-l border-border bg-bg p-6"
-              initial={{ x: 32, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 32, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div className="mb-5 flex items-start justify-between">
-                <div>
-                  <h2 className="text-base font-semibold text-text">{detail.recentContact.name}</h2>
-                  <p className="text-sm text-text-muted">
-                    {detail.recentContact.email ?? detail.recentContact.cellphone ?? detail.recentContact.phone ?? "Sin dato"}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setDetailOpen(false)}
-                  className="rounded-lg border border-border px-3 py-1.5 text-xs text-text-muted hover:bg-surface"
-                >
-                  Cerrar
-                </button>
-              </div>
+      <Sheet
+        open={detailOpen && !!detail}
+        onClose={() => setDetailOpen(false)}
+        title={detail?.recentContact?.name ?? "Detalle consulta"}
+        maxWidth="sm:max-w-2xl"
+      >
+        {detail && (
+          <div>
+              <p className="mb-4 text-sm text-text-muted">
+                {detail.recentContact.email ?? detail.recentContact.cellphone ?? detail.recentContact.phone ?? "Sin dato"}
+              </p>
 
               <div className="grid gap-5">
                 <form onSubmit={handleMetaUpdate} className="rounded-xl border border-border bg-surface/30 p-4">
@@ -554,10 +559,9 @@ export function ConsultantsFollowUpsClient({
                   </div>
                 </div>
               </div>
-            </motion.div>
-          </>
+          </div>
         )}
-      </AnimatePresence>
+      </Sheet>
     </div>
   );
 }

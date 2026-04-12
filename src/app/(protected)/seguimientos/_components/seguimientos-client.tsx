@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
+import { Sheet } from "../../_components/sheet";
 
 interface UserOption {
   id: string;
@@ -322,7 +323,36 @@ export function SeguimientosClient({
         </select>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-surface/30">
+      {/* Cards — solo mobile */}
+      <div className="sm:hidden space-y-2">
+        {filtered.length === 0 ? (
+          <p className="py-8 text-center text-sm text-text-muted">Sin resultados</p>
+        ) : (
+          filtered.map((item) => {
+            const status = getStatusMeta(item.status);
+            return (
+              <div key={item.id} onClick={() => loadDetail(item.id)}
+                className="cursor-pointer rounded-xl border border-border bg-surface/30 p-4 active:bg-surface/60">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-medium text-text">{item.property.address}</p>
+                  <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium border border-border">
+                    <span className={`h-1.5 w-1.5 rounded-full ${status.color}`} />
+                    {status.label}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-text-muted">{item.title?.trim() || "Sin título"}</p>
+                <div className="mt-2 flex items-center justify-between text-xs text-text-muted">
+                  <span>{userLabel(item.assignedToUser)}</span>
+                  <span>Vence: {formatDate(item.dueDate)}</span>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Tabla — solo desktop */}
+      <div className="hidden sm:block overflow-hidden rounded-2xl border border-border bg-surface/30">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -376,89 +406,66 @@ export function SeguimientosClient({
 
       <Pagination page={page} totalPages={totalPages} total={total} />
 
+
       <AnimatePresence>
-        {createOpen && isAdmin && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-            onClick={() => setCreateOpen(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 8 }}
-              onClick={(event) => event.stopPropagation()}
-              className="mx-4 w-full max-w-xl rounded-2xl border border-border bg-surface p-6 shadow-2xl"
-            >
-              <h2 className="mb-4 text-lg font-medium text-text">Nuevo seguimiento</h2>
-              <form className="flex flex-col gap-4" onSubmit={handleCreateFollowUp}>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Propiedad *</label>
-                    <select name="propertyId" required className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]">
-                      <option value="">Seleccionar...</option>
-                      {assignableProperties.map((property) => (
-                        <option key={property.id} value={property.id}>
-                          {property.address}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Asignado a *</label>
-                    <select name="assignedToUserId" required className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]">
-                      <option value="">Seleccionar...</option>
-                      {assignableUsers.map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {userLabel(option)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Título</label>
-                    <input name="title" placeholder="Ej: Seguimiento comercial" className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Vencimiento</label>
-                    <input name="dueDate" type="date" className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-text-muted">Estado</label>
-                  <select name="status" defaultValue="pendiente" className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]">
-                    {STATUS_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-text-muted">Notas</label>
-                  <textarea name="notes" rows={3} className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
-                </div>
-
-                <div className="mt-2 flex justify-end gap-3">
-                  <button type="button" onClick={() => setCreateOpen(false)} className="rounded-lg px-4 py-2 text-sm text-text-muted transition-colors hover:text-text">
-                    Cancelar
-                  </button>
-                  <button type="submit" disabled={savingFollowUp} className="rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30 disabled:opacity-50">
-                    {savingFollowUp ? "Guardando..." : "Crear seguimiento"}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
+        {createOpen && isAdmin && null}
       </AnimatePresence>
+
+      {isAdmin && (
+        <Sheet
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          title="Nuevo seguimiento"
+          maxWidth="sm:max-w-xl"
+          footer={
+            <div className="ml-auto flex gap-3">
+              <button type="button" onClick={() => setCreateOpen(false)} className="rounded-lg px-4 py-2 text-sm text-text-muted active:text-text">Cancelar</button>
+              <button type="submit" form="create-seguimiento-form" disabled={savingFollowUp} className="rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary active:bg-secondary/30 disabled:opacity-50">
+                {savingFollowUp ? "Guardando..." : "Crear seguimiento"}
+              </button>
+            </div>
+          }
+        >
+          <form id="create-seguimiento-form" className="flex flex-col gap-4" onSubmit={handleCreateFollowUp}>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-text-muted">Propiedad *</label>
+                <select name="propertyId" required className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]">
+                  <option value="">Seleccionar...</option>
+                  {assignableProperties.map((p) => <option key={p.id} value={p.id}>{p.address}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-text-muted">Asignado a *</label>
+                <select name="assignedToUserId" required className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]">
+                  <option value="">Seleccionar...</option>
+                  {assignableUsers.map((u) => <option key={u.id} value={u.id}>{userLabel(u)}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-text-muted">Título</label>
+                <input name="title" placeholder="Ej: Seguimiento comercial" className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-text-muted">Vencimiento</label>
+                <input name="dueDate" type="date" className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]" />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-muted">Estado</label>
+              <select name="status" defaultValue="pendiente" className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]">
+                {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-muted">Notas</label>
+              <textarea name="notes" rows={3} className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+            </div>
+          </form>
+        </Sheet>
+      )}
 
       <AnimatePresence>
         {detailOpen && (
@@ -466,15 +473,15 @@ export function SeguimientosClient({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
             onClick={closeDetail}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
               onClick={(event) => event.stopPropagation()}
-              className="mx-4 max-h-[90dvh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-border bg-surface p-6 shadow-2xl"
+              className="fixed bottom-0 left-0 right-0 max-h-[90dvh] overflow-y-auto overscroll-contain rounded-t-2xl border border-border bg-surface p-5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[85vh] sm:w-full sm:max-w-4xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:p-6"
             >
               {!detail || loadingDetail ? (
                 <div className="flex min-h-[260px] items-center justify-center text-sm text-text-muted">
@@ -621,6 +628,8 @@ export function SeguimientosClient({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Tabla → cards en mobile */}
     </div>
   );
 }

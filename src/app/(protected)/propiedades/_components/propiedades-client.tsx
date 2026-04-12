@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -126,6 +126,12 @@ export function PropiedadesClient({
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [syncingTokko, setSyncingTokko] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detecta mobile una sola vez al montar
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 640);
+  }, []);
 
   function applyFilters(nextPage = 1) {
     const params = new URLSearchParams(searchParams.toString());
@@ -542,8 +548,35 @@ export function PropiedadesClient({
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-border bg-surface/30">
+      {/* Cards — solo mobile */}
+      <div className="sm:hidden space-y-2">
+        {properties.length === 0 ? (
+          <p className="px-2 py-8 text-center text-sm text-text-muted">No hay propiedades para los filtros seleccionados</p>
+        ) : (
+          properties.map((p) => (
+            <div
+              key={p.id}
+              onClick={() => handleEdit(p)}
+              className="flex cursor-pointer items-start justify-between rounded-xl border border-border bg-surface/30 p-4 active:bg-surface/60"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-text">{p.address}</p>
+                <p className="mt-0.5 truncate text-xs text-text-muted">
+                  {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
+                </p>
+                <p className="mt-0.5 text-xs text-text-muted">{p.city ?? ""}{p.type ? ` · ${p.type}` : ""}</p>
+              </div>
+              <span className="ml-3 mt-0.5 inline-flex flex-shrink-0 items-center gap-1.5">
+                <span className={`h-1.5 w-1.5 rounded-full ${getStatusColor(p.status)}`} />
+                <span className="text-xs text-text-muted">{getStatusLabel(p.status)}</span>
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Table — solo desktop */}
+      <div className="hidden overflow-hidden rounded-2xl border border-border bg-surface/30 sm:block">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -634,28 +667,42 @@ export function PropiedadesClient({
       {/* Modal */}
       <AnimatePresence>
         {modalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-            onClick={handleClose}
-          >
+          <>
+            {/* Overlay */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              onClick={handleClose}
+            />
+
+            {/* Panel — bottom sheet en mobile, dialog en desktop */}
+            <motion.div
+              initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96 }}
+              animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
+              exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
               onClick={(e) => e.stopPropagation()}
-              className="mx-4 w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl"
+              className={`fixed z-50 flex flex-col border border-border bg-surface shadow-2xl
+                /* mobile: bottom sheet */
+                bottom-0 left-0 right-0 max-h-[90dvh] rounded-t-2xl
+                /* desktop: centered dialog */
+                sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-md
+                sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-h-[85vh] sm:rounded-2xl`}
             >
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-lg font-medium text-text">
+              {/* Drag handle — solo mobile */}
+              <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-border sm:hidden" />
+
+              {/* Header fijo */}
+              <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
+                <h2 className="text-base font-medium text-text">
                   {isEdit ? "Editar propiedad" : "Nueva propiedad"}
                 </h2>
                 <button
                   onClick={handleClose}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-bg hover:text-text"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors active:bg-bg"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" />
@@ -664,7 +711,8 @@ export function PropiedadesClient({
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              {/* Body scrolleable */}
+              <form id="property-form" onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 py-4">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-text-muted">Dirección *</label>
                   <input
@@ -672,7 +720,7 @@ export function PropiedadesClient({
                     required
                     defaultValue={editProperty?.address ?? ""}
                     placeholder="Av. Corrientes 1234, 5to A"
-                    className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
                   />
                 </div>
 
@@ -683,7 +731,7 @@ export function PropiedadesClient({
                       name="publicationTitle"
                       defaultValue={editProperty?.publicationTitle ?? ""}
                       placeholder="Título de aviso"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
                     />
                   </div>
                   <div>
@@ -692,7 +740,7 @@ export function PropiedadesClient({
                       name="referenceCode"
                       defaultValue={editProperty?.referenceCode ?? ""}
                       placeholder="Ej: ZP-M-51545814"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
                     />
                   </div>
                 </div>
@@ -703,7 +751,7 @@ export function PropiedadesClient({
                     name="realAddress"
                     defaultValue={editProperty?.realAddress ?? ""}
                     placeholder="Brown 1082 - 2B"
-                    className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
                   />
                 </div>
 
@@ -714,7 +762,7 @@ export function PropiedadesClient({
                       name="zone"
                       defaultValue={editProperty?.zone ?? ""}
                       placeholder="Palermo"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
                     />
                   </div>
                   <div>
@@ -723,7 +771,7 @@ export function PropiedadesClient({
                       name="city"
                       defaultValue={editProperty?.city ?? ""}
                       placeholder="Buenos Aires"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
                     />
                   </div>
                 </div>
@@ -734,7 +782,7 @@ export function PropiedadesClient({
                     <select
                       name="type"
                       defaultValue={editProperty?.type ?? ""}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
                     >
                       {PROPERTY_TYPES.map((t) => (
                         <option key={t.value} value={t.value}>{t.label}</option>
@@ -773,7 +821,7 @@ export function PropiedadesClient({
                       type="number"
                       min={0}
                       defaultValue={editProperty?.bathroomAmount ?? ""}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
                     />
                   </div>
                   <div>
@@ -784,7 +832,7 @@ export function PropiedadesClient({
                       min={0}
                       step="0.01"
                       defaultValue={editProperty?.totalSurface ?? ""}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
                     />
                   </div>
                 </div>
@@ -796,7 +844,7 @@ export function PropiedadesClient({
                       name="operationType"
                       defaultValue={editProperty?.operationType ?? ""}
                       placeholder="Venta / Alquiler"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
                     />
                   </div>
                   <div>
@@ -805,7 +853,7 @@ export function PropiedadesClient({
                       name="operationCurrency"
                       defaultValue={editProperty?.operationCurrency ?? ""}
                       placeholder="USD"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
                     />
                   </div>
                   <div>
@@ -816,7 +864,7 @@ export function PropiedadesClient({
                       min={0}
                       step="0.01"
                       defaultValue={editProperty?.operationPrice ?? ""}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
                     />
                   </div>
                 </div>
@@ -827,85 +875,97 @@ export function PropiedadesClient({
                     name="publicUrl"
                     defaultValue={editProperty?.publicUrl ?? ""}
                     placeholder="https://..."
-                    className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
                   />
                 </div>
 
                 {error && (
                   <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>
                 )}
-
-                <div className="mt-2 flex items-center justify-between">
-                  {isEdit ? (
-                    <button
-                      type="button"
-                      onClick={handleDelete}
-                      disabled={deleting}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/10 disabled:opacity-50"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                      </svg>
-                      {deleting ? "Eliminando..." : "Eliminar"}
-                    </button>
-                  ) : (
-                    <div />
-                  )}
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={handleClose}
-                      className="rounded-lg px-4 py-2 text-sm text-text-muted transition-colors hover:text-text"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30 disabled:opacity-50"
-                    >
-                      {loading ? (
-                        <>
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-secondary/30 border-t-secondary" />
-                          Guardando...
-                        </>
-                      ) : isEdit ? (
-                        "Guardar cambios"
-                      ) : (
-                        "Crear propiedad"
-                      )}
-                    </button>
-                  </div>
-                </div>
               </form>
+
+              {/* Footer fijo con acciones */}
+              <div
+                className="flex flex-shrink-0 items-center justify-between border-t border-border px-5 py-4"
+                style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+              >
+                {isEdit ? (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-red-400 transition-colors active:bg-red-500/10 disabled:opacity-50"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                    </svg>
+                    {deleting ? "Eliminando..." : "Eliminar"}
+                  </button>
+                ) : (
+                  <div />
+                )}
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="rounded-lg px-4 py-2 text-sm text-text-muted transition-colors active:text-text"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    form="property-form"
+                    disabled={loading}
+                    className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary transition-colors active:bg-secondary/30 disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-secondary/30 border-t-secondary" />
+                        Guardando...
+                      </>
+                    ) : isEdit ? (
+                      "Guardar cambios"
+                    ) : (
+                      "Crear propiedad"
+                    )}
+                  </button>
+                </div>
+              </div>
             </motion.div>
-          </motion.div>
+          </>
         )}
       </AnimatePresence>
 
       <AnimatePresence>
         {assignModalOpen && isAdmin && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-            onClick={() => setAssignModalOpen(false)}
-          >
+          <>
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              onClick={() => setAssignModalOpen(false)}
+            />
+            <motion.div
+              initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96 }}
+              animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
+              exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
               onClick={(e) => e.stopPropagation()}
-              className="mx-4 w-full max-w-xl rounded-2xl border border-border bg-surface p-6 shadow-2xl"
+              className={`fixed z-50 flex flex-col border border-border bg-surface shadow-2xl
+                bottom-0 left-0 right-0 max-h-[90dvh] rounded-t-2xl
+                sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-lg
+                sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-h-[85vh] sm:rounded-2xl`}
             >
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-lg font-medium text-text">Asignar seguimiento</h2>
+              <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-border sm:hidden" />
+
+              <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
+                <h2 className="text-base font-medium text-text">Asignar seguimiento</h2>
                 <button
                   onClick={() => setAssignModalOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-bg hover:text-text"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted active:bg-bg"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" />
@@ -914,14 +974,14 @@ export function PropiedadesClient({
                 </button>
               </div>
 
-              <form onSubmit={handleAssignFollowUp} className="flex flex-col gap-4">
+              <form id="assign-form" onSubmit={handleAssignFollowUp} className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 py-4">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-xs font-medium text-text-muted">Propiedad *</label>
                     <select
                       name="propertyId"
                       required
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
                     >
                       <option value="">Seleccionar...</option>
                       {propertiesForAssignments.map((property) => (
@@ -936,7 +996,7 @@ export function PropiedadesClient({
                     <select
                       name="assignedToUserId"
                       required
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
                     >
                       <option value="">Seleccionar...</option>
                       {usersForAssignments.map((user) => (
@@ -954,7 +1014,7 @@ export function PropiedadesClient({
                     <input
                       name="title"
                       placeholder="Ej: Seguimiento comercial"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
                     />
                   </div>
                   <div>
@@ -962,7 +1022,7 @@ export function PropiedadesClient({
                     <input
                       name="dueDate"
                       type="date"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
                     />
                   </div>
                 </div>
@@ -973,29 +1033,33 @@ export function PropiedadesClient({
                     name="notes"
                     rows={3}
                     placeholder="Indicaciones para el seguimiento..."
-                    className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                    className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
                   />
                 </div>
-
-                <div className="mt-2 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setAssignModalOpen(false)}
-                    className="rounded-lg px-4 py-2 text-sm text-text-muted transition-colors hover:text-text"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={assigning}
-                    className="rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30 disabled:opacity-50"
-                  >
-                    {assigning ? "Asignando..." : "Asignar seguimiento"}
-                  </button>
-                </div>
               </form>
+
+              <div
+                className="flex flex-shrink-0 items-center justify-end gap-3 border-t border-border px-5 py-4"
+                style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setAssignModalOpen(false)}
+                  className="rounded-lg px-4 py-2 text-sm text-text-muted transition-colors active:text-text"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  form="assign-form"
+                  disabled={assigning}
+                  className="rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary transition-colors active:bg-secondary/30 disabled:opacity-50"
+                >
+                  {assigning ? "Asignando..." : "Asignar seguimiento"}
+                </button>
+              </div>
             </motion.div>
-          </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

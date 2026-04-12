@@ -3,20 +3,27 @@
 :root {
   --color-bg: #0f1115;
   --color-surface: #1f2227;
+  --color-surface-elevated: #252830;
   --color-primary: #4b5340;
   --color-primary-hover: #606c5d;
+  --color-primary-subtle: rgba(75, 83, 64, 0.15);
   --color-secondary: #869477;
   --color-text: #f2f2f2;
   --color-text-muted: rgba(255, 255, 255, 0.4);
   --color-border: rgba(255, 255, 255, 0.1);
   --color-accent: #c5c5b5;
+  /* Safe area para notch/home bar */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 @theme inline {
   --color-bg: var(--color-bg);
   --color-surface: var(--color-surface);
+  --color-surface-elevated: var(--color-surface-elevated);
   --color-primary: var(--color-primary);
   --color-primary-hover: var(--color-primary-hover);
+  --color-primary-subtle: var(--color-primary-subtle);
   --color-secondary: var(--color-secondary);
   --color-text: var(--color-text);
   --color-text-muted: var(--color-text-muted);
@@ -25,11 +32,54 @@
   --font-sans: var(--font-montserrat);
 }
 
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
+}
+
+/* Previene zoom automático de iOS al enfocar inputs */
+input, select, textarea {
+  font-size: max(16px, 1rem);
+}
+
+/* Padding bottom que incluye bottom nav + safe area — solo en mobile */
+@media (max-width: 767px) {
+  .pb-nav {
+    padding-bottom: calc(72px + var(--safe-bottom));
+  }
+}
+
+/*
+  Fix global hover sticky en iOS.
+  Tailwind genera clases hover:xxx sin @media (hover:hover).
+  En iOS, tocar un elemento aplica el hover y queda pegado.
+  Sobreescribimos con !important solo los patrones comunes.
+*/
+@media not (hover: hover) {
+  /* Quitar todos los hover backgrounds en touch devices */
+  [class*="hover:bg-"]:hover {
+    background-color: inherit !important;
+  }
+  [class*="hover:text-"]:hover {
+    color: inherit !important;
+  }
+  [class*="hover:opacity"]:hover {
+    opacity: inherit !important;
+  }
+  [class*="hover:border-"]:hover {
+    border-color: inherit !important;
+  }
 }
 
 /* V4 login card: transparent on mobile, glassmorphic on desktop */
