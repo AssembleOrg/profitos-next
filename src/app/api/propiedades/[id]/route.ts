@@ -49,28 +49,34 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
     operationType,
     operationPrice,
     operationCurrency,
+    geoLat,
+    geoLong,
   } = body as Record<string, string | undefined>;
 
-  const property = await prisma.property.update({
-    where: { id },
-    data: {
-      ...(address !== undefined && { address }),
-      ...(realAddress !== undefined && { realAddress: realAddress || null }),
-      ...(publicationTitle !== undefined && { publicationTitle: publicationTitle || null }),
-      ...(referenceCode !== undefined && { referenceCode: referenceCode || null }),
-      ...(publicUrl !== undefined && { publicUrl: publicUrl || null }),
-      ...(city !== undefined && { city }),
-      ...(zone !== undefined && { zone }),
-      ...(type !== undefined && { type }),
-      ...(status !== undefined && { status }),
-      ...(roomAmount !== undefined && { roomAmount: numberOrNull(roomAmount) }),
-      ...(bathroomAmount !== undefined && { bathroomAmount: numberOrNull(bathroomAmount) }),
-      ...(totalSurface !== undefined && { totalSurface: numberOrNull(totalSurface) }),
-      ...(operationType !== undefined && { operationType: operationType || null }),
-      ...(operationPrice !== undefined && { operationPrice: numberOrNull(operationPrice) }),
-      ...(operationCurrency !== undefined && { operationCurrency: operationCurrency || null }),
-    },
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: Record<string, any> = {};
+  if (address !== undefined) data.address = address;
+  if (realAddress !== undefined) data.realAddress = realAddress || null;
+  if (publicationTitle !== undefined) data.publicationTitle = publicationTitle || null;
+  if (referenceCode !== undefined) data.referenceCode = referenceCode || null;
+  if (publicUrl !== undefined) data.publicUrl = publicUrl || null;
+  if (city !== undefined) data.city = city;
+  if (zone !== undefined) data.zone = zone;
+  if (type !== undefined) data.type = type;
+  if (status !== undefined) data.status = status;
+  if (roomAmount !== undefined) data.roomAmount = numberOrNull(roomAmount);
+  if (bathroomAmount !== undefined) data.bathroomAmount = numberOrNull(bathroomAmount);
+  if (totalSurface !== undefined) data.totalSurface = numberOrNull(totalSurface);
+  if (operationType !== undefined) data.operationType = operationType || null;
+  if (operationPrice !== undefined) data.operationPrice = numberOrNull(operationPrice);
+  if (operationCurrency !== undefined) data.operationCurrency = operationCurrency || null;
+  if (geoLat !== undefined) data.geoLat = numberOrNull(geoLat);
+  if (geoLong !== undefined) data.geoLong = numberOrNull(geoLong);
+  if ((body as Record<string, unknown>).ownerReportData !== undefined) {
+    data.ownerReportData = (body as Record<string, unknown>).ownerReportData ?? null;
+  }
+
+  const property = await prisma.property.update({ where: { id }, data });
 
   return ok(property, "Propiedad actualizada correctamente", path);
 });

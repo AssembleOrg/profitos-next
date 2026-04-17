@@ -12,7 +12,7 @@
  *   </Sheet>
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface SheetProps {
@@ -26,6 +26,21 @@ interface SheetProps {
 }
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+const MOBILE_MEDIA_QUERY = "(max-width: 639px)";
+
+function subscribeToMobileQuery(onStoreChange: () => void) {
+  if (!("window" in globalThis)) return () => {};
+
+  const mediaQueryList = globalThis.window.matchMedia(MOBILE_MEDIA_QUERY);
+  mediaQueryList.addEventListener("change", onStoreChange);
+
+  return () => mediaQueryList.removeEventListener("change", onStoreChange);
+}
+
+function getMobileSnapshot() {
+  if (!("window" in globalThis)) return false;
+  return globalThis.window.matchMedia(MOBILE_MEDIA_QUERY).matches;
+}
 
 export function Sheet({
   open,
@@ -35,12 +50,12 @@ export function Sheet({
   footer,
   maxWidth = "sm:max-w-md",
   avatarInitial,
-}: SheetProps) {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    setIsMobile(window.innerWidth < 640);
-  }, []);
+}: Readonly<SheetProps>) {
+  const isMobile = useSyncExternalStore(
+    subscribeToMobileQuery,
+    getMobileSnapshot,
+    () => false
+  );
 
   // Lock body scroll cuando el sheet está abierto
   useEffect(() => {
@@ -71,9 +86,9 @@ export function Sheet({
           {/* Panel */}
           <motion.div
             className={`fixed z-50 flex flex-col border border-border bg-surface shadow-2xl
-              bottom-0 left-0 right-0 max-h-[90dvh] rounded-t-2xl
-              sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full ${maxWidth}
-              sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-h-[85vh] sm:rounded-2xl`}
+              bottom-0 left-0 right-0 max-h-[92dvh] rounded-t-2xl
+              sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[calc(100%-2rem)] ${maxWidth}
+              sm:-translate-x-1/2 sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl`}
             initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96, y: "-48%" }}
             animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: "-50%" }}
             exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96, y: "-48%" }}

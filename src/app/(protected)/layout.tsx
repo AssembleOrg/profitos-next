@@ -20,8 +20,8 @@ export default async function ProtectedLayout({
   return (
     <div className="flex min-h-dvh bg-bg">
       <SplashScreen />
-      <Sidebar avatarUrl={user.avatarUrl} />
-      <main className="flex-1 overflow-auto md:ml-16">
+      <Sidebar avatarUrl={user.avatarUrl} role={user.role} />
+      <main className="flex-1 overflow-auto transition-[margin] duration-200 md:ml-[var(--sidebar-width,13rem)]">
         {/* Top bar */}
         <header className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between md:px-8 md:py-5">
           <div className="flex items-center gap-3">
@@ -30,7 +30,7 @@ export default async function ProtectedLayout({
             </h2>
             <span className="text-sm text-text-muted">/</span>
             <span className="whitespace-nowrap text-sm text-text-muted">
-              {now().toFormat("dd MMM yyyy")}
+              {now().toFormat("dd/MM/yyyy")}
             </span>
           </div>
           <CommandPalette />

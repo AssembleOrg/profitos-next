@@ -6,7 +6,7 @@ import { SeguimientosClient } from "./_components/seguimientos-client";
 const PAGE_SIZE = 20;
 
 interface Props {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; limit?: string }>;
 }
 
 export default async function SeguimientosPage({ searchParams }: Props) {
@@ -15,6 +15,7 @@ export default async function SeguimientosPage({ searchParams }: Props) {
 
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const limit = Math.min(100, Math.max(1, Number.parseInt(sp.limit ?? `${PAGE_SIZE}`, 10) || PAGE_SIZE));
   const where = user.role === "admin" ? {} : { assignedToUserId: user.id };
 
   const [followUps, total, users, properties] = await Promise.all([
@@ -35,8 +36,8 @@ export default async function SeguimientosPage({ searchParams }: Props) {
         },
       },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * limit,
+      take: limit,
     }),
     prisma.propertyFollowUp.count({ where }),
     user.role === "admin"
@@ -72,8 +73,9 @@ export default async function SeguimientosPage({ searchParams }: Props) {
     <SeguimientosClient
       followUps={serializedFollowUps}
       page={page}
-      totalPages={Math.ceil(total / PAGE_SIZE)}
+      totalPages={Math.ceil(total / limit)}
       total={total}
+      limit={limit}
       isAdmin={user.role === "admin"}
       assignableUsers={users}
       assignableProperties={properties}

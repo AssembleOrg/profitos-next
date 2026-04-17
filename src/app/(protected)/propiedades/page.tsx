@@ -9,6 +9,7 @@ const PAGE_SIZE = 20;
 interface Props {
   searchParams: Promise<{
     page?: string;
+    limit?: string;
     q?: string;
     status?: string;
     operation?: string;
@@ -27,6 +28,7 @@ export default async function PropiedadesPage({ searchParams }: Props) {
 
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const limit = Math.min(100, Math.max(1, Number.parseInt(sp.limit ?? `${PAGE_SIZE}`, 10) || PAGE_SIZE));
 
   const q = (sp.q ?? "").trim();
   const status = (sp.status ?? "").trim().toLowerCase();
@@ -81,8 +83,8 @@ export default async function PropiedadesPage({ searchParams }: Props) {
       where,
       include: { _count: { select: { visitas: true } } },
       orderBy,
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * limit,
+      take: limit,
     }),
     prisma.property.count({ where }),
     prisma.property.count(),
@@ -120,6 +122,9 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     operationType: string | null;
     operationPrice: number | null;
     operationCurrency: string | null;
+    geoLat: number | null;
+    geoLong: number | null;
+    ownerReportData: unknown;
     createdAt: Date;
     _count: { visitas: number };
   }) => ({
@@ -141,6 +146,9 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     operationType: p.operationType,
     operationPrice: p.operationPrice,
     operationCurrency: p.operationCurrency,
+    geoLat: p.geoLat,
+    geoLong: p.geoLong,
+    ownerReportData: (p.ownerReportData as Record<string, unknown>) ?? null,
     createdAt: p.createdAt.toISOString(),
     _count: p._count,
   }));
@@ -149,8 +157,9 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     <PropiedadesClient
       properties={serialized}
       page={page}
-      totalPages={Math.ceil(total / PAGE_SIZE)}
+      totalPages={Math.ceil(total / limit)}
       total={total}
+      limit={limit}
       totalAll={totalAll}
       isAdmin={user.role === "admin"}
       usersForAssignments={usersForAssignments}

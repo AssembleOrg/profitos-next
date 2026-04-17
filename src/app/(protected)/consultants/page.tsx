@@ -9,6 +9,7 @@ const PAGE_SIZE = 20;
 interface Props {
   searchParams: Promise<{
     page?: string;
+    limit?: string;
     q?: string;
     agent?: string;
     from?: string;
@@ -23,6 +24,7 @@ export default async function ConsultantsPage({ searchParams }: Props) {
 
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const limit = Math.min(100, Math.max(1, Number.parseInt(sp.limit ?? `${PAGE_SIZE}`, 10) || PAGE_SIZE));
   const q = (sp.q ?? "").trim();
   const agent = (sp.agent ?? "").trim();
   const from = (sp.from ?? "").trim();
@@ -58,8 +60,8 @@ export default async function ConsultantsPage({ searchParams }: Props) {
     prisma.recentContact.findMany({
       where,
       orderBy,
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * limit,
+      take: limit,
     }),
     prisma.recentContact.count({ where }),
     prisma.recentContact.count(),
@@ -110,7 +112,8 @@ export default async function ConsultantsPage({ searchParams }: Props) {
       page={page}
       total={total}
       totalAll={totalAll}
-      totalPages={Math.ceil(total / PAGE_SIZE)}
+      totalPages={Math.ceil(total / limit)}
+      limit={limit}
       lastSyncRunAt={syncState?.lastRunAt ? syncState.lastRunAt.toISOString() : null}
       filters={{ q, agent, from, to, sort }}
       agentOptions={agentOptions.map((x) => x.agentName).filter((x): x is string => !!x)}

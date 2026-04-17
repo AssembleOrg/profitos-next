@@ -27,6 +27,7 @@ interface ConsultantsClientProps {
   page: number;
   totalPages: number;
   total: number;
+  limit: number;
   totalAll: number;
   lastSyncRunAt: string | null;
   filters: {
@@ -59,11 +60,12 @@ export function ConsultantsClient({
   page,
   totalPages,
   total,
+  limit,
   totalAll,
   lastSyncRunAt,
   filters,
   agentOptions,
-}: ConsultantsClientProps) {
+}: Readonly<ConsultantsClientProps>) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -112,7 +114,7 @@ export function ConsultantsClient({
     agentFilter && `Agente: ${agentFilter}`,
     fromFilter && `Desde: ${fromFilter}`,
     toFilter && `Hasta: ${toFilter}`,
-  ].filter(Boolean) as string[];
+  ].filter(Boolean);
 
   async function handleSync(mode: "auto" | "api") {
     setSyncing(true);
@@ -145,7 +147,7 @@ export function ConsultantsClient({
 
   useEffect(() => {
     const supabase = createSupabaseClient();
-    const channelKey = currentUserEmail.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const channelKey = currentUserEmail.replaceAll(/[^a-zA-Z0-9_-]/g, "_");
     const channel = supabase
       .channel(`recent-contacts-${channelKey}`)
       .on(
@@ -208,7 +210,7 @@ export function ConsultantsClient({
         <div>
           <h1 className="text-lg font-medium text-text">Últimos contactos</h1>
           <p className="text-sm text-text-muted">
-            Mostrando {items.length} de {total} resultado{total !== 1 ? "s" : ""} · Total global: {totalAll}
+            Mostrando {items.length} de {total} resultado{total === 1 ? "" : "s"} · Total global: {totalAll}
           </p>
           <p className="text-xs text-text-muted/80">
             Última ejecución cron: {lastSyncRunAt ? new Date(lastSyncRunAt).toLocaleString("es-AR") : "sin registros"}
@@ -232,8 +234,8 @@ export function ConsultantsClient({
       {pendingRealtimeCount > 0 && (
         <div className="flex items-center justify-between rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-2 text-sm">
           <p className="text-secondary">
-            Hay {pendingRealtimeCount} contacto{pendingRealtimeCount !== 1 ? "s" : ""} nuevo
-            {pendingRealtimeCount !== 1 ? "s" : ""} en tiempo real.
+            Hay {pendingRealtimeCount} contacto{pendingRealtimeCount === 1 ? "" : "s"} nuevo
+            {pendingRealtimeCount === 1 ? "" : "s"} en tiempo real.
           </p>
           <button
             onClick={() => {
@@ -266,7 +268,7 @@ export function ConsultantsClient({
           <select
             value={agentFilter}
             onChange={(e) => setAgentFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none scheme-dark"
           >
             <option value="">Todos los agentes</option>
             {agentOptions.map((agent) => (
@@ -278,20 +280,20 @@ export function ConsultantsClient({
             type="date"
             value={fromFilter}
             onChange={(e) => setFromFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none scheme-dark"
           />
 
           <input
             type="date"
             value={toFilter}
             onChange={(e) => setToFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none scheme-dark"
           />
 
           <select
             value={sortFilter}
             onChange={(e) => setSortFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none scheme-dark"
           >
             <option value="created_desc">Más recientes</option>
             <option value="created_asc">Más antiguos</option>
@@ -392,7 +394,7 @@ export function ConsultantsClient({
         </div>
       </div>
 
-      <Pagination page={page} totalPages={totalPages} total={total} />
+      <Pagination page={page} totalPages={totalPages} total={total} limit={limit} />
     </div>
   );
 }

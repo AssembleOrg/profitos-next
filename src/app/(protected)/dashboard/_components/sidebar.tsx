@@ -5,9 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/app/login/actions";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
+import { formatDateTime } from "@/lib/datetime";
 
 interface NotificationItem {
-  kind: "contact" | "followup_assignment" | "contact_followup" | "property";
+  kind: "contact" | "followup_assignment" | "contact_followup" | "property" | "overdue_followup";
   eventAt: string;
   id: string;
   name?: string;
@@ -22,6 +23,7 @@ interface NotificationItem {
   tokkoContactId?: number;
   title?: string | null;
   status?: string;
+  dueDate?: string | null;
   updatedAt?: string;
   property?: { id: string; address: string };
   recentContact?: { id: string; name: string; email: string | null; cellphone: string | null };
@@ -38,6 +40,7 @@ const navItems = [
   {
     href: "/dashboard",
     label: "Dashboard",
+    adminOnly: false,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -50,6 +53,7 @@ const navItems = [
   {
     href: "/solicitudes",
     label: "Solicitudes",
+    adminOnly: false,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -62,6 +66,7 @@ const navItems = [
   {
     href: "/contactos",
     label: "Contactos",
+    adminOnly: false,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
@@ -74,6 +79,7 @@ const navItems = [
   {
     href: "/consultants",
     label: "Últimos contactos",
+    adminOnly: false,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 12h-4l-3 7-4-14-3 7H2" />
@@ -83,6 +89,7 @@ const navItems = [
   {
     href: "/consultants-followups",
     label: "Seg. consultas",
+    adminOnly: false,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 4h18v12H3z" />
@@ -95,6 +102,7 @@ const navItems = [
   {
     href: "/agenda",
     label: "Agenda",
+    adminOnly: false,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -107,6 +115,7 @@ const navItems = [
   {
     href: "/propiedades",
     label: "Propiedades",
+    adminOnly: false,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
@@ -117,6 +126,7 @@ const navItems = [
   {
     href: "/seguimientos",
     label: "Seguimientos",
+    adminOnly: false,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M9 11l3 3L22 4" />
@@ -125,8 +135,35 @@ const navItems = [
     ),
   },
   {
+    href: "/tasaciones",
+    label: "Tasaciones",
+    adminOnly: false,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="12" y1="18" x2="12" y2="12" />
+        <line x1="9" y1="15" x2="15" y2="15" />
+      </svg>
+    ),
+  },
+  {
+    href: "/miembros",
+    label: "Miembros",
+    adminOnly: true,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <line x1="19" y1="8" x2="19" y2="14" />
+        <line x1="22" y1="11" x2="16" y2="11" />
+      </svg>
+    ),
+  },
+  {
     href: "/configuracion",
     label: "Configuración",
+    adminOnly: false,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -138,27 +175,32 @@ const navItems = [
 
 interface SidebarProps {
   avatarUrl?: string | null;
+  role?: "admin" | "user" | "viewer";
 }
 
 function formatNotificationDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const yy = String(date.getFullYear()).slice(-2);
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  return `${dd}/${mm}/${yy} · ${hh}:${min}`;
+  try { return formatDateTime(value); } catch { return "—"; }
 }
 
-export function Sidebar({ avatarUrl }: SidebarProps) {
+export function Sidebar({ avatarUrl, role }: SidebarProps) {
+  const isAdmin = role === "admin";
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("jp_sidebar_collapsed") === "true";
+  });
   const [showMenu, setShowMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
+
+  // Sync CSS variable for layout margin
+  useEffect(() => {
+    localStorage.setItem("jp_sidebar_collapsed", String(collapsed));
+    document.documentElement.style.setProperty("--sidebar-width", collapsed ? "4rem" : "13rem");
+  }, [collapsed]);
 
   async function loadNotifications() {
     try {
@@ -201,7 +243,13 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
   }, [showMenu, showNotifications]);
 
   useEffect(() => {
-    void loadNotifications();
+    const timerId = globalThis.setTimeout(() => {
+      void loadNotifications();
+    }, 0);
+
+    return () => {
+      globalThis.clearTimeout(timerId);
+    };
   }, []);
 
   useEffect(() => {
@@ -283,39 +331,77 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
   }, []);
 
   return (
-    <aside className="fixed left-0 top-0 z-40 hidden h-dvh w-16 flex-col items-center border-r border-border bg-bg py-4 md:flex">
-      {/* Logo */}
-      <div className="mb-8 flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg">
-        <img
-          src="/images/download.svg"
-          alt="Juliana Profitos"
-          className="h-full w-full"
-        />
+    <aside className={`fixed left-0 top-0 z-40 hidden h-dvh flex-col border-r border-border bg-bg py-4 transition-all duration-200 md:flex ${collapsed ? "w-16" : "w-52"}`}>
+      {/* Logo + toggle */}
+      <div className={`mb-8 flex items-center ${collapsed ? "justify-center px-2" : "justify-between px-4"}`}>
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+            <img
+              src="/images/download.svg"
+              alt="Juliana Profitos"
+              className="h-full w-full"
+            />
+          </div>
+          {!collapsed && <span className="text-sm font-semibold text-text">Profitos</span>}
+        </div>
+        {!collapsed && (
+          <button
+            onClick={() => setCollapsed(true)}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-surface hover:text-text-muted"
+            title="Contraer sidebar"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="11 17 6 12 11 7" />
+              <polyline points="18 17 13 12 18 7" />
+            </svg>
+          </button>
+        )}
       </div>
 
+      {/* Expand button when collapsed */}
+      {collapsed && (
+        <div className="mb-2 flex justify-center px-2">
+          <button
+            onClick={() => setCollapsed(false)}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-surface hover:text-text-muted"
+            title="Expandir sidebar"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="13 17 18 12 13 7" />
+              <polyline points="6 17 11 12 6 7" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Nav */}
-      <nav className="flex flex-1 flex-col items-center gap-2">
-        {navItems.map((item) => {
+      <nav className="flex flex-1 flex-col gap-1 px-2">
+        {navItems
+          .filter((item) => !item.adminOnly || isAdmin)
+          .map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
-              title={item.label}
-              className={`relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+              title={collapsed ? item.label : undefined}
+              className={`relative flex h-10 items-center gap-3 rounded-lg text-sm transition-colors ${
+                collapsed ? "justify-center px-0" : "px-3"
+              } ${
                 isActive
                   ? "bg-olive-deep text-accent shadow-[inset_2px_0_0_var(--color-olive-bright)]"
                   : "text-text-faint hover:bg-surface hover:text-text-muted"
               }`}
             >
-              {item.icon}
+              <span className="shrink-0">{item.icon}</span>
+              {!collapsed && <span className="truncate">{item.label}</span>}
             </Link>
           );
         })}
       </nav>
 
       {/* Bottom */}
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex flex-col gap-2 px-2">
         {/* Notifications */}
         <div className="relative" ref={notificationsRef}>
           <button
@@ -329,22 +415,25 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
                 setUnreadCount(0);
               }
             }}
-            className="relative flex h-10 w-10 items-center justify-center rounded-lg text-white/30 transition-colors hover:bg-surface hover:text-white/60"
-            title="Notificaciones"
+            className={`relative flex h-10 items-center gap-3 rounded-lg text-sm text-white/30 transition-colors hover:bg-surface hover:text-white/60 ${collapsed ? "w-10 justify-center mx-auto px-0" : "w-full px-3"}`}
+            title={collapsed ? "Notificaciones" : undefined}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 01-3.46 0" />
-            </svg>
+            <span className="shrink-0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 01-3.46 0" />
+              </svg>
+            </span>
+            {!collapsed && <span className="truncate">Notificaciones</span>}
             {unreadCount > 0 && (
-              <span className="absolute right-1 top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-olive-bright px-1 text-[10px] font-semibold text-bg">
+              <span className={`inline-flex min-w-5 items-center justify-center rounded-full bg-olive-bright px-1.5 py-0.5 text-[10px] font-semibold text-bg ${collapsed ? "absolute -right-1 -top-1" : "ml-auto"}`}>
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>
 
           {showNotifications && (
-            <div className="absolute bottom-0 left-14 z-50 w-[390px] overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
+            <div className="absolute bottom-0 left-full z-50 ml-2 w-[390px] overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
               <div className="flex items-center justify-between gap-3 border-b border-border bg-bg/30 px-3 py-2.5">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">Notificaciones</p>
@@ -379,6 +468,8 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
                             ? "border-amber-500/30 bg-amber-500/10"
                             : item.kind === "contact_followup"
                               ? "border-fuchsia-500/30 bg-fuchsia-500/10"
+                              : item.kind === "overdue_followup"
+                                ? "border-red-500/30 bg-red-500/10"
                             : "border-emerald-500/30 bg-emerald-500/10"
                       }`}
                     >
@@ -391,6 +482,8 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
                                 ? "bg-amber-500/20 text-amber-300"
                                 : item.kind === "contact_followup"
                                   ? "bg-fuchsia-500/20 text-fuchsia-300"
+                                  : item.kind === "overdue_followup"
+                                    ? "bg-red-500/20 text-red-300"
                                 : "bg-emerald-500/20 text-emerald-300"
                           }`}
                         >
@@ -400,6 +493,8 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
                               ? "Seguimiento"
                               : item.kind === "contact_followup"
                                 ? "Seg. consulta"
+                                : item.kind === "overdue_followup"
+                                  ? "Vencido"
                               : "Propiedad nueva"}
                         </span>
                         <span className="text-[11px] text-text-muted/80">{formatNotificationDate(item.eventAt)}</span>
@@ -436,6 +531,18 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
                           </p>
                           <p className="text-xs text-text-muted">
                             Estado: {item.status ?? "pendiente"}
+                          </p>
+                        </>
+                      ) : item.kind === "overdue_followup" ? (
+                        <>
+                          <p className="text-sm font-medium leading-tight text-text">
+                            {item.property?.address ?? "Propiedad sin dirección"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-red-300">
+                            Vencido: {item.dueDate ? formatNotificationDate(item.dueDate) : "sin fecha"}
+                          </p>
+                          <p className="text-xs text-text-muted">
+                            Responsable: {item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}
                           </p>
                         </>
                       ) : (
@@ -487,26 +594,30 @@ export function Sidebar({ avatarUrl }: SidebarProps) {
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setShowMenu((v) => !v)}
-            className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full transition-opacity hover:opacity-80"
+            className={`flex h-10 items-center gap-3 rounded-lg transition-opacity hover:opacity-80 ${collapsed ? "w-10 justify-center mx-auto px-0" : "w-full px-3"}`}
+            title={collapsed ? "Mi cuenta" : undefined}
           >
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt="Avatar"
-                className="h-full w-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <img
-                src="/images/download.svg"
-                alt="Juliana Profitos"
-                className="h-full w-full"
-              />
-            )}
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Avatar"
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <img
+                  src="/images/download.svg"
+                  alt="Juliana Profitos"
+                  className="h-full w-full"
+                />
+              )}
+            </span>
+            {!collapsed && <span className="truncate text-sm text-text-muted">Mi cuenta</span>}
           </button>
 
           {showMenu && (
-            <div className="absolute bottom-0 left-14 z-50 min-w-[160px] rounded-lg border border-border bg-surface p-1 shadow-xl">
+            <div className="absolute bottom-0 left-full z-50 ml-2 min-w-[160px] rounded-lg border border-border bg-surface p-1 shadow-xl">
               <form action={signOut}>
                 <button
                   type="submit"

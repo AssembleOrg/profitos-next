@@ -18,7 +18,7 @@ export function SplashScreen() {
     <AnimatePresence>
       {visible && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-bg"
+          className="fixed inset-0 z-100 flex items-center justify-center bg-bg"
           exit={{
             opacity: 0,
             scale: 1.15,

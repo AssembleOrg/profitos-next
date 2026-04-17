@@ -68,12 +68,14 @@ async function loadLogoPngBuffer(): Promise<Uint8Array | null> {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await context.params;
     await getAuthContext();
+    const url = new URL(request.url);
+    const isOwnerMode = url.searchParams.get("mode") === "owner";
 
     const property = await prisma.property.findUnique({
       where: { id },
@@ -97,6 +99,7 @@ export async function GET(
         publicUrl: true,
         coverImageUrl: true,
         photos: true,
+        ownerReportData: true,
       },
     });
 
@@ -342,6 +345,74 @@ export async function GET(
       lineHeight: 14,
     });
 
+    // Owner report section (only in owner mode)
+    if (isOwnerMode) {
+      const ownerData = (property.ownerReportData ?? {}) as Record<string, unknown>;
+      const visitasTotales = ownerData.visitasTotales ?? "—";
+      const visitasMes = ownerData.visitasMes ?? "—";
+      const quejas = ((ownerData.quejas as string) ?? "").trim() || "Sin quejas registradas";
+      const mejoras = ((ownerData.mejoras as string) ?? "").trim() || "Sin mejoras registradas";
+
+      // Add a second page for the owner report
+      const page2 = pdf.addPage([595, 842]);
+      const p2W = 595;
+      const p2H = 842;
+      let p2Y = p2H - 36;
+
+      // Header stripe
+      page2.drawRectangle({ x: 0, y: p2H - 56, width: p2W, height: 56, color: rgb(0.01, 0.01, 0.01) });
+      page2.drawText("INFORME PARA PROPIETARIO", { x: 28, y: p2H - 38, size: 16, font: fontBold, color: rgb(1, 1, 1) });
+      page2.drawText(asText(property.address), { x: 28, y: p2H - 52, size: 9, font: fontRegular, color: rgb(0.7, 0.72, 0.75) });
+      p2Y = p2H - 56 - 28;
+
+      // Visitas cards
+      const vCardW = 240;
+      const vCardH = 60;
+      // Card 1: Visitas totales
+      page2.drawRectangle({ x: 28, y: p2Y - vCardH, width: vCardW, height: vCardH, color: rgb(1, 1, 1) });
+      page2.drawText("VISITAS TOTALES", { x: 40, y: p2Y - 20, size: 9, font: fontBold, color: rgb(0.4, 0.42, 0.45) });
+      page2.drawText(String(visitasTotales), { x: 40, y: p2Y - 44, size: 24, font: fontBold, color: rgb(0.08, 0.1, 0.14) });
+
+      // Card 2: Visitas este mes
+      page2.drawRectangle({ x: 28 + vCardW + 16, y: p2Y - vCardH, width: vCardW, height: vCardH, color: rgb(1, 1, 1) });
+      page2.drawText("VISITAS ESTE MES", { x: 28 + vCardW + 28, y: p2Y - 20, size: 9, font: fontBold, color: rgb(0.4, 0.42, 0.45) });
+      page2.drawText(String(visitasMes), { x: 28 + vCardW + 28, y: p2Y - 44, size: 24, font: fontBold, color: rgb(0.08, 0.1, 0.14) });
+
+      p2Y -= vCardH + 28;
+
+      // Quejas section
+      page2.drawRectangle({ x: 28, y: p2Y - 18, width: p2W - 56, height: 22, color: rgb(0.9, 0.91, 0.93) });
+      page2.drawText("QUEJAS / OBSERVACIONES", { x: 36, y: p2Y - 12, size: 10, font: fontBold, color: rgb(0.12, 0.13, 0.16) });
+      p2Y -= 36;
+
+      page2.drawText(quejas.slice(0, 1200), {
+        x: 32, y: p2Y, size: 10, font: fontRegular, color: rgb(0.2, 0.22, 0.25),
+        maxWidth: p2W - 64, lineHeight: 14,
+      });
+
+      const quejasLines = Math.max(1, Math.ceil(fontRegular.widthOfTextAtSize(quejas.slice(0, 1200), 10) / (p2W - 64)));
+      p2Y -= quejasLines * 14 + 24;
+
+      // Mejoras section
+      page2.drawRectangle({ x: 28, y: p2Y - 18, width: p2W - 56, height: 22, color: rgb(0.9, 0.91, 0.93) });
+      page2.drawText("MEJORAS / SUGERENCIAS", { x: 36, y: p2Y - 12, size: 10, font: fontBold, color: rgb(0.12, 0.13, 0.16) });
+      p2Y -= 36;
+
+      page2.drawText(mejoras.slice(0, 1200), {
+        x: 32, y: p2Y, size: 10, font: fontRegular, color: rgb(0.2, 0.22, 0.25),
+        maxWidth: p2W - 64, lineHeight: 14,
+      });
+
+      // Page 2 footer
+      page2.drawLine({ start: { x: 28, y: 56 }, end: { x: p2W - 28, y: 56 }, thickness: 0.8, color: rgb(0.8, 0.82, 0.85) });
+      page2.drawText(`Generado: ${new Date().toLocaleString("es-AR", { hour12: false })}`, {
+        x: 30, y: 40, size: 9, font: fontRegular, color: rgb(0.35, 0.37, 0.4),
+      });
+      page2.drawText("Informe confidencial para el propietario", {
+        x: 30, y: 26, size: 9, font: fontRegular, color: rgb(0.35, 0.37, 0.4),
+      });
+    }
+
     // Footer
     page.drawLine({
       start: { x: 28, y: 56 },
@@ -369,7 +440,10 @@ export async function GET(
 
     const bytes = await pdf.save();
     const fileNameBase = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-    const fileName = `propiedad-${fileNameBase || property.id}.pdf`;
+    const now = new Date();
+    const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+    const prefix = isOwnerMode ? "informe-propietario" : "propiedad";
+    const fileName = `${prefix}-${fileNameBase || property.id}-${ts}.pdf`;
 
     return new Response(Buffer.from(bytes), {
       headers: {

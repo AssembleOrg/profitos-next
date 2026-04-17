@@ -12,13 +12,17 @@ interface UpsertUserParams {
 }
 
 export async function upsertUser(params: UpsertUserParams): Promise<AppUser> {
-  const role = resolveRoleFromEmail(params.email);
+  // Check whitelist for a pre-assigned role, fallback to env var
+  const whitelist = await prisma.whitelist.findUnique({
+    where: { email: params.email.toLowerCase() },
+    select: { defaultRole: true },
+  });
+  const role = whitelist?.defaultRole ?? resolveRoleFromEmail(params.email);
 
   const user = await prisma.user.upsert({
     where: { id: params.id },
     update: {
       email: params.email,
-      role,
       fullName: params.fullName ?? undefined,
       avatarUrl: params.avatarUrl ?? undefined,
       ...(params.googleAccessToken !== undefined && {

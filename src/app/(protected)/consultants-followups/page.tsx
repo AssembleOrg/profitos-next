@@ -9,17 +9,19 @@ const PAGE_SIZE = 20;
 interface Props {
   searchParams: Promise<{
     page?: string;
+    limit?: string;
     q?: string;
     status?: string;
   }>;
 }
 
-export default async function ConsultantsFollowUpsPage({ searchParams }: Props) {
+export default async function ConsultantsFollowUpsPage({ searchParams }: Readonly<Props>) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const sp = await searchParams;
-  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
+  const limit = Math.min(100, Math.max(1, Number.parseInt(sp.limit ?? `${PAGE_SIZE}`, 10) || PAGE_SIZE));
   const q = (sp.q ?? "").trim();
   const status = (sp.status ?? "").trim().toLowerCase();
 
@@ -48,8 +50,8 @@ export default async function ConsultantsFollowUpsPage({ searchParams }: Props) 
         _count: { select: { actions: true, statusChanges: true } },
       },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * limit,
+      take: limit,
     }),
     prisma.contactFollowUp.count({ where }),
     user.role === "admin"
@@ -84,7 +86,8 @@ export default async function ConsultantsFollowUpsPage({ searchParams }: Props) 
       isAdmin={user.role === "admin"}
       page={page}
       total={total}
-      totalPages={Math.ceil(total / PAGE_SIZE)}
+      totalPages={Math.ceil(total / limit)}
+      limit={limit}
       filters={{ q, status }}
       items={serialized}
       assignableUsers={users}

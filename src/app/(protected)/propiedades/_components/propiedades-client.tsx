@@ -1,10 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
+import { Sheet } from "../../_components/sheet";
+import { buildPropertyWhatsAppLink } from "@/lib/whatsapp";
+
+const PropertiesMap = dynamic(
+  () => import("./properties-map").then((mod) => mod.PropertiesMap),
+  { ssr: false, loading: () => <div className="flex h-[500px] items-center justify-center rounded-2xl border border-border bg-surface/30 text-sm text-text-muted">Cargando mapa...</div> }
+);
 
 interface Property {
   id: string;
@@ -25,6 +33,9 @@ interface Property {
   operationType: string | null;
   operationPrice: number | null;
   operationCurrency: string | null;
+  geoLat: number | null;
+  geoLong: number | null;
+  ownerReportData: Record<string, unknown> | null;
   createdAt: string;
   _count?: { visitas: number };
 }
@@ -34,6 +45,7 @@ interface PropiedadesClientProps {
   page: number;
   totalPages: number;
   total: number;
+  limit: number;
   totalAll: number;
   isAdmin: boolean;
   usersForAssignments: Array<{ id: string; fullName: string | null; email: string }>;
@@ -47,6 +59,12 @@ interface PropiedadesClientProps {
     currency: string;
     sort: string;
   };
+}
+
+interface PdfPopupState {
+  property: Property;
+  top: number;
+  left: number;
 }
 
 const PROPERTY_TYPES = [
@@ -83,6 +101,7 @@ export function PropiedadesClient({
   page,
   totalPages,
   total,
+  limit,
   totalAll,
   isAdmin,
   usersForAssignments,
@@ -108,12 +127,40 @@ export function PropiedadesClient({
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [syncingTokko, setSyncingTokko] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [isMobile, setIsMobile] = useState(false);
+
+  // PDF popup & owner modal
+  const [pdfPopup, setPdfPopup] = useState<PdfPopupState | null>(null);
+  const [ownerModalProperty, setOwnerModalProperty] = useState<Property | null>(null);
+  const [ownerForm, setOwnerForm] = useState({ visitasTotales: "", visitasMes: "", quejas: "", mejoras: "" });
+  const [ownerSaving, setOwnerSaving] = useState(false);
 
   // Detecta mobile una sola vez al montar
   useEffect(() => {
     setIsMobile(window.innerWidth < 640);
   }, []);
+
+  // Cerrar popup PDF al hacer click fuera
+  useEffect(() => {
+    if (!pdfPopup) return;
+    function handleClick() {
+      setPdfPopup(null);
+    }
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, [pdfPopup]);
+
+  useEffect(() => {
+    if (!pdfPopup) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setPdfPopup(null);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [pdfPopup]);
 
   function applyFilters(nextPage = 1) {
     const params = new URLSearchParams(searchParams.toString());
@@ -199,6 +246,8 @@ export function PropiedadesClient({
       operationType: (form.get("operationType") as string) || null,
       operationPrice: (form.get("operationPrice") as string) || null,
       operationCurrency: (form.get("operationCurrency") as string) || null,
+      geoLat: (form.get("geoLat") as string) || null,
+      geoLong: (form.get("geoLong") as string) || null,
     };
 
     try {
@@ -329,6 +378,86 @@ export function PropiedadesClient({
     }
   }
 
+  function handlePdfClick(
+    e: React.MouseEvent<HTMLButtonElement>,
+    property: Property,
+    align: "left" | "right" = "right"
+  ) {
+    e.stopPropagation();
+    if (pdfPopup?.property.id === property.id) {
+      setPdfPopup(null);
+      return;
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuWidth = 132;
+    const menuHeight = 84;
+    const viewportPadding = 8;
+    const preferredLeft = align === "right" ? rect.right - menuWidth : rect.left;
+    const left = Math.min(
+      Math.max(preferredLeft, viewportPadding),
+      window.innerWidth - menuWidth - viewportPadding
+    );
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const top =
+      spaceBelow >= menuHeight + viewportPadding
+        ? rect.bottom + 6
+        : Math.max(viewportPadding, rect.top - menuHeight - 6);
+
+    setPdfPopup({
+      property,
+      left,
+      top,
+    });
+  }
+
+  function handlePdfNoDueno(propertyId: string) {
+    setPdfPopup(null);
+    window.open(`/api/propiedades/${propertyId}/pdf`, "_blank");
+  }
+
+  function handlePdfDueno(p: Property) {
+    setPdfPopup(null);
+    const data = (p.ownerReportData ?? {}) as Record<string, unknown>;
+    setOwnerForm({
+      visitasTotales: data.visitasTotales != null ? String(data.visitasTotales) : "",
+      visitasMes: data.visitasMes != null ? String(data.visitasMes) : "",
+      quejas: (data.quejas as string) ?? "",
+      mejoras: (data.mejoras as string) ?? "",
+    });
+    setOwnerModalProperty(p);
+  }
+
+  async function handleOwnerSubmit() {
+    if (!ownerModalProperty) return;
+    setOwnerSaving(true);
+    const payload = {
+      visitasTotales: ownerForm.visitasTotales ? Number(ownerForm.visitasTotales) : null,
+      visitasMes: ownerForm.visitasMes ? Number(ownerForm.visitasMes) : null,
+      quejas: ownerForm.quejas,
+      mejoras: ownerForm.mejoras,
+    };
+    try {
+      const res = await fetch(`/api/propiedades/${ownerModalProperty.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ownerReportData: payload }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.message ?? "Error al guardar");
+        return;
+      }
+      setOwnerModalProperty(null);
+      window.open(`/api/propiedades/${ownerModalProperty.id}/pdf?mode=owner`, "_blank");
+      router.refresh();
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setOwnerSaving(false);
+    }
+  }
+
   const isEdit = !!editProperty;
 
   return (
@@ -369,6 +498,33 @@ export function PropiedadesClient({
               <span className="sm:hidden">{syncingTokko ? "..." : "Tokko"}</span>
             </button>
           )}
+          <button
+            onClick={() => setViewMode((v) => (v === "list" ? "map" : "list"))}
+            className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text-muted active:bg-surface"
+          >
+            {viewMode === "list" ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+                  <line x1="8" y1="2" x2="8" y2="18" />
+                  <line x1="16" y1="6" x2="16" y2="22" />
+                </svg>
+                <span className="hidden sm:inline">Mapa</span>
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="8" y1="6" x2="21" y2="6" />
+                  <line x1="8" y1="12" x2="21" y2="12" />
+                  <line x1="8" y1="18" x2="21" y2="18" />
+                  <line x1="3" y1="6" x2="3.01" y2="6" />
+                  <line x1="3" y1="12" x2="3.01" y2="12" />
+                  <line x1="3" y1="18" x2="3.01" y2="18" />
+                </svg>
+                <span className="hidden sm:inline">Lista</span>
+              </>
+            )}
+          </button>
           <button
             onClick={handleNew}
             className="flex items-center gap-2 rounded-xl bg-secondary/20 px-3 py-2 text-sm font-medium text-secondary active:bg-secondary/30"
@@ -576,8 +732,27 @@ export function PropiedadesClient({
         </div>
       </div>
 
+      {/* Map view */}
+      {viewMode === "map" && (
+        <PropertiesMap
+          properties={properties
+            .filter((p) => p.geoLat != null && p.geoLong != null)
+            .map((p) => ({
+              id: p.id,
+              address: p.address,
+              geoLat: p.geoLat!,
+              geoLong: p.geoLong!,
+              operationType: p.operationType,
+              operationPrice: p.operationPrice,
+              operationCurrency: p.operationCurrency,
+              type: p.type,
+              status: p.status,
+            }))}
+        />
+      )}
+
       {/* Cards — solo mobile */}
-      <div className="sm:hidden space-y-2">
+      {viewMode === "list" && <div className="sm:hidden space-y-2">
         {properties.length === 0 ? (
           <p className="px-2 py-8 text-center text-sm text-text-muted">No hay propiedades para los filtros seleccionados</p>
         ) : (
@@ -585,26 +760,51 @@ export function PropiedadesClient({
             <div
               key={p.id}
               onClick={() => handleEdit(p)}
-              className="flex cursor-pointer items-start justify-between rounded-xl border border-border bg-surface/30 p-4 active:bg-surface/60"
+              className="flex cursor-pointer flex-col rounded-xl border border-border bg-surface/30 p-4 active:bg-surface/60"
             >
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-text">{p.address}</p>
-                <p className="mt-0.5 truncate text-xs text-text-muted">
-                  {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
-                </p>
-                <p className="mt-0.5 text-xs text-text-muted">{p.city ?? ""}{p.type ? ` · ${p.type}` : ""}</p>
+              <div className="flex items-start justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-text">{p.address}</p>
+                  <p className="mt-0.5 truncate text-xs text-text-muted">
+                    {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
+                  </p>
+                  <p className="mt-0.5 text-xs text-text-muted">{p.city ?? ""}{p.type ? ` · ${p.type}` : ""}</p>
+                </div>
+                <span className="ml-3 mt-0.5 inline-flex flex-shrink-0 items-center gap-1.5">
+                  <span className={`h-1.5 w-1.5 rounded-full ${getStatusColor(p.status)}`} />
+                  <span className="text-xs text-text-muted">{getStatusLabel(p.status)}</span>
+                </span>
               </div>
-              <span className="ml-3 mt-0.5 inline-flex flex-shrink-0 items-center gap-1.5">
-                <span className={`h-1.5 w-1.5 rounded-full ${getStatusColor(p.status)}`} />
-                <span className="text-xs text-text-muted">{getStatusLabel(p.status)}</span>
-              </span>
+              <div className="mt-2 flex gap-2">
+                <a
+                  href={buildPropertyWhatsAppLink(p)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 text-[11px] font-medium text-emerald-400"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.611.611l4.458-1.495A11.948 11.948 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.37 0-4.567-.696-6.42-1.888l-.447-.293-2.91.975.975-2.91-.293-.447A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+                  </svg>
+                  WhatsApp
+                </a>
+                <div className="relative">
+                  <button
+                    onClick={(e) => handlePdfClick(e, p, "left")}
+                    className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-border px-2.5 text-[11px] font-medium text-text-muted"
+                  >
+                    PDF
+                  </button>
+                </div>
+              </div>
             </div>
           ))
         )}
-      </div>
+      </div>}
 
       {/* Table — solo desktop */}
-      <div className="hidden overflow-hidden rounded-2xl border border-border bg-surface/30 sm:block">
+      {viewMode === "list" && <div className="hidden overflow-hidden rounded-2xl border border-border bg-surface/30 sm:block">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -651,24 +851,39 @@ export function PropiedadesClient({
                     <td className="px-5 py-3.5 text-right">
                       <div className="inline-flex items-center gap-2">
                         <a
-                          href={`/api/propiedades/${p.id}/pdf`}
+                          href={buildPropertyWhatsAppLink(p)}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           onClick={(event) => event.stopPropagation()}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:bg-bg hover:text-text"
+                          className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20"
+                          title="Compartir por WhatsApp"
                         >
-                          PDF
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="7 10 12 15 17 10" />
-                            <line x1="12" y1="15" x2="12" y2="3" />
+                          WhatsApp
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.611.611l4.458-1.495A11.948 11.948 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.37 0-4.567-.696-6.42-1.888l-.447-.293-2.91.975.975-2.91-.293-.447A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
                           </svg>
                         </a>
+                        <div className="relative">
+                          <button
+                            onClick={(e) => handlePdfClick(e, p)}
+                            className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-border px-3 text-xs font-medium text-text-muted transition-colors hover:bg-bg hover:text-text"
+                          >
+                            PDF
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                              <polyline points="7 10 12 15 17 10" />
+                              <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                          </button>
+                        </div>
                         {p.publicUrl ? (
                           <a
                             href={p.publicUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(event) => event.stopPropagation()}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-secondary/40 bg-secondary/15 px-3 py-1.5 text-xs font-medium text-secondary transition-colors hover:bg-secondary/25"
+                          className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-secondary/40 bg-secondary/15 px-3 text-xs font-medium text-secondary transition-colors hover:bg-secondary/25"
                         >
                           Ver en Tokko
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -687,10 +902,30 @@ export function PropiedadesClient({
             </tbody>
           </table>
         </div>
-      </div>
+      </div>}
 
       {/* Pagination */}
-      <Pagination page={page} totalPages={totalPages} total={total} />
+      <Pagination page={page} totalPages={totalPages} total={total} limit={limit} />
+
+      {pdfPopup && (
+        <div
+          className="fixed z-80 overflow-hidden rounded-lg border border-border bg-surface shadow-xl"
+          style={{ top: `${pdfPopup.top}px`, left: `${pdfPopup.left}px`, width: "132px" }}
+        >
+          <button
+            onClick={() => handlePdfNoDueno(pdfPopup.property.id)}
+            className="block w-full whitespace-nowrap px-4 py-2.5 text-left text-xs text-text-muted hover:bg-bg hover:text-text"
+          >
+            No Dueño
+          </button>
+          <button
+            onClick={() => handlePdfDueno(pdfPopup.property)}
+            className="block w-full whitespace-nowrap border-t border-border px-4 py-2.5 text-left text-xs text-text-muted hover:bg-bg hover:text-text"
+          >
+            Dueño
+          </button>
+        </div>
+      )}
 
       {/* Modal */}
       <AnimatePresence>
@@ -907,6 +1142,31 @@ export function PropiedadesClient({
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-text-muted">Latitud</label>
+                    <input
+                      name="geoLat"
+                      type="number"
+                      step="any"
+                      defaultValue={editProperty?.geoLat ?? ""}
+                      placeholder="-34.6037"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-text-muted">Longitud</label>
+                    <input
+                      name="geoLong"
+                      type="number"
+                      step="any"
+                      defaultValue={editProperty?.geoLong ?? ""}
+                      placeholder="-58.3816"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                    />
+                  </div>
+                </div>
+
                 {error && (
                   <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>
                 )}
@@ -1090,6 +1350,78 @@ export function PropiedadesClient({
           </>
         )}
       </AnimatePresence>
+
+      {/* Owner report modal */}
+      <Sheet
+        open={!!ownerModalProperty}
+        onClose={() => setOwnerModalProperty(null)}
+        title="Informe para propietario"
+        maxWidth="sm:max-w-lg"
+        footer={
+          <>
+            <button type="button" onClick={() => setOwnerModalProperty(null)} className="rounded-lg px-4 py-2 text-sm text-text-muted active:text-text">
+              Cancelar
+            </button>
+            <button
+              onClick={handleOwnerSubmit}
+              disabled={ownerSaving}
+              className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary active:bg-secondary/30 disabled:opacity-50"
+            >
+              {ownerSaving ? "Generando..." : "Guardar y generar PDF"}
+            </button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-text-muted">
+            {ownerModalProperty?.address}
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-muted">Visitas totales</label>
+              <input
+                type="number"
+                min={0}
+                value={ownerForm.visitasTotales}
+                onChange={(e) => setOwnerForm((f) => ({ ...f, visitasTotales: e.target.value }))}
+                placeholder="0"
+                className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-muted">Visitas este mes</label>
+              <input
+                type="number"
+                min={0}
+                value={ownerForm.visitasMes}
+                onChange={(e) => setOwnerForm((f) => ({ ...f, visitasMes: e.target.value }))}
+                placeholder="0"
+                className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-text-muted">Quejas / Observaciones</label>
+            <textarea
+              rows={4}
+              value={ownerForm.quejas}
+              onChange={(e) => setOwnerForm((f) => ({ ...f, quejas: e.target.value }))}
+              placeholder="Quejas o comentarios del propietario..."
+              className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-text-muted">Mejoras / Sugerencias</label>
+            <textarea
+              rows={4}
+              value={ownerForm.mejoras}
+              onChange={(e) => setOwnerForm((f) => ({ ...f, mejoras: e.target.value }))}
+              placeholder="Sugerencias de mejora para la propiedad..."
+              className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+            />
+          </div>
+        </div>
+      </Sheet>
     </div>
   );
 }

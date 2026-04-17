@@ -1,19 +1,34 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useId } from "react";
 
 interface PaginationProps {
   page: number;
   totalPages: number;
   total: number;
+  limit: number;
+  limitOptions?: number[];
 }
 
-export function Pagination({ page, totalPages, total }: PaginationProps) {
+export function Pagination({
+  page,
+  totalPages,
+  total,
+  limit,
+  limitOptions = [10, 20, 50, 100],
+}: Readonly<PaginationProps>) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const limitSelectId = useId();
 
-  if (totalPages <= 1) return null;
+  if (totalPages < 2) return null;
+
+  const pageSizeOptions = Array.from(new Set([...limitOptions, limit]))
+    .filter((value) => value > 0)
+    .sort((a, b) => a - b);
+  let dotsCount = 0;
 
   const pages: Array<number | "..."> = (() => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -33,11 +48,36 @@ export function Pagination({ page, totalPages, total }: PaginationProps) {
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }
 
+  function updateLimit(nextLimit: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("limit", String(nextLimit));
+    params.delete("page");
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  }
+
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <span className="text-xs font-medium text-text-muted">
         {total} resultado{total !== 1 ? "s" : ""} · Página {page} de {totalPages}
       </span>
+      <div className="flex items-center gap-2 sm:order-last">
+        <label htmlFor={limitSelectId} className="text-xs text-text-muted">
+          Por página
+        </label>
+        <select
+          id={limitSelectId}
+          value={limit}
+          onChange={(event) => updateLimit(Number(event.target.value))}
+          className="h-9 rounded-xl border border-border bg-bg px-2.5 text-xs text-text focus:border-secondary focus:outline-none scheme-dark"
+        >
+          {pageSizeOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </div>
       {/* Mobile: solo anterior / siguiente */}
       <div className="flex items-center gap-2 sm:hidden">
         <button
@@ -76,9 +116,9 @@ export function Pagination({ page, totalPages, total }: PaginationProps) {
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-        {pages.map((item, index) =>
+        {pages.map((item) =>
           item === "..." ? (
-            <span key={`dots-${index}`} className="px-1 text-xs text-text-muted">…</span>
+            <span key={`dots-${++dotsCount}`} className="px-1 text-xs text-text-muted">…</span>
           ) : (
             <button
               key={item}

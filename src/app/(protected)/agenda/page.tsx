@@ -10,7 +10,7 @@ export default async function AgendaPage() {
 
   const visitas = await prisma.visit.findMany({
     where: user.role === "admin" ? {} : { userId: user.id },
-    include: { client: true, property: true },
+    include: { client: true, property: true, user: { select: { fullName: true, email: true } } },
     orderBy: { date: "asc" },
   });
 
@@ -26,6 +26,7 @@ export default async function AgendaPage() {
     clientId: string | null;
     property: { address: string } | null;
     propertyId: string | null;
+    user: { fullName: string | null; email: string } | null;
   }) => ({
     id: v.id,
     title: v.title,
@@ -38,6 +39,7 @@ export default async function AgendaPage() {
     clientId: v.clientId ?? undefined,
     property: v.property?.address ?? undefined,
     propertyId: v.propertyId ?? undefined,
+    userName: v.user?.fullName?.trim() || v.user?.email || undefined,
   }));
 
   return <AgendaClient events={events} />;

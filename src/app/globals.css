@@ -92,6 +92,18 @@ input, select, textarea {
   font-size: max(16px, 1rem);
 }
 
+/* Oculta flechas de input number en todos los navegadores */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* Padding bottom que incluye bottom nav + safe area — solo en mobile */
 @media (max-width: 767px) {
   .pb-nav {

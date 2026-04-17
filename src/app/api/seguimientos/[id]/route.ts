@@ -68,13 +68,41 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
     throw new AppError(403, "Solo un administrador puede editar el título");
   }
 
+  // Get current state before update for transfer tracking
+  const currentFollowUp = await prisma.propertyFollowUp.findUnique({
+    where: { id },
+    select: { assignedToUserId: true, assignedToUser: { select: { fullName: true, email: true } } },
+  });
+
   if (assignedToUserId !== undefined) {
     assertAdmin(auth);
     const assignedUser = await prisma.user.findUnique({
       where: { id: assignedToUserId },
-      select: { id: true },
+      select: { id: true, fullName: true, email: true },
     });
     if (!assignedUser) throw new AppError(404, "Usuario asignado no encontrado");
+
+    // Log transfer as an action if the assignee actually changed
+    if (currentFollowUp && currentFollowUp.assignedToUserId !== assignedToUserId) {
+      const fromName = currentFollowUp.assignedToUser?.fullName?.trim() || currentFollowUp.assignedToUser?.email || "Sin asignar";
+      const toName = assignedUser.fullName?.trim() || assignedUser.email;
+      await prisma.followUpAction.create({
+        data: {
+          followUpId: id,
+          type: "transferencia",
+          description: `Seguimiento transferido de ${fromName} a ${toName}`,
+          actionAt: new Date(),
+          createdByUserId: auth.userId,
+          metadata: {
+            kind: "transfer",
+            fromUserId: currentFollowUp.assignedToUserId,
+            fromUserName: fromName,
+            toUserId: assignedToUserId,
+            toUserName: toName,
+          },
+        },
+      });
+    }
   }
 
   const followUp = await prisma.propertyFollowUp.update({

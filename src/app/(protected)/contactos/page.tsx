@@ -2,11 +2,19 @@ import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { ContactosClient } from "./_components/contactos-client";
+import { Prisma } from "@/generated/prisma/client";
 
 const PAGE_SIZE = 20;
 
 interface Props {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    limit?: string;
+    q?: string;
+    leadStatus?: string;
+    tab?: string;
+    hideDeleted?: string;
+  }>;
 }
 
 export default async function ContactosPage({ searchParams }: Props) {
@@ -15,44 +23,165 @@ export default async function ContactosPage({ searchParams }: Props) {
 
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const limit = Math.min(100, Math.max(1, Number.parseInt(sp.limit ?? `${PAGE_SIZE}`, 10) || PAGE_SIZE));
+  const q = (sp.q ?? "").trim();
+  const leadStatus = (sp.leadStatus ?? "").trim();
+  const tab = sp.tab ?? "tokko";
+  const hideDeleted = sp.hideDeleted === "true";
 
-  const where = user.role === "admin" ? {} : { userId: user.id };
+  if (tab === "manual") {
+    // Manual clients (existing behavior)
+    const clientWhere = user.role === "admin" ? {} : { userId: user.id };
+    const [clients, total] = await Promise.all([
+      prisma.client.findMany({
+        where: {
+          ...clientWhere,
+          ...(q && {
+            OR: [
+              { name: { contains: q, mode: "insensitive" as const } },
+              { email: { contains: q, mode: "insensitive" as const } },
+              { phone: { contains: q, mode: "insensitive" as const } },
+            ],
+          }),
+        },
+        include: { _count: { select: { visitas: true } } },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.client.count({
+        where: {
+          ...clientWhere,
+          ...(q && {
+            OR: [
+              { name: { contains: q, mode: "insensitive" as const } },
+              { email: { contains: q, mode: "insensitive" as const } },
+              { phone: { contains: q, mode: "insensitive" as const } },
+            ],
+          }),
+        },
+      }),
+    ]);
 
-  const [clients, total] = await Promise.all([
-    prisma.client.findMany({
+    const serializedClients = clients.map((c) => ({
+      id: c.id,
+      name: c.name,
+      phone: c.phone,
+      email: c.email,
+      notes: c.notes,
+      createdAt: c.createdAt.toISOString(),
+      _count: c._count,
+    }));
+
+    return (
+      <ContactosClient
+        tab="manual"
+        clients={serializedClients}
+        tokkoContacts={[]}
+        page={page}
+        totalPages={Math.ceil(total / limit)}
+        total={total}
+        limit={limit}
+        isAdmin={user.role === "admin"}
+        filters={{ q, leadStatus }}
+      />
+    );
+  }
+
+  // Tokko contacts (RecentContact)
+  const andFilters: Prisma.RecentContactWhereInput[] = [];
+
+  if (hideDeleted) {
+    andFilters.push({ tokkoDeletedAt: null });
+  }
+
+  if (q) {
+    andFilters.push({
+      OR: [
+        { name: { contains: q, mode: "insensitive" } },
+        { email: { contains: q, mode: "insensitive" } },
+        { cellphone: { contains: q, mode: "insensitive" } },
+        { phone: { contains: q, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  if (leadStatus) {
+    andFilters.push({ leadStatus: { equals: leadStatus, mode: "insensitive" } });
+  }
+
+  const where: Prisma.RecentContactWhereInput = andFilters.length > 0 ? { AND: andFilters } : {};
+
+  const [contacts, total, totalAll] = await Promise.all([
+    prisma.recentContact.findMany({
       where,
-      include: { _count: { select: { visitas: true } } },
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      orderBy: [{ tokkoCreatedAt: "desc" }, { createdAt: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+      select: {
+        id: true,
+        tokkoContactId: true,
+        name: true,
+        email: true,
+        phone: true,
+        cellphone: true,
+        leadStatus: true,
+        isCompany: true,
+        isOwner: true,
+        agentName: true,
+        agentEmail: true,
+        tags: true,
+        tokkoCreatedAt: true,
+        tokkoDeletedAt: true,
+        createdAt: true,
+      },
     }),
-    prisma.client.count({ where }),
+    prisma.recentContact.count({ where }),
+    prisma.recentContact.count(),
   ]);
 
-  const serialized = clients.map((c: {
-    id: string;
-    name: string;
-    phone: string | null;
-    email: string | null;
-    notes: string | null;
-    createdAt: Date;
-    _count: { visitas: number };
-  }) => ({
+  const serializedTokko = contacts.map((c) => ({
     id: c.id,
+    tokkoContactId: c.tokkoContactId,
     name: c.name,
-    phone: c.phone,
     email: c.email,
-    notes: c.notes,
+    phone: c.phone,
+    cellphone: c.cellphone,
+    leadStatus: c.leadStatus,
+    isCompany: c.isCompany,
+    isOwner: c.isOwner,
+    agentName: c.agentName,
+    agentEmail: c.agentEmail,
+    tags: c.tags as string[],
+    tokkoCreatedAt: c.tokkoCreatedAt?.toISOString() ?? null,
+    tokkoDeletedAt: c.tokkoDeletedAt?.toISOString() ?? null,
     createdAt: c.createdAt.toISOString(),
-    _count: c._count,
   }));
+
+  // Get distinct leadStatus values for filter dropdown
+  const leadStatuses = await prisma.recentContact.groupBy({
+    by: ["leadStatus"],
+    _count: { _all: true },
+    orderBy: { leadStatus: "asc" },
+  });
+
+  const leadStatusOptions = leadStatuses
+    .filter((s) => s.leadStatus)
+    .map((s) => ({ value: s.leadStatus!, count: s._count._all }));
 
   return (
     <ContactosClient
-      clients={serialized}
+      tab="tokko"
+      clients={[]}
+      tokkoContacts={serializedTokko}
       page={page}
-      totalPages={Math.ceil(total / PAGE_SIZE)}
+      totalPages={Math.ceil(total / limit)}
       total={total}
+      limit={limit}
+      totalAll={totalAll}
+      isAdmin={user.role === "admin"}
+      filters={{ q, leadStatus, hideDeleted }}
+      leadStatusOptions={leadStatusOptions}
     />
   );
 }

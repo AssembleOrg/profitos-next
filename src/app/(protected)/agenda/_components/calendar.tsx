@@ -19,6 +19,7 @@ export interface CalendarEvent {
   clientId?: string;
   property?: string;
   propertyId?: string;
+  userName?: string;
 }
 
 interface CalendarProps {
@@ -255,6 +256,11 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                             <span className="text-text-muted/50">Propiedad:</span> {ev.property}
                           </span>
                         )}
+                        {ev.userName && (
+                          <span className="text-xs text-text-muted">
+                            <span className="text-text-muted/50">Resp:</span> {ev.userName}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -358,7 +364,7 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                           key={ev.id}
                           onClick={() => onEventClick?.(ev)}
                           className={`group flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors ${colors.bg} hover:brightness-125`}
-                          title={`${ev.startTime}-${ev.endTime} · ${ev.title}${ev.client ? ` · ${ev.client}` : ""}`}
+                          title={`${ev.startTime}-${ev.endTime} · ${ev.title}${ev.client ? ` · ${ev.client}` : ""}${ev.userName ? ` · ${ev.userName}` : ""}`}
                         >
                           <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${colors.dot}`} />
                           <span className={`truncate text-[11px] font-medium ${colors.text}`}>

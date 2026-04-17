@@ -51,12 +51,33 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
     throw new AppError(403, "Solo administradores pueden reasignar");
   }
 
+  // Get current state for transfer tracking
+  const currentFU = await prisma.contactFollowUp.findUnique({
+    where: { id },
+    select: { assignedToUserId: true, assignedToUser: { select: { fullName: true, email: true } } },
+  });
+
   if (assignedToUserId !== undefined && assignedToUserId) {
     const target = await prisma.user.findUnique({
       where: { id: assignedToUserId },
-      select: { id: true },
+      select: { id: true, fullName: true, email: true },
     });
     if (!target) throw new AppError(404, "Usuario asignado no encontrado");
+
+    // Log transfer if assignee changed
+    if (currentFU && currentFU.assignedToUserId !== assignedToUserId) {
+      const fromName = currentFU.assignedToUser?.fullName?.trim() || currentFU.assignedToUser?.email || "Sin asignar";
+      const toName = target.fullName?.trim() || target.email;
+      await prisma.contactFollowUpAction.create({
+        data: {
+          followUpId: id,
+          type: "transferencia",
+          description: `Seguimiento transferido de ${fromName} a ${toName}`,
+          actionAt: new Date(),
+          createdByUserId: auth.userId,
+        },
+      });
+    }
   }
 
   const updated = await prisma.contactFollowUp.update({

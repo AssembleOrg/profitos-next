@@ -319,6 +319,102 @@ async function seedFromLocalJsonIfEmpty(
   };
 }
 
+// ─── Full Sync: trae TODOS los contactos de Tokko en batches ─────────────────
+
+const FULL_SYNC_KEY = "tokko_contacts_full";
+const FULL_SYNC_BATCH_SIZE = 100;
+
+async function upsertContactsOnly(items: TokkoObject[]) {
+  let created = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  for (const raw of items) {
+    const mapped = mapContact(raw);
+    const tokkoContactId = mapped.tokkoContactId;
+    if (!tokkoContactId) {
+      skipped += 1;
+      continue;
+    }
+    const data = { ...mapped, tokkoContactId };
+
+    const existing = await prisma.recentContact.findUnique({
+      where: { tokkoContactId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      await prisma.recentContact.create({ data });
+      created += 1;
+    } else {
+      await prisma.recentContact.update({ where: { id: existing.id }, data });
+      updated += 1;
+    }
+  }
+
+  return { created, updated, skipped };
+}
+
+export async function fullSyncTokkoContacts(options: { reset?: boolean } = {}) {
+  const state = await prisma.integrationSyncState.upsert({
+    where: { integrationKey: FULL_SYNC_KEY },
+    update: {},
+    create: {
+      integrationKey: FULL_SYNC_KEY,
+      lastOffset: 0,
+      lastTotalCount: 0,
+      lastRunAt: new Date(),
+    },
+  });
+
+  let currentOffset = options.reset ? 0 : state.lastOffset;
+
+  // Probe total count
+  const probe = await loadContactsPage(0, 1);
+  const totalCount = toInt(probe.meta?.total_count) ?? 0;
+
+  if (totalCount === 0) {
+    return { done: true, totalCount: 0, offset: 0, created: 0, updated: 0, skipped: 0, pagesFetched: 0 };
+  }
+
+  if (currentOffset >= totalCount && !options.reset) {
+    return { done: true, totalCount, offset: currentOffset, created: 0, updated: 0, skipped: 0, pagesFetched: 0 };
+  }
+
+  if (options.reset) currentOffset = 0;
+
+  // Fetch one batch
+  const page = await loadContactsPage(currentOffset, FULL_SYNC_BATCH_SIZE);
+  const objects = Array.isArray(page.objects) ? page.objects : [];
+
+  if (objects.length === 0) {
+    await prisma.integrationSyncState.update({
+      where: { integrationKey: FULL_SYNC_KEY },
+      data: { lastOffset: totalCount, lastTotalCount: totalCount, lastRunAt: new Date() },
+    });
+    return { done: true, totalCount, offset: currentOffset, created: 0, updated: 0, skipped: 0, pagesFetched: 1 };
+  }
+
+  const result = await upsertContactsOnly(objects);
+  const nextOffset = currentOffset + objects.length;
+  const done = nextOffset >= totalCount;
+
+  await prisma.integrationSyncState.update({
+    where: { integrationKey: FULL_SYNC_KEY },
+    data: { lastOffset: nextOffset, lastTotalCount: totalCount, lastRunAt: new Date() },
+  });
+
+  return {
+    done,
+    totalCount,
+    offset: nextOffset,
+    pagesFetched: 1,
+    ...result,
+  };
+}
+
+// ─── Incremental Sync (existing) ─────────────────────────────────────────────
+
 export async function syncTokkoContacts(options: SyncOptions = {}) {
   const mode = options.mode ?? "auto";
   const resolvedMode = mode === "auto" ? "api" : mode;

@@ -38,7 +38,7 @@ function toDate(value: unknown): Date | null {
 function toText(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
-  return trimmed ? trimmed : null;
+  return trimmed || null;
 }
 
 function safeArray(value: unknown): unknown[] {
@@ -59,8 +59,8 @@ function extractLocationData(location: unknown) {
   const loc = (location ?? {}) as Record<string, unknown>;
   const shortLocation = toText(loc.short_location);
   const parts = shortLocation?.split("|").map((part) => part.trim()).filter(Boolean) ?? [];
-  const city = parts.length > 0 ? parts[parts.length - 1] : null;
-  const zone = parts.length > 1 ? parts[parts.length - 2] : null;
+  const city = parts.length > 0 ? parts.at(-1) : null;
+  const zone = parts.length > 1 ? parts.at(-2) : null;
   return {
     city,
     zone,
@@ -237,7 +237,7 @@ export async function syncTokkoProperties(options: SyncOptions = {}) {
   });
 
   const metaProbe = await loadFromApi(0, 1);
-  const totalCount = toInt((metaProbe.meta as Record<string, unknown> | undefined)?.total_count) ?? 0;
+  const totalCount = toInt((metaProbe.meta)?.total_count) ?? 0;
   const tokkoCountInDb = await prisma.property.count({ where: { source: "tokko" } });
 
   let startOffset: number;
@@ -278,7 +278,7 @@ export async function syncTokkoProperties(options: SyncOptions = {}) {
   for (let offset = startOffset; offset < totalCount; offset += limit) {
     const pagePayload = await loadFromApi(offset, limit);
     pagesFetched += 1;
-    lastMeta = (pagePayload.meta as Record<string, unknown> | undefined) ?? lastMeta;
+    lastMeta = (pagePayload.meta) ?? lastMeta;
     const objects = Array.isArray(pagePayload.objects) ? pagePayload.objects : [];
     if (objects.length === 0) break;
     itemsToSync.push(...objects);

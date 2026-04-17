@@ -15,7 +15,7 @@ export const GET = withHandler(async (request) => {
 
   const followUpWhere = auth.isAdmin ? {} : { assignedToUserId: auth.userId };
 
-  const [contacts, followUps, contactFollowUps, properties] = await Promise.all([
+  const [contacts, followUps, contactFollowUps, properties, overdueFollowUps] = await Promise.all([
     prisma.recentContact.findMany({
       where: contactWhere,
       orderBy: [{ tokkoCreatedAt: "desc" }, { tokkoContactId: "desc" }],
@@ -83,6 +83,26 @@ export const GET = withHandler(async (request) => {
         createdAt: true,
       },
     }),
+    prisma.propertyFollowUp.findMany({
+      where: {
+        ...followUpWhere,
+        dueDate: { lt: new Date() },
+        status: { notIn: ["hecho", "cancelado"] },
+      },
+      orderBy: [{ dueDate: "asc" }],
+      take: limit,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        dueDate: true,
+        updatedAt: true,
+        createdAt: true,
+        property: { select: { id: true, address: true } },
+        assignedToUser: { select: { id: true, fullName: true, email: true } },
+        assignedByUser: { select: { id: true, fullName: true, email: true } },
+      },
+    }),
   ]);
 
   const merged = [
@@ -133,6 +153,21 @@ export const GET = withHandler(async (request) => {
         operationPrice: item.operationPrice,
         operationCurrency: item.operationCurrency,
         createdAt: item.createdAt.toISOString(),
+      },
+    })),
+    ...overdueFollowUps.map((item) => ({
+      kind: "overdue_followup" as const,
+      eventAt: item.dueDate ?? item.updatedAt,
+      payload: {
+        id: item.id,
+        title: item.title,
+        status: item.status,
+        dueDate: item.dueDate?.toISOString() ?? null,
+        updatedAt: item.updatedAt.toISOString(),
+        createdAt: item.createdAt.toISOString(),
+        property: item.property,
+        assignedToUser: item.assignedToUser,
+        assignedByUser: item.assignedByUser,
       },
     })),
   ]

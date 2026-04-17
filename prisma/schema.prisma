@@ -8,10 +8,11 @@ datasource db {
 }
 
 model Whitelist {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
+  id          String   @id @default(cuid())
+  email       String   @unique
+  isActive    Boolean  @default(true) @map("is_active")
+  defaultRole String   @default("user") @map("default_role")
+  createdAt   DateTime @default(now()) @map("created_at")
 
   @@map("jp_whitelist")
 }
@@ -36,6 +37,7 @@ model User {
   createdContactFollowUps  ContactFollowUp[] @relation("ContactFollowUpAssignedBy")
   contactFollowUpActions   ContactFollowUpAction[] @relation("ContactFollowUpActionCreatedBy")
   contactFollowUpStatusChanges ContactFollowUpStatusChange[] @relation("ContactFollowUpStatusChangedBy")
+  tasaciones           Tasacion[]
 
   @@map("jp_users")
 }
@@ -88,11 +90,13 @@ model Property {
   tokkoCreatedAt    DateTime? @map("tokko_created_at")
   tokkoUpdatedAt    DateTime? @map("tokko_updated_at")
   rawPayload        Json?     @map("raw_payload")
+  ownerReportData   Json?     @map("owner_report_data")
   syncAt            DateTime? @map("sync_at")
   userId            String?   @map("user_id")
   user              User?     @relation(fields: [userId], references: [id])
   visitas           Visit[]
   followUps         PropertyFollowUp[]
+  tasaciones        Tasacion[]
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -256,4 +260,39 @@ model IntegrationSyncState {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@map("jp_integration_sync_states")
+}
+
+model Tasacion {
+  id                 String    @id @default(cuid())
+  titulo             String
+  direccion          String
+
+  // Página 2: Tasación Actualizada
+  ubicacionUnidad    String?   @map("ubicacion_unidad")
+  superficieTotal    String?   @map("superficie_total")
+  superficieMono     String?   @map("superficie_mono")
+  condicionVenta     String?   @map("condicion_venta")
+  mapaImageUrl       String?   @map("mapa_image_url")
+
+  // Páginas 3+: Fotos
+  fotos              Json?
+
+  // Informe + Resultado (rich text HTML)
+  informeHtml        String?   @map("informe_html")
+  resultadoHtml      String?   @map("resultado_html")
+
+  // Lista de Precios
+  listaPreciosTitulo String?   @map("lista_precios_titulo")
+  tablas             Json?
+
+  status             String    @default("borrador")
+  userId             String    @map("user_id")
+  user               User      @relation(fields: [userId], references: [id])
+  propertyId         String?   @map("property_id")
+  property           Property? @relation(fields: [propertyId], references: [id])
+  deletedAt          DateTime? @map("deleted_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@map("jp_tasaciones")
 }

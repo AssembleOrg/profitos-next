@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
+import { formatDateTime as fmtDateTime } from "@/lib/datetime";
 
 interface UserOption {
   id: string;
@@ -67,6 +68,7 @@ interface Props {
   page: number;
   totalPages: number;
   total: number;
+  limit: number;
   filters: { q: string; status: string };
   assignableUsers: UserOption[];
 }
@@ -90,13 +92,7 @@ const ACTION_TYPES = [
 
 function formatDateTime(value: string | null) {
   if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("es-AR", {
-    dateStyle: "short",
-    timeStyle: "short",
-    hour12: false,
-  }).format(date);
+  try { return fmtDateTime(value); } catch { return "—"; }
 }
 
 function userLabel(user: UserOption | null | undefined) {
@@ -110,6 +106,7 @@ export function ConsultantsFollowUpsClient({
   page,
   totalPages,
   total,
+  limit,
   filters,
   assignableUsers,
 }: Props) {
@@ -391,7 +388,7 @@ export function ConsultantsFollowUpsClient({
       </div>
       </div>
 
-      <Pagination page={page} totalPages={totalPages} total={total} />
+      <Pagination page={page} totalPages={totalPages} total={total} limit={limit} />
 
       <Sheet
         open={detailOpen && !!detail}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { formatDate as fmtDate, formatDateTime as fmtDateTime } from "@/lib/datetime";
 
 const SPRING = { type: "spring" as const, stiffness: 400, damping: 30 };
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -61,20 +62,12 @@ interface DashboardOverview {
 
 function formatDateTime(value: string | null) {
   if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat("es-AR", {
-    dateStyle: "short",
-    timeStyle: "short",
-    hour12: false,
-  }).format(d);
+  try { return fmtDateTime(value); } catch { return "—"; }
 }
 
 function formatDateShort(value: string | null) {
   if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(d);
+  try { return fmtDate(value); } catch { return "—"; }
 }
 
 // ─── KPI Cards ───────────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
+import { formatDate as formatDateLib, formatDateTime as formatDateTimeLib } from "@/lib/datetime";
 
 interface UserOption {
   id: string;
@@ -55,6 +56,7 @@ interface Props {
   page: number;
   totalPages: number;
   total: number;
+  limit: number;
   isAdmin: boolean;
   assignableUsers: UserOption[];
   assignableProperties: PropertyOption[];
@@ -77,21 +79,16 @@ const ACTION_TYPES = [
 
 function formatDateTime(value: string | null) {
   if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("es-AR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date);
+  try { return formatDateTimeLib(value); } catch { return "—"; }
 }
 
 function formatDate(value: string | null) {
   if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("es-AR", {
-    dateStyle: "short",
-  }).format(date);
+  try {
+    return formatDateLib(value);
+  } catch {
+    return "—";
+  }
 }
 
 function getStatusMeta(status: string) {
@@ -112,6 +109,7 @@ export function SeguimientosClient({
   page,
   totalPages,
   total,
+  limit,
   isAdmin,
   assignableUsers,
   assignableProperties,
@@ -404,7 +402,7 @@ export function SeguimientosClient({
         </div>
       </div>
 
-      <Pagination page={page} totalPages={totalPages} total={total} />
+      <Pagination page={page} totalPages={totalPages} total={total} limit={limit} />
 
 
       <AnimatePresence>
