@@ -51,19 +51,6 @@ const navItems = [
     ),
   },
   {
-    href: "/solicitudes",
-    label: "Solicitudes",
-    adminOnly: false,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" />
-        <line x1="16" y1="17" x2="8" y2="17" />
-      </svg>
-    ),
-  },
-  {
     href: "/contactos",
     label: "Contactos",
     adminOnly: false,
@@ -135,6 +122,31 @@ const navItems = [
     ),
   },
   {
+    href: "/objetivos",
+    label: "Objetivos",
+    adminOnly: true,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="6" />
+        <circle cx="12" cy="12" r="2" />
+      </svg>
+    ),
+  },
+  {
+    href: "/mis-objetivos",
+    label: "Mis objetivos",
+    adminOnly: false,
+    hideForAdmin: true,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="6" />
+        <circle cx="12" cy="12" r="2" />
+      </svg>
+    ),
+  },
+  {
     href: "/tasaciones",
     label: "Tasaciones",
     adminOnly: false,
@@ -144,6 +156,51 @@ const navItems = [
         <polyline points="14 2 14 8 20 8" />
         <line x1="12" y1="18" x2="12" y2="12" />
         <line x1="9" y1="15" x2="15" y2="15" />
+      </svg>
+    ),
+  },
+  {
+    href: "/firmas",
+    label: "Estado de firmas",
+    adminOnly: false,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 6L9 17l-5-5" />
+        <path d="M14 4h-2a2 2 0 00-2 2" opacity="0.3" />
+      </svg>
+    ),
+  },
+  {
+    href: "/alquileres",
+    label: "Alquileres",
+    adminOnly: false,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="6" width="20" height="14" rx="2" />
+        <path d="M2 10h20" />
+        <path d="M7 15h2" />
+      </svg>
+    ),
+  },
+  {
+    href: "/inquilinos",
+    label: "Inquilinos",
+    adminOnly: false,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+      </svg>
+    ),
+  },
+  {
+    href: "/adicionales",
+    label: "Adicionales",
+    adminOnly: true,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
       </svg>
     ),
   },
@@ -377,7 +434,11 @@ export function Sidebar({ avatarUrl, role }: SidebarProps) {
       {/* Nav */}
       <nav className="flex flex-1 flex-col gap-1 px-2">
         {navItems
-          .filter((item) => !item.adminOnly || isAdmin)
+          .filter((item) => {
+            if (item.adminOnly && !isAdmin) return false;
+            if (item.hideForAdmin && isAdmin) return false;
+            return true;
+          })
           .map((item) => {
           const isActive = pathname === item.href;
           return (

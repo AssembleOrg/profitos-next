@@ -38,6 +38,14 @@ model User {
   contactFollowUpActions   ContactFollowUpAction[] @relation("ContactFollowUpActionCreatedBy")
   contactFollowUpStatusChanges ContactFollowUpStatusChange[] @relation("ContactFollowUpStatusChangedBy")
   tasaciones           Tasacion[]
+  assignedObjectiveCards ObjectiveCard[]   @relation("ObjectiveCardAssignedTo")
+  createdObjectiveCards  ObjectiveCard[]   @relation("ObjectiveCardCreatedBy")
+  evaluatedObjectiveItems ObjectiveItem[]  @relation("ObjectiveItemEvaluatedBy")
+  createdSignatureProposals      SignatureProposal[]       @relation("SignatureProposalCreatedBy")
+  createdSignatureProposalActions SignatureProposalAction[] @relation("SignatureProposalActionCreatedBy")
+  createdRentalContracts        RentalContract[]            @relation("RentalContractCreatedBy")
+  createdRentalPayments         RentalPaymentTransaction[]  @relation("RentalPaymentCreatedBy")
+  createdRentalDueDateActions   RentalDueDateAction[]       @relation("RentalDueDateActionCreatedBy")
 
   @@map("jp_users")
 }
@@ -97,6 +105,8 @@ model Property {
   visitas           Visit[]
   followUps         PropertyFollowUp[]
   tasaciones        Tasacion[]
+  signatureProposals SignatureProposal[]
+  rentalContracts   RentalContract[]
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -295,4 +305,255 @@ model Tasacion {
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
   @@map("jp_tasaciones")
+}
+
+model ObjectiveCard {
+  id               String          @id @default(cuid())
+  title            String
+  description      String?
+  startDate        DateTime        @map("start_date") @db.Date
+  endDate          DateTime        @map("end_date") @db.Date
+  statusOverride   String?         @map("status_override")
+  assignedToUserId String          @map("assigned_to_user_id")
+  assignedToUser   User            @relation("ObjectiveCardAssignedTo", fields: [assignedToUserId], references: [id], onDelete: Cascade)
+  createdByUserId  String          @map("created_by_user_id")
+  createdByUser    User            @relation("ObjectiveCardCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  items            ObjectiveItem[]
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  @@index([assignedToUserId, startDate, endDate])
+  @@index([startDate, endDate])
+  @@map("jp_objective_cards")
+}
+
+model ObjectiveItem {
+  id              String        @id @default(cuid())
+  cardId          String        @map("card_id")
+  card            ObjectiveCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  text            String
+  status          String        @default("pending") // pending | done | failed
+  position        Int           @default(0)
+  evaluatedByUserId String?     @map("evaluated_by_user_id")
+  evaluatedByUser User?         @relation("ObjectiveItemEvaluatedBy", fields: [evaluatedByUserId], references: [id], onDelete: SetNull)
+  evaluatedAt     DateTime?     @map("evaluated_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  @@index([cardId])
+  @@map("jp_objective_items")
+}
+
+model SignatureProposal {
+  id                 String                    @id @default(cuid())
+  propertyId         String                    @map("property_id")
+  property           Property                  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  // Estado actual del proceso
+  // propuesta_enviada | propuesta_aceptada | propuesta_rechazada
+  // espera_informes | comunicacion_partes_finales | fecha_acordada | entrega_llaves
+  status             String                    @default("propuesta_enviada")
+
+  title              String?
+  description        String?
+  attachments        Json?                     // [{ kind, path, name, size, mime }]
+
+  // Fechas relevantes (todas opcionales)
+  dateProcessStarted DateTime?                 @map("date_process_started") // espera_informes
+  dateAgreed         DateTime?                 @map("date_agreed")          // fecha_acordada
+  dateKeysHandover   DateTime?                 @map("date_keys_handover")   // entrega_llaves
+
+  // IDs de los Visit sincronizados con la agenda (para limpiar al borrar/cambiar)
+  visitInformesId    String?                   @map("visit_informes_id")
+  visitAcordadaId    String?                   @map("visit_acordada_id")
+  visitEntregaId     String?                   @map("visit_entrega_id")
+
+  createdByUserId    String                    @map("created_by_user_id")
+  createdByUser      User                      @relation("SignatureProposalCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  actions            SignatureProposalAction[]
+  createdAt          DateTime                  @default(now()) @map("created_at")
+  updatedAt          DateTime                  @updatedAt @map("updated_at")
+
+  @@index([propertyId])
+  @@index([status])
+  @@index([createdByUserId])
+  @@map("jp_signature_proposals")
+}
+
+model SignatureProposalAction {
+  id              String            @id @default(cuid())
+  proposalId      String            @map("proposal_id")
+  proposal        SignatureProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  // creation | nota | status_change | date_set
+  type            String            @default("nota")
+  fromStatus      String?           @map("from_status")
+  toStatus        String?           @map("to_status")
+  dateField       String?           @map("date_field") // para type=date_set: which date changed
+  description     String?
+  attachments     Json?
+
+  createdByUserId String            @map("created_by_user_id")
+  createdByUser   User              @relation("SignatureProposalActionCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  @@index([proposalId])
+  @@index([createdByUserId])
+  @@map("jp_signature_proposal_actions")
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Alquileres temporales
+// ────────────────────────────────────────────────────────────────────
+
+model Tenant {
+  id          String           @id @default(cuid())
+  fullName    String           @map("full_name")
+  idType      String           @map("id_type") // dni | cuit
+  idNumber    String           @map("id_number")
+  phone       String?
+  email       String?
+  notes       String?
+  contracts   RentalContract[]
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  @@index([fullName])
+  @@map("jp_tenants")
+}
+
+model RentalAdditional {
+  id            String                     @id @default(cuid())
+  name          String
+  defaultAmount Float?                     @map("default_amount")
+  notes         String?
+  contracts     RentalContractAdditional[]
+  createdAt     DateTime                   @default(now()) @map("created_at")
+  updatedAt     DateTime                   @updatedAt @map("updated_at")
+
+  @@map("jp_rental_additionals")
+}
+
+model RentalContract {
+  id              String                     @id @default(cuid())
+  propertyId      String                     @map("property_id")
+  property        Property                   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenantId        String                     @map("tenant_id")
+  tenant          Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title           String?
+  startDate       DateTime                   @map("start_date") @db.Date
+  endDate         DateTime                   @map("end_date") @db.Date
+  // diario | semanal | quincenal | mensual | bimestral | trimestral
+  frequency       String
+  baseAmount      Float                      @map("base_amount")
+  currency        String                     @default("ARS")
+  firstDueDate    DateTime                   @map("first_due_date") @db.Date
+  gracePeriodDays Int                        @default(0) @map("grace_period_days")
+  notes           String?
+  createdByUserId String                     @map("created_by_user_id")
+  createdByUser   User                       @relation("RentalContractCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  additionals     RentalContractAdditional[]
+  dueDates        RentalDueDate[]
+  createdAt       DateTime                   @default(now()) @map("created_at")
+  updatedAt       DateTime                   @updatedAt @map("updated_at")
+
+  @@index([propertyId])
+  @@index([tenantId])
+  @@index([startDate, endDate])
+  @@map("jp_rental_contracts")
+}
+
+model RentalContractAdditional {
+  id            String                    @id @default(cuid())
+  contractId    String                    @map("contract_id")
+  contract      RentalContract            @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  additionalId  String                    @map("additional_id")
+  additional    RentalAdditional          @relation(fields: [additionalId], references: [id], onDelete: Cascade)
+  amount        Float
+  position      Int                       @default(0)
+  dueDateLinks  RentalDueDateAdditional[]
+
+  @@index([contractId])
+  @@map("jp_rental_contract_additionals")
+}
+
+model RentalDueDate {
+  id              String                     @id @default(cuid())
+  contractId      String                     @map("contract_id")
+  contract        RentalContract             @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  position        Int
+  dueDate         DateTime                   @map("due_date") @db.Date
+  expectedAmount  Float                      @map("expected_amount")
+  // null = derivado de fechas; "pagado" | "parcial" | "condonado"
+  status          String?
+  notes           String?
+  additionals     RentalDueDateAdditional[]
+  transactions    RentalPaymentTransaction[]
+  actions         RentalDueDateAction[]
+  createdAt       DateTime                   @default(now()) @map("created_at")
+  updatedAt       DateTime                   @updatedAt @map("updated_at")
+
+  @@index([contractId])
+  @@index([dueDate])
+  @@map("jp_rental_due_dates")
+}
+
+model RentalDueDateAdditional {
+  id                   String                   @id @default(cuid())
+  dueDateId            String                   @map("due_date_id")
+  dueDate              RentalDueDate            @relation(fields: [dueDateId], references: [id], onDelete: Cascade)
+  contractAdditionalId String                   @map("contract_additional_id")
+  contractAdditional   RentalContractAdditional @relation(fields: [contractAdditionalId], references: [id], onDelete: Cascade)
+  included             Boolean                  @default(true)
+  amountOverride       Float?                   @map("amount_override")
+
+  @@unique([dueDateId, contractAdditionalId])
+  @@index([dueDateId])
+  @@map("jp_rental_due_date_additionals")
+}
+
+model RentalPaymentTransaction {
+  id               String        @id @default(cuid())
+  dueDateId        String        @map("due_date_id")
+  dueDate          RentalDueDate @relation(fields: [dueDateId], references: [id], onDelete: Cascade)
+  // monto que pagó el inquilino
+  amountPaid       Float         @map("amount_paid")
+  // comisión que queda para la inmobiliaria
+  commissionAmount Float         @default(0) @map("commission_amount")
+  // neto al propietario = amountPaid - commissionAmount (denormalizado para reporting)
+  ownerAmount      Float         @default(0) @map("owner_amount")
+  method           String?
+  paidAt           DateTime      @map("paid_at")
+  // true = el inquilino paga el total esperado; false = parcial
+  isFull           Boolean       @default(true) @map("is_full")
+  notes            String?
+  attachments      Json?
+  receiptNumber    Int?          @map("receipt_number")
+  receiptPath      String?       @map("receipt_path")
+  receiptIssuedAt  DateTime?     @map("receipt_issued_at")
+  createdByUserId  String        @map("created_by_user_id")
+  createdByUser    User          @relation("RentalPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdAt        DateTime      @default(now()) @map("created_at")
+
+  @@index([dueDateId])
+  @@index([paidAt])
+  @@map("jp_rental_payment_transactions")
+}
+
+model RentalDueDateAction {
+  id              String        @id @default(cuid())
+  dueDateId       String        @map("due_date_id")
+  dueDate         RentalDueDate @relation(fields: [dueDateId], references: [id], onDelete: Cascade)
+  // creation | nota | status_change | payment
+  type            String        @default("nota")
+  fromStatus      String?       @map("from_status")
+  toStatus        String?       @map("to_status")
+  description     String?
+  attachments     Json?
+  createdByUserId String        @map("created_by_user_id")
+  createdByUser   User          @relation("RentalDueDateActionCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  @@index([dueDateId])
+  @@map("jp_rental_due_date_actions")
 }

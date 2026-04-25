@@ -56,19 +56,43 @@ const primaryTabs = [
   },
 ];
 
-const moreItems = [
+interface MoreItem {
+  href: string;
+  label: string;
+  adminOnly?: boolean;
+  hideForAdmin?: boolean;
+}
+
+const moreItems: MoreItem[] = [
   { href: "/propiedades", label: "Propiedades" },
   { href: "/consultants", label: "Últimos contactos" },
   { href: "/consultants-followups", label: "Seg. consultas" },
   { href: "/seguimientos", label: "Seguimientos" },
+  { href: "/firmas", label: "Estado de firmas" },
+  { href: "/alquileres", label: "Alquileres" },
+  { href: "/inquilinos", label: "Inquilinos" },
+  { href: "/adicionales", label: "Adicionales", adminOnly: true },
+  { href: "/objetivos", label: "Objetivos", adminOnly: true },
+  { href: "/mis-objetivos", label: "Mis objetivos", hideForAdmin: true },
   { href: "/configuracion", label: "Configuración" },
 ];
 
-export function BottomNav() {
+interface BottomNavProps {
+  role?: "admin" | "user" | "viewer";
+}
+
+export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
+  const isAdmin = role === "admin";
 
-  const isMoreActive = moreItems.some((i) => pathname === i.href);
+  const visibleMoreItems = moreItems.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    if (item.hideForAdmin && isAdmin) return false;
+    return true;
+  });
+
+  const isMoreActive = visibleMoreItems.some((i) => pathname === i.href);
 
   return (
     <>
@@ -97,7 +121,7 @@ export function BottomNav() {
                 Más secciones
               </p>
               <div className="flex flex-col">
-                {moreItems.map((item) => (
+                {visibleMoreItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}

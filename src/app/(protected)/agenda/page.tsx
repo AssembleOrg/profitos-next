@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
+import { SIGNATURE_VISIT_TYPES } from "@/lib/signatures";
 import type { CalendarEvent } from "./_components/calendar";
 import { AgendaClient } from "./_components/agenda-client";
 
@@ -8,8 +9,20 @@ export default async function AgendaPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  // Visits de firma son globales (el equipo entero los ve).
+  // El resto sigue la regla de admin / usuario propio.
+  const where =
+    user.role === "admin"
+      ? {}
+      : {
+          OR: [
+            { userId: user.id },
+            { type: { in: [...SIGNATURE_VISIT_TYPES] } },
+          ],
+        };
+
   const visitas = await prisma.visit.findMany({
-    where: user.role === "admin" ? {} : { userId: user.id },
+    where,
     include: { client: true, property: true, user: { select: { fullName: true, email: true } } },
     orderBy: { date: "asc" },
   });

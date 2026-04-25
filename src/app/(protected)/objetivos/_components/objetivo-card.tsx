@@ -1,0 +1,421 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import {
+  CARD_STATUS_LABEL,
+  daysRemaining,
+  getCardProgress,
+  getCardStatus,
+  nextItemStatus,
+  type CardStatus,
+  type ItemStatus,
+} from "@/lib/objectives";
+import { formatDate, formatRelative, fromISO } from "@/lib/datetime";
+import type { SerializedCard, SerializedItem } from "./types";
+
+interface ObjetivoCardProps {
+  card: SerializedCard;
+  canEdit: boolean;
+  currentUserId: string;
+  onChanged: (next: SerializedCard) => void;
+  onDeleted: (id: string) => void;
+  onEdit: (card: SerializedCard) => void;
+}
+
+const STATUS_STYLE: Record<CardStatus, { dot: string; chip: string; ring: string }> = {
+  pending: {
+    dot: "bg-text-faint",
+    chip: "border-border-strong bg-surface text-text-muted",
+    ring: "ring-border",
+  },
+  in_progress: {
+    dot: "bg-olive-bright shadow-[0_0_10px_var(--color-olive-bright)]",
+    chip: "border-olive-bright/40 bg-olive-subtle text-olive-light",
+    ring: "ring-olive-bright/30",
+  },
+  completed: {
+    dot: "bg-emerald-400",
+    chip: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+    ring: "ring-emerald-500/30",
+  },
+};
+
+const ITEM_STATUS_STYLE: Record<ItemStatus, { box: string; label: string; line: string }> = {
+  pending: {
+    box: "border-border-strong bg-transparent",
+    label: "text-text",
+    line: "",
+  },
+  done: {
+    box: "border-emerald-400/70 bg-emerald-500/15 text-emerald-300",
+    label: "text-text-muted",
+    line: "line-through decoration-emerald-400/40 decoration-1",
+  },
+  failed: {
+    box: "border-red-400/70 bg-red-500/15 text-red-300",
+    label: "text-text-muted",
+    line: "line-through decoration-red-400/40 decoration-1",
+  },
+};
+
+export function ObjetivoCard({
+  card,
+  canEdit,
+  currentUserId,
+  onChanged,
+  onDeleted,
+  onEdit,
+}: Readonly<ObjetivoCardProps>) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const status = getCardStatus(card);
+  const progress = getCardProgress(card);
+  const statusStyle = STATUS_STYLE[status];
+  const isUserAssignee = card.assignedToUser.id === currentUserId;
+  const canTickItems = canEdit || isUserAssignee;
+  const remaining = daysRemaining(card);
+
+  const assigneeName =
+    card.assignedToUser.fullName?.trim() || card.assignedToUser.email.split("@")[0];
+  const initials = (card.assignedToUser.fullName ?? card.assignedToUser.email)
+    .split(/[\s.@]/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase() ?? "")
+    .join("");
+
+  async function toggleItemStatus(item: SerializedItem) {
+    if (!canTickItems) return;
+    const next = nextItemStatus(item.status);
+    const optimistic: SerializedCard = {
+      ...card,
+      items: card.items.map((i) =>
+        i.id === item.id
+          ? {
+              ...i,
+              status: next,
+              evaluatedAt: new Date().toISOString(),
+              evaluatedByUser: { id: currentUserId, email: "", fullName: "Tú" },
+            }
+          : i,
+      ),
+    };
+    onChanged(optimistic);
+
+    try {
+      const res = await fetch(`/api/objetivos/${card.id}/items/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.message ?? "Error");
+      onChanged({
+        ...card,
+        items: card.items.map((i) => (i.id === item.id ? serializeItem(body.data) : i)),
+      });
+    } catch (error) {
+      onChanged(card);
+      toast.error(error instanceof Error ? error.message : "No se pudo actualizar");
+    }
+  }
+
+  function handleDelete() {
+    if (!canEdit) return;
+    if (!confirm(`¿Eliminar el objetivo "${card.title}"? Esta acción no se puede deshacer.`)) return;
+    setMenuOpen(false);
+    startTransition(async () => {
+      try {
+        const res = await fetch(`/api/objetivos/${card.id}`, { method: "DELETE" });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body?.message ?? "Error al eliminar");
+        toast.success("Objetivo eliminado");
+        onDeleted(card.id);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "No se pudo eliminar");
+      }
+    });
+  }
+
+  async function changeOverride(value: CardStatus | null) {
+    setMenuOpen(false);
+    try {
+      const res = await fetch(`/api/objetivos/${card.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statusOverride: value }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.message ?? "Error");
+      onChanged(serializeCard(body.data));
+      toast.success("Estado actualizado");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo cambiar el estado");
+    }
+  }
+
+  return (
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      className={`group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface/60 ring-1 ring-inset ${statusStyle.ring} backdrop-blur-sm transition-shadow hover:shadow-[0_0_0_1px_var(--color-border-olive),0_18px_40px_-12px_rgba(0,0,0,0.6)]`}
+    >
+      <header className="flex items-start justify-between gap-3 border-b border-border/60 px-5 py-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-bg text-[11px] font-semibold uppercase text-text-muted">
+            {card.assignedToUser.avatarUrl ? (
+              <img
+                src={card.assignedToUser.avatarUrl}
+                alt={assigneeName}
+                className="h-full w-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <span>{initials || "·"}</span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-text">{assigneeName}</p>
+            <p className="truncate text-[11px] text-text-faint">{card.assignedToUser.email}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${statusStyle.chip}`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${statusStyle.dot}`} />
+            {CARD_STATUS_LABEL[status]}
+          </span>
+          {canEdit && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-label="Menú"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-bg hover:text-text"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="5" r="1" />
+                  <circle cx="12" cy="12" r="1" />
+                  <circle cx="12" cy="19" r="1" />
+                </svg>
+              </button>
+              <AnimatePresence>
+                {menuOpen && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Cerrar menú"
+                      className="fixed inset-0 z-40 cursor-default"
+                      onClick={() => setMenuOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: -4, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-9 z-50 w-52 overflow-hidden rounded-xl border border-border bg-surface-elevated p-1 shadow-2xl"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onEdit(card);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:bg-bg hover:text-text"
+                      >
+                        Editar objetivo
+                      </button>
+                      <div className="my-1 border-t border-border/60" />
+                      <p className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-widest text-text-faint">
+                        Forzar estado
+                      </p>
+                      {(["pending", "in_progress", "completed"] as CardStatus[]).map((value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => changeOverride(value)}
+                          className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-xs transition-colors ${
+                            card.statusOverride === value
+                              ? "bg-olive-subtle text-accent"
+                              : "text-text-muted hover:bg-bg hover:text-text"
+                          }`}
+                        >
+                          <span>{CARD_STATUS_LABEL[value]}</span>
+                          {card.statusOverride === value && (
+                            <span className="text-[10px] uppercase tracking-wider">activo</span>
+                          )}
+                        </button>
+                      ))}
+                      {card.statusOverride && (
+                        <button
+                          type="button"
+                          onClick={() => changeOverride(null)}
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-text-muted transition-colors hover:bg-bg hover:text-text"
+                        >
+                          Quitar override (auto)
+                        </button>
+                      )}
+                      <div className="my-1 border-t border-border/60" />
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={handleDelete}
+                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50"
+                      >
+                        Eliminar
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+      </header>
+
+      <div className="flex flex-1 flex-col gap-3 px-5 pt-4 pb-3">
+        <div>
+          <h3 className="text-[15px] font-semibold leading-tight text-text">{card.title}</h3>
+          {card.description && (
+            <p className="mt-1 text-xs leading-relaxed text-text-muted">{card.description}</p>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-text-faint">
+          <span className="inline-flex items-center gap-1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            {formatDate(card.startDate)} → {formatDate(card.endDate)}
+          </span>
+          {status === "in_progress" && remaining > 0 && (
+            <span className="text-text-muted">{remaining}d restantes</span>
+          )}
+          {card.statusOverride && (
+            <span className="rounded-full bg-bg px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-text-muted">
+              manual
+            </span>
+          )}
+        </div>
+
+        {card.items.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-border bg-bg/30 px-3 py-3 text-xs text-text-muted">
+            Sin ítems aún.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-1.5">
+            {card.items.map((item) => {
+              const itemStyle = ITEM_STATUS_STYLE[item.status];
+              const evaluatedRel =
+                item.evaluatedAt && item.status !== "pending"
+                  ? formatRelative(item.evaluatedAt)
+                  : null;
+              const evaluatorName =
+                item.evaluatedByUser?.fullName?.trim() ??
+                item.evaluatedByUser?.email?.split("@")[0] ??
+                null;
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => toggleItemStatus(item)}
+                    disabled={!canTickItems}
+                    title={
+                      evaluatedRel
+                        ? `${evaluatorName ? `Marcado por ${evaluatorName} · ` : ""}${evaluatedRel}`
+                        : canTickItems
+                          ? "Click para marcar"
+                          : undefined
+                    }
+                    className={`flex w-full items-start gap-2.5 rounded-lg border border-transparent px-2 py-1.5 text-left text-sm transition-colors ${
+                      canTickItems ? "hover:border-border-olive hover:bg-bg/40" : "cursor-default"
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border transition-all ${itemStyle.box}`}
+                    >
+                      {item.status === "done" && (
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                      {item.status === "failed" && (
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      )}
+                    </span>
+                    <span className={`flex-1 leading-snug ${itemStyle.label} ${itemStyle.line}`}>
+                      {item.text}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <footer className="border-t border-border/60 bg-bg/20 px-5 py-3">
+        <div className="mb-1.5 flex items-center justify-between text-[11px]">
+          <span className="font-semibold text-text-muted">
+            {progress.done}/{progress.total} cumplidos
+            {progress.failed > 0 && (
+              <span className="ml-1 text-red-300/90">· {progress.failed} no</span>
+            )}
+          </span>
+          <span className="font-mono text-accent">{progress.percent}%</span>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg">
+          <motion.div
+            initial={false}
+            animate={{ width: `${progress.percent}%` }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="h-full rounded-full bg-gradient-to-r from-olive-mid to-olive-bright"
+          />
+        </div>
+      </footer>
+    </motion.article>
+  );
+}
+
+function serializeItem(raw: unknown): SerializedItem {
+  const r = raw as Record<string, unknown>;
+  return {
+    id: r.id as string,
+    text: r.text as string,
+    status: r.status as SerializedItem["status"],
+    position: r.position as number,
+    evaluatedAt: r.evaluatedAt ? new Date(r.evaluatedAt as string).toISOString() : null,
+    evaluatedByUser: r.evaluatedByUser as SerializedItem["evaluatedByUser"],
+  };
+}
+
+function serializeCard(raw: unknown): SerializedCard {
+  const r = raw as Record<string, unknown>;
+  return {
+    id: r.id as string,
+    title: r.title as string,
+    description: (r.description as string | null) ?? null,
+    startDate: typeof r.startDate === "string" ? r.startDate.slice(0, 10) : new Date(r.startDate as string).toISOString().slice(0, 10),
+    endDate: typeof r.endDate === "string" ? r.endDate.slice(0, 10) : new Date(r.endDate as string).toISOString().slice(0, 10),
+    statusOverride: (r.statusOverride as SerializedCard["statusOverride"]) ?? null,
+    assignedToUser: r.assignedToUser as SerializedUser,
+    createdByUser: r.createdByUser as SerializedUser,
+    items: ((r.items as unknown[]) ?? []).map(serializeItem),
+    createdAt: new Date(r.createdAt as string).toISOString(),
+    updatedAt: new Date(r.updatedAt as string).toISOString(),
+  };
+}
+
+type SerializedUser = SerializedCard["assignedToUser"];

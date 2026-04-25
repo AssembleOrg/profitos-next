@@ -13,7 +13,7 @@ export interface CalendarEvent {
   date: string; // ISO date "2026-02-26"
   startTime: string; // "14:00"
   endTime: string; // "15:00"
-  type: "visita" | "firma" | "tasacion" | "otro";
+  type: "visita" | "firma" | "tasacion" | "otro" | "firma_informes" | "firma_acordada" | "entrega_llaves";
   description?: string;
   client?: string;
   clientId?: string;
@@ -36,6 +36,9 @@ const typeColors: Record<CalendarEvent["type"], { bg: string; text: string; dot:
   firma: { bg: "bg-amber-500/15", text: "text-amber-400", dot: "bg-amber-400" },
   tasacion: { bg: "bg-blue-500/15", text: "text-blue-400", dot: "bg-blue-400" },
   otro: { bg: "bg-purple-500/15", text: "text-purple-400", dot: "bg-purple-400" },
+  firma_informes: { bg: "bg-cyan-500/15", text: "text-cyan-400", dot: "bg-cyan-400" },
+  firma_acordada: { bg: "bg-amber-500/15", text: "text-amber-400", dot: "bg-amber-400" },
+  entrega_llaves: { bg: "bg-emerald-500/15", text: "text-emerald-400", dot: "bg-emerald-400" },
 };
 
 const typeLabels: Record<string, string> = {
@@ -43,6 +46,9 @@ const typeLabels: Record<string, string> = {
   firma: "Firma",
   tasacion: "Tasación",
   otro: "Otro",
+  firma_informes: "Inicio trámite",
+  firma_acordada: "Firma acordada",
+  entrega_llaves: "Entrega llaves",
 };
 
 /* ------------------------------------------------------------------ */

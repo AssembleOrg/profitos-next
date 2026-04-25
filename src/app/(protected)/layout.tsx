@@ -37,7 +37,7 @@ export default async function ProtectedLayout({
         </header>
         <div className="px-5 pb-nav md:px-8 md:pb-8">{children}</div>
       </main>
-      <BottomNav />
+      <BottomNav role={user.role} />
     </div>
   );
 }
