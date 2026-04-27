@@ -39,7 +39,7 @@ export function AgendaClient({ events }: AgendaClientProps) {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-text">Agenda</h1>
+          <h1 className="font-display text-2xl font-medium text-text">Agenda</h1>
           <p className="text-sm text-text-muted">
             Visitas, firmas y tasaciones programadas
           </p>

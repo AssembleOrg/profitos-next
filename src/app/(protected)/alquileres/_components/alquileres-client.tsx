@@ -420,7 +420,45 @@ function CobrosList({ contracts, onOpenDue }: CobrosListProps) {
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border">
-      <table className="w-full text-sm">
+      {/* Mobile cards */}
+      <div className="flex flex-col divide-y divide-border/60 sm:hidden">
+        {allDues.map(({ contract, due, effective }) => {
+          const collected = due.transactions.reduce((acc, t) => acc + t.amountPaid, 0);
+          const style = RENTAL_DUE_STATUS_STYLE[effective];
+          return (
+            <button
+              key={due.id}
+              type="button"
+              onClick={() => onOpenDue(contract, due)}
+              className="flex flex-col gap-2 bg-bg/30 px-4 py-3 text-left transition-colors active:bg-surface/40"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono text-xs text-text">
+                  {formatDate(due.dueDate)}
+                  <span className="ml-1 text-[10px] text-text-faint">#{due.position}</span>
+                </span>
+                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${style.chip}`}>
+                  <span className={`h-1 w-1 rounded-full ${style.dot}`} />
+                  {RENTAL_DUE_STATUS_LABEL[effective]}
+                </span>
+              </div>
+              <p className="line-clamp-1 text-sm text-text">{contract.property.address}</p>
+              <p className="text-xs text-text-muted">{contract.tenant.fullName}</p>
+              <div className="flex items-center gap-4">
+                <span className="text-[11px] text-text-muted">
+                  Esperado: <span className="font-mono text-text">{formatARS(due.expectedAmount)}</span>
+                </span>
+                <span className="text-[11px] text-text-muted">
+                  Cobrado: <span className="font-mono text-emerald-300">{formatARS(collected)}</span>
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Desktop table */}
+      <table className="hidden w-full text-sm sm:table">
         <thead className="bg-surface/40 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
           <tr>
             <th className="px-4 py-2.5 text-left">Vencimiento</th>

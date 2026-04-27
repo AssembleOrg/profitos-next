@@ -103,7 +103,7 @@ export function AdicionalesClient({ initialItems }: Readonly<AdicionalesClientPr
                       setEditing(it);
                       setOpen(true);
                     }}
-                    className="rounded-md border border-border px-2.5 py-1 text-[11px] text-text-muted transition-colors hover:bg-surface hover:text-text"
+                    className="rounded-md border border-border px-3 py-2 text-[11px] text-text-muted transition-colors hover:bg-surface hover:text-text"
                   >
                     Editar
                   </button>
@@ -111,7 +111,7 @@ export function AdicionalesClient({ initialItems }: Readonly<AdicionalesClientPr
                     <button
                       type="button"
                       onClick={() => handleDelete(it)}
-                      className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-[11px] text-red-300 transition-colors hover:bg-red-500/20"
+                      className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-[11px] text-red-300 transition-colors hover:bg-red-500/20"
                     >
                       Eliminar
                     </button>

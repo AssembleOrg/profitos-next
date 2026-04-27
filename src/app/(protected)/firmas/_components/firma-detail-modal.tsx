@@ -431,7 +431,7 @@ function Timeline({
                     <button
                       type="button"
                       onClick={() => deleteNote(action.id)}
-                      className="flex h-5 w-5 items-center justify-center rounded text-text-faint transition-colors hover:bg-red-500/10 hover:text-red-300"
+                      className="flex h-8 w-8 items-center justify-center rounded text-text-faint transition-colors hover:bg-red-500/10 hover:text-red-300"
                       aria-label="Eliminar nota"
                       title="Eliminar nota"
                     >

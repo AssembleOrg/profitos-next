@@ -164,7 +164,7 @@ export function FirmasClient({
           <button
             type="button"
             onClick={() => updateFilters({ q: null, status: null, propertyId: null })}
-            className="h-10 rounded-xl border border-border bg-bg px-3 text-xs font-medium text-text-muted transition-colors hover:border-olive-bright/40 hover:text-text"
+            className="h-11 rounded-xl border border-border bg-bg px-3 text-xs font-medium text-text-muted transition-colors hover:border-olive-bright/40 hover:text-text"
           >
             Limpiar filtros
           </button>

@@ -114,7 +114,64 @@ export function InquilinosClient({
         </p>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border">
-          <table className="w-full text-sm">
+          {/* Mobile cards */}
+          <div className="flex flex-col divide-y divide-border/60 sm:hidden">
+            <AnimatePresence>
+              {tenants.map((t) => (
+                <motion.div
+                  key={t.id}
+                  layout
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex flex-col gap-2 bg-bg/30 px-4 py-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium text-text">{t.fullName}</p>
+                      <p className="font-mono text-xs text-text-muted">
+                        <span className="rounded bg-surface px-1.5 py-0.5 text-[10px] uppercase">{t.idType}</span>{" "}
+                        {t.idNumber}
+                      </p>
+                    </div>
+                    <span className="text-[11px] text-text-muted">
+                      {t.contractsCount} contrato{t.contractsCount !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  {(t.phone || t.email) && (
+                    <div className="flex flex-col gap-0.5">
+                      {t.phone && <span className="text-xs text-text-muted">{t.phone}</span>}
+                      {t.email && <span className="text-xs text-text-faint">{t.email}</span>}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditing(t);
+                        setCreateOpen(true);
+                      }}
+                      className="rounded-md border border-border px-3 py-2 text-xs text-text-muted transition-colors active:bg-surface active:text-text"
+                    >
+                      Editar
+                    </button>
+                    {isAdmin && t.contractsCount === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(t.id, t.fullName)}
+                        className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300 transition-colors active:bg-red-500/20"
+                      >
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          {/* Desktop table */}
+          <table className="hidden w-full text-sm sm:table">
             <thead className="bg-surface/40 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
               <tr>
                 <th className="px-4 py-2.5 text-left">Nombre</th>
@@ -158,7 +215,7 @@ export function InquilinosClient({
                             setEditing(t);
                             setCreateOpen(true);
                           }}
-                          className="rounded-md border border-border px-2.5 py-1 text-[11px] text-text-muted transition-colors hover:bg-surface hover:text-text"
+                          className="rounded-md border border-border px-3 py-2 text-[11px] text-text-muted transition-colors hover:bg-surface hover:text-text"
                         >
                           Editar
                         </button>
@@ -166,7 +223,7 @@ export function InquilinosClient({
                           <button
                             type="button"
                             onClick={() => handleDelete(t.id, t.fullName)}
-                            className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-[11px] text-red-300 transition-colors hover:bg-red-500/20"
+                            className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-[11px] text-red-300 transition-colors hover:bg-red-500/20"
                           >
                             Eliminar
                           </button>

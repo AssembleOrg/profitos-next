@@ -465,7 +465,7 @@ export function PropiedadesClient({
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-lg font-medium text-text">Propiedades</h1>
+          <h1 className="font-display text-2xl font-medium text-text">Propiedades</h1>
           <p className="text-sm text-text-muted">
             Mostrando {properties.length} de {total} resultado{total !== 1 ? "s" : ""} · Total global: {totalAll}
           </p>

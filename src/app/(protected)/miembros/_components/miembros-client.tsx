@@ -138,7 +138,7 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-text">Miembros</h1>
+          <h1 className="font-display text-2xl font-medium text-text">Miembros</h1>
           <p className="mt-1 text-sm text-text-muted">
             {total} miembro{total !== 1 ? "s" : ""} con acceso al sistema
           </p>

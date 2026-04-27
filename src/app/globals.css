@@ -107,7 +107,7 @@ input[type="number"] {
 /* Padding bottom que incluye bottom nav + safe area — solo en mobile */
 @media (max-width: 767px) {
   .pb-nav {
-    padding-bottom: calc(72px + var(--safe-bottom));
+    padding-bottom: calc(88px + var(--safe-bottom));
   }
 }
 

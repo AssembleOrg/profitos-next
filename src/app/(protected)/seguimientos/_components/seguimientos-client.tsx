@@ -275,7 +275,7 @@ export function SeguimientosClient({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-text">Seguimientos</h1>
+          <h1 className="font-display text-2xl font-medium text-text">Seguimientos</h1>
           <p className="text-sm text-text-muted">
             {total} seguimiento{total !== 1 ? "s" : ""} cargado{total !== 1 ? "s" : ""}
           </p>

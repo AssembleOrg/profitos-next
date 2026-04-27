@@ -642,7 +642,7 @@ export function ContractWizard({
                                   className="flex items-center gap-2 rounded-xl border border-olive-bright/30 bg-olive-subtle/60 px-3 py-2"
                                 >
                                   <span className="flex-1 text-sm text-text">{sa.name}</span>
-                                  <div className="w-44">
+                                  <div className="w-full sm:w-44">
                                     <CurrencyInput
                                       value={sa.amount}
                                       onChange={(v) =>
