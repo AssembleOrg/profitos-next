@@ -52,60 +52,63 @@ export function FiltersBar({
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-2xl border border-border bg-surface/40 p-3 transition-opacity sm:flex-row sm:items-end ${
+      className={`flex flex-col gap-3 rounded-2xl border border-border bg-surface/40 p-3 transition-opacity ${
         pending ? "opacity-70" : ""
       }`}
     >
-      {showUserFilter && (
-        <label className="flex flex-col gap-1.5 sm:min-w-[220px]">
+      <div className="flex flex-wrap items-end gap-3">
+        {showUserFilter && (
+          <label className="flex w-full flex-col gap-1.5 sm:w-[200px]">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+              Empleado
+            </span>
+            <select
+              value={selectedUserId}
+              onChange={(e) => update({ assignedToUserId: e.target.value })}
+              className="h-10 w-full rounded-xl border border-border bg-bg px-3 text-sm text-text focus:border-secondary focus:outline-none scheme-dark"
+            >
+              <option value="">Todos</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.fullName?.trim() || u.email}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        <label className="flex flex-col gap-1.5">
           <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-            Empleado
+            Desde
           </span>
-          <select
-            value={selectedUserId}
-            onChange={(e) => update({ assignedToUserId: e.target.value })}
-            className="h-10 rounded-xl border border-border bg-bg px-3 text-sm text-text focus:border-secondary focus:outline-none scheme-dark"
-          >
-            <option value="">Todos los empleados</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.fullName?.trim() || u.email}
-              </option>
-            ))}
-          </select>
+          <DateField value={from} onChange={(iso) => update({ from: iso })} />
         </label>
-      )}
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-          Desde
-        </span>
-        <DateField value={from} onChange={(iso) => update({ from: iso })} />
-      </label>
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-          Hasta
-        </span>
-        <DateField value={to} onChange={(iso) => update({ to: iso })} />
-      </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+            Hasta
+          </span>
+          <DateField value={to} onChange={(iso) => update({ to: iso })} />
+        </label>
 
-      <div className="flex flex-wrap items-center gap-1.5 sm:ml-auto">
-        <button
-          type="button"
-          onClick={setThisMonth}
-          className="h-10 rounded-xl border border-border bg-bg px-3 text-xs font-medium text-text-muted transition-colors hover:border-olive-bright/40 hover:text-text"
-        >
-          Este mes
-        </button>
-        {hasPeriod && (
+        <div className="flex flex-wrap items-center gap-1.5 pb-0.5">
           <button
             type="button"
-            onClick={clearPeriod}
+            onClick={setThisMonth}
             className="h-10 rounded-xl border border-border bg-bg px-3 text-xs font-medium text-text-muted transition-colors hover:border-olive-bright/40 hover:text-text"
           >
-            Histórico (sin período)
+            Este mes
           </button>
-        )}
+          {hasPeriod && (
+            <button
+              type="button"
+              onClick={clearPeriod}
+              className="h-10 rounded-xl border border-border bg-bg px-3 text-xs font-medium text-text-muted transition-colors hover:border-olive-bright/40 hover:text-text"
+            >
+              Sin período
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

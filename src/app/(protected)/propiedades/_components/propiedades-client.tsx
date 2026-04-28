@@ -124,6 +124,7 @@ export function PropiedadesClient({
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"save" | "delete" | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [syncingTokko, setSyncingTokko] = useState(false);
@@ -1100,6 +1101,7 @@ export function PropiedadesClient({
                   </div>
                 </div>
 
+                {/* Operación y Moneda ocultas del modal — visibles solo en tabla y filtros
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="mb-1 block text-xs font-medium text-text-muted">Operación</label>
@@ -1119,18 +1121,19 @@ export function PropiedadesClient({
                       className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
                     />
                   </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Precio</label>
-                    <input
-                      name="operationPrice"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      defaultValue={editProperty?.operationPrice ?? ""}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
-                    />
-                  </div>
+                */}
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-text-muted">Precio</label>
+                  <input
+                    name="operationPrice"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    defaultValue={editProperty?.operationPrice ?? ""}
+                    className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
+                  />
                 </div>
+                {/* fin campos ocultos */}
 
                 <div>
                   <label className="mb-1 block text-xs font-medium text-text-muted">URL pública</label>
@@ -1180,7 +1183,7 @@ export function PropiedadesClient({
                 {isEdit ? (
                   <button
                     type="button"
-                    onClick={handleDelete}
+                    onClick={() => setConfirmAction("delete")}
                     disabled={deleting}
                     className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-red-400 transition-colors active:bg-red-500/10 disabled:opacity-50"
                   >
@@ -1201,24 +1204,100 @@ export function PropiedadesClient({
                   >
                     Cancelar
                   </button>
+                  {isEdit ? (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmAction("save")}
+                      disabled={loading}
+                      className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary transition-colors active:bg-secondary/30 disabled:opacity-50"
+                    >
+                      {loading ? (
+                        <>
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-secondary/30 border-t-secondary" />
+                          Guardando...
+                        </>
+                      ) : (
+                        "Guardar cambios"
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      form="property-form"
+                      disabled={loading}
+                      className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary transition-colors active:bg-secondary/30 disabled:opacity-50"
+                    >
+                      {loading ? (
+                        <>
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-secondary/30 border-t-secondary" />
+                          Guardando...
+                        </>
+                      ) : (
+                        "Crear propiedad"
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de confirmación — Guardar / Eliminar */}
+      <AnimatePresence>
+        {confirmAction && (
+          <>
+            <motion.div
+              key="confirm-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm"
+              onClick={() => setConfirmAction(null)}
+            />
+            <motion.div
+              key="confirm-dialog"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="fixed left-1/2 top-1/2 z-[71] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-surface p-6 shadow-2xl"
+            >
+              <p className="text-base font-medium text-text">
+                {confirmAction === "delete" ? "¿Eliminar propiedad?" : "¿Guardar cambios?"}
+              </p>
+              <p className="mt-1 text-sm text-text-muted">
+                {confirmAction === "delete"
+                  ? "Esta acción no se puede deshacer."
+                  : "Se guardarán los cambios realizados en la propiedad."}
+              </p>
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirmAction(null)}
+                  className="rounded-lg px-4 py-2 text-sm text-text-muted transition-colors active:text-text"
+                >
+                  Cancelar
+                </button>
+                {confirmAction === "delete" ? (
+                  <button
+                    type="button"
+                    onClick={() => { setConfirmAction(null); handleDelete(); }}
+                    className="rounded-xl bg-red-500/20 px-5 py-2 text-sm font-medium text-red-400 transition-colors active:bg-red-500/30"
+                  >
+                    Eliminar
+                  </button>
+                ) : (
                   <button
                     type="submit"
                     form="property-form"
-                    disabled={loading}
-                    className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary transition-colors active:bg-secondary/30 disabled:opacity-50"
+                    onClick={() => setConfirmAction(null)}
+                    className="rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary transition-colors active:bg-secondary/30"
                   >
-                    {loading ? (
-                      <>
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-secondary/30 border-t-secondary" />
-                        Guardando...
-                      </>
-                    ) : isEdit ? (
-                      "Guardar cambios"
-                    ) : (
-                      "Crear propiedad"
-                    )}
+                    Confirmar
                   </button>
-                </div>
+                )}
               </div>
             </motion.div>
           </>

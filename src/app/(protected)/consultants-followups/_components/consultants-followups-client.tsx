@@ -269,17 +269,17 @@ export function ConsultantsFollowUpsClient({
       </div>
 
       <div className="rounded-2xl border border-border bg-surface/30 p-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px_auto_auto]">
+        <div className="flex flex-wrap gap-3">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar por nombre, email, teléfono..."
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none"
+            className="min-w-0 flex-1 basis-full rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none sm:basis-auto"
           />
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            className="flex-1 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
           >
             <option value="">Todos los estados</option>
             {STATUS_OPTIONS.map((option) => (
@@ -290,13 +290,13 @@ export function ConsultantsFollowUpsClient({
           </select>
           <button
             onClick={() => applyFilters(1)}
-            className="rounded-xl bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30"
+            className="rounded-xl bg-secondary/20 px-4 py-2.5 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30"
           >
             Aplicar
           </button>
           <button
             onClick={resetFilters}
-            className="rounded-xl border border-border px-4 py-2 text-sm text-text-muted transition-colors hover:bg-bg hover:text-text"
+            className="rounded-xl border border-border px-4 py-2.5 text-sm text-text-muted transition-colors hover:bg-bg hover:text-text"
           >
             Limpiar
           </button>
@@ -312,9 +312,9 @@ export function ConsultantsFollowUpsClient({
         )}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-surface/30">
+      <div className="rounded-2xl border border-border bg-surface/30">
       {/* Cards — solo mobile */}
-      <div className="sm:hidden space-y-2">
+      <div className="sm:hidden space-y-2 p-3">
         {items.length === 0 ? (
           <p className="py-8 text-center text-sm text-text-muted">Sin resultados</p>
         ) : (
@@ -326,9 +326,31 @@ export function ConsultantsFollowUpsClient({
                 <p className="font-medium text-text">{item.recentContact.name}</p>
                 <span className="rounded-full border border-border bg-bg px-2 py-0.5 text-[10px] text-text flex-shrink-0">{item.status}</span>
               </div>
-              <p className="mt-0.5 text-xs text-text-muted">
-                {item.recentContact.email ?? item.recentContact.cellphone ?? "Sin dato"}
-              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {item.recentContact.email && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.recentContact.email!); toast.success("Mail copiado"); }}
+                    className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" /></svg>
+                    <span className="max-w-[160px] truncate">{item.recentContact.email}</span>
+                  </button>
+                )}
+                {(item.recentContact.cellphone || item.recentContact.phone) && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.recentContact.cellphone ?? item.recentContact.phone!); toast.success("Teléfono copiado"); }}
+                    className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 016.19 15.9a19.79 19.79 0 01-3.07-8.67A2 2 0 015.11 5h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L9.09 12.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" /></svg>
+                    {item.recentContact.cellphone ?? item.recentContact.phone}
+                  </button>
+                )}
+                {!item.recentContact.email && !item.recentContact.cellphone && !item.recentContact.phone && (
+                  <span className="text-xs text-text-muted/50">Sin contacto</span>
+                )}
+              </div>
               <p className="mt-2 text-xs text-text-muted">{userLabel(item.assignedToUser)} · {formatDateTime(item.updatedAt)}</p>
             </div>
           ))
@@ -336,55 +358,71 @@ export function ConsultantsFollowUpsClient({
       </div>
 
       {/* Tabla ya existente — solo desktop */}
-      <div className="hidden sm:block">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs font-semibold uppercase tracking-widest text-text-muted">
-                <th className="px-5 py-3">Consulta</th>
-                <th className="px-5 py-3">Estado</th>
-                <th className="px-5 py-3">Responsable</th>
-                <th className="px-5 py-3">Actualizado</th>
-                <th className="px-5 py-3 text-right">Detalle</th>
+      <div className="hidden overflow-hidden sm:block">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-border text-xs font-semibold uppercase tracking-widest text-text-muted">
+              <th className="px-5 py-3">Consulta</th>
+              <th className="px-5 py-3">Estado</th>
+              <th className="hidden px-5 py-3 md:table-cell">Responsable</th>
+              <th className="hidden px-5 py-3 lg:table-cell">Actualizado</th>
+              <th className="px-5 py-3 text-right">Detalle</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-5 py-12 text-center text-sm text-text-muted">
+                  No hay seguimientos de consultas para los filtros seleccionados
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-text-muted">
-                    No hay seguimientos de consultas para los filtros seleccionados
+            ) : (
+              items.map((item) => (
+                <tr key={item.id} className="border-b border-border/50 last:border-b-0">
+                  <td className="px-5 py-3.5">
+                    <p className="font-medium text-text">{item.recentContact.name}</p>
+                    <p className="text-xs text-text-muted">#{item.recentContact.tokkoContactId}</p>
+                    {item.recentContact.email && (
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(item.recentContact.email!); toast.success("Mail copiado"); }}
+                        className="block max-w-[200px] truncate text-xs text-text-muted/80 transition-colors hover:text-text active:opacity-60"
+                      >
+                        {item.recentContact.email}
+                      </button>
+                    )}
+                    {(item.recentContact.cellphone || item.recentContact.phone) && (
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(item.recentContact.cellphone ?? item.recentContact.phone!); toast.success("Teléfono copiado"); }}
+                        className="block max-w-[200px] truncate text-xs text-text-muted/80 transition-colors hover:text-text active:opacity-60"
+                      >
+                        {item.recentContact.cellphone ?? item.recentContact.phone}
+                      </button>
+                    )}
+                    {!item.recentContact.email && !item.recentContact.cellphone && !item.recentContact.phone && (
+                      <p className="text-xs text-text-muted/50">Sin contacto</p>
+                    )}
+                    <p className="mt-0.5 text-xs text-text-muted/70 md:hidden">{userLabel(item.assignedToUser)}</p>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <span className="rounded-full border border-border bg-bg px-2.5 py-1 text-xs text-text">
+                      {item.status}
+                    </span>
+                  </td>
+                  <td className="hidden px-5 py-3.5 text-text-muted md:table-cell">{userLabel(item.assignedToUser)}</td>
+                  <td className="hidden px-5 py-3.5 text-text-muted lg:table-cell">{formatDateTime(item.updatedAt)}</td>
+                  <td className="px-5 py-3.5 text-right">
+                    <button
+                      onClick={() => loadDetail(item.id)}
+                      className="rounded-lg border border-border px-3 py-1.5 text-xs text-secondary transition-colors hover:bg-bg"
+                    >
+                      {loadingDetail ? "Cargando..." : "Abrir"}
+                    </button>
                   </td>
                 </tr>
-              ) : (
-                items.map((item) => (
-                  <tr key={item.id} className="border-b border-border/50 last:border-b-0">
-                    <td className="px-5 py-3.5">
-                      <p className="font-medium text-text">{item.recentContact.name}</p>
-                      <p className="text-xs text-text-muted">
-                        #{item.recentContact.tokkoContactId} · {item.recentContact.email ?? item.recentContact.cellphone ?? item.recentContact.phone ?? "Sin dato"}
-                      </p>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="rounded-full border border-border bg-bg px-2.5 py-1 text-xs text-text">
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-text-muted">{userLabel(item.assignedToUser)}</td>
-                    <td className="px-5 py-3.5 text-text-muted">{formatDateTime(item.updatedAt)}</td>
-                    <td className="px-5 py-3.5 text-right">
-                      <button
-                        onClick={() => loadDetail(item.id)}
-                        className="rounded-lg border border-border px-3 py-1.5 text-xs text-secondary transition-colors hover:bg-bg"
-                      >
-                        {loadingDetail ? "Cargando..." : "Abrir"}
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
       </div>
 

@@ -133,8 +133,8 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative flex-1 sm:min-w-[200px]">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -150,7 +150,7 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          className="min-w-0 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
         >
           <option value="">Todos los estados</option>
           <option value="borrador">Borrador</option>
@@ -160,19 +160,19 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
           type="date"
           value={fromDate}
           onChange={(e) => setFromDate(e.target.value)}
-          className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          className="min-w-0 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
           title="Desde"
         />
         <input
           type="date"
           value={toDate}
           onChange={(e) => setToDate(e.target.value)}
-          className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          className="min-w-0 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
           title="Hasta"
         />
         <button
           onClick={() => applyFilters(1)}
-          className="rounded-xl bg-secondary/20 px-4 py-2.5 text-sm font-medium text-secondary hover:bg-secondary/30"
+          className="shrink-0 rounded-xl bg-secondary/20 px-4 py-2.5 text-sm font-medium text-secondary hover:bg-secondary/30"
         >
           Buscar
         </button>
@@ -214,8 +214,8 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
       </div>
 
       {/* Desktop table */}
-      <div className="hidden overflow-hidden rounded-2xl border border-border bg-surface/30 sm:block">
-        <table className="w-full text-left text-sm">
+      <div className="hidden overflow-x-auto rounded-2xl border border-border bg-surface/30 sm:block">
+        <table className="w-full min-w-[600px] text-left text-sm">
           <thead>
             <tr className="border-b border-border text-xs font-semibold uppercase tracking-widest text-text-muted">
               <th className="px-5 py-3">Dirección</th>

@@ -338,9 +338,31 @@ export function ConsultantsClient({
           items.map((item) => (
             <div key={item.id} className="rounded-xl border border-border bg-surface/30 p-4">
               <p className="font-medium text-text">{item.name}</p>
-              <p className="mt-0.5 text-xs text-text-muted">
-                {item.email ?? item.cellphone ?? item.phone ?? "Sin dato"}
-              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {item.email && (
+                  <button
+                    type="button"
+                    onClick={() => { navigator.clipboard.writeText(item.email!); toast.success("Mail copiado"); }}
+                    className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" /></svg>
+                    <span className="max-w-[160px] truncate">{item.email}</span>
+                  </button>
+                )}
+                {(item.cellphone || item.phone) && (
+                  <button
+                    type="button"
+                    onClick={() => { navigator.clipboard.writeText(item.cellphone ?? item.phone!); toast.success("Teléfono copiado"); }}
+                    className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 016.19 15.9a19.79 19.79 0 01-3.07-8.67A2 2 0 015.11 5h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L9.09 12.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" /></svg>
+                    {item.cellphone ?? item.phone}
+                  </button>
+                )}
+                {!item.email && !item.cellphone && !item.phone && (
+                  <span className="text-xs text-text-muted/50">Sin contacto</span>
+                )}
+              </div>
               <div className="mt-2 flex items-center justify-between text-xs text-text-muted">
                 <span>{item.agentName ?? "—"}</span>
                 <span>{formatDateTime24(item.tokkoCreatedAt)}</span>
@@ -352,46 +374,62 @@ export function ConsultantsClient({
 
       {/* Tabla — solo desktop */}
       <div className="hidden sm:block overflow-hidden rounded-2xl border border-border bg-surface/30">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs font-semibold uppercase tracking-widest text-text-muted">
-                <th className="px-5 py-3">Contacto</th>
-                <th className="px-5 py-3">Agente</th>
-                <th className="px-5 py-3">Creado</th>
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-border text-xs font-semibold uppercase tracking-widest text-text-muted">
+              <th className="px-5 py-3">Contacto</th>
+              <th className="hidden px-5 py-3 md:table-cell">Agente</th>
+              <th className="hidden px-5 py-3 lg:table-cell">Creado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="px-5 py-12 text-center text-sm text-text-muted">
+                  No hay últimos contactos para los filtros seleccionados
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="px-5 py-12 text-center text-sm text-text-muted">
-                    No hay últimos contactos para los filtros seleccionados
+            ) : (
+              items.map((item) => (
+                <tr key={item.id} className="border-b border-border/50 last:border-b-0">
+                  <td className="px-5 py-3.5">
+                    <p className="font-medium text-text">{item.name}</p>
+                    <p className="text-xs text-text-muted">#{item.tokkoContactId}</p>
+                    {item.email && (
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(item.email!); toast.success("Mail copiado"); }}
+                        className="block max-w-[200px] truncate text-xs text-text-muted/80 transition-colors hover:text-text active:opacity-60"
+                      >
+                        {item.email}
+                      </button>
+                    )}
+                    {(item.cellphone || item.phone) && (
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(item.cellphone ?? item.phone!); toast.success("Teléfono copiado"); }}
+                        className="block max-w-[200px] truncate text-xs text-text-muted/80 transition-colors hover:text-text active:opacity-60"
+                      >
+                        {item.cellphone ?? item.phone}
+                      </button>
+                    )}
+                    {!item.email && !item.cellphone && !item.phone && (
+                      <p className="text-xs text-text-muted/50">Sin contacto</p>
+                    )}
+                    <p className="mt-0.5 text-xs text-text-muted/70 md:hidden">{item.agentName ?? "—"}</p>
+                  </td>
+                  <td className="hidden px-5 py-3.5 md:table-cell">
+                    <p className="text-text-muted">{item.agentName ?? "—"}</p>
+                    {item.agentEmail && (
+                      <p className="text-xs text-text-muted/70">{item.agentEmail}</p>
+                    )}
+                  </td>
+                  <td className="hidden px-5 py-3.5 text-text-muted lg:table-cell">
+                    {formatDateTime24(item.tokkoCreatedAt)}
                   </td>
                 </tr>
-              ) : (
-                items.map((item) => (
-                  <tr key={item.id} className="border-b border-border/50 last:border-b-0">
-                    <td className="px-5 py-3.5">
-                      <p className="font-medium text-text">{item.name}</p>
-                      <p className="text-xs text-text-muted">
-                        #{item.tokkoContactId} · {item.email ?? item.cellphone ?? item.phone ?? "Sin dato"}
-                      </p>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <p className="text-text-muted">{item.agentName ?? "—"}</p>
-                      {item.agentEmail && (
-                        <p className="text-xs text-text-muted/70">{item.agentEmail}</p>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5 text-text-muted">
-                      {formatDateTime24(item.tokkoCreatedAt)}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
       <Pagination page={page} totalPages={totalPages} total={total} limit={limit} />

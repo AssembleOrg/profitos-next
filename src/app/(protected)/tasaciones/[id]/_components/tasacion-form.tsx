@@ -108,7 +108,7 @@ export function TasacionForm({ tasacion }: Props) {
   }, [direccion, ubicacionUnidad, superficieTotal, superficieMono, condicionVenta, mapaImageUrl, fotos, informeHtml, resultadoHtml, listaPreciosTitulo, tablas, tasacion.id, router]);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
+    <div className="mx-auto max-w-4xl min-w-0 space-y-8 overflow-hidden">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
@@ -125,18 +125,18 @@ export function TasacionForm({ tasacion }: Props) {
             <p className="text-xs text-text-muted">Editando tasación</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <button
             onClick={() => handleSave(false)}
             disabled={saving}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-surface hover:text-text disabled:opacity-50"
+            className="flex w-full items-center justify-center rounded-xl border border-border px-4 py-3 text-sm font-medium text-text-muted transition-colors active:bg-surface/60 hover:bg-surface hover:text-text disabled:opacity-50 sm:w-auto sm:rounded-lg sm:py-2"
           >
             {saving ? "Guardando..." : "Guardar"}
           </button>
           <button
             onClick={() => handleSave(true)}
             disabled={saving}
-            className="flex items-center gap-2 rounded-lg bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-secondary/20 px-5 py-3 text-sm font-semibold text-secondary transition-colors active:bg-secondary/40 hover:bg-secondary/30 disabled:opacity-50 sm:w-auto sm:rounded-lg sm:py-2 sm:font-medium"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -149,7 +149,7 @@ export function TasacionForm({ tasacion }: Props) {
       </div>
 
       {/* Section 1: Portada */}
-      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-6">
+      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-4 sm:p-6">
         <SectionHeader title="Portada" number="1" />
         <div>
           <label className="mb-1.5 block text-xs font-medium text-text-muted">Dirección (aparece en la portada) *</label>
@@ -163,7 +163,7 @@ export function TasacionForm({ tasacion }: Props) {
       </div>
 
       {/* Section 2: Tasación Actualizada */}
-      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-6">
+      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-4 sm:p-6">
         <SectionHeader title="Tasación Actualizada" number="2" />
         <p className="text-xs text-text-faint">
           Estos datos aparecen en el punteo de la segunda página del PDF.
@@ -224,7 +224,7 @@ export function TasacionForm({ tasacion }: Props) {
       </div>
 
       {/* Section 3: Fotos */}
-      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-6">
+      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-4 sm:p-6">
         <SectionHeader title="Fotos de la propiedad" number="3" />
         <p className="text-xs text-text-faint">
           Se mostrarán 2 fotos por página en el PDF. Las imágenes se convierten a AVIF automáticamente.
@@ -233,7 +233,7 @@ export function TasacionForm({ tasacion }: Props) {
       </div>
 
       {/* Section 4: Informe */}
-      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-6">
+      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-4 sm:p-6">
         <SectionHeader title="Informe" number="4" />
         <p className="text-xs text-text-faint">
           Descripción detallada del inmueble. Aparece como una página de texto en el PDF.
@@ -246,7 +246,7 @@ export function TasacionForm({ tasacion }: Props) {
       </div>
 
       {/* Section 5: Resultado */}
-      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-6">
+      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-4 sm:p-6">
         <SectionHeader title="Resultado" number="5" />
         <p className="text-xs text-text-faint">
           Conclusión y estimación de la tasación. Aparece como página de texto en el PDF.
@@ -259,7 +259,7 @@ export function TasacionForm({ tasacion }: Props) {
       </div>
 
       {/* Section 6: Lista de Precios */}
-      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-6">
+      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-4 sm:p-6">
         <SectionHeader title="Lista de Precios" number="6" />
         <div>
           <label className="mb-1.5 block text-xs font-medium text-text-muted">Título de la lista</label>
@@ -277,25 +277,52 @@ export function TasacionForm({ tasacion }: Props) {
       </div>
 
       {/* Bottom actions */}
-      <div className="flex items-center justify-between rounded-2xl border border-border bg-surface/30 p-4">
-        <Link href="/tasaciones" className="text-sm text-text-muted hover:text-text">
-          &larr; Volver al listado
-        </Link>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handleSave(false)}
-            disabled={saving}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-surface hover:text-text disabled:opacity-50"
+      <div className="rounded-2xl border border-border bg-surface/30 p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {/* Desktop: link izquierda */}
+          <Link
+            href="/tasaciones"
+            className="hidden items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-text-muted transition-colors hover:bg-surface hover:text-text sm:flex"
           >
-            Guardar
-          </button>
-          <button
-            onClick={() => handleSave(true)}
-            disabled={saving}
-            className="flex items-center gap-2 rounded-lg bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary hover:bg-secondary/30 disabled:opacity-50"
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            Volver al listado
+          </Link>
+
+          {/* Botones: col-reverse en mobile (primario arriba), row en desktop */}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+            <button
+              onClick={() => handleSave(false)}
+              disabled={saving}
+              className="flex w-full items-center justify-center rounded-xl border border-border px-4 py-3 text-sm font-medium text-text-muted transition-colors active:bg-surface/60 hover:bg-surface hover:text-text disabled:opacity-50 sm:w-auto sm:rounded-lg sm:py-2"
+            >
+              {saving ? "Guardando..." : "Guardar"}
+            </button>
+            <button
+              onClick={() => handleSave(true)}
+              disabled={saving}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-secondary/20 px-5 py-3 text-sm font-semibold text-secondary transition-colors active:bg-secondary/40 hover:bg-secondary/30 disabled:opacity-50 sm:w-auto sm:rounded-lg sm:py-2 sm:font-medium"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Guardar y generar PDF
+            </button>
+          </div>
+
+          {/* Mobile: link al fondo, full-width con ícono */}
+          <Link
+            href="/tasaciones"
+            className="flex items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm text-text-muted transition-colors active:bg-surface/60 hover:bg-surface hover:text-text sm:hidden"
           >
-            Guardar y generar PDF
-          </button>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            Volver al listado
+          </Link>
         </div>
       </div>
     </div>

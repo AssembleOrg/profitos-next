@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { formatDate, formatDateTime } from "@/lib/datetime";
 
 interface InformeData {
@@ -197,29 +198,41 @@ export function InformeClient({ memberId, from, to }: Props) {
                 {member.email[0].toUpperCase()}
               </div>
             )}
-            <div>
-              <h1 className="text-lg font-semibold text-text">
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-semibold text-text">
                 {member.fullName ?? member.email}
               </h1>
-              <p className="text-xs text-text-muted">{member.email} · {member.role}</p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(member.email);
+                    toast.success("Mail copiado");
+                  }}
+                  className="truncate text-xs text-text-muted transition-colors hover:text-text"
+                  title="Copiar mail"
+                >
+                  {member.email}
+                </button>
+                <span className="shrink-0 text-xs text-text-faint">· {member.role}</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Date range */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
-            className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            className="min-w-0 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
           />
           <span className="text-xs text-text-muted">a</span>
           <input
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
-            className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            className="min-w-0 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
           />
           <button
             onClick={applyDateRange}
@@ -361,22 +374,55 @@ export function InformeClient({ memberId, from, to }: Props) {
             </h3>
           </div>
           <div className="divide-y divide-border/50">
-            {data.seguimientosContacto.map((s) => (
-              <div key={s.id} className="flex items-center justify-between px-5 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-text">{s.recentContact.name}</p>
-                  <p className="text-xs text-text-muted">
-                    {s.recentContact.email ?? s.recentContact.cellphone ?? s.recentContact.phone ?? "Sin contacto"}
-                    {" · "}{s._count.actions} accion{s._count.actions !== 1 ? "es" : ""}
-                    {s.statusChanges.length > 0 && ` · Último cambio: ${s.statusChanges[0].fromStatus} → ${s.statusChanges[0].toStatus}`}
-                  </p>
+            {data.seguimientosContacto.map((s) => {
+              const contactInfo = s.recentContact.email ?? s.recentContact.cellphone ?? s.recentContact.phone ?? null;
+              const isEmail = !!s.recentContact.email;
+              const lastChange = s.statusChanges.length > 0
+                ? s.statusChanges[0]
+                : null;
+              const validChange = lastChange && lastChange.fromStatus && lastChange.toStatus
+                ? `${lastChange.fromStatus} → ${lastChange.toStatus}`
+                : null;
+              return (
+                <div key={s.id} className="flex items-center justify-between px-5 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-text">{s.recentContact.name}</p>
+                    <div className="flex flex-wrap items-center gap-x-1 text-xs text-text-muted">
+                      {contactInfo ? (
+                        isEmail ? (
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(contactInfo);
+                              toast.success("Mail copiado");
+                            }}
+                            className="truncate transition-colors hover:text-text"
+                            title="Copiar mail"
+                          >
+                            {contactInfo}
+                          </button>
+                        ) : (
+                          <span className="truncate">{contactInfo}</span>
+                        )
+                      ) : (
+                        <span>Sin contacto</span>
+                      )}
+                      <span>·</span>
+                      <span>{s._count.actions} accion{s._count.actions !== 1 ? "es" : ""}</span>
+                      {validChange && (
+                        <>
+                          <span>·</span>
+                          <span>Último cambio: {validChange}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="ml-3 flex shrink-0 items-center gap-1.5">
+                    <span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS[s.status] ?? "bg-text-muted"}`} />
+                    <span className="text-xs capitalize text-text-muted">{s.status}</span>
+                  </div>
                 </div>
-                <div className="ml-3 flex items-center gap-1.5">
-                  <span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS[s.status] ?? "bg-text-muted"}`} />
-                  <span className="text-xs capitalize text-text-muted">{s.status}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -483,7 +529,7 @@ export function InformeClient({ memberId, from, to }: Props) {
                   {TIMELINE_LABELS[item.kind] ?? item.kind}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-text">
+                  <p className="truncate text-sm text-text">
                     <span className="font-medium">{item.entity}</span>
                     {item.description && (
                       <span className="text-text-muted">

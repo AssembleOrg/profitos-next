@@ -33,7 +33,7 @@ export default async function ProtectedLayout({
               {now().toFormat("dd/MM/yyyy")}
             </span>
           </div>
-          <CommandPalette />
+          <CommandPalette role={user.role} />
         </header>
         <div className="px-5 pb-nav md:px-8 md:pb-8">{children}</div>
       </main>

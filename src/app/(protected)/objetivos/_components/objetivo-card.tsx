@@ -20,6 +20,7 @@ interface ObjetivoCardProps {
   canEdit: boolean;
   currentUserId: string;
   onChanged: (next: SerializedCard) => void;
+  onItemChanged: (cardId: string, updatedItem: SerializedItem) => void;
   onDeleted: (id: string) => void;
   onEdit: (card: SerializedCard) => void;
 }
@@ -65,11 +66,13 @@ export function ObjetivoCard({
   canEdit,
   currentUserId,
   onChanged,
+  onItemChanged,
   onDeleted,
   onEdit,
 }: Readonly<ObjetivoCardProps>) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [loadingItems, setLoadingItems] = useState<Set<string>>(new Set());
   const status = getCardStatus(card);
   const progress = getCardProgress(card);
   const statusStyle = STATUS_STYLE[status];
@@ -87,22 +90,16 @@ export function ObjetivoCard({
     .join("");
 
   async function toggleItemStatus(item: SerializedItem) {
-    if (!canTickItems) return;
+    if (!canTickItems || loadingItems.has(item.id)) return;
     const next = nextItemStatus(item.status);
-    const optimistic: SerializedCard = {
-      ...card,
-      items: card.items.map((i) =>
-        i.id === item.id
-          ? {
-              ...i,
-              status: next,
-              evaluatedAt: new Date().toISOString(),
-              evaluatedByUser: { id: currentUserId, email: "", fullName: "Tú" },
-            }
-          : i,
-      ),
-    };
-    onChanged(optimistic);
+
+    setLoadingItems((prev) => new Set(prev).add(item.id));
+    onItemChanged(card.id, {
+      ...item,
+      status: next,
+      evaluatedAt: new Date().toISOString(),
+      evaluatedByUser: { id: currentUserId, email: "", fullName: "Tú" },
+    });
 
     try {
       const res = await fetch(`/api/objetivos/${card.id}/items/${item.id}`, {
@@ -112,13 +109,16 @@ export function ObjetivoCard({
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message ?? "Error");
-      onChanged({
-        ...card,
-        items: card.items.map((i) => (i.id === item.id ? serializeItem(body.data) : i)),
-      });
+      onItemChanged(card.id, serializeItem(body.data));
     } catch (error) {
-      onChanged(card);
+      onItemChanged(card.id, item);
       toast.error(error instanceof Error ? error.message : "No se pudo actualizar");
+    } finally {
+      setLoadingItems((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
     }
   }
 
@@ -328,7 +328,7 @@ export function ObjetivoCard({
                   <button
                     type="button"
                     onClick={() => toggleItemStatus(item)}
-                    disabled={!canTickItems}
+                    disabled={!canTickItems || loadingItems.has(item.id)}
                     title={
                       evaluatedRel
                         ? `${evaluatorName ? `Marcado por ${evaluatorName} · ` : ""}${evaluatedRel}`

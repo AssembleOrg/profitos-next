@@ -8,7 +8,15 @@ import * as Dialog from "@radix-ui/react-dialog";
 const ico = "shrink-0 text-text/60";
 const icoAccent = "shrink-0 text-secondary";
 
-const navItems: { label: string; href: string; icon: ReactNode }[] = [
+interface PaletteNavItem {
+  label: string;
+  href: string;
+  icon: ReactNode;
+  adminOnly?: boolean;
+  hideForAdmin?: boolean;
+}
+
+const navItems: PaletteNavItem[] = [
   {
     label: "Dashboard", href: "/dashboard",
     icon: (
@@ -17,17 +25,6 @@ const navItems: { label: string; href: string; icon: ReactNode }[] = [
         <rect x="14" y="3" width="7" height="7" rx="1" />
         <rect x="3" y="14" width="7" height="7" rx="1" />
         <rect x="14" y="14" width="7" height="7" rx="1" />
-      </svg>
-    ),
-  },
-  {
-    label: "Solicitudes", href: "/solicitudes",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" />
-        <line x1="16" y1="17" x2="8" y2="17" />
       </svg>
     ),
   },
@@ -51,13 +48,22 @@ const navItems: { label: string; href: string; icon: ReactNode }[] = [
     ),
   },
   {
-    label: "Seguimientos consultas", href: "/consultants-followups",
+    label: "Seg. consultas", href: "/consultants-followups",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
         <path d="M3 4h18v12H3z" />
         <path d="M7 20h10" />
         <path d="M9 16v4" />
         <path d="M15 16v4" />
+      </svg>
+    ),
+  },
+  {
+    label: "Seguimientos", href: "/seguimientos",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
+        <path d="M9 11l3 3L22 4" />
+        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
       </svg>
     ),
   },
@@ -82,11 +88,84 @@ const navItems: { label: string; href: string; icon: ReactNode }[] = [
     ),
   },
   {
-    label: "Seguimientos", href: "/seguimientos",
+    label: "Tasaciones", href: "/tasaciones",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
-        <path d="M9 11l3 3L22 4" />
-        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="12" y1="18" x2="12" y2="12" />
+        <line x1="9" y1="15" x2="15" y2="15" />
+      </svg>
+    ),
+  },
+  {
+    label: "Estado de firmas", href: "/firmas",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
+        <path d="M20 6L9 17l-5-5" />
+      </svg>
+    ),
+  },
+  {
+    label: "Alquileres", href: "/alquileres",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
+        <rect x="2" y="6" width="20" height="14" rx="2" />
+        <path d="M2 10h20" />
+        <path d="M7 15h2" />
+      </svg>
+    ),
+  },
+  {
+    label: "Inquilinos", href: "/inquilinos",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
+        <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+      </svg>
+    ),
+  },
+  {
+    label: "Objetivos", href: "/objetivos",
+    adminOnly: true,
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="6" />
+        <circle cx="12" cy="12" r="2" />
+      </svg>
+    ),
+  },
+  {
+    label: "Mis objetivos", href: "/mis-objetivos",
+    hideForAdmin: true,
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="6" />
+        <circle cx="12" cy="12" r="2" />
+      </svg>
+    ),
+  },
+  {
+    label: "Adicionales", href: "/adicionales",
+    adminOnly: true,
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+    ),
+  },
+  {
+    label: "Miembros", href: "/miembros",
+    adminOnly: true,
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
+        <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <line x1="19" y1="8" x2="19" y2="14" />
+        <line x1="22" y1="11" x2="16" y2="11" />
       </svg>
     ),
   },
@@ -147,7 +226,12 @@ const quickActions: { label: string; href: string; icon: ReactNode }[] = [
   },
 ];
 
-export function CommandPalette() {
+interface CommandPaletteProps {
+  role?: "admin" | "user" | "viewer";
+}
+
+export function CommandPalette({ role }: CommandPaletteProps = {}) {
+  const isAdmin = role === "admin";
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -229,7 +313,11 @@ export function CommandPalette() {
               heading="Navegación"
               className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-widest [&_[cmdk-group-heading]]:text-text-muted"
             >
-              {navItems.map((item) => (
+              {navItems.filter((item) => {
+                if (item.adminOnly && !isAdmin) return false;
+                if (item.hideForAdmin && isAdmin) return false;
+                return true;
+              }).map((item) => (
                 <Command.Item
                   key={item.href}
                   value={item.label}

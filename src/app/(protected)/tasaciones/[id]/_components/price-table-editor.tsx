@@ -76,11 +76,11 @@ export function PriceTableEditor({ tablas, onChange }: Readonly<Props>) {
               value={tabla.titulo}
               onChange={(e) => updateTabla(ti, "titulo", e.target.value)}
               placeholder="Ej: Unidades dos ambientes"
-              className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+              className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
             />
             <button
               onClick={() => removeTabla(ti)}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-red-400 hover:bg-red-500/10"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-red-400 transition-colors hover:bg-red-500/10"
               title="Eliminar tabla"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -91,7 +91,7 @@ export function PriceTableEditor({ tablas, onChange }: Readonly<Props>) {
           </div>
 
           {/* Desktop header */}
-          <div className="hidden grid-cols-[1fr_1fr_1fr_36px] gap-2 text-[10px] font-semibold uppercase tracking-widest text-text-muted sm:grid">
+          <div className="hidden grid-cols-[1fr_1fr_1fr_36px] gap-2 text-[10px] font-semibold uppercase tracking-widest text-text-muted md:grid">
             <span className="px-1">Unidad</span>
             <span className="px-1">Valor (USD)</span>
             <span className="px-1">Observaciones</span>
@@ -100,8 +100,25 @@ export function PriceTableEditor({ tablas, onChange }: Readonly<Props>) {
 
           {/* Rows */}
           {tabla.filas.map((fila, fi) => (
-            <div key={fi} className="flex flex-col gap-2 border-b border-border/50 pb-3 last:border-0 last:pb-0 sm:grid sm:grid-cols-[1fr_1fr_1fr_36px] sm:border-0 sm:pb-0">
-              <div className="sm:hidden text-[10px] font-semibold uppercase tracking-widest text-text-muted">Fila {fi + 1}</div>
+            <div key={fi} className="flex flex-col gap-2 border-b border-border/50 pb-3 last:border-0 last:pb-0 md:grid md:grid-cols-[1fr_1fr_1fr_36px] md:items-center md:border-0 md:pb-0">
+
+              {/* Mobile: label + delete en la misma línea */}
+              <div className="flex items-center justify-between md:hidden">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+                  Fila {fi + 1}
+                </span>
+                <button
+                  onClick={() => removeFila(ti, fi)}
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-red-500/10 hover:text-red-400 active:bg-red-500/15"
+                  title="Eliminar fila"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+
               <input
                 value={fila.unidad}
                 onChange={(e) => updateFila(ti, fi, "unidad", e.target.value)}
@@ -121,9 +138,12 @@ export function PriceTableEditor({ tablas, onChange }: Readonly<Props>) {
                 placeholder="Cochera"
                 className="rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
               />
+
+              {/* Desktop: delete en la última columna del grid */}
               <button
                 onClick={() => removeFila(ti, fi)}
-                className="flex h-8 items-center justify-center self-end rounded-md text-text-faint hover:text-red-400 sm:h-full sm:self-auto"
+                className="hidden h-9 w-9 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-red-500/10 hover:text-red-400 md:flex"
+                title="Eliminar fila"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />

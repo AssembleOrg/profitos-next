@@ -152,7 +152,7 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
       </div>
 
       {/* List */}
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
         <AnimatePresence mode="popLayout">
           {items.map((item) => (
             <motion.div
@@ -161,7 +161,7 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-4 py-3 lg:flex-row lg:items-center lg:justify-between"
             >
               <div className="flex items-center gap-3">
                 {/* Avatar */}
@@ -202,65 +202,65 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 sm:shrink-0">
-                {/* Informe link */}
-                {item.hasAccount && (
-                  <Link
-                    href={`/miembros/${item.id}/informe`}
-                    className="rounded-lg bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-400 transition-colors hover:bg-sky-500/20"
+              <div className="flex flex-col gap-2 lg:shrink-0 lg:flex-row lg:items-center lg:gap-2">
+                {/* Fila superior: Informe + Rol */}
+                <div className="flex items-center gap-2">
+                  {item.hasAccount && (
+                    <Link
+                      href={`/miembros/${item.id}/informe`}
+                      className="rounded-lg bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-400 transition-colors hover:bg-sky-500/20"
+                    >
+                      Informe
+                    </Link>
+                  )}
+                  {item.role && (
+                    <select
+                      value={item.role ?? "user"}
+                      onChange={(e) => handleChangeRole(item, e.target.value as "admin" | "user" | "viewer")}
+                      disabled={changingRoleId === item.id}
+                      className="flex-1 rounded-lg border border-border bg-bg px-2 py-1.5 text-xs text-text focus:border-secondary focus:outline-none disabled:opacity-50 lg:flex-none [color-scheme:dark]"
+                    >
+                      <option value="admin">Admin</option>
+                      <option value="user">Usuario</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
+                  )}
+                </div>
+
+                {/* Fila inferior: Toggle + Eliminar */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleToggle(item)}
+                    disabled={togglingId === item.id}
+                    className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors lg:flex-none ${
+                      item.isActive
+                        ? "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                        : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                    } disabled:opacity-50`}
+                    title={item.isActive ? "Desactivar acceso" : "Activar acceso"}
                   >
-                    Informe
-                  </Link>
-                )}
-
-                {/* Role selector */}
-                {item.role && (
-                  <select
-                    value={item.role ?? "user"}
-                    onChange={(e) => handleChangeRole(item, e.target.value as "admin" | "user" | "viewer")}
-                    disabled={changingRoleId === item.id}
-                    className="rounded-lg border border-border bg-bg px-2 py-1.5 text-xs text-text focus:border-secondary focus:outline-none disabled:opacity-50 [color-scheme:dark]"
+                    {togglingId === item.id
+                      ? "..."
+                      : item.isActive
+                        ? "Desactivar"
+                        : "Activar"}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    disabled={deletingId === item.id}
+                    className="flex-1 rounded-lg bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50 lg:flex-none"
+                    title="Eliminar"
                   >
-                    <option value="admin">Admin</option>
-                    <option value="user">Usuario</option>
-                    <option value="viewer">Viewer</option>
-                  </select>
-                )}
-
-                {/* Toggle active */}
-                <button
-                  onClick={() => handleToggle(item)}
-                  disabled={togglingId === item.id}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                    item.isActive
-                      ? "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
-                      : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                  } disabled:opacity-50`}
-                  title={item.isActive ? "Desactivar acceso" : "Activar acceso"}
-                >
-                  {togglingId === item.id
-                    ? "..."
-                    : item.isActive
-                      ? "Desactivar"
-                      : "Activar"}
-                </button>
-
-                {/* Delete */}
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  disabled={deletingId === item.id}
-                  className="rounded-lg bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
-                  title="Eliminar"
-                >
-                  {deletingId === item.id ? "..." : "Eliminar"}
-                </button>
+                    {deletingId === item.id ? "..." : "Eliminar"}
+                  </button>
+                </div>
               </div>
             </motion.div>
           ))}
         </AnimatePresence>
 
         {items.length === 0 && (
-          <div className="rounded-xl border border-border bg-surface px-6 py-12 text-center">
+          <div className="col-span-full rounded-xl border border-border bg-surface px-6 py-12 text-center">
             <p className="text-sm text-text-muted">No hay miembros registrados</p>
           </div>
         )}

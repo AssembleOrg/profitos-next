@@ -51,7 +51,7 @@ export function RichTextEditor({ content, onChange, placeholder }: Props) {
     editorProps: {
       attributes: {
         class:
-          "prose prose-invert prose-sm max-w-none px-4 py-3 min-h-[200px] focus:outline-none text-text",
+          "prose prose-invert prose-sm max-w-none w-full min-w-0 overflow-hidden px-4 py-3 min-h-[200px] focus:outline-none text-text",
       },
     },
   });
@@ -59,7 +59,7 @@ export function RichTextEditor({ content, onChange, placeholder }: Props) {
   if (!editor) return null;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-bg">
+    <div className="w-full min-w-0 overflow-hidden rounded-lg border border-border bg-bg">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-0.5 border-b border-border px-2 py-1.5">
         <ToolbarButton
@@ -166,6 +166,9 @@ export function RichTextEditor({ content, onChange, placeholder }: Props) {
           pointer-events: none;
           height: 0;
         }
+        .ProseMirror { word-break: break-word; overflow-wrap: break-word; }
+        .ProseMirror table { width: 100%; }
+        .ProseMirror pre { white-space: pre-wrap; word-break: break-word; }
       `}</style>
     </div>
   );

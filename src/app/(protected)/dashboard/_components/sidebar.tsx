@@ -36,11 +36,28 @@ interface NotificationItem {
   operationCurrency?: string | null;
 }
 
-const navItems = [
+interface NavItem {
+  href: string;
+  label: string;
+  group: "principal" | "clientes" | "propiedades" | "alquileres" | "gestion";
+  adminOnly?: boolean;
+  hideForAdmin?: boolean;
+  icon: React.ReactNode;
+}
+
+const navGroups: { key: NavItem["group"]; label: string | null }[] = [
+  { key: "principal", label: null },
+  { key: "clientes", label: "Clientes y ventas" },
+  { key: "propiedades", label: "Propiedades" },
+  { key: "alquileres", label: "Alquileres" },
+  { key: "gestion", label: "Gestión" },
+];
+
+const navItems: NavItem[] = [
   {
     href: "/dashboard",
     label: "Dashboard",
-    adminOnly: false,
+    group: "principal",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -53,7 +70,7 @@ const navItems = [
   {
     href: "/contactos",
     label: "Contactos",
-    adminOnly: false,
+    group: "clientes",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
@@ -66,7 +83,7 @@ const navItems = [
   {
     href: "/consultants",
     label: "Últimos contactos",
-    adminOnly: false,
+    group: "clientes",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 12h-4l-3 7-4-14-3 7H2" />
@@ -76,7 +93,7 @@ const navItems = [
   {
     href: "/consultants-followups",
     label: "Seg. consultas",
-    adminOnly: false,
+    group: "clientes",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 4h18v12H3z" />
@@ -87,9 +104,20 @@ const navItems = [
     ),
   },
   {
+    href: "/seguimientos",
+    label: "Seguimientos",
+    group: "clientes",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 11l3 3L22 4" />
+        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+      </svg>
+    ),
+  },
+  {
     href: "/agenda",
     label: "Agenda",
-    adminOnly: false,
+    group: "clientes",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -102,7 +130,7 @@ const navItems = [
   {
     href: "/propiedades",
     label: "Propiedades",
-    adminOnly: false,
+    group: "propiedades",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
@@ -111,45 +139,9 @@ const navItems = [
     ),
   },
   {
-    href: "/seguimientos",
-    label: "Seguimientos",
-    adminOnly: false,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 11l3 3L22 4" />
-        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
-      </svg>
-    ),
-  },
-  {
-    href: "/objetivos",
-    label: "Objetivos",
-    adminOnly: true,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <circle cx="12" cy="12" r="6" />
-        <circle cx="12" cy="12" r="2" />
-      </svg>
-    ),
-  },
-  {
-    href: "/mis-objetivos",
-    label: "Mis objetivos",
-    adminOnly: false,
-    hideForAdmin: true,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <circle cx="12" cy="12" r="6" />
-        <circle cx="12" cy="12" r="2" />
-      </svg>
-    ),
-  },
-  {
     href: "/tasaciones",
     label: "Tasaciones",
-    adminOnly: false,
+    group: "propiedades",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -162,7 +154,7 @@ const navItems = [
   {
     href: "/firmas",
     label: "Estado de firmas",
-    adminOnly: false,
+    group: "propiedades",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 6L9 17l-5-5" />
@@ -173,7 +165,7 @@ const navItems = [
   {
     href: "/alquileres",
     label: "Alquileres",
-    adminOnly: false,
+    group: "alquileres",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="6" width="20" height="14" rx="2" />
@@ -185,7 +177,7 @@ const navItems = [
   {
     href: "/inquilinos",
     label: "Inquilinos",
-    adminOnly: false,
+    group: "alquileres",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
@@ -194,8 +186,35 @@ const navItems = [
     ),
   },
   {
+    href: "/objetivos",
+    label: "Objetivos",
+    group: "gestion",
+    adminOnly: true,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="6" />
+        <circle cx="12" cy="12" r="2" />
+      </svg>
+    ),
+  },
+  {
+    href: "/mis-objetivos",
+    label: "Mis objetivos",
+    group: "gestion",
+    hideForAdmin: true,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="6" />
+        <circle cx="12" cy="12" r="2" />
+      </svg>
+    ),
+  },
+  {
     href: "/adicionales",
     label: "Adicionales",
+    group: "gestion",
     adminOnly: true,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -207,6 +226,7 @@ const navItems = [
   {
     href: "/miembros",
     label: "Miembros",
+    group: "gestion",
     adminOnly: true,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -220,7 +240,7 @@ const navItems = [
   {
     href: "/configuracion",
     label: "Configuración",
-    adminOnly: false,
+    group: "gestion",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -242,10 +262,12 @@ function formatNotificationDate(value: string) {
 export function Sidebar({ avatarUrl, role }: SidebarProps) {
   const isAdmin = role === "admin";
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("jp_sidebar_collapsed") === "true";
-  });
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("jp_sidebar_collapsed");
+    if (stored === "true") setCollapsed(true);
+  }, []);
   const [showMenu, setShowMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -432,31 +454,49 @@ export function Sidebar({ avatarUrl, role }: SidebarProps) {
       )}
 
       {/* Nav */}
-      <nav className="flex flex-1 flex-col gap-1 px-2">
-        {navItems
-          .filter((item) => {
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2">
+        {navGroups.map((group, groupIdx) => {
+          const items = navItems.filter((item) => {
+            if (item.group !== group.key) return false;
             if (item.adminOnly && !isAdmin) return false;
             if (item.hideForAdmin && isAdmin) return false;
             return true;
-          })
-          .map((item) => {
-          const isActive = pathname === item.href;
+          });
+          if (items.length === 0) return null;
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={collapsed ? item.label : undefined}
-              className={`relative flex h-10 items-center gap-3 rounded-lg text-sm transition-colors ${
-                collapsed ? "justify-center px-0" : "px-3"
-              } ${
-                isActive
-                  ? "bg-olive-deep text-accent shadow-[inset_2px_0_0_var(--color-olive-bright)]"
-                  : "text-text-faint hover:bg-surface hover:text-text-muted"
-              }`}
-            >
-              <span className="shrink-0">{item.icon}</span>
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </Link>
+            <div key={group.key} className={groupIdx > 0 ? "mt-2" : undefined}>
+              {groupIdx > 0 && (
+                collapsed ? (
+                  <div className="mx-auto mb-2 h-px w-6 bg-border/60" />
+                ) : (
+                  <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-accent/70">
+                    {group.label}
+                  </p>
+                )
+              )}
+              <div className="flex flex-col gap-0.5">
+                {items.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      title={collapsed ? item.label : undefined}
+                      className={`relative flex h-9 items-center gap-3 rounded-lg text-sm transition-colors ${
+                        collapsed ? "justify-center px-0" : "px-3"
+                      } ${
+                        isActive
+                          ? "bg-olive-deep text-accent shadow-[inset_2px_0_0_var(--color-olive-bright)]"
+                          : "text-text-faint hover:bg-surface hover:text-text-muted"
+                      }`}
+                    >
+                      <span className="shrink-0">{item.icon}</span>
+                      {!collapsed && <span className="truncate">{item.label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </nav>

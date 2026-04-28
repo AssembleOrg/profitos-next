@@ -9,7 +9,7 @@ import { ObjetivoCard } from "./objetivo-card";
 import { CreateObjetivoModal } from "./create-modal";
 import { FiltersBar } from "./filters-bar";
 import { KPIStrip } from "./kpi-strip";
-import type { SerializedCard, SerializedUser } from "./types";
+import type { SerializedCard, SerializedItem, SerializedUser } from "./types";
 import { ItemsEditorPopover } from "./items-editor";
 
 interface ObjetivosClientProps {
@@ -51,6 +51,16 @@ export function ObjetivosClient({
 
   function handleCardChanged(next: SerializedCard) {
     setCards((prev) => prev.map((c) => (c.id === next.id ? next : c)));
+  }
+
+  function handleItemChanged(cardId: string, updatedItem: SerializedItem) {
+    setCards((prev) =>
+      prev.map((c) =>
+        c.id === cardId
+          ? { ...c, items: c.items.map((i) => (i.id === updatedItem.id ? updatedItem : i)) }
+          : c,
+      ),
+    );
   }
 
   function handleCardDeleted(id: string) {
@@ -124,6 +134,7 @@ export function ObjetivosClient({
                   canEdit={isAdmin}
                   currentUserId={currentUserId}
                   onChanged={handleCardChanged}
+                  onItemChanged={handleItemChanged}
                   onDeleted={handleCardDeleted}
                   onEdit={handleEdit}
                 />

@@ -310,7 +310,7 @@ export function SeguimientosClient({
         <select
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
-          className="rounded-xl border border-border bg-surface/40 px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
         >
           <option value="">Todos los estados</option>
           {STATUS_OPTIONS.map((option) => (

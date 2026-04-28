@@ -376,9 +376,31 @@ export function ContactosClient({
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-text">{c.name}</p>
-                      <p className="mt-0.5 truncate text-xs text-text-muted">
-                        {c.email ?? c.cellphone ?? c.phone ?? "Sin contacto"}
-                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {c.email && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(c.email!); toast.success("Mail copiado"); }}
+                            className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" /></svg>
+                            <span className="max-w-[160px] truncate">{c.email}</span>
+                          </button>
+                        )}
+                        {(c.cellphone || c.phone) && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(c.cellphone ?? c.phone!); toast.success("Teléfono copiado"); }}
+                            className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 016.19 15.9a19.79 19.79 0 01-3.07-8.67A2 2 0 015.11 5h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L9.09 12.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" /></svg>
+                            {c.cellphone ?? c.phone}
+                          </button>
+                        )}
+                        {!c.email && !c.cellphone && !c.phone && (
+                          <span className="text-xs text-text-muted/50">Sin contacto</span>
+                        )}
+                      </div>
                     </div>
                     {c.leadStatus && (
                       <span className="ml-2 flex shrink-0 items-center gap-1.5">
@@ -397,52 +419,51 @@ export function ContactosClient({
 
           {/* Desktop table */}
           <div className="hidden overflow-hidden rounded-2xl border border-border bg-surface/30 sm:block">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border text-xs font-semibold uppercase tracking-widest text-text-muted">
-                    <th className="px-5 py-3">Nombre</th>
-                    <th className="px-5 py-3">Email</th>
-                    <th className="px-5 py-3">Teléfono</th>
-                    <th className="px-5 py-3">Estado</th>
-                    <th className="px-5 py-3">Fecha Tokko</th>
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs font-semibold uppercase tracking-widest text-text-muted">
+                  <th className="px-5 py-3">Nombre</th>
+                  <th className="hidden px-5 py-3 md:table-cell">Email</th>
+                  <th className="hidden px-5 py-3 lg:table-cell">Teléfono</th>
+                  <th className="px-5 py-3">Estado</th>
+                  <th className="hidden px-5 py-3 lg:table-cell">Fecha Tokko</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tokkoContacts.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-12 text-center text-sm text-text-muted">
+                      {filters.q || filters.leadStatus ? "Sin resultados para los filtros" : "No hay contactos sincronizados"}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {tokkoContacts.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-5 py-12 text-center text-sm text-text-muted">
-                        {filters.q || filters.leadStatus ? "Sin resultados para los filtros" : "No hay contactos sincronizados"}
+                ) : (
+                  tokkoContacts.map((c) => (
+                    <tr key={c.id} onClick={() => handleEditTokko(c)} className="cursor-pointer border-b border-border/50 transition-colors last:border-b-0 hover:bg-surface/50">
+                      <td className="px-5 py-3.5">
+                        <p className="font-medium text-text">{c.name}</p>
+                        {c.tokkoDeletedAt && (
+                          <p className="text-[10px] text-red-400">Eliminado en Tokko</p>
+                        )}
+                        <p className="mt-0.5 text-xs text-text-muted md:hidden">{c.email ?? c.cellphone ?? c.phone ?? "—"}</p>
+                      </td>
+                      <td className="hidden px-5 py-3.5 text-text-muted md:table-cell">{c.email ?? "—"}</td>
+                      <td className="hidden px-5 py-3.5 text-text-muted lg:table-cell">{c.cellphone ?? c.phone ?? "—"}</td>
+                      <td className="px-5 py-3.5">
+                        {c.leadStatus ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className={`h-1.5 w-1.5 rounded-full ${getLeadStatusColor(c.leadStatus)}`} />
+                            <span className="text-text-muted">{c.leadStatus}</span>
+                          </span>
+                        ) : "—"}
+                      </td>
+                      <td className="hidden px-5 py-3.5 text-text-muted lg:table-cell">
+                        {c.tokkoCreatedAt ? formatDate(c.tokkoCreatedAt) : "—"}
                       </td>
                     </tr>
-                  ) : (
-                    tokkoContacts.map((c) => (
-                      <tr key={c.id} onClick={() => handleEditTokko(c)} className="cursor-pointer border-b border-border/50 transition-colors last:border-b-0 hover:bg-surface/50">
-                        <td className="px-5 py-3.5">
-                          <p className="font-medium text-text">{c.name}</p>
-                          {c.tokkoDeletedAt && (
-                            <p className="text-[10px] text-red-400">Eliminado en Tokko</p>
-                          )}
-                        </td>
-                        <td className="px-5 py-3.5 text-text-muted">{c.email ?? "—"}</td>
-                        <td className="px-5 py-3.5 text-text-muted">{c.cellphone ?? c.phone ?? "—"}</td>
-                        <td className="px-5 py-3.5">
-                          {c.leadStatus ? (
-                            <span className="inline-flex items-center gap-1.5">
-                              <span className={`h-1.5 w-1.5 rounded-full ${getLeadStatusColor(c.leadStatus)}`} />
-                              <span className="text-text-muted">{c.leadStatus}</span>
-                            </span>
-                          ) : "—"}
-                        </td>
-                        <td className="px-5 py-3.5 text-text-muted">
-                          {c.tokkoCreatedAt ? formatDate(c.tokkoCreatedAt) : "—"}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </>
       )}
@@ -477,19 +498,30 @@ export function ContactosClient({
                     </motion.div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-text">{c.name}</p>
-                      {c.email && <p className="truncate text-xs text-text-muted">{c.email}</p>}
                     </div>
                   </div>
-                  <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-3">
+                    {c.email && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(c.email!); toast.success("Mail copiado"); }}
+                        className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" /></svg>
+                        <span className="max-w-[140px] truncate">{c.email}</span>
+                      </button>
+                    )}
                     {c.phone ? (
-                      <span className="flex items-center gap-1.5 text-xs text-text-muted">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
-                        </svg>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(c.phone!); toast.success("Teléfono copiado"); }}
+                        className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 016.19 15.9a19.79 19.79 0 01-3.07-8.67A2 2 0 015.11 5h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L9.09 12.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" /></svg>
                         {c.phone}
-                      </span>
+                      </button>
                     ) : (
-                      <span className="text-xs text-text-muted/50">Sin teléfono</span>
+                      !c.email && <span className="text-xs text-text-muted/50">Sin contacto</span>
                     )}
                     <span className="text-xs text-text-muted">
                       {c._count?.visitas ?? 0} visita{(c._count?.visitas ?? 0) !== 1 ? "s" : ""}
@@ -596,18 +628,18 @@ export function ContactosClient({
                 className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-muted">Teléfono</label>
-              <input name="phone" defaultValue={editTokkoContact?.phone ?? ""} placeholder="Teléfono fijo"
-                className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-muted">Estado</label>
-              <input name="leadStatus" defaultValue={editTokkoContact?.leadStatus ?? ""} placeholder="Activo, Cerrado..."
-                className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
-            </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-text-muted">Teléfono</label>
+            <input name="phone" defaultValue={editTokkoContact?.phone ?? ""} placeholder="Teléfono fijo"
+              className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
           </div>
+          {/* Estado (leadStatus) oculto del modal — visible solo en tabla y filtro
+          <div>
+            <label className="mb-1 block text-xs font-medium text-text-muted">Estado</label>
+            <input name="leadStatus" defaultValue={editTokkoContact?.leadStatus ?? ""} placeholder="Activo, Cerrado..."
+              className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+          </div>
+          */}
           {editTokkoContact?.tokkoCreatedAt && (
             <p className="text-xs text-text-faint">Creado en Tokko: {formatDate(editTokkoContact.tokkoCreatedAt)}</p>
           )}
