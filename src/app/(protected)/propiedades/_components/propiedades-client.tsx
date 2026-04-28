@@ -804,8 +804,75 @@ export function PropiedadesClient({
         )}
       </div>}
 
-      {/* Table — solo desktop */}
-      {viewMode === "list" && <div className="hidden overflow-hidden rounded-2xl border border-border bg-surface/30 sm:block">
+      {/* Grid 2→3 columnas — sm hasta xl */}
+      {viewMode === "list" && (
+        <div className="hidden sm:grid xl:hidden grid-cols-2 lg:grid-cols-3 gap-2">
+          {properties.length === 0 ? (
+            <p className="col-span-3 px-2 py-8 text-center text-sm text-text-muted">
+              No hay propiedades para los filtros seleccionados
+            </p>
+          ) : (
+            properties.map((p) => (
+              <div
+                key={p.id}
+                onClick={() => handleEdit(p)}
+                className="flex cursor-pointer flex-col rounded-xl border border-border bg-surface/30 p-4 active:bg-surface/60"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-text">{p.address}</p>
+                    <p className="mt-0.5 truncate text-xs text-text-muted">
+                      {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
+                    </p>
+                    <p className="mt-0.5 text-xs text-text-muted">{p.city ?? ""}{p.type ? ` · ${p.type}` : ""}</p>
+                  </div>
+                  <span className="ml-1 mt-0.5 inline-flex flex-shrink-0 items-center gap-1.5">
+                    <span className={`h-1.5 w-1.5 rounded-full ${getStatusColor(p.status)}`} />
+                    <span className="text-xs text-text-muted">{getStatusLabel(p.status)}</span>
+                  </span>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <a
+                    href={buildPropertyWhatsAppLink(p)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 text-[11px] font-medium text-emerald-400"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                      <path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.611.611l4.458-1.495A11.948 11.948 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.37 0-4.567-.696-6.42-1.888l-.447-.293-2.91.975.975-2.91-.293-.447A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+                    </svg>
+                    WhatsApp
+                  </a>
+                  <div className="relative">
+                    <button
+                      onClick={(e) => handlePdfClick(e, p, "left")}
+                      className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-border px-2.5 text-[11px] font-medium text-text-muted"
+                    >
+                      PDF
+                    </button>
+                  </div>
+                  {p.publicUrl && (
+                    <a
+                      href={p.publicUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-secondary/40 bg-secondary/15 px-2.5 text-[11px] font-medium text-secondary"
+                    >
+                      Tokko
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Table — solo desktop xl+ */}
+      {viewMode === "list" && <div className="hidden overflow-hidden rounded-2xl border border-border bg-surface/30 xl:block">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
