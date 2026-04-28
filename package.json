@@ -2,6 +2,7 @@
   "name": "profitos-next",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.18.1",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate --config prisma/prisma.config.ts && next build",
