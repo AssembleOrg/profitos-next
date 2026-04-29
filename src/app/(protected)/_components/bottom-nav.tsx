@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNotifications, type NotificationItem } from "./use-notifications";
+import { formatDateTime } from "@/lib/datetime";
 
 const primaryTabs = [
   {
@@ -201,9 +203,91 @@ interface BottomNavProps {
   role?: "admin" | "user" | "viewer";
 }
 
+function formatNotifDate(value: string) {
+  try { return formatDateTime(value); } catch { return "—"; }
+}
+
+function NotifCard({ item }: { item: NotificationItem }) {
+  return (
+    <div
+      className={`rounded-lg border px-3 py-2.5 ${
+        item.kind === "contact"
+          ? "border-sky-500/30 bg-sky-500/10"
+          : item.kind === "followup_assignment"
+            ? "border-amber-500/30 bg-amber-500/10"
+            : item.kind === "contact_followup"
+              ? "border-fuchsia-500/30 bg-fuchsia-500/10"
+              : item.kind === "overdue_followup"
+                ? "border-red-500/30 bg-red-500/10"
+            : "border-emerald-500/30 bg-emerald-500/10"
+      }`}
+    >
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <span
+          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+            item.kind === "contact"
+              ? "bg-sky-500/20 text-sky-300"
+              : item.kind === "followup_assignment"
+                ? "bg-amber-500/20 text-amber-300"
+                : item.kind === "contact_followup"
+                  ? "bg-fuchsia-500/20 text-fuchsia-300"
+                  : item.kind === "overdue_followup"
+                    ? "bg-red-500/20 text-red-300"
+                : "bg-emerald-500/20 text-emerald-300"
+          }`}
+        >
+          {item.kind === "contact"
+            ? "Nuevo contacto"
+            : item.kind === "followup_assignment"
+              ? "Seguimiento"
+              : item.kind === "contact_followup"
+                ? "Seg. consulta"
+                : item.kind === "overdue_followup"
+                  ? "Vencido"
+              : "Propiedad nueva"}
+        </span>
+        <span className="text-[11px] text-text-muted/80">{formatNotifDate(item.eventAt)}</span>
+      </div>
+
+      {item.kind === "contact" ? (
+        <>
+          <p className="text-sm font-medium leading-tight text-text">{item.name ?? "Contacto sin nombre"}</p>
+          <p className="mt-0.5 text-xs text-text-muted">Estado: {item.leadStatus ?? "Sin estado"} · Agente: {item.agentName ?? "Sin agente"}</p>
+        </>
+      ) : item.kind === "followup_assignment" ? (
+        <>
+          <p className="text-sm font-medium leading-tight text-text">{item.property?.address ?? "Propiedad sin dirección"}</p>
+          <p className="mt-0.5 text-xs text-text-muted">Responsable: {item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}</p>
+          <p className="text-xs text-text-muted">Estado: {item.status ?? "pendiente"}</p>
+        </>
+      ) : item.kind === "contact_followup" ? (
+        <>
+          <p className="text-sm font-medium leading-tight text-text">{item.recentContact?.name ?? "Consulta"}</p>
+          <p className="mt-0.5 text-xs text-text-muted">Responsable: {item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}</p>
+          <p className="text-xs text-text-muted">Estado: {item.status ?? "pendiente"}</p>
+        </>
+      ) : item.kind === "overdue_followup" ? (
+        <>
+          <p className="text-sm font-medium leading-tight text-text">{item.property?.address ?? "Propiedad sin dirección"}</p>
+          <p className="mt-0.5 text-xs text-red-300">Vencido: {item.dueDate ? formatNotifDate(item.dueDate) : "sin fecha"}</p>
+          <p className="text-xs text-text-muted">Responsable: {item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}</p>
+        </>
+      ) : (
+        <>
+          <p className="text-sm font-medium leading-tight text-text">{item.address ?? item.publicationTitle ?? "Propiedad nueva"}</p>
+          <p className="mt-0.5 text-xs text-text-muted">{item.operationType ?? "Operación no informada"} · Estado: {item.status ?? "activa"}</p>
+          <p className="text-xs text-text-muted">{item.operationCurrency ?? ""} {item.operationPrice?.toLocaleString("es-AR") ?? "Precio no informado"}</p>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const { notifications, unreadCount, markAsSeen, loadNotifications } = useNotifications();
   const isAdmin = role === "admin";
 
   const visibleMoreItems = moreItems.filter((item) => {
@@ -216,7 +300,86 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
 
   return (
     <>
-      {/* Sheet overlay */}
+      {/* Notifications sheet */}
+      <AnimatePresence>
+        {showNotifications && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setShowNotifications(false)}
+            />
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-white/10 bg-surface/95 backdrop-blur-2xl md:hidden"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              style={{ paddingBottom: "calc(var(--safe-bottom, 0px) + 88px)" }}
+            >
+              <div className="mx-auto my-3 h-1 w-10 rounded-full bg-white/20" />
+
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 pb-3 pt-1">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Notificaciones</p>
+                  <p className="mt-0.5 text-xs text-text-muted/70">
+                    Últimos {notifications.length} evento{notifications.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => { markAsSeen(); }}
+                  className="rounded-md border border-white/10 px-2.5 py-1 text-[11px] font-medium text-text-muted transition-colors active:bg-white/5"
+                >
+                  Marcar leídas
+                </button>
+              </div>
+
+              <div className="max-h-[55dvh] space-y-2 overflow-y-auto p-3">
+                {notifications.length === 0 ? (
+                  <p className="rounded-lg border border-white/10 bg-white/5 px-3 py-4 text-sm text-text-muted">
+                    Sin notificaciones.
+                  </p>
+                ) : (
+                  notifications.map((item) => (
+                    <NotifCard key={`${item.kind}-${item.id}`} item={item} />
+                  ))
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 border-t border-white/10">
+                <Link
+                  href="/consultants"
+                  onClick={() => setShowNotifications(false)}
+                  className="block border-r border-white/10 px-4 py-3 text-xs font-medium text-secondary active:bg-white/5"
+                >
+                  Ver últimos contactos
+                </Link>
+                <Link
+                  href="/seguimientos"
+                  onClick={() => setShowNotifications(false)}
+                  className="block px-4 py-3 text-xs font-medium text-secondary active:bg-white/5"
+                >
+                  Ver seg. propiedades
+                </Link>
+              </div>
+              <div className="border-t border-white/10">
+                <Link
+                  href="/consultants-followups"
+                  onClick={() => setShowNotifications(false)}
+                  className="block px-4 py-3 text-xs font-medium text-secondary active:bg-white/5"
+                >
+                  Ver seg. consultas
+                </Link>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* More sheet overlay */}
       <AnimatePresence>
         {showMore && (
           <>
@@ -245,6 +408,31 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
 
               {/* Grid of items */}
               <div className="grid grid-cols-3 gap-1 px-3 pb-2">
+                {/* Notifications entry */}
+                <button
+                  onClick={() => {
+                    setShowMore(false);
+                    void loadNotifications();
+                    setShowNotifications(true);
+                  }}
+                  className="flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 transition-colors text-text-muted active:bg-white/5 relative"
+                >
+                  <span className="relative text-white/50">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                      <path d="M13.73 21a2 2 0 01-3.46 0" />
+                    </svg>
+                    {unreadCount > 0 && (
+                      <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-olive-bright px-1 py-0.5 text-[9px] font-semibold text-bg">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-center text-[11px] font-medium leading-tight text-white/60">
+                    Notificaciones
+                  </span>
+                </button>
+
                 {visibleMoreItems.map((item) => {
                   const isActive = pathname === item.href;
                   return (
@@ -331,12 +519,17 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
               onClick={() => setShowMore((v) => !v)}
               className="relative z-10 flex w-full flex-col items-center justify-center gap-0.5 py-2"
             >
-              <span className={`shrink-0 ${isMoreActive || showMore ? "text-accent" : "text-white/35"}`}>
+              <span className={`relative shrink-0 ${isMoreActive || showMore ? "text-accent" : "text-white/35"}`}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="5" cy="12" r="1.5" />
                   <circle cx="12" cy="12" r="1.5" />
                   <circle cx="19" cy="12" r="1.5" />
                 </svg>
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-olive-bright px-1 py-0.5 text-[9px] font-semibold text-bg">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </span>
               <span
                 className={`w-full truncate text-center text-[9px] font-medium leading-none ${

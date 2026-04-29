@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Sheet } from "../../_components/sheet";
+import { Spinner } from "../../_components/spinner";
 import { Pagination } from "../../_components/pagination";
 import { formatDate } from "@/lib/datetime";
 
@@ -240,7 +241,7 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
                     title={item.isActive ? "Desactivar acceso" : "Activar acceso"}
                   >
                     {togglingId === item.id
-                      ? "..."
+                      ? <Spinner size={12} />
                       : item.isActive
                         ? "Desactivar"
                         : "Activar"}
@@ -251,7 +252,7 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
                     className="flex-1 rounded-lg bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50 lg:flex-none"
                     title="Eliminar"
                   >
-                    {deletingId === item.id ? "..." : "Eliminar"}
+                    {deletingId === item.id ? <Spinner variant="red" size={12} /> : "Eliminar"}
                   </button>
                 </div>
               </div>
@@ -296,9 +297,9 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
             <button
               onClick={handleCreate}
               disabled={loading || !email.trim()}
-              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-text transition-colors hover:bg-primary-hover disabled:opacity-50"
+              className="flex flex-1 items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-text transition-colors hover:bg-primary-hover disabled:opacity-50"
             >
-              {loading ? "Agregando..." : "Agregar"}
+              {loading ? <Spinner /> : "Agregar"}
             </button>
           </div>
         }

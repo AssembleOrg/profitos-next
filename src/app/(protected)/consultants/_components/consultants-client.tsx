@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { Spinner } from "../../_components/spinner";
 import { Pagination } from "../../_components/pagination";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
@@ -222,11 +223,13 @@ export function ConsultantsClient({
             disabled={syncing}
             className="flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-surface hover:text-text disabled:opacity-50"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
-              <polyline points="21 3 21 8 16 8" />
-            </svg>
-            {syncing ? "Sincronizando..." : "Actualizar últimos contactos"}
+            {syncing ? <Spinner size={14} /> : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
+                <polyline points="21 3 21 8 16 8" />
+              </svg>
+            )}
+            {syncing ? "Actualizando..." : "Actualizar últimos contactos"}
           </button>
         )}
       </div>
@@ -337,7 +340,7 @@ export function ConsultantsClient({
         ) : (
           items.map((item) => (
             <div key={item.id} className="rounded-xl border border-border bg-surface/30 p-4">
-              <p className="font-medium text-text">{item.name}</p>
+              <p className="break-all font-medium text-text">{item.name}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {item.email && (
                   <button

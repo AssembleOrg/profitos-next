@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { Spinner } from "../../_components/spinner";
 import {
   CARD_STATUS_LABEL,
   daysRemaining,
@@ -268,7 +269,7 @@ export function ObjetivoCard({
                         onClick={handleDelete}
                         className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50"
                       >
-                        Eliminar
+                        {pending ? <Spinner variant="red" size={12} /> : "Eliminar"}
                       </button>
                     </motion.div>
                   </>

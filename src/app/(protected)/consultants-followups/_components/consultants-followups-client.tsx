@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
+import { Spinner } from "../../_components/spinner";
 import { formatDateTime as fmtDateTime } from "@/lib/datetime";
 
 interface UserOption {
@@ -323,7 +324,7 @@ export function ConsultantsFollowUpsClient({
               className="cursor-pointer rounded-xl border border-border bg-surface/30 p-4 active:bg-surface/60"
               onClick={() => loadDetail(item.id)}>
               <div className="flex items-start justify-between gap-2">
-                <p className="font-medium text-text">{item.recentContact.name}</p>
+                <p className="min-w-0 break-all font-medium text-text">{item.recentContact.name}</p>
                 <span className="rounded-full border border-border bg-bg px-2 py-0.5 text-[10px] text-text flex-shrink-0">{item.status}</span>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -469,7 +470,7 @@ export function ConsultantsFollowUpsClient({
                       disabled={savingMeta}
                       className="rounded-xl border border-border px-4 py-2 text-sm text-text-muted transition-colors hover:bg-bg hover:text-text disabled:opacity-50"
                     >
-                      {savingMeta ? "Guardando..." : "Guardar datos"}
+                      {savingMeta ? <Spinner size={14} /> : "Guardar datos"}
                     </button>
                   </div>
                 </form>

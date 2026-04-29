@@ -6,6 +6,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
+import { Spinner } from "../../_components/spinner";
 import { Sheet } from "../../_components/sheet";
 import { formatDate } from "@/lib/datetime";
 
@@ -276,7 +277,7 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
                           disabled={deletingId === t.id}
                           className="rounded-lg bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
                         >
-                          {deletingId === t.id ? "..." : "Eliminar"}
+                          {deletingId === t.id ? <Spinner variant="red" size={12} /> : "Eliminar"}
                         </button>
                       </div>
                     </td>
@@ -307,9 +308,9 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
             <button
               onClick={handleCreate}
               disabled={createLoading || !newDireccion.trim()}
-              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-text hover:bg-primary-hover disabled:opacity-50"
+              className="flex flex-1 items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-text hover:bg-primary-hover disabled:opacity-50"
             >
-              {createLoading ? "Creando..." : "Crear y editar"}
+              {createLoading ? <Spinner /> : "Crear y editar"}
             </button>
           </div>
         }

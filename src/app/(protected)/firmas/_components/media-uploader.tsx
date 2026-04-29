@@ -118,7 +118,7 @@ export function AttachmentPreview({
       )}
       {kind === "image" && !url && <SkeletonBox label="imagen" />}
       {kind === "video" && url && (
-        <video src={url} controls className="aspect-square w-full rounded-lg bg-black object-cover" />
+        <video src={url} controls playsInline className="aspect-square w-full rounded-lg bg-black object-cover" />
       )}
       {kind === "video" && !url && <SkeletonBox label="video" />}
       {kind === "audio" && (

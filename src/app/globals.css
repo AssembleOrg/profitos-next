@@ -67,6 +67,12 @@
 
 * {
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+button, nav, [role="tab"], [role="menuitem"] {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 html {
@@ -87,9 +93,9 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* Previene zoom automático de iOS al enfocar inputs */
+/* Previene zoom automático de iOS al enfocar inputs — !important necesario para ganar a text-sm de Tailwind */
 input, select, textarea {
-  font-size: max(16px, 1rem);
+  font-size: max(16px, 1rem) !important;
 }
 
 /* Oculta flechas de input number en todos los navegadores */

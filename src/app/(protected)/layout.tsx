@@ -5,6 +5,7 @@ import { Sidebar } from "./dashboard/_components/sidebar";
 import { CommandPalette } from "./dashboard/_components/command-palette";
 import { SplashScreen } from "./_components/splash-screen";
 import { BottomNav } from "./_components/bottom-nav";
+import { NativeParityProvider } from "./_components/native-parity-provider";
 
 export default async function ProtectedLayout({
   children,
@@ -19,6 +20,7 @@ export default async function ProtectedLayout({
 
   return (
     <div className="flex min-h-dvh bg-bg">
+      <NativeParityProvider />
       <SplashScreen />
       <Sidebar avatarUrl={user.avatarUrl} role={user.role} />
       <main className="flex-1 overflow-auto transition-[margin] duration-200 md:ml-[var(--sidebar-width,13rem)]">

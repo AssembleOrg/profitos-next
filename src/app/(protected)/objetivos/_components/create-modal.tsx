@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { Spinner } from "../../_components/spinner";
 import { defaultPeriod } from "@/lib/objectives";
 import { now } from "@/lib/datetime";
 import { DateField } from "../../_components/date-field";
@@ -399,9 +400,9 @@ export function CreateObjetivoModal({
                     type="button"
                     onClick={handleSubmit}
                     disabled={submitting}
-                    className="rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2 text-sm font-semibold text-bg shadow-[0_0_0_1px_rgba(143,168,112,0.15),0_8px_24px_-8px_rgba(143,168,112,0.5)] transition-all hover:bg-olive-vivid disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex items-center justify-center rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2 text-sm font-semibold text-bg shadow-[0_0_0_1px_rgba(143,168,112,0.15),0_8px_24px_-8px_rgba(143,168,112,0.5)] transition-all hover:bg-olive-vivid disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {ctaLabel}
+                    {submitting ? <Spinner /> : ctaLabel}
                   </button>
                 </footer>
               </motion.div>

@@ -109,7 +109,7 @@ export function AttachmentPreview({ attachment, url, onRemove }: Readonly<Attach
       )}
       {kind === "image" && !url && <Skeleton label="imagen" />}
       {kind === "video" && url && (
-        <video src={url} controls className="aspect-square w-full rounded-lg bg-black object-cover" />
+        <video src={url} controls playsInline className="aspect-square w-full rounded-lg bg-black object-cover" />
       )}
       {kind === "video" && !url && <Skeleton label="video" />}
       {kind === "audio" && (

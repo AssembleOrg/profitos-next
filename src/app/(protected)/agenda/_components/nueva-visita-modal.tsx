@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { Spinner } from "../../_components/spinner";
 import {
   SearchableSelect,
   type SearchableSelectOption,
@@ -154,7 +155,7 @@ export function NuevaVisitaModal({
           <button type="button" onClick={handleClose} className="rounded-lg px-4 py-2 text-sm text-text-muted active:text-text">Cancelar</button>
           <button type="submit" form="nueva-visita-form" disabled={loading}
             className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary active:bg-secondary/30 disabled:opacity-50">
-            {loading ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-secondary/30 border-t-secondary" />Guardando...</> : "Guardar visita"}
+            {loading ? <Spinner /> : "Guardar visita"}
           </button>
         </div>
       }

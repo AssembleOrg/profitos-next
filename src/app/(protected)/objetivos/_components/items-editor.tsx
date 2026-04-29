@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { Spinner } from "../../_components/spinner";
 import type { SerializedCard, SerializedItem } from "./types";
 
 interface ItemsEditorPopoverProps {
@@ -120,9 +121,14 @@ export function ItemsEditorPopover({ card, onChanged }: Readonly<ItemsEditorPopo
                   type="button"
                   onClick={addItem}
                   disabled={submitting || !text.trim()}
-                  className="rounded-lg border border-olive-bright/30 bg-olive-mid px-3 py-1.5 text-xs font-semibold text-bg transition-colors hover:bg-olive-vivid disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex-shrink-0 rounded-lg border border-olive-bright/30 bg-olive-mid px-3 py-1.5 text-xs font-semibold text-bg transition-colors hover:bg-olive-vivid disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Agregar
+                  {submitting ? <Spinner size={12} /> : (
+                    <>
+                      <span className="sm:hidden">+</span>
+                      <span className="hidden sm:inline">Agregar</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
