@@ -166,6 +166,7 @@ const navItems: NavItem[] = [
     href: "/alquileres",
     label: "Alquileres",
     group: "alquileres",
+    adminOnly: true,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="6" width="20" height="14" rx="2" />
@@ -178,6 +179,7 @@ const navItems: NavItem[] = [
     href: "/inquilinos",
     label: "Inquilinos",
     group: "alquileres",
+    adminOnly: true,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
@@ -208,32 +210,6 @@ const navItems: NavItem[] = [
         <circle cx="12" cy="12" r="10" />
         <circle cx="12" cy="12" r="6" />
         <circle cx="12" cy="12" r="2" />
-      </svg>
-    ),
-  },
-  {
-    href: "/adicionales",
-    label: "Adicionales",
-    group: "gestion",
-    adminOnly: true,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="12" y1="5" x2="12" y2="19" />
-        <line x1="5" y1="12" x2="19" y2="12" />
-      </svg>
-    ),
-  },
-  {
-    href: "/miembros",
-    label: "Miembros",
-    group: "gestion",
-    adminOnly: true,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <line x1="19" y1="8" x2="19" y2="14" />
-        <line x1="22" y1="11" x2="16" y2="11" />
       </svg>
     ),
   },

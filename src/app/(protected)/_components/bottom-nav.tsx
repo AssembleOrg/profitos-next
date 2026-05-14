@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotifications, type NotificationItem } from "./use-notifications";
 import { formatDateTime } from "@/lib/datetime";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 const primaryTabs = [
   {
@@ -106,6 +107,7 @@ const moreItems: MoreItem[] = [
   {
     href: "/alquileres",
     label: "Alquileres",
+    adminOnly: true,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="1" y="3" width="15" height="13" rx="1" />
@@ -118,6 +120,7 @@ const moreItems: MoreItem[] = [
   {
     href: "/inquilinos",
     label: "Inquilinos",
+    adminOnly: true,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
@@ -133,18 +136,6 @@ const moreItems: MoreItem[] = [
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <line x1="12" y1="1" x2="12" y2="23" />
         <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
-      </svg>
-    ),
-  },
-  {
-    href: "/adicionales",
-    label: "Adicionales",
-    adminOnly: true,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="8" x2="12" y2="16" />
-        <line x1="8" y1="12" x2="16" y2="12" />
       </svg>
     ),
   },
@@ -169,21 +160,6 @@ const moreItems: MoreItem[] = [
         <circle cx="12" cy="12" r="10" />
         <circle cx="12" cy="12" r="6" />
         <circle cx="12" cy="12" r="2" />
-      </svg>
-    ),
-  },
-  {
-    href: "/miembros",
-    label: "Miembros",
-    adminOnly: true,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 00-3-3.87" />
-        <path d="M16 3.13a4 4 0 010 7.75" />
-        <line x1="19" y1="8" x2="19" y2="14" />
-        <line x1="22" y1="11" x2="16" y2="11" />
       </svg>
     ),
   },
@@ -289,12 +265,25 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
   const [showNotifications, setShowNotifications] = useState(false);
   const { notifications, unreadCount, markAsSeen, loadNotifications } = useNotifications();
   const isAdmin = role === "admin";
+  const [favorites, setFavorites] = useLocalStorage<string[]>("jp_mobile_favorites", []);
 
   const visibleMoreItems = moreItems.filter((item) => {
     if (item.adminOnly && !isAdmin) return false;
     if (item.hideForAdmin && isAdmin) return false;
     return true;
   });
+
+  const isFav = (href: string) => favorites.includes(href);
+  const toggleFav = (href: string) => {
+    setFavorites((prev) => (prev.includes(href) ? prev.filter((h) => h !== href) : [...prev, href]));
+  };
+
+  const sortedMoreItems = [
+    ...favorites
+      .map((href) => visibleMoreItems.find((i) => i.href === href))
+      .filter((item): item is MoreItem => Boolean(item)),
+    ...visibleMoreItems.filter((i) => !isFav(i.href)),
+  ];
 
   const isMoreActive = visibleMoreItems.some((i) => pathname === i.href);
 
@@ -433,19 +422,44 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                   </span>
                 </button>
 
-                {visibleMoreItems.map((item) => {
+                {sortedMoreItems.map((item) => {
                   const isActive = pathname === item.href;
+                  const fav = isFav(item.href);
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={() => setShowMore(false)}
-                      className={`flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 transition-colors active:scale-95 ${
+                      className={`relative flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 transition-colors active:scale-95 ${
                         isActive
                           ? "bg-accent/15 text-accent"
                           : "text-text-muted active:bg-white/5"
                       }`}
                     >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleFav(item.href);
+                        }}
+                        aria-label={fav ? "Quitar de favoritos" : "Marcar como favorito"}
+                        className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full transition-transform active:scale-90"
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill={fav ? "currentColor" : "none"}
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className={fav ? "text-fav-gold" : "text-text-subtle"}
+                        >
+                          <polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9 12 2" />
+                        </svg>
+                      </button>
                       <span className={isActive ? "text-accent" : "text-olive-vivid"}>
                         {item.icon}
                       </span>

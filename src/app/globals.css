@@ -34,6 +34,9 @@
   --color-border-strong: rgba(255, 255, 255, 0.22);
   --color-border-olive: rgba(143, 168, 112, 0.32);
 
+  /* Favorites */
+  --color-fav-gold: #d4a84a;
+
   /* Safe area */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -63,6 +66,7 @@
   --color-border: var(--color-border);
   --color-border-strong: var(--color-border-strong);
   --color-border-olive: var(--color-border-olive);
+  --color-fav-gold: var(--color-fav-gold);
   --font-sans: var(--font-montserrat);
   --font-display: var(--font-playfair);
 }
