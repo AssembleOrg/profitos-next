@@ -417,7 +417,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                   }}
                   className="flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 transition-colors text-text-muted active:bg-white/5 relative"
                 >
-                  <span className="relative text-white/50">
+                  <span className="relative text-olive-vivid">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
                       <path d="M13.73 21a2 2 0 01-3.46 0" />
@@ -428,7 +428,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                       </span>
                     )}
                   </span>
-                  <span className="text-center text-[11px] font-medium leading-tight text-white/60">
+                  <span className="text-center text-[11px] font-medium leading-tight text-text-muted">
                     Notificaciones
                   </span>
                 </button>
@@ -446,10 +446,10 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                           : "text-text-muted active:bg-white/5"
                       }`}
                     >
-                      <span className={isActive ? "text-accent" : "text-white/50"}>
+                      <span className={isActive ? "text-accent" : "text-olive-vivid"}>
                         {item.icon}
                       </span>
-                      <span className={`text-center text-[11px] font-medium leading-tight ${isActive ? "text-accent" : "text-white/60"}`}>
+                      <span className={`text-center text-[11px] font-medium leading-tight ${isActive ? "text-accent" : "text-text-muted"}`}>
                         {item.label}
                       </span>
                     </Link>
@@ -487,12 +487,12 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                   href={tab.href}
                   className="relative z-10 flex w-full flex-col items-center justify-center gap-0.5 py-2"
                 >
-                  <span className={`shrink-0 ${isActive ? "text-accent" : "text-white/35"}`}>
+                  <span className={`shrink-0 ${isActive ? "text-accent" : "text-text-muted"}`}>
                     {tab.icon}
                   </span>
                   <span
                     className={`w-full truncate text-center text-[9px] font-medium leading-none ${
-                      isActive ? "text-accent" : "text-white/35"
+                      isActive ? "text-accent" : "text-text-muted"
                     }`}
                   >
                     {tab.label}
@@ -519,7 +519,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
               onClick={() => setShowMore((v) => !v)}
               className="relative z-10 flex w-full flex-col items-center justify-center gap-0.5 py-2"
             >
-              <span className={`relative shrink-0 ${isMoreActive || showMore ? "text-accent" : "text-white/35"}`}>
+              <span className={`relative shrink-0 ${isMoreActive || showMore ? "text-accent" : "text-text-muted"}`}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="5" cy="12" r="1.5" />
                   <circle cx="12" cy="12" r="1.5" />
@@ -533,7 +533,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
               </span>
               <span
                 className={`w-full truncate text-center text-[9px] font-medium leading-none ${
-                  isMoreActive || showMore ? "text-accent" : "text-white/35"
+                  isMoreActive || showMore ? "text-accent" : "text-text-muted"
                 }`}
               >
                 Más

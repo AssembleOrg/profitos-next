@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  /* Backgrounds */
-  --color-bg: #0d0f12;
-  --color-surface: #161a1f;
-  --color-surface-elevated: #1e232a;
-  --color-surface-overlay: #242930;
+  /* Backgrounds — Camino C: undertone warm + green muy sutil para coherencia con olive branding */
+  --color-bg: #131410;
+  --color-surface: #1a1c17;
+  --color-surface-elevated: #232620;
+  --color-surface-overlay: #2d3128;
 
   /* Olive scale */
   --color-olive-deep: #2e3427;
@@ -25,13 +25,14 @@
 
   /* Text */
   --color-text: #f0ede8;
-  --color-text-muted: rgba(240, 237, 232, 0.5);
-  --color-text-faint: rgba(240, 237, 232, 0.28);
+  --color-text-muted: rgba(240, 237, 232, 0.72);
+  --color-text-subtle: rgba(240, 237, 232, 0.40);
+  --color-text-faint: rgba(240, 237, 232, 0.55);
 
   /* Borders */
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-strong: rgba(255, 255, 255, 0.14);
-  --color-border-olive: rgba(143, 168, 112, 0.20);
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-border-strong: rgba(255, 255, 255, 0.22);
+  --color-border-olive: rgba(143, 168, 112, 0.32);
 
   /* Safe area */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -57,6 +58,7 @@
   --color-accent: var(--color-accent);
   --color-text: var(--color-text);
   --color-text-muted: var(--color-text-muted);
+  --color-text-subtle: var(--color-text-subtle);
   --color-text-faint: var(--color-text-faint);
   --color-border: var(--color-border);
   --color-border-strong: var(--color-border-strong);
@@ -139,6 +141,12 @@ input[type="number"] {
   }
 }
 
+*:focus-visible {
+  outline: 2px solid var(--color-olive-bright);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
 /* V4 login card: transparent on mobile, glassmorphic on desktop */
 .v4-login-card {
   background: transparent;
@@ -150,8 +158,8 @@ input[type="number"] {
     -webkit-backdrop-filter: blur(48px);
     background: linear-gradient(
       to bottom,
-      rgba(15, 17, 21, 0.88),
-      rgba(15, 17, 21, 0.6)
+      rgba(19, 20, 16, 0.88),
+      rgba(19, 20, 16, 0.6)
     );
     box-shadow: 0 -30px 90px rgba(0, 0, 0, 0.53);
   }

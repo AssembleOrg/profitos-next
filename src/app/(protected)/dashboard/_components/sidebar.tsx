@@ -426,7 +426,7 @@ export function Sidebar({ avatarUrl, role }: SidebarProps) {
         {!collapsed && (
           <button
             onClick={() => setCollapsed(true)}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-surface hover:text-text-muted"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
             title="Contraer sidebar"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -442,7 +442,7 @@ export function Sidebar({ avatarUrl, role }: SidebarProps) {
         <div className="mb-2 flex justify-center px-2">
           <button
             onClick={() => setCollapsed(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-surface hover:text-text-muted"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
             title="Expandir sidebar"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -467,7 +467,7 @@ export function Sidebar({ avatarUrl, role }: SidebarProps) {
             <div key={group.key} className={groupIdx > 0 ? "mt-2" : undefined}>
               {groupIdx > 0 && (
                 collapsed ? (
-                  <div className="mx-auto mb-2 h-px w-6 bg-border/60" />
+                  <div className="mx-auto mb-2 h-px w-6 bg-border-strong" />
                 ) : (
                   <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-accent/70">
                     {group.label}
@@ -486,11 +486,11 @@ export function Sidebar({ avatarUrl, role }: SidebarProps) {
                         collapsed ? "justify-center px-0" : "px-3"
                       } ${
                         isActive
-                          ? "bg-olive-deep text-accent shadow-[inset_2px_0_0_var(--color-olive-bright)]"
-                          : "text-text-faint hover:bg-surface hover:text-text-muted"
+                          ? "bg-olive-deep text-accent shadow-[inset_3px_0_0_var(--color-olive-bright)]"
+                          : "text-text-muted hover:bg-surface-elevated hover:text-text"
                       }`}
                     >
-                      <span className="shrink-0">{item.icon}</span>
+                      <span className={`shrink-0 ${isActive ? "text-olive-light" : "text-olive-vivid"}`}>{item.icon}</span>
                       {!collapsed && <span className="truncate">{item.label}</span>}
                     </Link>
                   );
@@ -516,7 +516,7 @@ export function Sidebar({ avatarUrl, role }: SidebarProps) {
                 setUnreadCount(0);
               }
             }}
-            className={`relative flex h-10 items-center gap-3 rounded-lg text-sm text-white/30 transition-colors hover:bg-surface hover:text-white/60 ${collapsed ? "w-10 justify-center mx-auto px-0" : "w-full px-3"}`}
+            className={`relative flex h-10 items-center gap-3 rounded-lg text-sm text-text-muted transition-colors hover:bg-surface-elevated hover:text-text ${collapsed ? "w-10 justify-center mx-auto px-0" : "w-full px-3"}`}
             title={collapsed ? "Notificaciones" : undefined}
           >
             <span className="shrink-0">
