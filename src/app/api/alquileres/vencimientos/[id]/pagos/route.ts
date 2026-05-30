@@ -70,9 +70,12 @@ export const POST = withHandler(async (request: NextRequest, context) => {
   const ownerAmount = amountPaid - commission;
   const isFullBool = isFull === true;
 
-  // Reservar el siguiente número de comprobante atomicamente
+  // Reservar el siguiente número de comprobante atomicamente.
+  // La secuencia se referencia calificada con el schema porque las queries
+  // crudas se envían tal cual y no usan el search_path de Prisma (que apunta
+  // a "$user", public — sin `profitos`), a diferencia de las queries de modelo.
   const seqResult = await prisma.$queryRaw<Array<{ nextval: bigint }>>`
-    SELECT nextval('jp_rental_receipt_seq')::bigint AS nextval
+    SELECT nextval('profitos.jp_rental_receipt_seq')::bigint AS nextval
   `;
   const receiptNumber = Number(seqResult[0]?.nextval ?? 0);
   if (!receiptNumber) throw new AppError(500, "No se pudo asignar número de comprobante");
