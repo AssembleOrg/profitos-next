@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { signOut } from "@/app/login/actions";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import { formatDateTime } from "@/lib/datetime";
+import { useNavFavorites } from "../../_components/nav-favorites-context";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 interface NotificationItem {
   kind: "contact" | "followup_assignment" | "contact_followup" | "property" | "overdue_followup";
@@ -244,19 +246,170 @@ interface SidebarProps {
   role?: "admin" | "user" | "viewer";
 }
 
+interface NavLinkProps {
+  item: NavItem;
+  collapsed: boolean;
+  isActive: boolean;
+  fav: boolean;
+  onToggleFav: (href: string) => void;
+}
+
+/**
+ * Ítem del sidebar con su toggle de favorito. El botón de estrella es hermano
+ * del Link (no anidado) para no meter un <button> dentro de un <a>.
+ */
+function NavLink({ item, collapsed, isActive, fav, onToggleFav }: Readonly<NavLinkProps>) {
+  return (
+    <div className="group relative">
+      <Link
+        href={item.href}
+        title={collapsed ? item.label : undefined}
+        className={`relative flex h-9 items-center gap-3 rounded-lg text-sm transition-colors ${
+          collapsed ? "justify-center px-0" : "px-3 pr-9"
+        } ${
+          isActive
+            ? "bg-olive-deep text-accent shadow-[inset_3px_0_0_var(--color-olive-bright)]"
+            : "text-text-muted hover:bg-surface-elevated hover:text-text"
+        }`}
+      >
+        <span className={`shrink-0 ${isActive ? "text-olive-light" : "text-olive-vivid"}`}>{item.icon}</span>
+        {!collapsed && <span className="truncate">{item.label}</span>}
+      </Link>
+      {!collapsed && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleFav(item.href);
+          }}
+          aria-label={fav ? "Quitar de favoritos" : "Marcar como favorito"}
+          className={`absolute right-1.5 top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md transition-opacity hover:bg-surface ${
+            fav ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill={fav ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={fav ? "text-fav-gold" : "text-text-subtle"}
+          >
+            <polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9 12 2" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
 function formatNotificationDate(value: string) {
   try { return formatDateTime(value); } catch { return "—"; }
 }
 
-export function Sidebar({ avatarUrl, role }: SidebarProps) {
+// Estilos y etiquetas por tipo de notificación (evita ternarios anidados).
+const NOTIF_CARD_CLASS: Record<NotificationItem["kind"], string> = {
+  contact: "border-sky-500/30 bg-sky-500/10",
+  followup_assignment: "border-amber-500/30 bg-amber-500/10",
+  contact_followup: "border-fuchsia-500/30 bg-fuchsia-500/10",
+  overdue_followup: "border-red-500/30 bg-red-500/10",
+  property: "border-emerald-500/30 bg-emerald-500/10",
+};
+
+const NOTIF_BADGE_CLASS: Record<NotificationItem["kind"], string> = {
+  contact: "bg-sky-500/20 text-sky-300",
+  followup_assignment: "bg-amber-500/20 text-amber-300",
+  contact_followup: "bg-fuchsia-500/20 text-fuchsia-300",
+  overdue_followup: "bg-red-500/20 text-red-300",
+  property: "bg-emerald-500/20 text-emerald-300",
+};
+
+const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
+  contact: "Nuevo contacto",
+  followup_assignment: "Seguimiento",
+  contact_followup: "Seg. consulta",
+  overdue_followup: "Vencido",
+  property: "Propiedad nueva",
+};
+
+function SidebarNotifBody({ item }: Readonly<{ item: NotificationItem }>) {
+  const responsable = item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable";
+  switch (item.kind) {
+    case "contact":
+      return (
+        <>
+          <p className="text-sm font-medium leading-tight text-text">{item.name ?? "Contacto sin nombre"}</p>
+          <p className="mt-0.5 text-xs text-text-muted">Estado: {item.leadStatus ?? "Sin estado"} · Agente: {item.agentName ?? "Sin agente"}</p>
+        </>
+      );
+    case "followup_assignment":
+      return (
+        <>
+          <p className="text-sm font-medium leading-tight text-text">{item.property?.address ?? "Propiedad sin dirección"}</p>
+          <p className="mt-0.5 text-xs text-text-muted">Responsable: {responsable}</p>
+          <p className="text-xs text-text-muted">Estado: {item.status ?? "pendiente"}</p>
+        </>
+      );
+    case "contact_followup":
+      return (
+        <>
+          <p className="text-sm font-medium leading-tight text-text">{item.recentContact?.name ?? "Consulta"}</p>
+          <p className="mt-0.5 text-xs text-text-muted">Responsable: {responsable}</p>
+          <p className="text-xs text-text-muted">Estado: {item.status ?? "pendiente"}</p>
+        </>
+      );
+    case "overdue_followup":
+      return (
+        <>
+          <p className="text-sm font-medium leading-tight text-text">{item.property?.address ?? "Propiedad sin dirección"}</p>
+          <p className="mt-0.5 text-xs text-red-300">Vencido: {item.dueDate ? formatNotificationDate(item.dueDate) : "sin fecha"}</p>
+          <p className="text-xs text-text-muted">Responsable: {responsable}</p>
+        </>
+      );
+    default:
+      return (
+        <>
+          <p className="text-sm font-medium leading-tight text-text">{item.address ?? item.publicationTitle ?? "Propiedad nueva"}</p>
+          <p className="mt-0.5 text-xs text-text-muted">{item.operationType ?? "Operación no informada"} · Estado: {item.status ?? "activa"}</p>
+          <p className="text-xs text-text-muted">{item.operationCurrency ?? ""} {item.operationPrice?.toLocaleString("es-AR") ?? "Precio no informado"}</p>
+        </>
+      );
+  }
+}
+
+function SidebarNotifCard({ item }: Readonly<{ item: NotificationItem }>) {
+  return (
+    <div className={`rounded-lg border px-3 py-2.5 ${NOTIF_CARD_CLASS[item.kind]}`}>
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${NOTIF_BADGE_CLASS[item.kind]}`}>
+          {NOTIF_LABEL[item.kind]}
+        </span>
+        <span className="text-[11px] text-text-muted/80">{formatNotificationDate(item.eventAt)}</span>
+      </div>
+      <SidebarNotifBody item={item} />
+    </div>
+  );
+}
+
+export function Sidebar({ avatarUrl, role }: Readonly<SidebarProps>) {
   const isAdmin = role === "admin";
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const { favorites, isFavorite, toggle: toggleFavorite } = useNavFavorites();
+  const [collapsed, setCollapsed] = useLocalStorage<boolean>("jp_sidebar_collapsed", false);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("jp_sidebar_collapsed");
-    if (stored === "true") setCollapsed(true);
-  }, []);
+  const visibleNavItems = navItems.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    if (item.hideForAdmin && isAdmin) return false;
+    return true;
+  });
+  const favoriteItems = favorites
+    .map((href) => visibleNavItems.find((i) => i.href === href))
+    .filter((i): i is NavItem => Boolean(i));
+
   const [showMenu, setShowMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -264,9 +417,8 @@ export function Sidebar({ avatarUrl, role }: SidebarProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
-  // Sync CSS variable for layout margin
+  // Sync CSS variable for layout margin (la persistencia la maneja useLocalStorage)
   useEffect(() => {
-    localStorage.setItem("jp_sidebar_collapsed", String(collapsed));
     document.documentElement.style.setProperty("--sidebar-width", collapsed ? "4rem" : "13rem");
   }, [collapsed]);
 
@@ -394,7 +546,7 @@ export function Sidebar({ avatarUrl, role }: SidebarProps) {
       .subscribe();
 
     return () => {
-      void supabase.removeChannel(channel);
+      supabase.removeChannel(channel);
     };
   }, []);
 
@@ -444,46 +596,55 @@ export function Sidebar({ avatarUrl, role }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2">
+        {/* Favoritos */}
+        {favoriteItems.length > 0 && (
+          <div>
+            {collapsed ? (
+              <div className="mx-auto mb-2 h-px w-6 bg-border-strong" />
+            ) : (
+              <p className="mb-1 flex items-center gap-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-fav-gold/80">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5"><polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9 12 2" /></svg>
+                Favoritos
+              </p>
+            )}
+            <div className="flex flex-col gap-0.5">
+              {favoriteItems.map((item) => (
+                <NavLink
+                  key={`fav-${item.href}`}
+                  item={item}
+                  collapsed={collapsed}
+                  isActive={pathname === item.href}
+                  fav={isFavorite(item.href)}
+                  onToggleFav={toggleFavorite}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {navGroups.map((group, groupIdx) => {
-          const items = navItems.filter((item) => {
-            if (item.group !== group.key) return false;
-            if (item.adminOnly && !isAdmin) return false;
-            if (item.hideForAdmin && isAdmin) return false;
-            return true;
-          });
+          const items = visibleNavItems.filter((item) => item.group === group.key);
           if (items.length === 0) return null;
+          const showSeparator = groupIdx > 0 || favoriteItems.length > 0;
           return (
-            <div key={group.key} className={groupIdx > 0 ? "mt-2" : undefined}>
-              {groupIdx > 0 && (
-                collapsed ? (
-                  <div className="mx-auto mb-2 h-px w-6 bg-border-strong" />
-                ) : (
-                  <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-accent/70">
-                    {group.label}
-                  </p>
-                )
+            <div key={group.key} className={showSeparator ? "mt-2" : undefined}>
+              {showSeparator && collapsed && <div className="mx-auto mb-2 h-px w-6 bg-border-strong" />}
+              {!collapsed && group.label && (
+                <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-accent/70">
+                  {group.label}
+                </p>
               )}
               <div className="flex flex-col gap-0.5">
-                {items.map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      title={collapsed ? item.label : undefined}
-                      className={`relative flex h-9 items-center gap-3 rounded-lg text-sm transition-colors ${
-                        collapsed ? "justify-center px-0" : "px-3"
-                      } ${
-                        isActive
-                          ? "bg-olive-deep text-accent shadow-[inset_3px_0_0_var(--color-olive-bright)]"
-                          : "text-text-muted hover:bg-surface-elevated hover:text-text"
-                      }`}
-                    >
-                      <span className={`shrink-0 ${isActive ? "text-olive-light" : "text-olive-vivid"}`}>{item.icon}</span>
-                      {!collapsed && <span className="truncate">{item.label}</span>}
-                    </Link>
-                  );
-                })}
+                {items.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    item={item}
+                    collapsed={collapsed}
+                    isActive={pathname === item.href}
+                    fav={isFavorite(item.href)}
+                    onToggleFav={toggleFavorite}
+                  />
+                ))}
               </div>
             </div>
           );
@@ -549,106 +710,7 @@ export function Sidebar({ avatarUrl, role }: SidebarProps) {
                   </p>
                 ) : (
                   notifications.map((item) => (
-                    <div
-                      key={`${item.kind}-${item.id}`}
-                      className={`rounded-lg border px-3 py-2.5 ${
-                        item.kind === "contact"
-                          ? "border-sky-500/30 bg-sky-500/10"
-                          : item.kind === "followup_assignment"
-                            ? "border-amber-500/30 bg-amber-500/10"
-                            : item.kind === "contact_followup"
-                              ? "border-fuchsia-500/30 bg-fuchsia-500/10"
-                              : item.kind === "overdue_followup"
-                                ? "border-red-500/30 bg-red-500/10"
-                            : "border-emerald-500/30 bg-emerald-500/10"
-                      }`}
-                    >
-                      <div className="mb-1.5 flex items-center justify-between gap-2">
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                            item.kind === "contact"
-                              ? "bg-sky-500/20 text-sky-300"
-                              : item.kind === "followup_assignment"
-                                ? "bg-amber-500/20 text-amber-300"
-                                : item.kind === "contact_followup"
-                                  ? "bg-fuchsia-500/20 text-fuchsia-300"
-                                  : item.kind === "overdue_followup"
-                                    ? "bg-red-500/20 text-red-300"
-                                : "bg-emerald-500/20 text-emerald-300"
-                          }`}
-                        >
-                          {item.kind === "contact"
-                            ? "Nuevo contacto"
-                            : item.kind === "followup_assignment"
-                              ? "Seguimiento"
-                              : item.kind === "contact_followup"
-                                ? "Seg. consulta"
-                                : item.kind === "overdue_followup"
-                                  ? "Vencido"
-                              : "Propiedad nueva"}
-                        </span>
-                        <span className="text-[11px] text-text-muted/80">{formatNotificationDate(item.eventAt)}</span>
-                      </div>
-
-                      {item.kind === "contact" ? (
-                        <>
-                          <p className="text-sm font-medium leading-tight text-text">
-                            {item.name ?? "Contacto sin nombre"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-text-muted">
-                            Estado: {item.leadStatus ?? "Sin estado"} · Agente: {item.agentName ?? "Sin agente"}
-                          </p>
-                        </>
-                      ) : item.kind === "followup_assignment" ? (
-                        <>
-                          <p className="text-sm font-medium leading-tight text-text">
-                            {item.property?.address ?? "Propiedad sin dirección"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-text-muted">
-                            Responsable: {item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}
-                          </p>
-                          <p className="text-xs text-text-muted">
-                            Estado: {item.status ?? "pendiente"}
-                          </p>
-                        </>
-                      ) : item.kind === "contact_followup" ? (
-                        <>
-                          <p className="text-sm font-medium leading-tight text-text">
-                            {item.recentContact?.name ?? "Consulta"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-text-muted">
-                            Responsable: {item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}
-                          </p>
-                          <p className="text-xs text-text-muted">
-                            Estado: {item.status ?? "pendiente"}
-                          </p>
-                        </>
-                      ) : item.kind === "overdue_followup" ? (
-                        <>
-                          <p className="text-sm font-medium leading-tight text-text">
-                            {item.property?.address ?? "Propiedad sin dirección"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-red-300">
-                            Vencido: {item.dueDate ? formatNotificationDate(item.dueDate) : "sin fecha"}
-                          </p>
-                          <p className="text-xs text-text-muted">
-                            Responsable: {item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-sm font-medium leading-tight text-text">
-                            {item.address ?? item.publicationTitle ?? "Propiedad nueva"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-text-muted">
-                            {item.operationType ?? "Operación no informada"} · Estado: {item.status ?? "activa"}
-                          </p>
-                          <p className="text-xs text-text-muted">
-                            {item.operationCurrency ?? ""} {item.operationPrice?.toLocaleString("es-AR") ?? "Precio no informado"}
-                          </p>
-                        </>
-                      )}
-                    </div>
+                    <SidebarNotifCard key={`${item.kind}-${item.id}`} item={item} />
                   ))
                 )}
               </div>

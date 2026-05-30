@@ -6,15 +6,17 @@ import { CommandPalette } from "../dashboard/_components/command-palette";
 import { BottomNav } from "./bottom-nav";
 import { RolePreviewProvider, useRolePreview, type Role } from "./role-preview-context";
 import { RolePreviewBanner } from "./role-preview-banner";
+import { NavFavoritesProvider } from "./nav-favorites-context";
 
 interface ProtectedShellProps {
   realRole: Role;
   avatarUrl: string | null;
   greeting: ReactNode;
+  favorites: string[];
   children: ReactNode;
 }
 
-function Shell({ avatarUrl, greeting, children }: Omit<ProtectedShellProps, "realRole">) {
+function Shell({ avatarUrl, greeting, children }: Readonly<Omit<ProtectedShellProps, "realRole" | "favorites">>) {
   const { effectiveRole } = useRolePreview();
   return (
     <>
@@ -32,12 +34,14 @@ function Shell({ avatarUrl, greeting, children }: Omit<ProtectedShellProps, "rea
   );
 }
 
-export function ProtectedShell({ realRole, avatarUrl, greeting, children }: ProtectedShellProps) {
+export function ProtectedShell({ realRole, avatarUrl, greeting, favorites, children }: Readonly<ProtectedShellProps>) {
   return (
     <RolePreviewProvider realRole={realRole}>
-      <Shell avatarUrl={avatarUrl} greeting={greeting}>
-        {children}
-      </Shell>
+      <NavFavoritesProvider initialFavorites={favorites}>
+        <Shell avatarUrl={avatarUrl} greeting={greeting}>
+          {children}
+        </Shell>
+      </NavFavoritesProvider>
     </RolePreviewProvider>
   );
 }

@@ -6,6 +6,7 @@ export interface AppUser {
   role: "admin" | "user" | "viewer";
   googleAccessToken: string | null;
   googleRefreshToken: string | null;
+  navFavorites: string[] | null;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -25,6 +25,7 @@ model User {
   role               String     @default("user")
   googleAccessToken  String?    @map("google_access_token")
   googleRefreshToken String?    @map("google_refresh_token")
+  navFavorites       Json?      @map("nav_favorites")
   createdAt          DateTime   @default(now()) @map("created_at")
   updatedAt          DateTime   @updatedAt @map("updated_at")
   visitas            Visit[]

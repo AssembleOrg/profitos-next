@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotifications, type NotificationItem } from "./use-notifications";
 import { formatDateTime } from "@/lib/datetime";
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useNavFavorites } from "./nav-favorites-context";
 
 const primaryTabs = [
   {
@@ -276,18 +276,13 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
   const [showNotifications, setShowNotifications] = useState(false);
   const { notifications, unreadCount, markAsSeen, loadNotifications } = useNotifications();
   const isAdmin = role === "admin";
-  const [favorites, setFavorites] = useLocalStorage<string[]>("jp_mobile_favorites", []);
+  const { favorites, isFavorite: isFav, toggle: toggleFav } = useNavFavorites();
 
   const visibleMoreItems = moreItems.filter((item) => {
     if (item.adminOnly && !isAdmin) return false;
     if (item.hideForAdmin && isAdmin) return false;
     return true;
   });
-
-  const isFav = (href: string) => favorites.includes(href);
-  const toggleFav = (href: string) => {
-    setFavorites((prev) => (prev.includes(href) ? prev.filter((h) => h !== href) : [...prev, href]));
-  };
 
   const sortedMoreItems = [
     ...favorites

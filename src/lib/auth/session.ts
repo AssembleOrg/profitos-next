@@ -17,5 +17,10 @@ export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
 
   if (!appUser) return null;
 
-  return appUser as AppUser;
+  return {
+    ...appUser,
+    navFavorites: Array.isArray(appUser.navFavorites)
+      ? (appUser.navFavorites as string[])
+      : null,
+  } as AppUser;
 });

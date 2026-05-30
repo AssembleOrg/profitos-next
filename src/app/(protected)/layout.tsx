@@ -32,7 +32,12 @@ export default async function ProtectedLayout({
     <div className="flex min-h-dvh bg-bg">
       <NativeParityProvider />
       <SplashScreen />
-      <ProtectedShell realRole={user.role} avatarUrl={user.avatarUrl} greeting={greeting}>
+      <ProtectedShell
+        realRole={user.role}
+        avatarUrl={user.avatarUrl}
+        greeting={greeting}
+        favorites={user.navFavorites ?? []}
+      >
         {children}
       </ProtectedShell>
     </div>
