@@ -4,10 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNotifications, type NotificationItem } from "./use-notifications";
+import { type NotificationItem } from "./use-notifications";
+import { useNotificationsContext } from "./notifications-context";
 import { formatDateTime } from "@/lib/datetime";
 import { useNavFavorites } from "./nav-favorites-context";
 import { useAccess } from "./access-context";
+import { PREFETCH_HREFS } from "@/lib/nav/views";
 
 const primaryTabs = [
   {
@@ -283,10 +285,10 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const { notifications, unreadCount, markAsSeen, loadNotifications } = useNotifications();
   const isAdmin = role === "admin";
   const { favorites, isFavorite: isFav, toggle: toggleFav } = useNavFavorites();
   const { canAccess } = useAccess();
+  const { notifications, unreadCount, markAsSeen, loadNotifications } = useNotificationsContext();
 
   const visiblePrimaryTabs = primaryTabs.filter((tab) => canAccess(tab.href));
 
@@ -447,6 +449,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                     <Link
                       key={item.href}
                       href={item.href}
+                      prefetch={PREFETCH_HREFS.has(item.href) ? undefined : false}
                       onClick={() => setShowMore(false)}
                       className={`relative flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 transition-colors active:scale-95 ${
                         isActive
@@ -517,6 +520,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                 )}
                 <Link
                   href={tab.href}
+                  prefetch={PREFETCH_HREFS.has(tab.href) ? undefined : false}
                   className="relative z-10 flex w-full flex-col items-center justify-center gap-0.5 py-2"
                 >
                   <span className={`shrink-0 ${isActive ? "text-accent" : "text-text-muted"}`}>

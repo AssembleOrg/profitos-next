@@ -33,6 +33,13 @@ export const APP_VIEWS: AppView[] = [
   { href: "/configuracion", label: "Configuración", adminOnly: true },
 ];
 
+/**
+ * Vistas en las que se mantiene el prefetch de Next (navegación instantánea).
+ * En el resto se desactiva para no disparar un request RSC por cada link en
+ * cada carga (importante en hostings que cobran por invocación/request).
+ */
+export const PREFETCH_HREFS = new Set<string>(["/dashboard", "/contactos", "/estados-cuenta"]);
+
 /** Vistas que un admin puede conceder/quitar a un usuario común. */
 export const GRANTABLE_VIEWS: AppView[] = APP_VIEWS.filter((v) => !v.always && !v.adminOnly);
 

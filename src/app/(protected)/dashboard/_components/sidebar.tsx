@@ -4,40 +4,13 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/app/login/actions";
-import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import { formatDateTime } from "@/lib/datetime";
 import { useNavFavorites } from "../../_components/nav-favorites-context";
 import { useAccess } from "../../_components/access-context";
+import { useNotificationsContext } from "../../_components/notifications-context";
+import { type NotificationItem } from "../../_components/use-notifications";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-
-interface NotificationItem {
-  kind: "contact" | "followup_assignment" | "contact_followup" | "property" | "overdue_followup";
-  eventAt: string;
-  id: string;
-  name?: string;
-  email?: string | null;
-  cellphone?: string | null;
-  phone?: string | null;
-  leadStatus?: string | null;
-  agentName?: string | null;
-  agentEmail?: string | null;
-  tokkoCreatedAt?: string | null;
-  createdAt?: string;
-  tokkoContactId?: number;
-  title?: string | null;
-  status?: string;
-  dueDate?: string | null;
-  updatedAt?: string;
-  property?: { id: string; address: string };
-  recentContact?: { id: string; name: string; email: string | null; cellphone: string | null };
-  assignedToUser?: { id: string; fullName: string | null; email: string };
-  assignedByUser?: { id: string; fullName: string | null; email: string };
-  address?: string;
-  publicationTitle?: string | null;
-  operationType?: string | null;
-  operationPrice?: number | null;
-  operationCurrency?: string | null;
-}
+import { PREFETCH_HREFS } from "@/lib/nav/views";
 
 interface NavItem {
   href: string;
@@ -264,6 +237,7 @@ function NavLink({ item, collapsed, isActive, fav, onToggleFav }: Readonly<NavLi
     <div className="group relative">
       <Link
         href={item.href}
+        prefetch={PREFETCH_HREFS.has(item.href) ? undefined : false}
         title={collapsed ? item.label : undefined}
         className={`relative flex h-9 items-center gap-3 rounded-lg text-sm transition-all duration-150 ${
           collapsed ? "justify-center px-0" : "px-3 pr-9"
@@ -412,10 +386,9 @@ export function Sidebar({ avatarUrl, role }: Readonly<SidebarProps>) {
     .map((href) => visibleNavItems.find((i) => i.href === href))
     .filter((i): i is NavItem => Boolean(i));
 
+  const { notifications, unreadCount, markAsSeen, loadNotifications } = useNotificationsContext();
   const [showMenu, setShowMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
@@ -423,33 +396,6 @@ export function Sidebar({ avatarUrl, role }: Readonly<SidebarProps>) {
   useEffect(() => {
     document.documentElement.style.setProperty("--sidebar-width", collapsed ? "4rem" : "13rem");
   }, [collapsed]);
-
-  async function loadNotifications() {
-    try {
-      const res = await fetch("/api/notifications/recent-contacts?limit=15", {
-        cache: "no-store",
-      });
-      if (!res.ok) return;
-      const body = await res.json();
-      const items = (body?.data?.items ?? []) as NotificationItem[];
-      setNotifications(items);
-
-      const lastSeen = localStorage.getItem("jp_last_notifications_seen_at");
-      if (!lastSeen) {
-        setUnreadCount(items.length > 0 ? 1 : 0);
-        return;
-      }
-      const lastSeenMs = new Date(lastSeen).getTime();
-      const count = items.filter((item) => {
-        const eventAt = item.eventAt ?? item.tokkoCreatedAt ?? item.createdAt;
-        if (!eventAt) return false;
-        return new Date(eventAt).getTime() > lastSeenMs;
-      }).length;
-      setUnreadCount(count);
-    } catch {
-      // silent
-    }
-  }
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -463,94 +409,6 @@ export function Sidebar({ avatarUrl, role }: Readonly<SidebarProps>) {
     if (showMenu || showNotifications) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showMenu, showNotifications]);
-
-  useEffect(() => {
-    const timerId = globalThis.setTimeout(() => {
-      void loadNotifications();
-    }, 0);
-
-    return () => {
-      globalThis.clearTimeout(timerId);
-    };
-  }, []);
-
-  useEffect(() => {
-    const supabase = createSupabaseClient();
-    const schema = process.env.NEXT_PUBLIC_DB_SCHEMA ?? "profitos";
-    const channel = supabase
-      .channel("sidebar-last-contacts")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema,
-          table: "jp_ultimos_contactos",
-        },
-        () => {
-          void loadNotifications();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema,
-          table: "jp_contact_followups",
-        },
-        () => {
-          void loadNotifications();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema,
-          table: "jp_contact_followups",
-        },
-        () => {
-          void loadNotifications();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema,
-          table: "jp_propiedades",
-        },
-        () => {
-          void loadNotifications();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema,
-          table: "jp_property_followups",
-        },
-        () => {
-          void loadNotifications();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema,
-          table: "jp_property_followups",
-        },
-        () => {
-          void loadNotifications();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   return (
     <aside className={`fixed left-0 top-0 z-40 hidden h-dvh flex-col border-r border-border-olive/50 bg-gradient-to-b from-surface/50 via-bg to-bg py-4 transition-all duration-200 md:flex ${collapsed ? "w-16" : "w-52"}`}>
@@ -666,10 +524,8 @@ export function Sidebar({ avatarUrl, role }: Readonly<SidebarProps>) {
               const next = !showNotifications;
               setShowNotifications(next);
               if (next) {
-                void loadNotifications();
-                const now = new Date().toISOString();
-                localStorage.setItem("jp_last_notifications_seen_at", now);
-                setUnreadCount(0);
+                loadNotifications().catch(() => {});
+                markAsSeen();
               }
             }}
             className={`relative flex h-10 items-center gap-3 rounded-lg text-sm text-text-muted transition-colors hover:bg-surface-elevated hover:text-text ${collapsed ? "w-10 justify-center mx-auto px-0" : "w-full px-3"}`}
@@ -699,11 +555,7 @@ export function Sidebar({ avatarUrl, role }: Readonly<SidebarProps>) {
                   </p>
                 </div>
                 <button
-                  onClick={() => {
-                    const now = new Date().toISOString();
-                    localStorage.setItem("jp_last_notifications_seen_at", now);
-                    setUnreadCount(0);
-                  }}
+                  onClick={() => markAsSeen()}
                   className="rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-text-muted transition-colors hover:bg-bg hover:text-text"
                 >
                   Marcar leídas

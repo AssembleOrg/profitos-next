@@ -8,6 +8,7 @@ import { RolePreviewProvider, useRolePreview, type Role } from "./role-preview-c
 import { RolePreviewBanner } from "./role-preview-banner";
 import { NavFavoritesProvider } from "./nav-favorites-context";
 import { AccessProvider } from "./access-context";
+import { NotificationsProvider } from "./notifications-context";
 
 interface ProtectedShellProps {
   realRole: Role;
@@ -50,9 +51,11 @@ export function ProtectedShell({
     <RolePreviewProvider realRole={realRole}>
       <AccessProvider isAdmin={isAdmin} accessibleHrefs={accessibleHrefs}>
         <NavFavoritesProvider initialFavorites={favorites}>
-          <Shell avatarUrl={avatarUrl} greeting={greeting}>
-            {children}
-          </Shell>
+          <NotificationsProvider>
+            <Shell avatarUrl={avatarUrl} greeting={greeting}>
+              {children}
+            </Shell>
+          </NotificationsProvider>
         </NavFavoritesProvider>
       </AccessProvider>
     </RolePreviewProvider>
