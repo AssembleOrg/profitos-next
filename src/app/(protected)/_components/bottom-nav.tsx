@@ -140,6 +140,17 @@ const moreItems: MoreItem[] = [
     ),
   },
   {
+    href: "/estados-cuenta",
+    label: "Estados de cuenta",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="5" width="20" height="14" rx="2" />
+        <path d="M2 10h20" />
+        <path d="M16 14h2" />
+      </svg>
+    ),
+  },
+  {
     href: "/objetivos",
     label: "Objetivos",
     adminOnly: true,

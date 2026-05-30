@@ -126,6 +126,16 @@ const navItems: PaletteNavItem[] = [
     ),
   },
   {
+    label: "Estados de cuenta", href: "/estados-cuenta",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={ico}>
+        <rect x="2" y="5" width="20" height="14" rx="2" />
+        <path d="M2 10h20" />
+        <path d="M16 14h2" />
+      </svg>
+    ),
+  },
+  {
     label: "Objetivos", href: "/objetivos",
     adminOnly: true,
     icon: (

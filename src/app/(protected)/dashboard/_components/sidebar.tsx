@@ -39,7 +39,7 @@ interface NotificationItem {
 interface NavItem {
   href: string;
   label: string;
-  group: "principal" | "clientes" | "propiedades" | "alquileres" | "gestion";
+  group: "principal" | "clientes" | "propiedades" | "alquileres" | "finanzas" | "gestion";
   adminOnly?: boolean;
   hideForAdmin?: boolean;
   icon: React.ReactNode;
@@ -50,6 +50,7 @@ const navGroups: { key: NavItem["group"]; label: string | null }[] = [
   { key: "clientes", label: "Clientes y ventas" },
   { key: "propiedades", label: "Propiedades" },
   { key: "alquileres", label: "Alquileres" },
+  { key: "finanzas", label: "Finanzas" },
   { key: "gestion", label: "Gestión" },
 ];
 
@@ -184,6 +185,18 @@ const navItems: NavItem[] = [
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
         <circle cx="9" cy="7" r="4" />
+      </svg>
+    ),
+  },
+  {
+    href: "/estados-cuenta",
+    label: "Estados de cuenta",
+    group: "finanzas",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="5" width="20" height="14" rx="2" />
+        <path d="M2 10h20" />
+        <path d="M16 14h2" />
       </svg>
     ),
   },

@@ -46,6 +46,8 @@ model User {
   createdRentalContracts        RentalContract[]            @relation("RentalContractCreatedBy")
   createdRentalPayments         RentalPaymentTransaction[]  @relation("RentalPaymentCreatedBy")
   createdRentalDueDateActions   RentalDueDateAction[]       @relation("RentalDueDateActionCreatedBy")
+  createdAccountEntries         AccountEntry[]              @relation("AccountEntryCreatedBy")
+  agentAccountEntries           AccountEntry[]              @relation("AccountEntryAgent")
 
   @@map("jp_users")
 }
@@ -107,6 +109,7 @@ model Property {
   tasaciones        Tasacion[]
   signatureProposals SignatureProposal[]
   rentalContracts   RentalContract[]
+  accountEntries    AccountEntry[]
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -556,4 +559,55 @@ model RentalDueDateAction {
 
   @@index([dueDateId])
   @@map("jp_rental_due_date_actions")
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Estados de cuenta (caja/finanzas de la inmobiliaria)
+// ────────────────────────────────────────────────────────────────────
+
+model AccountCategory {
+  id         String         @id @default(cuid())
+  name       String
+  // income | expense
+  kind       String
+  color      String?
+  isSystem   Boolean        @default(false) @map("is_system")
+  sortOrder  Int            @default(0) @map("sort_order")
+  archivedAt DateTime?      @map("archived_at")
+  entries    AccountEntry[]
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+
+  @@index([kind])
+  @@map("jp_account_categories")
+}
+
+model AccountEntry {
+  id              String           @id @default(cuid())
+  // income | expense (coincide con el kind de la categoría)
+  type            String
+  categoryId      String?          @map("category_id")
+  category        AccountCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  amount          Float
+  // ARS | USD
+  currency        String           @default("ARS")
+  // fecha contable del movimiento
+  date            DateTime         @db.Date
+  description     String?
+  agentUserId     String?          @map("agent_user_id")
+  agentUser       User?            @relation("AccountEntryAgent", fields: [agentUserId], references: [id], onDelete: SetNull)
+  propertyId      String?          @map("property_id")
+  property        Property?        @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  attachments     Json?
+  createdByUserId String           @map("created_by_user_id")
+  createdByUser   User             @relation("AccountEntryCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@index([type])
+  @@index([categoryId])
+  @@index([currency])
+  @@index([agentUserId])
+  @@map("jp_account_entries")
 }
