@@ -8,11 +8,14 @@ datasource db {
 }
 
 model Whitelist {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  isActive    Boolean  @default(true) @map("is_active")
-  defaultRole String   @default("user") @map("default_role")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id           String   @id @default(cuid())
+  email        String   @unique
+  isActive     Boolean  @default(true) @map("is_active")
+  defaultRole  String   @default("user") @map("default_role")
+  // Vistas permitidas (array de hrefs). null = sin configurar (sin acceso).
+  // Los admins ignoran esta columna (ven todo).
+  allowedViews Json?    @map("allowed_views")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   @@map("jp_whitelist")
 }

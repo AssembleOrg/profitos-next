@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNotifications, type NotificationItem } from "./use-notifications";
 import { formatDateTime } from "@/lib/datetime";
 import { useNavFavorites } from "./nav-favorites-context";
+import { useAccess } from "./access-context";
 
 const primaryTabs = [
   {
@@ -194,78 +195,86 @@ function formatNotifDate(value: string) {
   try { return formatDateTime(value); } catch { return "—"; }
 }
 
-function NotifCard({ item }: { item: NotificationItem }) {
-  return (
-    <div
-      className={`rounded-lg border px-3 py-2.5 ${
-        item.kind === "contact"
-          ? "border-sky-500/30 bg-sky-500/10"
-          : item.kind === "followup_assignment"
-            ? "border-amber-500/30 bg-amber-500/10"
-            : item.kind === "contact_followup"
-              ? "border-fuchsia-500/30 bg-fuchsia-500/10"
-              : item.kind === "overdue_followup"
-                ? "border-red-500/30 bg-red-500/10"
-            : "border-emerald-500/30 bg-emerald-500/10"
-      }`}
-    >
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span
-          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-            item.kind === "contact"
-              ? "bg-sky-500/20 text-sky-300"
-              : item.kind === "followup_assignment"
-                ? "bg-amber-500/20 text-amber-300"
-                : item.kind === "contact_followup"
-                  ? "bg-fuchsia-500/20 text-fuchsia-300"
-                  : item.kind === "overdue_followup"
-                    ? "bg-red-500/20 text-red-300"
-                : "bg-emerald-500/20 text-emerald-300"
-          }`}
-        >
-          {item.kind === "contact"
-            ? "Nuevo contacto"
-            : item.kind === "followup_assignment"
-              ? "Seguimiento"
-              : item.kind === "contact_followup"
-                ? "Seg. consulta"
-                : item.kind === "overdue_followup"
-                  ? "Vencido"
-              : "Propiedad nueva"}
-        </span>
-        <span className="text-[11px] text-text-muted/80">{formatNotifDate(item.eventAt)}</span>
-      </div>
+// Estilos y etiquetas por tipo de notificación (evita ternarios anidados).
+const NOTIF_CARD_CLASS: Record<NotificationItem["kind"], string> = {
+  contact: "border-sky-500/30 bg-sky-500/10",
+  followup_assignment: "border-amber-500/30 bg-amber-500/10",
+  contact_followup: "border-fuchsia-500/30 bg-fuchsia-500/10",
+  overdue_followup: "border-red-500/30 bg-red-500/10",
+  property: "border-emerald-500/30 bg-emerald-500/10",
+};
 
-      {item.kind === "contact" ? (
+const NOTIF_BADGE_CLASS: Record<NotificationItem["kind"], string> = {
+  contact: "bg-sky-500/20 text-sky-300",
+  followup_assignment: "bg-amber-500/20 text-amber-300",
+  contact_followup: "bg-fuchsia-500/20 text-fuchsia-300",
+  overdue_followup: "bg-red-500/20 text-red-300",
+  property: "bg-emerald-500/20 text-emerald-300",
+};
+
+const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
+  contact: "Nuevo contacto",
+  followup_assignment: "Seguimiento",
+  contact_followup: "Seg. consulta",
+  overdue_followup: "Vencido",
+  property: "Propiedad nueva",
+};
+
+function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
+  const responsable = item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable";
+  switch (item.kind) {
+    case "contact":
+      return (
         <>
           <p className="text-sm font-medium leading-tight text-text">{item.name ?? "Contacto sin nombre"}</p>
           <p className="mt-0.5 text-xs text-text-muted">Estado: {item.leadStatus ?? "Sin estado"} · Agente: {item.agentName ?? "Sin agente"}</p>
         </>
-      ) : item.kind === "followup_assignment" ? (
+      );
+    case "followup_assignment":
+      return (
         <>
           <p className="text-sm font-medium leading-tight text-text">{item.property?.address ?? "Propiedad sin dirección"}</p>
-          <p className="mt-0.5 text-xs text-text-muted">Responsable: {item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}</p>
+          <p className="mt-0.5 text-xs text-text-muted">Responsable: {responsable}</p>
           <p className="text-xs text-text-muted">Estado: {item.status ?? "pendiente"}</p>
         </>
-      ) : item.kind === "contact_followup" ? (
+      );
+    case "contact_followup":
+      return (
         <>
           <p className="text-sm font-medium leading-tight text-text">{item.recentContact?.name ?? "Consulta"}</p>
-          <p className="mt-0.5 text-xs text-text-muted">Responsable: {item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}</p>
+          <p className="mt-0.5 text-xs text-text-muted">Responsable: {responsable}</p>
           <p className="text-xs text-text-muted">Estado: {item.status ?? "pendiente"}</p>
         </>
-      ) : item.kind === "overdue_followup" ? (
+      );
+    case "overdue_followup":
+      return (
         <>
           <p className="text-sm font-medium leading-tight text-text">{item.property?.address ?? "Propiedad sin dirección"}</p>
           <p className="mt-0.5 text-xs text-red-300">Vencido: {item.dueDate ? formatNotifDate(item.dueDate) : "sin fecha"}</p>
-          <p className="text-xs text-text-muted">Responsable: {item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}</p>
+          <p className="text-xs text-text-muted">Responsable: {responsable}</p>
         </>
-      ) : (
+      );
+    default:
+      return (
         <>
           <p className="text-sm font-medium leading-tight text-text">{item.address ?? item.publicationTitle ?? "Propiedad nueva"}</p>
           <p className="mt-0.5 text-xs text-text-muted">{item.operationType ?? "Operación no informada"} · Estado: {item.status ?? "activa"}</p>
           <p className="text-xs text-text-muted">{item.operationCurrency ?? ""} {item.operationPrice?.toLocaleString("es-AR") ?? "Precio no informado"}</p>
         </>
-      )}
+      );
+  }
+}
+
+function NotifCard({ item }: Readonly<{ item: NotificationItem }>) {
+  return (
+    <div className={`rounded-lg border px-3 py-2.5 ${NOTIF_CARD_CLASS[item.kind]}`}>
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${NOTIF_BADGE_CLASS[item.kind]}`}>
+          {NOTIF_LABEL[item.kind]}
+        </span>
+        <span className="text-[11px] text-text-muted/80">{formatNotifDate(item.eventAt)}</span>
+      </div>
+      <NotifBody item={item} />
     </div>
   );
 }
@@ -277,11 +286,14 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
   const { notifications, unreadCount, markAsSeen, loadNotifications } = useNotifications();
   const isAdmin = role === "admin";
   const { favorites, isFavorite: isFav, toggle: toggleFav } = useNavFavorites();
+  const { canAccess } = useAccess();
+
+  const visiblePrimaryTabs = primaryTabs.filter((tab) => canAccess(tab.href));
 
   const visibleMoreItems = moreItems.filter((item) => {
     if (item.adminOnly && !isAdmin) return false;
     if (item.hideForAdmin && isAdmin) return false;
-    return true;
+    return canAccess(item.href);
   });
 
   const sortedMoreItems = [
@@ -308,7 +320,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
               onClick={() => setShowNotifications(false)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-white/10 bg-surface/95 backdrop-blur-2xl md:hidden"
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-border-olive/40 bg-surface/95 backdrop-blur-2xl md:hidden"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -387,7 +399,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
               onClick={() => setShowMore(false)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-white/10 bg-surface/95 backdrop-blur-2xl md:hidden"
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-border-olive/40 bg-surface/95 backdrop-blur-2xl md:hidden"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -407,7 +419,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                 <button
                   onClick={() => {
                     setShowMore(false);
-                    void loadNotifications();
+                    loadNotifications().catch(() => {});
                     setShowNotifications(true);
                   }}
                   className="flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 transition-colors text-text-muted active:bg-white/5 relative"
@@ -486,8 +498,8 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
         className="fixed bottom-0 left-0 right-0 z-40 md:hidden"
         style={{ paddingBottom: "calc(var(--safe-bottom, 0px) + 8px)" }}
       >
-        <nav className="mx-3 mb-2 flex items-stretch overflow-hidden rounded-2xl border border-white/8 bg-white/5 p-1 shadow-2xl backdrop-blur-2xl">
-          {primaryTabs.map((tab) => {
+        <nav className="mx-3 mb-2 flex items-stretch overflow-hidden rounded-2xl border border-border-olive/40 bg-gradient-to-b from-surface/80 to-bg/70 p-1 shadow-2xl backdrop-blur-2xl">
+          {visiblePrimaryTabs.map((tab) => {
             const isActive = pathname === tab.href;
             return (
               <motion.div
@@ -499,7 +511,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                 {isActive && (
                   <motion.span
                     layoutId="nav-pill"
-                    className="absolute inset-0 rounded-xl bg-accent/20"
+                    className="absolute inset-0 rounded-xl bg-gradient-to-b from-olive-mid/25 to-olive-deep/60 ring-1 ring-inset ring-olive-bright/25"
                     transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                   />
                 )}
@@ -531,7 +543,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
             {(isMoreActive || showMore) && (
               <motion.span
                 layoutId="nav-pill"
-                className="absolute inset-0 rounded-xl bg-accent/20"
+                className="absolute inset-0 rounded-xl bg-gradient-to-b from-olive-mid/25 to-olive-deep/60 ring-1 ring-inset ring-olive-bright/25"
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
               />
             )}

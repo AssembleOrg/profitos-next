@@ -7,6 +7,7 @@ import { signOut } from "@/app/login/actions";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import { formatDateTime } from "@/lib/datetime";
 import { useNavFavorites } from "../../_components/nav-favorites-context";
+import { useAccess } from "../../_components/access-context";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 
 interface NotificationItem {
@@ -264,11 +265,11 @@ function NavLink({ item, collapsed, isActive, fav, onToggleFav }: Readonly<NavLi
       <Link
         href={item.href}
         title={collapsed ? item.label : undefined}
-        className={`relative flex h-9 items-center gap-3 rounded-lg text-sm transition-colors ${
+        className={`relative flex h-9 items-center gap-3 rounded-lg text-sm transition-all duration-150 ${
           collapsed ? "justify-center px-0" : "px-3 pr-9"
         } ${
           isActive
-            ? "bg-olive-deep text-accent shadow-[inset_3px_0_0_var(--color-olive-bright)]"
+            ? "bg-gradient-to-r from-olive-deep via-olive-deep/55 to-transparent font-medium text-accent shadow-[inset_2px_0_0_var(--color-olive-bright)]"
             : "text-text-muted hover:bg-surface-elevated hover:text-text"
         }`}
       >
@@ -399,12 +400,13 @@ export function Sidebar({ avatarUrl, role }: Readonly<SidebarProps>) {
   const isAdmin = role === "admin";
   const pathname = usePathname();
   const { favorites, isFavorite, toggle: toggleFavorite } = useNavFavorites();
+  const { canAccess } = useAccess();
   const [collapsed, setCollapsed] = useLocalStorage<boolean>("jp_sidebar_collapsed", false);
 
   const visibleNavItems = navItems.filter((item) => {
     if (item.adminOnly && !isAdmin) return false;
     if (item.hideForAdmin && isAdmin) return false;
-    return true;
+    return canAccess(item.href);
   });
   const favoriteItems = favorites
     .map((href) => visibleNavItems.find((i) => i.href === href))
@@ -551,18 +553,22 @@ export function Sidebar({ avatarUrl, role }: Readonly<SidebarProps>) {
   }, []);
 
   return (
-    <aside className={`fixed left-0 top-0 z-40 hidden h-dvh flex-col border-r border-border bg-bg py-4 transition-all duration-200 md:flex ${collapsed ? "w-16" : "w-52"}`}>
+    <aside className={`fixed left-0 top-0 z-40 hidden h-dvh flex-col border-r border-border-olive/50 bg-gradient-to-b from-surface/50 via-bg to-bg py-4 transition-all duration-200 md:flex ${collapsed ? "w-16" : "w-52"}`}>
       {/* Logo + toggle */}
-      <div className={`mb-8 flex items-center ${collapsed ? "justify-center px-2" : "justify-between px-4"}`}>
+      <div className={`mb-4 flex items-center border-b border-border/50 pb-4 ${collapsed ? "justify-center px-2" : "justify-between px-4"}`}>
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-olive-deep/50 ring-1 ring-border-olive/60">
             <img
               src="/images/download.svg"
               alt="Juliana Profitos"
               className="h-full w-full"
             />
           </div>
-          {!collapsed && <span className="text-sm font-semibold text-text">Profitos</span>}
+          {!collapsed && (
+            <span className="bg-gradient-to-r from-text to-olive-light bg-clip-text text-sm font-semibold text-transparent">
+              Profitos
+            </span>
+          )}
         </div>
         {!collapsed && (
           <button
@@ -598,12 +604,12 @@ export function Sidebar({ avatarUrl, role }: Readonly<SidebarProps>) {
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2">
         {/* Favoritos */}
         {favoriteItems.length > 0 && (
-          <div>
+          <div className={collapsed ? undefined : "mb-1 rounded-xl border border-fav-gold/15 bg-fav-gold/5 p-1.5"}>
             {collapsed ? (
-              <div className="mx-auto mb-2 h-px w-6 bg-border-strong" />
+              <div className="mx-auto mb-2 h-px w-6 bg-fav-gold/40" />
             ) : (
-              <p className="mb-1 flex items-center gap-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-fav-gold/80">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5"><polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9 12 2" /></svg>
+              <p className="mb-1 flex items-center gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-widest text-fav-gold">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5"><polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9 12 2" /></svg>
                 Favoritos
               </p>
             )}

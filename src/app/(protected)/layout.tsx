@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentAccess } from "@/lib/auth/access";
+import { isPathAllowed } from "@/lib/nav/views";
 import { now } from "@/lib/datetime";
 import { SplashScreen } from "./_components/splash-screen";
 import { NativeParityProvider } from "./_components/native-parity-provider";
@@ -14,6 +17,16 @@ export default async function ProtectedLayout({
 
   if (!user) {
     redirect("/login");
+  }
+
+  // Control de acceso por vistas: si el usuario abre por URL una vista a la que
+  // no tiene acceso, lo mandamos al dashboard (siempre permitido).
+  const access = await getCurrentAccess();
+  const accessibleHrefs = access?.accessibleHrefs ?? [];
+  const isAdmin = access?.isAdmin ?? false;
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  if (pathname && !isPathAllowed(pathname, new Set(accessibleHrefs), isAdmin)) {
+    redirect("/dashboard");
   }
 
   const greeting = (
@@ -37,6 +50,8 @@ export default async function ProtectedLayout({
         avatarUrl={user.avatarUrl}
         greeting={greeting}
         favorites={user.navFavorites ?? []}
+        accessibleHrefs={accessibleHrefs}
+        isAdmin={isAdmin}
       >
         {children}
       </ProtectedShell>

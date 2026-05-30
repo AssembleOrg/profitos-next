@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
 import * as Dialog from "@radix-ui/react-dialog";
+import { useAccess } from "../../_components/access-context";
 
 const ico = "shrink-0 text-text/60";
 const icoAccent = "shrink-0 text-secondary";
@@ -242,6 +243,7 @@ interface CommandPaletteProps {
 
 export function CommandPalette({ role }: CommandPaletteProps = {}) {
   const isAdmin = role === "admin";
+  const { canAccess } = useAccess();
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -288,15 +290,17 @@ export function CommandPalette({ role }: CommandPaletteProps = {}) {
         <Dialog.Title className="sr-only">Buscar</Dialog.Title>
         <Dialog.Description className="sr-only">Buscador de páginas y acciones rápidas</Dialog.Description>
         {/* Backdrop */}
-        <div
+        <button
+          type="button"
+          aria-label="Cerrar búsqueda"
           className="fixed inset-0 bg-black/60 backdrop-blur-sm"
           onClick={() => setOpen(false)}
         />
 
         {/* Panel */}
-        <div className="fixed left-1/2 top-[20%] w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+        <div className="fixed left-1/2 top-[20%] w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-2xl border border-border-olive/40 bg-gradient-to-b from-surface to-surface/90 shadow-2xl">
           {/* Search input */}
-          <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+          <div className="flex items-center gap-3 border-b border-border-olive/40 px-4 py-3">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-text-muted">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -305,12 +309,14 @@ export function CommandPalette({ role }: CommandPaletteProps = {}) {
               placeholder="Buscar páginas, acciones..."
               className="w-full bg-transparent text-sm text-text placeholder:text-text-muted/50 focus:outline-none"
             />
-            <kbd
-              className="hidden shrink-0 cursor-pointer rounded border border-border bg-bg px-1.5 py-0.5 text-[10px] text-text-muted sm:inline"
+            <button
+              type="button"
+              aria-label="Cerrar búsqueda"
               onClick={() => setOpen(false)}
+              className="hidden shrink-0 cursor-pointer rounded border border-border bg-bg px-1.5 py-0.5 text-[10px] text-text-muted sm:inline"
             >
               ESC
-            </kbd>
+            </button>
           </div>
 
           {/* Results */}
@@ -326,13 +332,13 @@ export function CommandPalette({ role }: CommandPaletteProps = {}) {
               {navItems.filter((item) => {
                 if (item.adminOnly && !isAdmin) return false;
                 if (item.hideForAdmin && isAdmin) return false;
-                return true;
+                return canAccess(item.href);
               }).map((item) => (
                 <Command.Item
                   key={item.href}
                   value={item.label}
                   onSelect={() => navigate(item.href)}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-text transition-colors data-[selected=true]:bg-bg"
+                  className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-text transition-colors data-[selected=true]:bg-olive-deep/60 data-[selected=true]:text-accent"
                 >
                   {item.icon}
                   {item.label}
@@ -351,7 +357,7 @@ export function CommandPalette({ role }: CommandPaletteProps = {}) {
                   key={item.label}
                   value={item.label}
                   onSelect={() => navigate(item.href)}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-text transition-colors data-[selected=true]:bg-bg"
+                  className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-text transition-colors data-[selected=true]:bg-olive-deep/60 data-[selected=true]:text-accent"
                 >
                   {item.icon}
                   {item.label}
