@@ -127,7 +127,7 @@ function DetailContent({
   return (
     <>
       {/* Header */}
-      <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+      <header className="flex items-start justify-between gap-3 border-b border-border-olive/40 px-5 py-4">
         <div className="min-w-0">
           <Dialog.Title className="line-clamp-1 text-base font-semibold text-text">
             {firma.property.address}

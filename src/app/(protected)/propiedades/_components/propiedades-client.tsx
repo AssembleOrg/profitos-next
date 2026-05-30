@@ -1027,7 +1027,7 @@ export function PropiedadesClient({
               <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-border sm:hidden" />
 
               {/* Header fijo */}
-              <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
+              <div className="flex flex-shrink-0 items-center justify-between border-b border-border-olive/40 px-5 py-4">
                 <h2 className="text-base font-medium text-text">
                   {isEdit ? "Editar propiedad" : "Nueva propiedad"}
                 </h2>
@@ -1395,7 +1395,7 @@ export function PropiedadesClient({
             >
               <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-border sm:hidden" />
 
-              <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
+              <div className="flex flex-shrink-0 items-center justify-between border-b border-border-olive/40 px-5 py-4">
                 <h2 className="text-base font-medium text-text">Asignar seguimiento</h2>
                 <button
                   onClick={() => setAssignModalOpen(false)}

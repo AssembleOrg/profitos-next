@@ -99,7 +99,7 @@ export function Sheet({
             <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-border sm:hidden" />
 
             {/* Header */}
-            <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
+            <div className="flex flex-shrink-0 items-center justify-between border-b border-border-olive/40 px-5 py-4">
               <div className="flex items-center gap-3">
                 {avatarInitial && (
                   <motion.div

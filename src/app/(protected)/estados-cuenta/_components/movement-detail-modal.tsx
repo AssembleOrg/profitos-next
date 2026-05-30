@@ -75,7 +75,7 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
                 transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                 className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(480px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
               >
-                <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+                <header className="flex items-center justify-between gap-3 border-b border-border-olive/40 px-5 py-4">
                   <Dialog.Title className="flex items-center gap-2 text-base font-semibold text-text">
                     Detalle del movimiento
                     {isRental && (
