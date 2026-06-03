@@ -70,7 +70,7 @@ interface Props {
   totalPages: number;
   total: number;
   limit: number;
-  filters: { q: string; status: string };
+  filters: { q: string; status: string; assignedToUserId: string };
   assignableUsers: UserOption[];
 }
 
@@ -116,6 +116,7 @@ export function ConsultantsFollowUpsClient({
   const searchParams = useSearchParams();
   const [q, setQ] = useState(filters.q);
   const [status, setStatus] = useState(filters.status);
+  const [assignedToUserId, setAssignedToUserId] = useState(filters.assignedToUserId);
   const [detailOpen, setDetailOpen] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [detail, setDetail] = useState<FollowUpDetail | null>(null);
@@ -124,10 +125,16 @@ export function ConsultantsFollowUpsClient({
   const [savingAction, setSavingAction] = useState(false);
   const [savingMeta, setSavingMeta] = useState(false);
 
-  const activeFilters = useMemo(
-    () => [q && `Búsqueda: ${q}`, status && `Estado: ${status}`].filter(Boolean) as string[],
-    [q, status]
-  );
+  const activeFilters = useMemo(() => {
+    const responsable = assignedToUserId
+      ? assignableUsers.find((u) => u.id === assignedToUserId)
+      : null;
+    return [
+      q && `Búsqueda: ${q}`,
+      status && `Estado: ${status}`,
+      responsable && `Responsable: ${userLabel(responsable)}`,
+    ].filter(Boolean) as string[];
+  }, [q, status, assignedToUserId, assignableUsers]);
 
   function applyFilters(nextPage = 1) {
     const params = new URLSearchParams(searchParams.toString());
@@ -138,6 +145,7 @@ export function ConsultantsFollowUpsClient({
     };
     setOrDelete("q", q);
     setOrDelete("status", status);
+    setOrDelete("assignedToUserId", isAdmin ? assignedToUserId : "");
     if (nextPage <= 1) params.delete("page");
     else params.set("page", String(nextPage));
     const qs = params.toString();
@@ -147,6 +155,7 @@ export function ConsultantsFollowUpsClient({
   function resetFilters() {
     setQ("");
     setStatus("");
+    setAssignedToUserId("");
     router.push(pathname);
   }
 
@@ -289,6 +298,20 @@ export function ConsultantsFollowUpsClient({
               </option>
             ))}
           </select>
+          {isAdmin && (
+            <select
+              value={assignedToUserId}
+              onChange={(e) => setAssignedToUserId(e.target.value)}
+              className="flex-1 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            >
+              <option value="">Todos los responsables</option>
+              {assignableUsers.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {userLabel(user)}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             onClick={() => applyFilters(1)}
             className="rounded-xl bg-secondary/20 px-4 py-2.5 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30"

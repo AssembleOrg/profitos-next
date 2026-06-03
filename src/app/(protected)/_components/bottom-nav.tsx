@@ -51,6 +51,20 @@ const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
   property: "Propiedad nueva",
 };
 
+function notifOrigin(item: NotificationItem): string {
+  const propUser = item.createdByUser?.fullName?.trim() || item.createdByUser?.email;
+  switch (item.kind) {
+    case "contact":
+      return `Agente: ${item.agentName?.trim() || item.agentEmail || "Sin agente"}`;
+    case "property":
+      return propUser
+        ? `Usuario: ${propUser}`
+        : `Origen: ${item.producerName?.trim() || item.branchName?.trim() || "Importación"}`;
+    default:
+      return `Responsable: ${item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}`;
+  }
+}
+
 function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
   const responsable = item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable";
   switch (item.kind) {
@@ -58,7 +72,8 @@ function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
       return (
         <>
           <p className="text-sm font-medium leading-tight text-text">{item.name ?? "Contacto sin nombre"}</p>
-          <p className="mt-0.5 text-xs text-text-muted">Estado: {item.leadStatus ?? "Sin estado"} · Agente: {item.agentName ?? "Sin agente"}</p>
+          <p className="mt-0.5 text-xs text-text-muted">Estado: {item.leadStatus ?? "Sin estado"}</p>
+          <p className="text-xs text-text-muted">{notifOrigin(item)}</p>
         </>
       );
     case "followup_assignment":
@@ -91,6 +106,7 @@ function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
           <p className="text-sm font-medium leading-tight text-text">{item.address ?? item.publicationTitle ?? "Propiedad nueva"}</p>
           <p className="mt-0.5 text-xs text-text-muted">{item.operationType ?? "Operación no informada"} · Estado: {item.status ?? "activa"}</p>
           <p className="text-xs text-text-muted">{item.operationCurrency ?? ""} {item.operationPrice?.toLocaleString("es-AR") ?? "Precio no informado"}</p>
+          <p className="text-xs text-text-muted">{notifOrigin(item)}</p>
         </>
       );
   }

@@ -12,6 +12,7 @@ interface Props {
     limit?: string;
     q?: string;
     status?: string;
+    assignedToUserId?: string;
   }>;
 }
 
@@ -24,9 +25,11 @@ export default async function ConsultantsFollowUpsPage({ searchParams }: Readonl
   const limit = Math.min(100, Math.max(1, Number.parseInt(sp.limit ?? `${PAGE_SIZE}`, 10) || PAGE_SIZE));
   const q = (sp.q ?? "").trim();
   const status = (sp.status ?? "").trim().toLowerCase();
+  const assignedToUserId = (sp.assignedToUserId ?? "").trim();
 
   const and: Prisma.ContactFollowUpWhereInput[] = [];
   if (user.role !== "admin") and.push({ assignedToUserId: user.id });
+  else if (assignedToUserId) and.push({ assignedToUserId });
   if (status) and.push({ status });
   if (q) {
     and.push({
@@ -88,7 +91,7 @@ export default async function ConsultantsFollowUpsPage({ searchParams }: Readonl
       total={total}
       totalPages={Math.ceil(total / limit)}
       limit={limit}
-      filters={{ q, status }}
+      filters={{ q, status, assignedToUserId }}
       items={serialized}
       assignableUsers={users}
     />

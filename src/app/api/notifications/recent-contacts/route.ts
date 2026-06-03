@@ -81,6 +81,9 @@ export const GET = withHandler(async (request) => {
         operationPrice: true,
         operationCurrency: true,
         createdAt: true,
+        producerName: true,
+        branchName: true,
+        user: { select: { id: true, fullName: true, email: true } },
       },
     }),
     prisma.propertyFollowUp.findMany({
@@ -153,6 +156,9 @@ export const GET = withHandler(async (request) => {
         operationPrice: item.operationPrice,
         operationCurrency: item.operationCurrency,
         createdAt: item.createdAt.toISOString(),
+        createdByUser: item.user,
+        producerName: item.producerName,
+        branchName: item.branchName,
       },
     })),
     ...overdueFollowUps.map((item) => ({

@@ -30,6 +30,9 @@ export interface NotificationItem {
   operationType?: string | null;
   operationPrice?: number | null;
   operationCurrency?: string | null;
+  createdByUser?: { id: string; fullName: string | null; email: string } | null;
+  producerName?: string | null;
+  branchName?: string | null;
 }
 
 const LS_KEY = "jp_last_notifications_seen_at";
