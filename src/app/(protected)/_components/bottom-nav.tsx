@@ -10,184 +10,13 @@ import { formatDateTime } from "@/lib/datetime";
 import { useNavFavorites } from "./nav-favorites-context";
 import { useAccess } from "./access-context";
 import { PREFETCH_HREFS } from "@/lib/nav/views";
+import {
+  NAV_META_LIST,
+  getNavMeta,
+  DEFAULT_MOBILE_TABS,
+  type NavMeta,
+} from "@/lib/nav/items";
 
-const primaryTabs = [
-  {
-    href: "/dashboard",
-    label: "Inicio",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1.5" />
-        <rect x="14" y="3" width="7" height="7" rx="1.5" />
-        <rect x="3" y="14" width="7" height="7" rx="1.5" />
-        <rect x="14" y="14" width="7" height="7" rx="1.5" />
-      </svg>
-    ),
-  },
-  {
-    href: "/contactos",
-    label: "Contactos",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 00-3-3.87" />
-        <path d="M16 3.13a4 4 0 010 7.75" />
-      </svg>
-    ),
-  },
-  {
-    href: "/agenda",
-    label: "Agenda",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2" />
-        <line x1="16" y1="2" x2="16" y2="6" />
-        <line x1="8" y1="2" x2="8" y2="6" />
-        <line x1="3" y1="10" x2="21" y2="10" />
-      </svg>
-    ),
-  },
-  {
-    href: "/propiedades",
-    label: "Propiedades",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-        <polyline points="9 22 9 12 15 12 15 22" />
-      </svg>
-    ),
-  },
-];
-
-interface MoreItem {
-  href: string;
-  label: string;
-  adminOnly?: boolean;
-  hideForAdmin?: boolean;
-  icon: React.ReactNode;
-}
-
-const moreItems: MoreItem[] = [
-  {
-    href: "/consultants",
-    label: "Últimos contactos",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/consultants-followups",
-    label: "Seg. consultas",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-      </svg>
-    ),
-  },
-  {
-    href: "/seguimientos",
-    label: "Seguimientos",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12 6 12 12 16 14" />
-      </svg>
-    ),
-  },
-  {
-    href: "/firmas",
-    label: "Firmas",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 20h9" />
-        <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/alquileres",
-    label: "Alquileres",
-    adminOnly: true,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="1" y="3" width="15" height="13" rx="1" />
-        <path d="M16 8h5l2 3v5h-7V8z" />
-        <circle cx="5.5" cy="18.5" r="2.5" />
-        <circle cx="18.5" cy="18.5" r="2.5" />
-      </svg>
-    ),
-  },
-  {
-    href: "/inquilinos",
-    label: "Inquilinos",
-    adminOnly: true,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-        <path d="M12 11v2m0 4h.01" />
-      </svg>
-    ),
-  },
-  {
-    href: "/tasaciones",
-    label: "Tasaciones",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="12" y1="1" x2="12" y2="23" />
-        <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
-      </svg>
-    ),
-  },
-  {
-    href: "/estados-cuenta",
-    label: "Estados de cuenta",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="5" width="20" height="14" rx="2" />
-        <path d="M2 10h20" />
-        <path d="M16 14h2" />
-      </svg>
-    ),
-  },
-  {
-    href: "/objetivos",
-    label: "Objetivos",
-    adminOnly: true,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <circle cx="12" cy="12" r="6" />
-        <circle cx="12" cy="12" r="2" />
-      </svg>
-    ),
-  },
-  {
-    href: "/mis-objetivos",
-    label: "Mis objetivos",
-    hideForAdmin: true,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <circle cx="12" cy="12" r="6" />
-        <circle cx="12" cy="12" r="2" />
-      </svg>
-    ),
-  },
-  {
-    href: "/configuracion",
-    label: "Configuración",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
-      </svg>
-    ),
-  },
-];
 
 interface BottomNavProps {
   role?: "admin" | "user" | "viewer";
@@ -290,22 +119,35 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
   const { canAccess } = useAccess();
   const { notifications, unreadCount, markAsSeen, loadNotifications } = useNotificationsContext();
 
-  const visiblePrimaryTabs = primaryTabs.filter((tab) => canAccess(tab.href));
+  const isVisible = (m: NavMeta) => {
+    if (m.adminOnly && !isAdmin) return false;
+    if (m.hideForAdmin && isAdmin) return false;
+    return canAccess(m.href);
+  };
 
-  const visibleMoreItems = moreItems.filter((item) => {
-    if (item.adminOnly && !isAdmin) return false;
-    if (item.hideForAdmin && isAdmin) return false;
-    return canAccess(item.href);
-  });
+  // Tabs primarias = favoritos del usuario (accesibles), con fallback a los
+  // defaults cuando no tiene favoritos. Se muestran todas: con 5+ la fila
+  // scrollea horizontalmente y el botón "Más" queda fijo.
+  const resolveVisible = (hrefs: string[]): NavMeta[] =>
+    hrefs
+      .map(getNavMeta)
+      .filter((m): m is NavMeta => m !== undefined && isVisible(m));
 
+  const favTabs = resolveVisible(favorites);
+  const visiblePrimaryTabs = favTabs.length > 0 ? favTabs : resolveVisible(DEFAULT_MOBILE_TABS);
+
+  // El sheet "Más" lista TODO lo favoriteable (incluidas las tabs primarias,
+  // para poder desmarcarlas). Favoritos arriba.
+  const visibleMoreItems = NAV_META_LIST.filter(isVisible);
   const sortedMoreItems = [
     ...favorites
       .map((href) => visibleMoreItems.find((i) => i.href === href))
-      .filter((item): item is MoreItem => Boolean(item)),
+      .filter((item): item is NavMeta => Boolean(item)),
     ...visibleMoreItems.filter((i) => !isFav(i.href)),
   ];
 
-  const isMoreActive = visibleMoreItems.some((i) => pathname === i.href);
+  const primaryHrefs = new Set(visiblePrimaryTabs.map((t) => t.href));
+  const isMoreActive = visibleMoreItems.some((i) => pathname === i.href && !primaryHrefs.has(i.href));
 
   return (
     <>
@@ -446,17 +288,26 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                   const isActive = pathname === item.href;
                   const fav = isFav(item.href);
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      prefetch={PREFETCH_HREFS.has(item.href) ? undefined : false}
-                      onClick={() => setShowMore(false)}
-                      className={`relative flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 transition-colors active:scale-95 ${
-                        isActive
-                          ? "bg-accent/15 text-accent"
-                          : "text-text-muted active:bg-white/5"
-                      }`}
-                    >
+                    // La estrella es HERMANA del Link (no anidada) para no meter
+                    // un <button> dentro de un <a> (HTML inválido que rompía el toggle).
+                    <div key={item.href} className="relative">
+                      <Link
+                        href={item.href}
+                        prefetch={PREFETCH_HREFS.has(item.href) ? undefined : false}
+                        onClick={() => setShowMore(false)}
+                        className={`flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 transition-colors active:scale-95 ${
+                          isActive
+                            ? "bg-accent/15 text-accent"
+                            : "text-text-muted active:bg-white/5"
+                        }`}
+                      >
+                        <span className={isActive ? "text-accent" : "text-olive-vivid"}>
+                          {item.icon}
+                        </span>
+                        <span className={`text-center text-[11px] font-medium leading-tight ${isActive ? "text-accent" : "text-text-muted"}`}>
+                          {item.label}
+                        </span>
+                      </Link>
                       <button
                         type="button"
                         onClick={(e) => {
@@ -465,7 +316,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                           toggleFav(item.href);
                         }}
                         aria-label={fav ? "Quitar de favoritos" : "Marcar como favorito"}
-                        className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full transition-transform active:scale-90"
+                        className="absolute right-1 top-1 z-10 flex h-8 w-8 items-center justify-center rounded-full transition-transform active:scale-90"
                       >
                         <svg
                           width="14"
@@ -481,13 +332,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                           <polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9 12 2" />
                         </svg>
                       </button>
-                      <span className={isActive ? "text-accent" : "text-olive-vivid"}>
-                        {item.icon}
-                      </span>
-                      <span className={`text-center text-[11px] font-medium leading-tight ${isActive ? "text-accent" : "text-text-muted"}`}>
-                        {item.label}
-                      </span>
-                    </Link>
+                    </div>
                   );
                 })}
               </div>
@@ -501,55 +346,59 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
         className="fixed bottom-0 left-0 right-0 z-40 md:hidden"
         style={{ paddingBottom: "calc(var(--safe-bottom, 0px) + 8px)" }}
       >
-        <nav className="mx-3 mb-2 flex items-stretch overflow-hidden rounded-2xl border border-border-olive/40 bg-gradient-to-b from-surface/80 to-bg/70 p-1 shadow-2xl backdrop-blur-2xl">
-          {visiblePrimaryTabs.map((tab) => {
-            const isActive = pathname === tab.href;
-            return (
-              <motion.div
-                key={tab.href}
-                className="relative min-w-0 flex-1"
-                whileTap={{ scale: 0.9 }}
-                transition={{ duration: 0.1 }}
-              >
-                {isActive && (
-                  <motion.span
-                    layoutId="nav-pill"
-                    className="absolute inset-0 rounded-xl bg-gradient-to-b from-olive-mid/25 to-olive-deep/60 ring-1 ring-inset ring-olive-bright/25"
-                    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                  />
-                )}
-                <Link
-                  href={tab.href}
-                  prefetch={PREFETCH_HREFS.has(tab.href) ? undefined : false}
-                  className="relative z-10 flex w-full flex-col items-center justify-center gap-0.5 py-2"
-                >
-                  <span className={`shrink-0 ${isActive ? "text-accent" : "text-text-muted"}`}>
-                    {tab.icon}
-                  </span>
-                  <span
-                    className={`w-full truncate text-center text-[9px] font-medium leading-none ${
-                      isActive ? "text-accent" : "text-text-muted"
-                    }`}
+        <nav className="mx-3 mb-2 flex items-stretch rounded-2xl border border-border-olive/40 bg-gradient-to-b from-surface/80 to-bg/70 p-1 shadow-2xl backdrop-blur-2xl">
+          {/* Zona scrolleable de favoritos */}
+          <div className="relative min-w-0 flex-1">
+            <div className="flex items-stretch gap-0.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {visiblePrimaryTabs.map((tab) => {
+                const isActive = pathname === tab.href;
+                return (
+                  <motion.div
+                    key={tab.href}
+                    className="relative w-[22vw] max-w-[88px] shrink-0"
+                    whileTap={{ scale: 0.9 }}
+                    transition={{ duration: 0.1 }}
                   >
-                    {tab.label}
-                  </span>
-                </Link>
-              </motion.div>
-            );
-          })}
+                    {isActive && (
+                      <span className="absolute inset-0 rounded-xl bg-gradient-to-b from-olive-mid/25 to-olive-deep/60 ring-1 ring-inset ring-olive-bright/25" />
+                    )}
+                    <Link
+                      href={tab.href}
+                      prefetch={PREFETCH_HREFS.has(tab.href) ? undefined : false}
+                      className="relative z-10 flex w-full flex-col items-center justify-center gap-0.5 py-2"
+                    >
+                      <span className={`shrink-0 ${isActive ? "text-accent" : "text-text-muted"}`}>
+                        {tab.icon}
+                      </span>
+                      <span
+                        className={`w-full truncate text-center text-[9px] font-medium leading-none ${
+                          isActive ? "text-accent" : "text-text-muted"
+                        }`}
+                      >
+                        {tab.shortLabel ?? tab.label}
+                      </span>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+            {/* Fade: indica que hay más tabs para scrollear */}
+            {visiblePrimaryTabs.length > 4 && (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-bg/80 to-transparent"
+              />
+            )}
+          </div>
 
-          {/* Más button */}
+          {/* Más button — fijo, fuera del scroll */}
           <motion.div
-            className="relative min-w-0 flex-1"
+            className="relative w-[20vw] max-w-[76px] shrink-0"
             whileTap={{ scale: 0.9 }}
             transition={{ duration: 0.1 }}
           >
             {(isMoreActive || showMore) && (
-              <motion.span
-                layoutId="nav-pill"
-                className="absolute inset-0 rounded-xl bg-gradient-to-b from-olive-mid/25 to-olive-deep/60 ring-1 ring-inset ring-olive-bright/25"
-                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              />
+              <span className="absolute inset-0 rounded-xl bg-gradient-to-b from-olive-mid/25 to-olive-deep/60 ring-1 ring-inset ring-olive-bright/25" />
             )}
             <button
               onClick={() => setShowMore((v) => !v)}
