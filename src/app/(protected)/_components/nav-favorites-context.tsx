@@ -24,7 +24,7 @@ interface ProviderProps {
 export function NavFavoritesProvider({ initialFavorites, children }: Readonly<ProviderProps>) {
   const [favorites, setFavorites] = useState<string[]>(initialFavorites);
 
-  const persist = useCallback(async (next: string[], prev: string[]) => {
+  const persist = useCallback(async (next: string[], href: string) => {
     try {
       const res = await fetch("/api/users/favorites", {
         method: "PATCH",
@@ -33,19 +33,26 @@ export function NavFavoritesProvider({ initialFavorites, children }: Readonly<Pr
       });
       if (!res.ok) throw new Error("Error al guardar");
     } catch {
-      setFavorites(prev); // revertir si falla
+      // Revertir SOLO este href contra el estado actual (el toggle es su propio
+      // inverso), no pisar con un snapshot viejo que podría descartar otro cambio.
+      setFavorites((curr) =>
+        curr.includes(href) ? curr.filter((h) => h !== href) : [...curr, href]
+      );
       toast.error("No se pudieron guardar los favoritos");
     }
   }, []);
 
   const toggle = useCallback(
     (href: string) => {
-      const prev = favorites;
-      const next = prev.includes(href) ? prev.filter((h) => h !== href) : [...prev, href];
-      setFavorites(next);
-      void persist(next, prev);
+      // Update funcional: cada toggle parte del estado más reciente, así dos
+      // toggles seguidos no se pisan entre sí.
+      setFavorites((curr) => {
+        const next = curr.includes(href) ? curr.filter((h) => h !== href) : [...curr, href];
+        void persist(next, href);
+        return next;
+      });
     },
-    [favorites, persist]
+    [persist]
   );
 
   const isFavorite = useCallback((href: string) => favorites.includes(href), [favorites]);

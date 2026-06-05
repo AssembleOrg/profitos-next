@@ -12,8 +12,6 @@ interface Props {
   urlError?: string;
 }
 
-const SERVICE_TAGS = ["Compra", "Venta", "Alquiler"];
-
 export function LoginV4({ step, urlError }: Props) {
   return (
     <motion.div
@@ -69,9 +67,6 @@ export function LoginV4({ step, urlError }: Props) {
             PROPIEDADES
           </p>
         </div>
-        <p className="hidden text-[10px] font-light tracking-[0.2em] text-white/30 sm:block">
-          Sistema de gesti&oacute;n inmobiliaria
-        </p>
       </motion.header>
 
       {/* Spacer */}
@@ -103,20 +98,6 @@ export function LoginV4({ step, urlError }: Props) {
             <br />
             venta y alquiler de inmuebles.
           </p>
-          <div className="mt-7 flex items-center gap-4">
-            <span className="h-[2px] w-8 bg-primary" />
-            {SERVICE_TAGS.map((tag, i) => (
-              <span
-                key={tag}
-                className="text-[10px] font-medium uppercase tracking-[0.25em] text-secondary/70"
-              >
-                {tag}
-                {i < SERVICE_TAGS.length - 1 && (
-                  <span className="ml-4 text-white/15">&middot;</span>
-                )}
-              </span>
-            ))}
-          </div>
         </motion.div>
 
         {/* Login card — full width on mobile, fixed 400px on desktop */}
@@ -132,7 +113,7 @@ export function LoginV4({ step, urlError }: Props) {
             ease: LUXURY_EASE,
           }}
         >
-          <LoginForm step={step} inputStyle="pill" urlError={urlError} />
+          <LoginForm step={step} urlError={urlError} />
         </motion.div>
       </div>
     </motion.div>

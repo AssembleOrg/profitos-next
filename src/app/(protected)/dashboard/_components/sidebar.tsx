@@ -11,209 +11,11 @@ import { useNotificationsContext } from "../../_components/notifications-context
 import { type NotificationItem } from "../../_components/use-notifications";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { PREFETCH_HREFS } from "@/lib/nav/views";
+import { NAV_META_LIST, NAV_GROUPS as navGroups, type NavMeta } from "@/lib/nav/items";
 
-interface NavItem {
-  href: string;
-  label: string;
-  group: "principal" | "clientes" | "propiedades" | "alquileres" | "finanzas" | "gestion";
-  adminOnly?: boolean;
-  hideForAdmin?: boolean;
-  icon: React.ReactNode;
-}
+type NavItem = NavMeta;
+const navItems = NAV_META_LIST;
 
-const navGroups: { key: NavItem["group"]; label: string | null }[] = [
-  { key: "principal", label: null },
-  { key: "clientes", label: "Clientes y ventas" },
-  { key: "propiedades", label: "Propiedades" },
-  { key: "alquileres", label: "Alquileres" },
-  { key: "finanzas", label: "Finanzas" },
-  { key: "gestion", label: "Gestión" },
-];
-
-const navItems: NavItem[] = [
-  {
-    href: "/dashboard",
-    label: "Dashboard",
-    group: "principal",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-      </svg>
-    ),
-  },
-  {
-    href: "/contactos",
-    label: "Contactos",
-    group: "clientes",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 00-3-3.87" />
-        <path d="M16 3.13a4 4 0 010 7.75" />
-      </svg>
-    ),
-  },
-  {
-    href: "/consultants",
-    label: "Últimos contactos",
-    group: "clientes",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22 12h-4l-3 7-4-14-3 7H2" />
-      </svg>
-    ),
-  },
-  {
-    href: "/consultants-followups",
-    label: "Seg. consultas",
-    group: "clientes",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 4h18v12H3z" />
-        <path d="M7 20h10" />
-        <path d="M9 16v4" />
-        <path d="M15 16v4" />
-      </svg>
-    ),
-  },
-  {
-    href: "/seguimientos",
-    label: "Seguimientos",
-    group: "clientes",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 11l3 3L22 4" />
-        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
-      </svg>
-    ),
-  },
-  {
-    href: "/agenda",
-    label: "Agenda",
-    group: "clientes",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-        <line x1="16" y1="2" x2="16" y2="6" />
-        <line x1="8" y1="2" x2="8" y2="6" />
-        <line x1="3" y1="10" x2="21" y2="10" />
-      </svg>
-    ),
-  },
-  {
-    href: "/propiedades",
-    label: "Propiedades",
-    group: "propiedades",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-        <polyline points="9 22 9 12 15 12 15 22" />
-      </svg>
-    ),
-  },
-  {
-    href: "/tasaciones",
-    label: "Tasaciones",
-    group: "propiedades",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="12" y1="18" x2="12" y2="12" />
-        <line x1="9" y1="15" x2="15" y2="15" />
-      </svg>
-    ),
-  },
-  {
-    href: "/firmas",
-    label: "Estado de firmas",
-    group: "propiedades",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 6L9 17l-5-5" />
-        <path d="M14 4h-2a2 2 0 00-2 2" opacity="0.3" />
-      </svg>
-    ),
-  },
-  {
-    href: "/alquileres",
-    label: "Alquileres",
-    group: "alquileres",
-    adminOnly: true,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="6" width="20" height="14" rx="2" />
-        <path d="M2 10h20" />
-        <path d="M7 15h2" />
-      </svg>
-    ),
-  },
-  {
-    href: "/inquilinos",
-    label: "Inquilinos",
-    group: "alquileres",
-    adminOnly: true,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-      </svg>
-    ),
-  },
-  {
-    href: "/estados-cuenta",
-    label: "Estados de cuenta",
-    group: "finanzas",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="5" width="20" height="14" rx="2" />
-        <path d="M2 10h20" />
-        <path d="M16 14h2" />
-      </svg>
-    ),
-  },
-  {
-    href: "/objetivos",
-    label: "Objetivos",
-    group: "gestion",
-    adminOnly: true,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <circle cx="12" cy="12" r="6" />
-        <circle cx="12" cy="12" r="2" />
-      </svg>
-    ),
-  },
-  {
-    href: "/mis-objetivos",
-    label: "Mis objetivos",
-    group: "gestion",
-    hideForAdmin: true,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <circle cx="12" cy="12" r="6" />
-        <circle cx="12" cy="12" r="2" />
-      </svg>
-    ),
-  },
-  {
-    href: "/configuracion",
-    label: "Configuración",
-    group: "gestion",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
-      </svg>
-    ),
-  },
-];
 
 interface SidebarProps {
   avatarUrl?: string | null;
@@ -311,6 +113,20 @@ const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
   property: "Propiedad nueva",
 };
 
+function notifOrigin(item: NotificationItem): string {
+  const propUser = item.createdByUser?.fullName?.trim() || item.createdByUser?.email;
+  switch (item.kind) {
+    case "contact":
+      return `Agente: ${item.agentName?.trim() || item.agentEmail || "Sin agente"}`;
+    case "property":
+      return propUser
+        ? `Usuario: ${propUser}`
+        : `Origen: ${item.producerName?.trim() || item.branchName?.trim() || "Importación"}`;
+    default:
+      return `Responsable: ${item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}`;
+  }
+}
+
 function SidebarNotifBody({ item }: Readonly<{ item: NotificationItem }>) {
   const responsable = item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable";
   switch (item.kind) {
@@ -318,7 +134,8 @@ function SidebarNotifBody({ item }: Readonly<{ item: NotificationItem }>) {
       return (
         <>
           <p className="text-sm font-medium leading-tight text-text">{item.name ?? "Contacto sin nombre"}</p>
-          <p className="mt-0.5 text-xs text-text-muted">Estado: {item.leadStatus ?? "Sin estado"} · Agente: {item.agentName ?? "Sin agente"}</p>
+          <p className="mt-0.5 text-xs text-text-muted">Estado: {item.leadStatus ?? "Sin estado"}</p>
+          <p className="text-xs text-text-muted">{notifOrigin(item)}</p>
         </>
       );
     case "followup_assignment":
@@ -351,6 +168,7 @@ function SidebarNotifBody({ item }: Readonly<{ item: NotificationItem }>) {
           <p className="text-sm font-medium leading-tight text-text">{item.address ?? item.publicationTitle ?? "Propiedad nueva"}</p>
           <p className="mt-0.5 text-xs text-text-muted">{item.operationType ?? "Operación no informada"} · Estado: {item.status ?? "activa"}</p>
           <p className="text-xs text-text-muted">{item.operationCurrency ?? ""} {item.operationPrice?.toLocaleString("es-AR") ?? "Precio no informado"}</p>
+          <p className="text-xs text-text-muted">{notifOrigin(item)}</p>
         </>
       );
   }
