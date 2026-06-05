@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
+import { fromISO } from "@/lib/datetime";
 import { TasacionesClient } from "./_components/tasaciones-client";
 
 const PAGE_SIZE = 20;
@@ -22,8 +23,8 @@ export default async function TasacionesPage({ searchParams }: Props) {
   const to = (sp.to ?? "").trim();
 
   const dateFilter: Record<string, Date> = {};
-  if (from) { const d = new Date(from); d.setHours(0, 0, 0, 0); dateFilter.gte = d; }
-  if (to) { const d = new Date(to); d.setHours(23, 59, 59, 999); dateFilter.lte = d; }
+  if (from) dateFilter.gte = fromISO(from).startOf("day").toJSDate();
+  if (to) dateFilter.lte = fromISO(to).endOf("day").toJSDate();
 
   const where = {
     deletedAt: null,

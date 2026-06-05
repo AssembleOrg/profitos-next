@@ -48,6 +48,7 @@ export function MovementFormModal({
   const [description, setDescription] = useState("");
   const [agentUserId, setAgentUserId] = useState("");
   const [agentPercentage, setAgentPercentage] = useState<string>("");
+  const [agentShareType, setAgentShareType] = useState<"percent" | "amount">("percent");
   const [isShared, setIsShared] = useState(false);
   const [propertyId, setPropertyId] = useState<string | null>(null);
   const [propertyLabel, setPropertyLabel] = useState<string | null>(null);
@@ -87,6 +88,7 @@ export function MovementFormModal({
       setDescription(editing.description ?? "");
       setAgentUserId(editing.agentUserId ?? "");
       setAgentPercentage(editing.agentPercentage != null ? String(editing.agentPercentage) : "");
+      setAgentShareType(editing.agentShareType ?? "percent");
       setIsShared(editing.isShared ?? false);
       setPropertyId(editing.propertyId ?? null);
       setPropertyLabel(editing.propertyAddress ?? null);
@@ -101,6 +103,7 @@ export function MovementFormModal({
       setDescription("");
       setAgentUserId("");
       setAgentPercentage("");
+      setAgentShareType("percent");
       setIsShared(false);
       setPropertyId(null);
       setPropertyLabel(null);
@@ -140,8 +143,9 @@ export function MovementFormModal({
         description: description.trim() || null,
         agentUserId: agentUserId || null,
         propertyId: propertyId || null,
-        // % al agente: solo informativo y solo para egresos
+        // Valor al agente: solo informativo y solo para egresos (% o monto fijo)
         agentPercentage: type === "expense" ? parsedPercentage : null,
+        agentShareType,
         isShared,
         attachments,
       };
@@ -289,25 +293,48 @@ export function MovementFormModal({
                       </div>
                     </div>
 
-                    {/* % al agente (solo egresos, informativo) */}
+                    {/* Valor al agente (solo egresos, informativo): % o monto fijo */}
                     {type === "expense" && (
                       <div>
                         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
-                          % al agente <span className="text-text-faint">(informativo)</span>
+                          Valor al agente <span className="text-text-faint">(informativo)</span>
                         </label>
-                        <div className="relative">
+                        <div className="flex items-center gap-1 rounded-xl border border-border bg-bg pr-1 focus-within:border-secondary">
+                          {agentShareType === "amount" && (
+                            <span className="pl-3 text-sm text-text-faint">{currency === "USD" ? "US$" : "$"}</span>
+                          )}
                           <input
                             type="number"
                             inputMode="decimal"
                             min={0}
-                            max={100}
+                            max={agentShareType === "percent" ? 100 : undefined}
                             step="0.01"
                             value={agentPercentage}
                             onChange={(e) => setAgentPercentage(e.target.value)}
                             placeholder="0"
-                            className={`${inputClass} pr-8`}
+                            className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-text focus:outline-none"
                           />
-                          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-text-faint">%</span>
+                          {/* Mini-selector dentro del input */}
+                          <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-surface p-0.5">
+                            <button
+                              type="button"
+                              onClick={() => setAgentShareType("percent")}
+                              className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors ${
+                                agentShareType === "percent" ? "bg-accent/20 text-accent" : "text-text-muted hover:text-text"
+                              }`}
+                            >
+                              %
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setAgentShareType("amount")}
+                              className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors ${
+                                agentShareType === "amount" ? "bg-accent/20 text-accent" : "text-text-muted hover:text-text"
+                              }`}
+                            >
+                              $ Fijo
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}

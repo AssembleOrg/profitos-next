@@ -110,7 +110,16 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
                     <Row label="Categoría" value={movement.categoryName ?? "—"} />
                     <Row label="Fecha" value={formatDate(movement.date)} />
                     {movement.agentName && <Row label="Agente" value={movement.agentName} />}
-                    {movement.agentPercentage != null && <Row label="% al agente" value={`${movement.agentPercentage}%`} />}
+                    {movement.agentPercentage != null && (
+                      <Row
+                        label="Valor al agente"
+                        value={
+                          movement.agentShareType === "amount"
+                            ? formatMoney(movement.agentPercentage, movement.currency)
+                            : `${movement.agentPercentage}%`
+                        }
+                      />
+                    )}
                     {movement.propertyAddress && <Row label="Propiedad" value={movement.propertyAddress} />}
                     {movement.description && <Row label="Descripción" value={movement.description} />}
                     {movement.createdByName && <Row label="Cargado por" value={movement.createdByName} />}

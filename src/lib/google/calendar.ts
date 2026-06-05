@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma/client";
+import { fromISO } from "@/lib/datetime";
 
 const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -205,8 +206,9 @@ export async function listCalendarEvents(
   timeMax: string
 ): Promise<{ events: GoogleCalendarListEvent[]; error: string | null }> {
   const params = new URLSearchParams({
-    timeMin: new Date(`${timeMin}T00:00:00.000Z`).toISOString(),
-    timeMax: new Date(`${timeMax}T23:59:59.999Z`).toISOString(),
+    // Límites del día en GMT-3 (Argentina), no en UTC.
+    timeMin: fromISO(timeMin).startOf("day").toISO() ?? `${timeMin}T00:00:00-03:00`,
+    timeMax: fromISO(timeMax).endOf("day").toISO() ?? `${timeMax}T23:59:59-03:00`,
     singleEvents: "true",
     orderBy: "startTime",
     maxResults: "250",

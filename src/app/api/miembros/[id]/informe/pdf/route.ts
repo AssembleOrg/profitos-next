@@ -3,30 +3,14 @@ import { NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/api/auth";
 import { prisma } from "@/lib/prisma/client";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { now, fromISO, formatDateOnly } from "@/lib/datetime";
 
 /* ── helpers ─────────────────────────────────────────────────── */
 
-function startOfMonth(): Date {
-  const d = new Date();
-  d.setDate(1);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function endOfToday(): Date {
-  const d = new Date();
-  d.setHours(23, 59, 59, 999);
-  return d;
-}
-
 function fmtDate(d: Date | string | null): string {
   if (!d) return "—";
-  const date = typeof d === "string" ? new Date(d) : d;
-  if (isNaN(date.getTime())) return "—";
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const yyyy = date.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
+  // Fechas de almanaque (vencimiento, fecha de visita) → día calendario en GMT-3.
+  return formatDateOnly(d);
 }
 
 function truncate(text: string, max: number): string {
@@ -76,10 +60,10 @@ export async function GET(request: NextRequest, context: { params: Promise<Recor
   });
   if (!user) return NextResponse.json({ error: "Sin cuenta" }, { status: 400 });
 
-  const from = sp.get("from") ? new Date(sp.get("from")!) : startOfMonth();
-  const to = sp.get("to") ? new Date(sp.get("to")!) : endOfToday();
-  from.setHours(0, 0, 0, 0);
-  to.setHours(23, 59, 59, 999);
+  const fromDt = sp.get("from") ? fromISO(sp.get("from")!).startOf("day") : now().startOf("month");
+  const toDt = sp.get("to") ? fromISO(sp.get("to")!).endOf("day") : now().endOf("day");
+  const from = fromDt.toJSDate();
+  const to = toDt.toJSDate();
 
   const dateRange = { gte: from, lte: to };
   const userId = user.id;
@@ -188,7 +172,7 @@ export async function GET(request: NextRequest, context: { params: Promise<Recor
   page.drawText(`${user.email}  ·  ${capitalize(user.role)}`, { x: M + 8, y: H - 64, size: 8, font: fontR, color: C.textFaint });
 
   // Date range badge on right
-  const dateStr = `${fmtDate(from)}  —  ${fmtDate(to)}`;
+  const dateStr = `${fromDt.toFormat("dd/MM/yyyy")}  —  ${toDt.toFormat("dd/MM/yyyy")}`;
   const dateW = fontR.widthOfTextAtSize(dateStr, 8) + 16;
   page.drawRectangle({ x: W - M - dateW, y: H - 52, width: dateW, height: 18, color: C.surfaceElevated });
   page.drawText(dateStr, { x: W - M - dateW + 8, y: H - 47, size: 8, font: fontR, color: C.textMuted });
@@ -317,13 +301,13 @@ export async function GET(request: NextRequest, context: { params: Promise<Recor
   // ── Footer on every page ──
   const pages = pdf.getPages();
   const totalPages = pages.length;
-  const now = new Date();
+  const generadoStr = now().toFormat("dd/MM/yyyy");
   for (let i = 0; i < totalPages; i++) {
     const p = pages[i];
     const footerY = 16;
     p.drawLine({ start: { x: M, y: footerY + 10 }, end: { x: W - M, y: footerY + 10 }, thickness: 0.5, color: C.divider });
     p.drawText("Profitos Propiedades", { x: M, y: footerY, size: 7, font: fontR, color: C.textFaint });
-    p.drawText(`Generado: ${fmtDate(now)}`, { x: W / 2 - 30, y: footerY, size: 7, font: fontR, color: C.textFaint });
+    p.drawText(`Generado: ${generadoStr}`, { x: W / 2 - 30, y: footerY, size: 7, font: fontR, color: C.textFaint });
     const pageLabel = `${i + 1} / ${totalPages}`;
     p.drawText(pageLabel, { x: W - M - fontR.widthOfTextAtSize(pageLabel, 7), y: footerY, size: 7, font: fontR, color: C.textFaint });
   }
@@ -331,7 +315,7 @@ export async function GET(request: NextRequest, context: { params: Promise<Recor
   // ── output ──
   const bytes = await pdf.save();
   const safeName = (user.fullName ?? user.email).replace(/[^a-zA-Z0-9]/g, "_");
-  const fileName = `informe_${safeName}_${fmtDate(from).replace(/\//g, "-")}_${fmtDate(to).replace(/\//g, "-")}.pdf`;
+  const fileName = `informe_${safeName}_${fromDt.toFormat("dd-MM-yyyy")}_${toDt.toFormat("dd-MM-yyyy")}.pdf`;
 
   return new Response(Buffer.from(bytes), {
     headers: {

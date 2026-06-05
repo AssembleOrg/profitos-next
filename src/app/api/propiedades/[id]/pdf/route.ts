@@ -4,6 +4,7 @@ import { PDFDocument, PDFImage, StandardFonts, rgb } from "pdf-lib";
 import { AppError } from "@/lib/api/handler";
 import { getAuthContext } from "@/lib/api/auth";
 import { prisma } from "@/lib/prisma/client";
+import { now, formatDateOnly } from "@/lib/datetime";
 
 function asText(value: string | null | undefined, fallback = "No informado") {
   const text = (value ?? "").trim();
@@ -26,9 +27,8 @@ function formatGastoMoney(amount: number, currency: string) {
 }
 
 function formatGastoDate(date: Date) {
-  const d = String(date.getUTCDate()).padStart(2, "0");
-  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-  return `${d}/${m}/${date.getUTCFullYear()}`;
+  // Fecha contable (columna de fecha pura) → día calendario sin desplazar.
+  return formatDateOnly(date);
 }
 
 function parsePhotoUrls(value: unknown): string[] {
@@ -425,7 +425,7 @@ export async function GET(
 
       // Page 2 footer
       page2.drawLine({ start: { x: 28, y: 56 }, end: { x: p2W - 28, y: 56 }, thickness: 0.8, color: rgb(0.8, 0.82, 0.85) });
-      page2.drawText(`Generado: ${new Date().toLocaleString("es-AR", { hour12: false })}`, {
+      page2.drawText(`Generado: ${now().toFormat("dd/MM/yyyy HH:mm")}`, {
         x: 30, y: 40, size: 9, font: fontRegular, color: rgb(0.35, 0.37, 0.4),
       });
       page2.drawText("Informe confidencial para el propietario", {
@@ -493,7 +493,7 @@ export async function GET(
 
       // Page 3 footer
       page3.drawLine({ start: { x: 28, y: 56 }, end: { x: p3W - 28, y: 56 }, thickness: 0.8, color: rgb(0.8, 0.82, 0.85) });
-      page3.drawText(`Generado: ${new Date().toLocaleString("es-AR", { hour12: false })}`, {
+      page3.drawText(`Generado: ${now().toFormat("dd/MM/yyyy HH:mm")}`, {
         x: 30, y: 40, size: 9, font: fontRegular, color: rgb(0.35, 0.37, 0.4),
       });
       page3.drawText("Informe confidencial para el propietario", {
@@ -508,7 +508,7 @@ export async function GET(
       thickness: 0.8,
       color: rgb(0.8, 0.82, 0.85),
     });
-    page.drawText(`Generado: ${new Date().toLocaleString("es-AR", { hour12: false })}`, {
+    page.drawText(`Generado: ${now().toFormat("dd/MM/yyyy HH:mm")}`, {
       x: 30,
       y: 40,
       size: 9,
@@ -528,8 +528,7 @@ export async function GET(
 
     const bytes = await pdf.save();
     const fileNameBase = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-    const now = new Date();
-    const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+    const ts = now().toFormat("yyyyLLdd_HHmm");
     const prefix = isOwnerMode ? "informe-propietario" : "propiedad";
     const fileName = `${prefix}-${fileNameBase || property.id}-${ts}.pdf`;
 

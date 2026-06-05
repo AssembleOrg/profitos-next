@@ -602,8 +602,11 @@ model AccountEntry {
   agentUser       User?            @relation("AccountEntryAgent", fields: [agentUserId], references: [id], onDelete: SetNull)
   propertyId      String?          @map("property_id")
   property        Property?        @relation(fields: [propertyId], references: [id], onDelete: SetNull)
-  // % informativo dado al agente (solo egresos). No participa de cálculos.
+  // Valor informativo dado al agente (solo egresos). No participa de cálculos.
+  // El número va en agentPercentage; agentShareType indica si es % o monto fijo.
   agentPercentage Float?           @map("agent_percentage")
+  // "percent" | "amount"
+  agentShareType  String           @default("percent") @map("agent_share_type")
   // Marca informativa: ¿el movimiento es compartido?
   isShared        Boolean          @default(false) @map("is_shared")
   attachments     Json?

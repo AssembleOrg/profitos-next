@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Spinner } from "../../_components/spinner";
 import { Pagination } from "../../_components/pagination";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
+import { formatDateTime } from "@/lib/datetime";
 
 interface ConsultantItem {
   id: string;
@@ -214,7 +215,7 @@ export function ConsultantsClient({
             Mostrando {items.length} de {total} resultado{total === 1 ? "" : "s"} · Total global: {totalAll}
           </p>
           <p className="text-xs text-text-muted/80">
-            Última ejecución cron: {lastSyncRunAt ? new Date(lastSyncRunAt).toLocaleString("es-AR") : "sin registros"}
+            Última ejecución cron: {lastSyncRunAt ? formatDateTime(lastSyncRunAt) : "sin registros"}
           </p>
         </div>
         {isAdmin && (

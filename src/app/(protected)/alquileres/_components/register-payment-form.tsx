@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { formatARS } from "@/lib/rentals";
+import { now } from "@/lib/datetime";
 import { CurrencyInput } from "./currency-input";
 import { MediaUploader } from "./media-uploader";
 import { useSignedUrls } from "./use-signed-urls";
@@ -20,7 +21,7 @@ export function RegisterPaymentForm({ due, onRegistered }: Readonly<RegisterPaym
   const [amountPaid, setAmountPaid] = useState<number | null>(null);
   const [commissionAmount, setCommissionAmount] = useState<number | null>(null);
   const [method, setMethod] = useState<string>("transferencia");
-  const [paidAt, setPaidAt] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [paidAt, setPaidAt] = useState<string>(() => now().toISODate()!);
   const [isFull, setIsFull] = useState(true);
   const [notes, setNotes] = useState("");
   const [attachments, setAttachments] = useState<RentalAttachment[]>([]);
@@ -38,7 +39,7 @@ export function RegisterPaymentForm({ due, onRegistered }: Readonly<RegisterPaym
       setNotes("");
       setAttachments([]);
       setMethod("transferencia");
-      setPaidAt(new Date().toISOString().slice(0, 10));
+      setPaidAt(now().toISODate()!);
     }
   }, [open, due.expectedAmount]);
 

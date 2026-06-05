@@ -13,8 +13,10 @@ export interface EntryBody {
   description?: string;
   agentUserId?: string | null;
   propertyId?: string | null;
-  /** % informativo dado al agente (solo egresos). */
+  /** Valor informativo dado al agente (solo egresos): % o monto fijo. */
   agentPercentage?: number | null;
+  /** "percent" | "amount" — cómo interpretar agentPercentage. */
+  agentShareType?: string;
   /** Marca informativa: ¿movimiento compartido? */
   isShared?: boolean;
   attachments?: unknown[];
@@ -30,6 +32,7 @@ export interface ValidatedEntry {
   agentUserId: string | null;
   propertyId: string | null;
   agentPercentage: number | null;
+  agentShareType: "percent" | "amount";
   isShared: boolean;
   attachments: Prisma.InputJsonValue | undefined;
 }
@@ -39,7 +42,7 @@ export interface ValidatedEntry {
  * `type` se deriva del `kind` de la categoría (fuente de verdad).
  */
 export async function validateEntry(body: EntryBody): Promise<ValidatedEntry> {
-  const { categoryId, amount, currency, date, description, agentUserId, propertyId, agentPercentage, isShared, attachments } = body;
+  const { categoryId, amount, currency, date, description, agentUserId, propertyId, agentPercentage, agentShareType, isShared, attachments } = body;
 
   if (!categoryId) throw new AppError(400, "La categoría es obligatoria");
   if (categoryId === RENTAL_COMMISSION_CATEGORY_ID) {
@@ -70,13 +73,17 @@ export async function validateEntry(body: EntryBody): Promise<ValidatedEntry> {
     throw new AppError(400, "Adjuntos inválidos");
   }
 
-  // % informativo del agente: solo válido en egresos. Se acota a 0–100.
-  let normalizedPercentage: number | null = null;
+  // Valor informativo del agente: solo válido en egresos. Puede ser % (0–100) o monto fijo (>=0).
+  const shareType: "percent" | "amount" = agentShareType === "amount" ? "amount" : "percent";
+  let normalizedShare: number | null = null;
   if (agentPercentage !== undefined && agentPercentage !== null && category.kind === "expense") {
-    if (typeof agentPercentage !== "number" || !Number.isFinite(agentPercentage) || agentPercentage < 0 || agentPercentage > 100) {
+    if (typeof agentPercentage !== "number" || !Number.isFinite(agentPercentage) || agentPercentage < 0) {
+      throw new AppError(400, "El valor para el agente debe ser un número positivo");
+    }
+    if (shareType === "percent" && agentPercentage > 100) {
       throw new AppError(400, "El porcentaje del agente debe estar entre 0 y 100");
     }
-    normalizedPercentage = agentPercentage;
+    normalizedShare = agentPercentage;
   }
 
   return {
@@ -88,7 +95,8 @@ export async function validateEntry(body: EntryBody): Promise<ValidatedEntry> {
     description: description?.trim() || null,
     agentUserId: agentUserId || null,
     propertyId: propertyId || null,
-    agentPercentage: normalizedPercentage,
+    agentPercentage: normalizedShare,
+    agentShareType: shareType,
     isShared: isShared === true,
     attachments: (attachments as Prisma.InputJsonValue) ?? undefined,
   };

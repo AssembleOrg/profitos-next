@@ -24,6 +24,16 @@ export function formatDate(date: Date | string) {
   return dt.toFormat(VISUAL_DATE_FORMAT);
 }
 
+/**
+ * Para columnas de fecha pura (se guardan como medianoche UTC): formatea el día
+ * calendario almacenado SIN desplazarlo por zona horaria. Usar para fechas "de
+ * almanaque" (vencimientos, fecha contable, fecha de visita), no para instantes.
+ */
+export function formatDateOnly(date: Date | string) {
+  const dt = typeof date === "string" ? fromISO(date) : DateTime.fromJSDate(date, { zone: "utc" });
+  return dt.toFormat(VISUAL_DATE_FORMAT);
+}
+
 export function formatDateTime(date: Date | string) {
   const dt = typeof date === "string" ? fromISO(date) : fromJSDate(date);
   return dt.toFormat(`${VISUAL_DATE_FORMAT} · HH:mm`);

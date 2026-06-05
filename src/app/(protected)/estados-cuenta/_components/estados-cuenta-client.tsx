@@ -7,6 +7,7 @@ import { now, formatDate } from "@/lib/datetime";
 import {
   formatMoney,
   monthKey,
+  monthLabel,
   type AccountMovement,
   type AccountReport,
   type Currency,
@@ -404,9 +405,7 @@ function MonthGroupHeader({ monthKeyStr, items }: Readonly<{ monthKeyStr: string
     return [...map.entries()];
   }, [items]);
 
-  const [year, month] = monthKeyStr.split("-");
-  const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-  const label = `${MONTHS[Number(month) - 1] ?? month} ${year}`;
+  const label = monthLabel(monthKeyStr);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-bg/40 px-4 py-2.5">
