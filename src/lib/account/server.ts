@@ -26,6 +26,7 @@ export interface MovementFilters {
   categoryId?: string;
   currency?: Currency;
   agentUserId?: string;
+  isShared?: boolean;
   source?: MovementSource;
 }
 
@@ -48,6 +49,7 @@ function manualWhere(filters: MovementFilters, beforeRange = false): Prisma.Acco
   if (filters.categoryId) where.categoryId = filters.categoryId;
   if (filters.currency) where.currency = filters.currency;
   if (filters.agentUserId) where.agentUserId = filters.agentUserId;
+  if (filters.isShared !== undefined) where.isShared = filters.isShared;
   return where;
 }
 
@@ -55,6 +57,8 @@ function shouldIncludeRental(filters: MovementFilters): boolean {
   if (filters.source === "manual") return false;
   if (filters.type && filters.type !== "income") return false;
   if (filters.categoryId && filters.categoryId !== RENTAL_COMMISSION_CATEGORY_ID) return false;
+  // Las comisiones de alquiler nunca son "compartidas".
+  if (filters.isShared === true) return false;
   return true;
 }
 
@@ -113,6 +117,8 @@ function mapManual(entry: Prisma.AccountEntryGetPayload<{ include: typeof manual
     agentName: userName(entry.agentUser),
     propertyId: entry.propertyId,
     propertyAddress: entry.property?.address ?? null,
+    agentPercentage: entry.agentPercentage,
+    isShared: entry.isShared,
     attachments: entry.attachments ?? null,
     createdByUserId: entry.createdByUserId,
     createdByName: userName(entry.createdByUser),
@@ -137,6 +143,8 @@ function mapRental(tx: Prisma.RentalPaymentTransactionGetPayload<{ include: type
     agentName: userName(tx.createdByUser),
     propertyId: contract.property?.id ?? null,
     propertyAddress: contract.property?.address ?? null,
+    agentPercentage: null,
+    isShared: false,
     attachments: null,
     createdByUserId: tx.createdByUserId,
     createdByName: userName(tx.createdByUser),

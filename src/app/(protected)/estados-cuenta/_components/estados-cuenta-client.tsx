@@ -37,6 +37,7 @@ export interface AccountFilters {
   currency?: Currency;
   categoryId?: string;
   agentUserId?: string;
+  isShared?: boolean;
 }
 
 interface Props {
@@ -76,6 +77,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
     if (merged.currency) qs.set("currency", merged.currency);
     if (merged.categoryId) qs.set("categoryId", merged.categoryId);
     if (merged.agentUserId) qs.set("agentUserId", merged.agentUserId);
+    if (merged.isShared !== undefined) qs.set("shared", merged.isShared ? "1" : "0");
     router.push(`${pathname}?${qs.toString()}`);
   }
 
@@ -227,6 +229,19 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
               {agents.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
+            </select>
+          </Field>
+          <Field label="Compartido">
+            <select
+              value={filters.isShared === undefined ? "" : filters.isShared ? "1" : "0"}
+              onChange={(e) =>
+                apply({ isShared: e.target.value === "" ? undefined : e.target.value === "1" })
+              }
+              className={selectClass}
+            >
+              <option value="">Todos</option>
+              <option value="1">Solo compartidos</option>
+              <option value="0">No compartidos</option>
             </select>
           </Field>
         </div>
@@ -442,6 +457,12 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
           {isRental && (
             <span className="shrink-0 rounded-full bg-olive-deep px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-accent">
               Auto · alquiler
+            </span>
+          )}
+          {m.isShared && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-accent">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>
+              Compartido
             </span>
           )}
           {attachmentCount > 0 && (

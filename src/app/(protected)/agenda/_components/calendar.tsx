@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DateTime, Info } from "luxon";
 
 /* ------------------------------------------------------------------ */
@@ -20,6 +20,10 @@ export interface CalendarEvent {
   property?: string;
   propertyId?: string;
   userName?: string;
+  /** "google" = evento traído de Google Calendar (solo lectura). */
+  source?: "internal" | "google";
+  htmlLink?: string;
+  allDay?: boolean;
 }
 
 interface CalendarProps {
@@ -51,6 +55,13 @@ const typeLabels: Record<string, string> = {
   entrega_llaves: "Entrega llaves",
 };
 
+/** Estilo distintivo para eventos externos de Google Calendar. */
+const googleStyle = { bg: "bg-indigo-500/15", text: "text-indigo-300", dot: "bg-indigo-400" };
+
+function eventStyle(ev: CalendarEvent): { bg: string; text: string; dot: string } {
+  return ev.source === "google" ? googleStyle : typeColors[ev.type];
+}
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -58,9 +69,45 @@ const typeLabels: Record<string, string> = {
 export function Calendar({ events, onEventClick }: CalendarProps) {
   const [current, setCurrent] = useState(() => DateTime.now().startOf("month"));
   const [selectedDate, setSelectedDate] = useState(() => DateTime.now());
+  const [googleEvents, setGoogleEvents] = useState<CalendarEvent[]>([]);
+  const [showGoogle, setShowGoogle] = useState(true);
 
   const weekdays = Info.weekdays("short", { locale: "es" });
   const weekdaysNarrow = Info.weekdays("narrow", { locale: "es" });
+
+  /* Overlay solo lectura de Google Calendar (reuniones del email logueado) */
+  useEffect(() => {
+    if (!showGoogle) return;
+    let active = true;
+    const from = current.startOf("month").minus({ days: 7 }).toISODate();
+    const to = current.endOf("month").plus({ days: 7 }).toISODate();
+    (async () => {
+      try {
+        const res = await fetch(`/api/agenda/google-events?from=${from}&to=${to}`);
+        const body = await res.json();
+        if (active) setGoogleEvents(Array.isArray(body?.data) ? (body.data as CalendarEvent[]) : []);
+      } catch {
+        if (active) setGoogleEvents([]);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [current, showGoogle]);
+
+  const allEvents = useMemo(
+    () => (showGoogle ? [...events, ...googleEvents] : events),
+    [events, googleEvents, showGoogle]
+  );
+
+  /* Click: eventos de Google abren Google Calendar; el resto, el modal interno */
+  function handleEventClick(ev: CalendarEvent) {
+    if (ev.source === "google") {
+      if (ev.htmlLink) window.open(ev.htmlLink, "_blank", "noopener,noreferrer");
+      return;
+    }
+    onEventClick?.(ev);
+  }
 
   /* Build the 6-row grid ---------------------------------------------- */
   const grid = useMemo(() => {
@@ -78,23 +125,23 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
   /* Index events by date string --------------------------------------- */
   const eventsByDate = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
-    for (const ev of events) {
+    for (const ev of allEvents) {
       const key = ev.date;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(ev);
     }
     return map;
-  }, [events]);
+  }, [allEvents]);
 
   const today = DateTime.now().toISODate();
   const selectedIso = selectedDate.toISODate()!;
   const selectedDayEvents = eventsByDate.get(selectedIso) ?? [];
 
-  /* Unique event types for a given day (max 3 dots) ------------------- */
-  function dayEventTypes(iso: string): CalendarEvent["type"][] {
+  /* Unique dot colors for a given day (max 3 dots) -------------------- */
+  function dayEventDots(iso: string): string[] {
     const evts = eventsByDate.get(iso);
     if (!evts) return [];
-    const unique = [...new Set(evts.map((e) => e.type))];
+    const unique = [...new Set(evts.map((e) => eventStyle(e).dot))];
     return unique.slice(0, 3);
   }
 
@@ -134,6 +181,18 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
               className="rounded-lg border border-border px-2.5 py-0.5 text-[11px] text-text-muted transition-colors hover:bg-surface hover:text-text"
             >
               Hoy
+            </button>
+            <button
+              onClick={() => setShowGoogle((v) => !v)}
+              title={showGoogle ? "Ocultar Google Calendar" : "Mostrar Google Calendar"}
+              className={`flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] transition-colors ${
+                showGoogle
+                  ? "border-indigo-400/40 bg-indigo-500/15 text-indigo-300"
+                  : "border-border text-text-muted hover:bg-surface hover:text-text"
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${showGoogle ? "bg-indigo-400" : "bg-text-faint"}`} />
+              Google
             </button>
           </div>
           <div className="flex items-center gap-1">
@@ -177,7 +236,7 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
               const isCurrentMonth = day.month === current.month;
               const isToday = iso === today;
               const isSelected = iso === selectedIso;
-              const dots = dayEventTypes(iso);
+              const dots = dayEventDots(iso);
 
               return (
                 <button
@@ -200,10 +259,10 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                   >
                     {day.day}
                   </span>
-                  {/* Event dots by type */}
+                  {/* Event dots by color */}
                   <div className="flex h-1.5 items-center gap-px">
-                    {dots.map((type) => (
-                      <span key={type} className={`h-1 w-1 rounded-full ${typeColors[type].dot}`} />
+                    {dots.map((dot) => (
+                      <span key={dot} className={`h-1 w-1 rounded-full ${dot}`} />
                     ))}
                   </div>
                 </button>
@@ -230,11 +289,12 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
             </div>
           ) : (
             selectedDayEvents.map((ev) => {
-              const colors = typeColors[ev.type];
+              const colors = eventStyle(ev);
+              const isGoogle = ev.source === "google";
               return (
                 <button
                   key={ev.id}
-                  onClick={() => onEventClick?.(ev)}
+                  onClick={() => handleEventClick(ev)}
                   className="flex items-start gap-3 rounded-xl border border-border/50 p-4 text-left transition-colors hover:bg-surface/50"
                 >
                   {/* Color bar */}
@@ -244,11 +304,11 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-sm font-medium text-text">{ev.title}</p>
                       <span className={`flex-shrink-0 rounded-md px-2 py-0.5 text-[10px] font-medium ${colors.bg} ${colors.text}`}>
-                        {typeLabels[ev.type]}
+                        {isGoogle ? "Google" : typeLabels[ev.type]}
                       </span>
                     </div>
                     <p className="mt-0.5 text-xs text-text-muted">
-                      {ev.startTime} – {ev.endTime}
+                      {ev.allDay ? "Todo el día" : `${ev.startTime} – ${ev.endTime}`}
                     </p>
                     {(ev.client || ev.property) && (
                       <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
@@ -364,13 +424,14 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                   {/* Events */}
                   <div className="flex flex-col gap-1">
                     {dayEvents.slice(0, maxVisible).map((ev) => {
-                      const colors = typeColors[ev.type];
+                      const colors = eventStyle(ev);
+                      const timeLabel = ev.allDay ? "Todo el día" : `${ev.startTime}-${ev.endTime}`;
                       return (
                         <div
                           key={ev.id}
-                          onClick={() => onEventClick?.(ev)}
+                          onClick={() => handleEventClick(ev)}
                           className={`group flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors ${colors.bg} hover:brightness-125`}
-                          title={`${ev.startTime}-${ev.endTime} · ${ev.title}${ev.client ? ` · ${ev.client}` : ""}${ev.userName ? ` · ${ev.userName}` : ""}`}
+                          title={`${timeLabel} · ${ev.title}${ev.source === "google" ? " · Google" : ""}${ev.client ? ` · ${ev.client}` : ""}${ev.userName ? ` · ${ev.userName}` : ""}`}
                         >
                           <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${colors.dot}`} />
                           <span className={`truncate text-[11px] font-medium ${colors.text}`}>
@@ -392,13 +453,29 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
         </div>
 
         {/* Legend */}
-        <div className="mt-5 flex items-center gap-5">
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
           {Object.entries(typeColors).map(([type, colors]) => (
             <div key={type} className="flex items-center gap-1.5">
               <span className={`h-2 w-2 rounded-full ${colors.dot}`} />
               <span className="text-xs capitalize text-text-muted">{typeLabels[type] ?? type}</span>
             </div>
           ))}
+          <div className="flex items-center gap-1.5">
+            <span className={`h-2 w-2 rounded-full ${googleStyle.dot}`} />
+            <span className="text-xs text-text-muted">Google Calendar</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowGoogle((v) => !v)}
+            className={`ml-auto flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs transition-colors ${
+              showGoogle
+                ? "border-indigo-400/40 bg-indigo-500/15 text-indigo-300"
+                : "border-border text-text-muted hover:bg-surface hover:text-text"
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${showGoogle ? "bg-indigo-400" : "bg-text-faint"}`} />
+            {showGoogle ? "Google Calendar visible" : "Mostrar Google Calendar"}
+          </button>
         </div>
       </div>
     </div>

@@ -83,6 +83,11 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
                         Auto · alquiler
                       </span>
                     )}
+                    {movement.isShared && (
+                      <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-accent">
+                        Compartido
+                      </span>
+                    )}
                   </Dialog.Title>
                   <Dialog.Close asChild>
                     <button type="button" aria-label="Cerrar" className="flex h-8 w-8 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-bg hover:text-text">
@@ -105,6 +110,7 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
                     <Row label="Categoría" value={movement.categoryName ?? "—"} />
                     <Row label="Fecha" value={formatDate(movement.date)} />
                     {movement.agentName && <Row label="Agente" value={movement.agentName} />}
+                    {movement.agentPercentage != null && <Row label="% al agente" value={`${movement.agentPercentage}%`} />}
                     {movement.propertyAddress && <Row label="Propiedad" value={movement.propertyAddress} />}
                     {movement.description && <Row label="Descripción" value={movement.description} />}
                     {movement.createdByName && <Row label="Cargado por" value={movement.createdByName} />}

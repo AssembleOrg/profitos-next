@@ -47,6 +47,8 @@ export function MovementFormModal({
   const [date, setDate] = useState(defaultDate);
   const [description, setDescription] = useState("");
   const [agentUserId, setAgentUserId] = useState("");
+  const [agentPercentage, setAgentPercentage] = useState<string>("");
+  const [isShared, setIsShared] = useState(false);
   const [propertyId, setPropertyId] = useState<string | null>(null);
   const [propertyLabel, setPropertyLabel] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<RentalAttachment[]>([]);
@@ -84,6 +86,8 @@ export function MovementFormModal({
       setDate(editing.date);
       setDescription(editing.description ?? "");
       setAgentUserId(editing.agentUserId ?? "");
+      setAgentPercentage(editing.agentPercentage != null ? String(editing.agentPercentage) : "");
+      setIsShared(editing.isShared ?? false);
       setPropertyId(editing.propertyId ?? null);
       setPropertyLabel(editing.propertyAddress ?? null);
       setAttachments(atts);
@@ -96,6 +100,8 @@ export function MovementFormModal({
       setDate(defaultDate || now().toISODate()!);
       setDescription("");
       setAgentUserId("");
+      setAgentPercentage("");
+      setIsShared(false);
       setPropertyId(null);
       setPropertyLabel(null);
       setAttachments([]);
@@ -125,6 +131,7 @@ export function MovementFormModal({
     }
     setSubmitting(true);
     try {
+      const parsedPercentage = agentPercentage.trim() === "" ? null : Number(agentPercentage.replace(",", "."));
       const payload = {
         categoryId,
         amount,
@@ -133,6 +140,9 @@ export function MovementFormModal({
         description: description.trim() || null,
         agentUserId: agentUserId || null,
         propertyId: propertyId || null,
+        // % al agente: solo informativo y solo para egresos
+        agentPercentage: type === "expense" ? parsedPercentage : null,
+        isShared,
         attachments,
       };
       const res = await fetch(
@@ -222,6 +232,27 @@ export function MovementFormModal({
                       </button>
                     </div>
 
+                    {/* Compartido (informativo) */}
+                    <button
+                      type="button"
+                      onClick={() => setIsShared((v) => !v)}
+                      className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
+                        isShared
+                          ? "border-accent/40 bg-accent/15 text-accent"
+                          : "border-border bg-bg text-text-muted hover:text-text"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>
+                        Movimiento compartido
+                      </span>
+                      <span
+                        className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${isShared ? "bg-accent/40" : "bg-border"}`}
+                      >
+                        <span className={`h-4 w-4 rounded-full bg-text transition-transform ${isShared ? "translate-x-4" : ""}`} />
+                      </span>
+                    </button>
+
                     {/* Categoría */}
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">Categoría</label>
@@ -257,6 +288,29 @@ export function MovementFormModal({
                         </div>
                       </div>
                     </div>
+
+                    {/* % al agente (solo egresos, informativo) */}
+                    {type === "expense" && (
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                          % al agente <span className="text-text-faint">(informativo)</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            min={0}
+                            max={100}
+                            step="0.01"
+                            value={agentPercentage}
+                            onChange={(e) => setAgentPercentage(e.target.value)}
+                            placeholder="0"
+                            className={`${inputClass} pr-8`}
+                          />
+                          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-text-faint">%</span>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Fecha */}
                     <div>

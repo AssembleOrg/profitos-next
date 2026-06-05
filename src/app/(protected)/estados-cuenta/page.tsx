@@ -16,6 +16,7 @@ interface Props {
     currency?: string;
     categoryId?: string;
     agentUserId?: string;
+    shared?: string;
     view?: string;
   }>;
 }
@@ -34,11 +35,14 @@ export default async function EstadosCuentaPage({ searchParams }: Readonly<Props
   const to = sp.to && DATE_RE.test(sp.to) ? sp.to : defaultTo;
   const view: AccountFilters["view"] = sp.view === "mensual" ? "mensual" : "rango";
 
+  const isShared = sp.shared === "1" ? true : sp.shared === "0" ? false : undefined;
+
   const filters: MovementFilters = { from, to };
   if (isEntryType(sp.type)) filters.type = sp.type;
   if (sp.categoryId) filters.categoryId = sp.categoryId;
   if (isCurrency(sp.currency)) filters.currency = sp.currency;
   if (sp.agentUserId) filters.agentUserId = sp.agentUserId;
+  if (isShared !== undefined) filters.isShared = isShared;
 
   const [report, categories, agents] = await Promise.all([
     getAccountReport(filters),
@@ -60,6 +64,7 @@ export default async function EstadosCuentaPage({ searchParams }: Readonly<Props
     currency: isCurrency(sp.currency) ? sp.currency : undefined,
     categoryId: sp.categoryId || undefined,
     agentUserId: sp.agentUserId || undefined,
+    isShared,
   };
 
   return (

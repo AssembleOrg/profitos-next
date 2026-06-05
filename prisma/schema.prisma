@@ -602,6 +602,10 @@ model AccountEntry {
   agentUser       User?            @relation("AccountEntryAgent", fields: [agentUserId], references: [id], onDelete: SetNull)
   propertyId      String?          @map("property_id")
   property        Property?        @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  // % informativo dado al agente (solo egresos). No participa de cálculos.
+  agentPercentage Float?           @map("agent_percentage")
+  // Marca informativa: ¿el movimiento es compartido?
+  isShared        Boolean          @default(false) @map("is_shared")
   attachments     Json?
   createdByUserId String           @map("created_by_user_id")
   createdByUser   User             @relation("AccountEntryCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
@@ -613,5 +617,6 @@ model AccountEntry {
   @@index([categoryId])
   @@index([currency])
   @@index([agentUserId])
+  @@index([isShared])
   @@map("jp_account_entries")
 }

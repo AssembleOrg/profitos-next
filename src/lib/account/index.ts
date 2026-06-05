@@ -98,6 +98,10 @@ export interface AccountMovement {
   agentName: string | null;
   propertyId: string | null;
   propertyAddress: string | null;
+  /** % informativo dado al agente (solo egresos). */
+  agentPercentage: number | null;
+  /** Marca informativa: ¿movimiento compartido? */
+  isShared: boolean;
   attachments: unknown;
   createdByUserId: string;
   createdByName: string | null;

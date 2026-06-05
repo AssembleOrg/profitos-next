@@ -13,6 +13,10 @@ export interface EntryBody {
   description?: string;
   agentUserId?: string | null;
   propertyId?: string | null;
+  /** % informativo dado al agente (solo egresos). */
+  agentPercentage?: number | null;
+  /** Marca informativa: ¿movimiento compartido? */
+  isShared?: boolean;
   attachments?: unknown[];
 }
 
@@ -25,6 +29,8 @@ export interface ValidatedEntry {
   description: string | null;
   agentUserId: string | null;
   propertyId: string | null;
+  agentPercentage: number | null;
+  isShared: boolean;
   attachments: Prisma.InputJsonValue | undefined;
 }
 
@@ -33,7 +39,7 @@ export interface ValidatedEntry {
  * `type` se deriva del `kind` de la categoría (fuente de verdad).
  */
 export async function validateEntry(body: EntryBody): Promise<ValidatedEntry> {
-  const { categoryId, amount, currency, date, description, agentUserId, propertyId, attachments } = body;
+  const { categoryId, amount, currency, date, description, agentUserId, propertyId, agentPercentage, isShared, attachments } = body;
 
   if (!categoryId) throw new AppError(400, "La categoría es obligatoria");
   if (categoryId === RENTAL_COMMISSION_CATEGORY_ID) {
@@ -64,6 +70,15 @@ export async function validateEntry(body: EntryBody): Promise<ValidatedEntry> {
     throw new AppError(400, "Adjuntos inválidos");
   }
 
+  // % informativo del agente: solo válido en egresos. Se acota a 0–100.
+  let normalizedPercentage: number | null = null;
+  if (agentPercentage !== undefined && agentPercentage !== null && category.kind === "expense") {
+    if (typeof agentPercentage !== "number" || !Number.isFinite(agentPercentage) || agentPercentage < 0 || agentPercentage > 100) {
+      throw new AppError(400, "El porcentaje del agente debe estar entre 0 y 100");
+    }
+    normalizedPercentage = agentPercentage;
+  }
+
   return {
     type: category.kind as "income" | "expense",
     categoryId,
@@ -73,6 +88,8 @@ export async function validateEntry(body: EntryBody): Promise<ValidatedEntry> {
     description: description?.trim() || null,
     agentUserId: agentUserId || null,
     propertyId: propertyId || null,
+    agentPercentage: normalizedPercentage,
+    isShared: isShared === true,
     attachments: (attachments as Prisma.InputJsonValue) ?? undefined,
   };
 }

@@ -18,6 +18,25 @@ interface GoogleCalendarEvent {
   summary: string;
 }
 
+interface GoogleEventDateTime {
+  dateTime?: string; // RFC3339 con offset, p.ej. "2026-06-05T14:00:00-03:00"
+  date?: string; // "2026-06-05" (eventos de día completo)
+  timeZone?: string;
+}
+
+export interface GoogleCalendarListEvent {
+  id: string;
+  htmlLink?: string;
+  summary?: string;
+  status?: string;
+  start?: GoogleEventDateTime;
+  end?: GoogleEventDateTime;
+}
+
+interface GoogleEventsListResponse {
+  items?: GoogleCalendarListEvent[];
+}
+
 /* ------------------------------------------------------------------ */
 /*  Token refresh                                                      */
 /* ------------------------------------------------------------------ */
@@ -173,6 +192,34 @@ export async function createCalendarEvent(
 
   if (error || !data) return { eventId: null, error };
   return { eventId: data.id, error: null };
+}
+
+/**
+ * Lista los eventos del calendario primario del usuario en un rango.
+ * Solo lectura (overlay en la agenda). `timeMin`/`timeMax` en ISO (YYYY-MM-DD o RFC3339).
+ * `singleEvents=true` expande recurrencias en instancias individuales.
+ */
+export async function listCalendarEvents(
+  accessToken: string,
+  timeMin: string,
+  timeMax: string
+): Promise<{ events: GoogleCalendarListEvent[]; error: string | null }> {
+  const params = new URLSearchParams({
+    timeMin: new Date(`${timeMin}T00:00:00.000Z`).toISOString(),
+    timeMax: new Date(`${timeMax}T23:59:59.999Z`).toISOString(),
+    singleEvents: "true",
+    orderBy: "startTime",
+    maxResults: "250",
+  });
+
+  const { data, error } = await calendarFetch<GoogleEventsListResponse>(
+    accessToken,
+    `/calendars/primary/events?${params.toString()}`
+  );
+
+  if (error || !data) return { events: [], error };
+  const events = (data.items ?? []).filter((e) => e.status !== "cancelled");
+  return { events, error: null };
 }
 
 export async function updateCalendarEvent(

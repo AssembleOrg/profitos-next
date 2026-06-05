@@ -17,6 +17,7 @@ function parseFilters(sp: URLSearchParams): MovementFilters {
   const categoryId = sp.get("categoryId");
   const currency = sp.get("currency");
   const agentUserId = sp.get("agentUserId");
+  const shared = sp.get("shared");
   const source = sp.get("source");
 
   if (from && DATE_RE.test(from)) filters.from = from;
@@ -25,6 +26,8 @@ function parseFilters(sp: URLSearchParams): MovementFilters {
   if (categoryId) filters.categoryId = categoryId;
   if (isCurrency(currency)) filters.currency = currency;
   if (agentUserId) filters.agentUserId = agentUserId;
+  if (shared === "1") filters.isShared = true;
+  else if (shared === "0") filters.isShared = false;
   if (source === "manual" || source === "rental_commission") filters.source = source as MovementSource;
   return filters;
 }

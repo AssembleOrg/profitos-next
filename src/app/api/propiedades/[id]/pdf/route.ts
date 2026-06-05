@@ -20,6 +20,17 @@ function formatPrice(price: number | null, currency: string | null) {
   return `${c} ${price.toLocaleString("es-AR")}`;
 }
 
+function formatGastoMoney(amount: number, currency: string) {
+  const symbol = currency === "USD" ? "US$" : "$";
+  return `${symbol} ${amount.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+}
+
+function formatGastoDate(date: Date) {
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${d}/${m}/${date.getUTCFullYear()}`;
+}
+
 function parsePhotoUrls(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -104,6 +115,15 @@ export async function GET(
     });
 
     if (!property) throw new AppError(404, "Propiedad no encontrada");
+
+    // Gastos anexados a la propiedad (solo para el informe del dueño).
+    const gastos = isOwnerMode
+      ? await prisma.accountEntry.findMany({
+          where: { propertyId: id, type: "expense" },
+          include: { category: { select: { name: true } } },
+          orderBy: { date: "desc" },
+        })
+      : [];
 
     const pdf = await PDFDocument.create();
     const page = pdf.addPage([595, 842]); // A4
@@ -409,6 +429,74 @@ export async function GET(
         x: 30, y: 40, size: 9, font: fontRegular, color: rgb(0.35, 0.37, 0.4),
       });
       page2.drawText("Informe confidencial para el propietario", {
+        x: 30, y: 26, size: 9, font: fontRegular, color: rgb(0.35, 0.37, 0.4),
+      });
+
+      // ── Página 3: Gastos anexados a la propiedad ──────────────────
+      const page3 = pdf.addPage([595, 842]);
+      const p3W = 595;
+      const p3H = 842;
+
+      // Header stripe
+      page3.drawRectangle({ x: 0, y: p3H - 56, width: p3W, height: 56, color: rgb(0.01, 0.01, 0.01) });
+      page3.drawText("GASTOS DE LA PROPIEDAD", { x: 28, y: p3H - 38, size: 16, font: fontBold, color: rgb(1, 1, 1) });
+      page3.drawText(asText(property.address), { x: 28, y: p3H - 52, size: 9, font: fontRegular, color: rgb(0.7, 0.72, 0.75) });
+
+      let p3Y = p3H - 56 - 30;
+
+      if (gastos.length === 0) {
+        page3.drawText("Sin gastos registrados para esta propiedad.", {
+          x: 32, y: p3Y, size: 11, font: fontRegular, color: rgb(0.35, 0.37, 0.4),
+        });
+      } else {
+        // Encabezado de columnas
+        page3.drawRectangle({ x: 28, y: p3Y - 6, width: p3W - 56, height: 22, color: rgb(0.9, 0.91, 0.93) });
+        page3.drawText("FECHA", { x: 36, y: p3Y, size: 9, font: fontBold, color: rgb(0.12, 0.13, 0.16) });
+        page3.drawText("CONCEPTO", { x: 110, y: p3Y, size: 9, font: fontBold, color: rgb(0.12, 0.13, 0.16) });
+        page3.drawText("MONTO", { x: p3W - 120, y: p3Y, size: 9, font: fontBold, color: rgb(0.12, 0.13, 0.16) });
+        p3Y -= 26;
+
+        const MAX_ROWS = 28;
+        const subtotals = new Map<string, number>();
+        const rows = gastos.slice(0, MAX_ROWS);
+        for (const g of gastos) {
+          subtotals.set(g.currency, (subtotals.get(g.currency) ?? 0) + g.amount);
+        }
+
+        for (const g of rows) {
+          const concepto = [g.category?.name ?? "Sin categoría", g.description].filter(Boolean).join(" · ");
+          page3.drawText(formatGastoDate(g.date), { x: 36, y: p3Y, size: 9, font: fontRegular, color: rgb(0.2, 0.22, 0.25) });
+          page3.drawText(concepto.slice(0, 60), { x: 110, y: p3Y, size: 9, font: fontRegular, color: rgb(0.2, 0.22, 0.25), maxWidth: p3W - 110 - 130 });
+          const montoText = formatGastoMoney(g.amount, g.currency);
+          const montoWidth = fontBold.widthOfTextAtSize(montoText, 9);
+          page3.drawText(montoText, { x: p3W - 28 - montoWidth, y: p3Y, size: 9, font: fontBold, color: rgb(0.08, 0.1, 0.14) });
+          p3Y -= 18;
+        }
+
+        if (gastos.length > MAX_ROWS) {
+          page3.drawText(`y ${gastos.length - MAX_ROWS} gasto(s) más…`, { x: 36, y: p3Y, size: 9, font: fontRegular, color: rgb(0.45, 0.47, 0.5) });
+          p3Y -= 18;
+        }
+
+        // Subtotales por moneda
+        p3Y -= 8;
+        page3.drawLine({ start: { x: 28, y: p3Y + 10 }, end: { x: p3W - 28, y: p3Y + 10 }, thickness: 0.8, color: rgb(0.8, 0.82, 0.85) });
+        for (const [currency, total] of subtotals) {
+          const label = `Total ${currency}`;
+          const totalText = formatGastoMoney(total, currency);
+          const totalWidth = fontBold.widthOfTextAtSize(totalText, 11);
+          page3.drawText(label, { x: p3W - 28 - 200, y: p3Y - 6, size: 11, font: fontBold, color: rgb(0.12, 0.13, 0.16) });
+          page3.drawText(totalText, { x: p3W - 28 - totalWidth, y: p3Y - 6, size: 11, font: fontBold, color: rgb(0.08, 0.1, 0.14) });
+          p3Y -= 22;
+        }
+      }
+
+      // Page 3 footer
+      page3.drawLine({ start: { x: 28, y: 56 }, end: { x: p3W - 28, y: 56 }, thickness: 0.8, color: rgb(0.8, 0.82, 0.85) });
+      page3.drawText(`Generado: ${new Date().toLocaleString("es-AR", { hour12: false })}`, {
+        x: 30, y: 40, size: 9, font: fontRegular, color: rgb(0.35, 0.37, 0.4),
+      });
+      page3.drawText("Informe confidencial para el propietario", {
         x: 30, y: 26, size: 9, font: fontRegular, color: rgb(0.35, 0.37, 0.4),
       });
     }
