@@ -65,6 +65,13 @@ export function AlquileresClient({
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [contracts, setContracts] = useState(initialContracts);
+  // Re-sincronizar cuando el server manda otra data (cambio de tab / refresh):
+  // useState() no reinicia solo al cambiar el prop, y la tab Cobros manda [].
+  const [syncedInitial, setSyncedInitial] = useState(initialContracts);
+  if (syncedInitial !== initialContracts) {
+    setSyncedInitial(initialContracts);
+    setContracts(initialContracts);
+  }
   const [tenantList, setTenantList] = useState(tenants);
   const [propertyList, setPropertyList] = useState(properties);
   const [wizardOpen, setWizardOpen] = useState(false);
