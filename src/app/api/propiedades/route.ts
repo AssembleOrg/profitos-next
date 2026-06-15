@@ -79,6 +79,7 @@ export const POST = withHandler(async (request: NextRequest) => {
   const property = await prisma.property.create({
     data: {
       address,
+      source: "manual",
       realAddress: realAddress ?? null,
       publicationTitle: publicationTitle ?? null,
       referenceCode: referenceCode ?? null,

@@ -52,6 +52,7 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
   if ("phone" in body) data.phone = body.phone?.trim() || null;
   if ("email" in body) data.email = body.email?.trim() || null;
   if ("notes" in body) data.notes = body.notes?.trim() || null;
+  if (Array.isArray(body.attachments)) data.attachments = body.attachments;
 
   const updated = await prisma.tenant.update({ where: { id }, data });
   return ok(updated, "Inquilino actualizado correctamente", path);

@@ -1,4 +1,27 @@
-import type { RentalDueManualStatus, RentalFrequency } from "@/lib/rentals";
+import type { RentalDueEffectiveStatus, RentalDueManualStatus, RentalFrequency } from "@/lib/rentals";
+
+/** Resumen agregado de las cuotas de un contrato (calculado en el server). */
+export interface RentalDueSummary {
+  expectedTotal: number;
+  collectedTotal: number;
+  commissionTotal: number;
+  ownerTotal: number;
+  counts: Record<RentalDueEffectiveStatus, number>;
+}
+
+/**
+ * Cabecera liviana de contrato para la pestaña Cobros (lazy-load).
+ * No trae las cuotas: solo lo necesario para el header del accordion.
+ * El detalle (cuotas/pagos) se trae al expandir vía GET /api/alquileres/[id].
+ */
+export interface CobrosContractHeader {
+  id: string;
+  propertyAddress: string;
+  tenantName: string;
+  title: string | null;
+  dueCount: number;
+  summary: RentalDueSummary;
+}
 
 export interface RentalUser {
   id: string;

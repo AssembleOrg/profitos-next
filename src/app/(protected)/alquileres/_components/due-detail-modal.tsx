@@ -126,14 +126,16 @@ function Body({
   const signedUrls = useSignedUrls(allPaths);
 
   if (!due) return null;
+  const collectedTotal = due.transactions.reduce((acc, t) => acc + t.amountPaid, 0);
   const effective: RentalDueEffectiveStatus = getDueEffectiveStatus({
     dueDate: due.dueDate,
     status: due.status,
     gracePeriodDays,
+    expectedAmount: due.expectedAmount,
+    collected: collectedTotal,
   });
   const style = RENTAL_DUE_STATUS_STYLE[effective];
 
-  const collectedTotal = due.transactions.reduce((acc, t) => acc + t.amountPaid, 0);
   const commissionTotal = due.transactions.reduce((acc, t) => acc + t.commissionAmount, 0);
   const ownerTotal = due.transactions.reduce((acc, t) => acc + t.ownerAmount, 0);
 

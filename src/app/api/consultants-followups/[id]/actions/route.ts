@@ -4,6 +4,7 @@ import { ok, created } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
 import { getAccessibleContactFollowUpOrThrow } from "@/lib/api/contact-followups";
+import type { Prisma } from "@/generated/prisma/client";
 
 const ALLOWED_ACTION_TYPES = new Set([
   "nota",
@@ -43,12 +44,14 @@ export const POST = withHandler(async (request: NextRequest, context) => {
   const description = String(body?.description ?? "").trim();
   const audioUrlRaw = String(body?.audioUrl ?? "").trim();
   const actionAtRaw = String(body?.actionAt ?? "").trim();
+  const attachments = body?.attachments;
+  const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
 
   if (!ALLOWED_ACTION_TYPES.has(type)) {
     throw new AppError(400, "Tipo de acción inválido");
   }
-  if (!description) {
-    throw new AppError(400, "La descripción de la acción es obligatoria");
+  if (!description && !hasAttachments) {
+    throw new AppError(400, "La acción no puede estar vacía (texto o adjuntos)");
   }
 
   const actionAt = actionAtRaw ? new Date(actionAtRaw) : new Date();
@@ -62,6 +65,7 @@ export const POST = withHandler(async (request: NextRequest, context) => {
       type,
       description,
       audioUrl: audioUrlRaw || null,
+      attachments: hasAttachments ? (attachments as Prisma.InputJsonValue) : undefined,
       actionAt,
       createdByUserId: auth.userId,
     },

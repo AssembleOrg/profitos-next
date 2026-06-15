@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { DateTime, Info } from "luxon";
+import type { NoteAttachment } from "@/components/notes/media-uploader";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -19,6 +20,7 @@ export interface CalendarEvent {
   clientId?: string;
   property?: string;
   propertyId?: string;
+  attachments?: NoteAttachment[] | null;
   userName?: string;
   /** "google" = evento traído de Google Calendar (solo lectura). */
   source?: "internal" | "google";

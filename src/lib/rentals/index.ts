@@ -64,7 +64,7 @@ export type RentalDueEffectiveStatus =
   | RentalDueManualStatus;
 
 export const RENTAL_DUE_STATUS_LABEL: Record<RentalDueEffectiveStatus, string> = {
-  esperando: "Esperando",
+  esperando: "A vencer",
   vencido: "Vencido",
   pagado: "Pagado",
   parcial: "Parcial",
@@ -108,16 +108,31 @@ interface DueStatusInput {
   dueDate: Date | string;
   status: string | null;
   gracePeriodDays: number;
+  /** Importe esperado de la cuota (con adicionales). Necesario para derivar por pagos. */
+  expectedAmount?: number;
+  /** Suma de lo efectivamente cobrado en la cuota. Necesario para derivar por pagos. */
+  collected?: number;
 }
 
 /**
  * Calcula el estado efectivo de un vencimiento.
  * - Si tiene `status` manual, gana.
- * - Si la fecha + grace ya pasó → `vencido`.
+ * - Si hay pagos registrados que cubren la cuota → `pagado`; si la cubren en
+ *   parte → `parcial` (aunque no se haya marcado a mano).
+ * - Si no hay pagos y la fecha + grace ya pasó → `vencido`.
  * - Si todavía no llegó → `esperando`.
  */
 export function getDueEffectiveStatus(input: DueStatusInput): RentalDueEffectiveStatus {
   if (input.status && isManualDueStatus(input.status)) return input.status;
+
+  // Derivar por pagos efectivos (cuando se pasan expectedAmount + collected).
+  if (input.collected !== undefined && input.collected > 0) {
+    if (input.expectedAmount !== undefined && input.collected >= input.expectedAmount) {
+      return "pagado";
+    }
+    return "parcial";
+  }
+
   const today = now().startOf("day");
   const dt =
     typeof input.dueDate === "string"
@@ -267,15 +282,19 @@ export function summarizeDueDates(
   };
   for (const due of dueDates) {
     expectedTotal += due.expectedAmount;
+    let dueCollected = 0;
     for (const tx of due.transactions ?? []) {
-      collectedTotal += tx.amountPaid;
+      dueCollected += tx.amountPaid;
       commissionTotal += tx.commissionAmount;
       ownerTotal += tx.ownerAmount;
     }
+    collectedTotal += dueCollected;
     const eff = getDueEffectiveStatus({
       dueDate: due.dueDate,
       status: due.status,
       gracePeriodDays,
+      expectedAmount: due.expectedAmount,
+      collected: dueCollected,
     });
     counts[eff]++;
   }

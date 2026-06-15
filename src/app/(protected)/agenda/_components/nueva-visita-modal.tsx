@@ -7,6 +7,7 @@ import {
   type SearchableSelectOption,
 } from "./searchable-select";
 import { Sheet } from "../../_components/sheet";
+import { MediaUploader, type NoteAttachment } from "@/components/notes/media-uploader";
 
 interface NuevaVisitaModalProps {
   open: boolean;
@@ -30,6 +31,7 @@ export function NuevaVisitaModal({
   const [error, setError] = useState<string | null>(null);
   const [property, setProperty] = useState<SearchableSelectOption | null>(null);
   const [client, setClient] = useState<SearchableSelectOption | null>(null);
+  const [attachments, setAttachments] = useState<NoteAttachment[]>([]);
 
   /* ---- Search handlers ---- */
   const searchProperties = useCallback(
@@ -110,6 +112,7 @@ export function NuevaVisitaModal({
       propertyId: property?.id ?? undefined,
       clientId: client?.id ?? undefined,
       description: (form.get("description") as string) || undefined,
+      attachments,
     };
 
     try {
@@ -128,6 +131,7 @@ export function NuevaVisitaModal({
 
       setProperty(null);
       setClient(null);
+      setAttachments([]);
       onCreated();
       onClose();
     } catch {
@@ -266,6 +270,9 @@ export function NuevaVisitaModal({
                   placeholder="Notas adicionales..."
                   className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
                 />
+                <div className="mt-2">
+                  <MediaUploader attachments={attachments} onChange={setAttachments} />
+                </div>
               </div>
 
               {/* Error */}

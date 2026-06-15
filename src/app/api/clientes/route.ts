@@ -47,6 +47,7 @@ export const POST = withHandler(async (request: NextRequest) => {
   const body = await request.json();
 
   const { name, phone, email, notes } = body as Record<string, string | undefined>;
+  const attachments = (body as { attachments?: unknown[] }).attachments;
 
   if (!name) throw new AppError(400, "El campo 'name' es obligatorio");
 
@@ -56,6 +57,7 @@ export const POST = withHandler(async (request: NextRequest) => {
       phone: phone ?? null,
       email: email ?? null,
       notes: notes ?? null,
+      ...(Array.isArray(attachments) && { attachments: attachments as never }),
       userId,
     },
   });

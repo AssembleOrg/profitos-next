@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
 import { formatDate } from "@/lib/datetime";
+import { WhatsAppLink } from "@/components/whatsapp-link";
+import { MediaUploader, type NoteAttachment } from "@/components/notes/media-uploader";
+import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
 
 interface Client {
   id: string;
@@ -14,6 +17,7 @@ interface Client {
   phone: string | null;
   email: string | null;
   notes: string | null;
+  attachments: NoteAttachment[] | null;
   createdAt: string;
   _count?: { visitas: number };
 }
@@ -87,6 +91,7 @@ export function ContactosClient({
   // Manual client modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
+  const [clientAttachments, setClientAttachments] = useState<NoteAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -194,6 +199,11 @@ export function ContactosClient({
   function handleEdit(c: Client) { setEditClient(c); setModalOpen(true); }
   function handleClose() { setModalOpen(false); setEditClient(null); }
 
+  useEffect(() => {
+    if (modalOpen) setClientAttachments(editClient?.attachments ?? []);
+  }, [modalOpen, editClient]);
+  const clientSignedUrls = useNoteSignedUrls(clientAttachments.map((a) => a.path));
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
@@ -203,6 +213,7 @@ export function ContactosClient({
       phone: (form.get("phone") as string) || null,
       email: (form.get("email") as string) || null,
       notes: (form.get("notes") as string) || null,
+      attachments: clientAttachments,
     };
     try {
       const url = editClient ? `/api/clientes/${editClient.id}` : "/api/clientes";
@@ -388,14 +399,12 @@ export function ContactosClient({
                           </button>
                         )}
                         {(c.cellphone || c.phone) && (
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(c.cellphone ?? c.phone!); toast.success("Teléfono copiado"); }}
-                            className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                          <WhatsAppLink
+                            phone={c.cellphone ?? c.phone}
+                            className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted transition-colors hover:border-green-500/40 hover:text-green-500 active:bg-surface/80"
                           >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 016.19 15.9a19.79 19.79 0 01-3.07-8.67A2 2 0 015.11 5h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L9.09 12.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" /></svg>
                             {c.cellphone ?? c.phone}
-                          </button>
+                          </WhatsAppLink>
                         )}
                         {!c.email && !c.cellphone && !c.phone && (
                           <span className="text-xs text-text-muted/50">Sin contacto</span>
@@ -444,10 +453,27 @@ export function ContactosClient({
                         {c.tokkoDeletedAt && (
                           <p className="text-[10px] text-red-400">Eliminado en Tokko</p>
                         )}
-                        <p className="mt-0.5 text-xs text-text-muted md:hidden">{c.email ?? c.cellphone ?? c.phone ?? "—"}</p>
+                        <p className="mt-0.5 text-xs text-text-muted md:hidden">
+                          {c.email ?? ((c.cellphone || c.phone) ? (
+                            <WhatsAppLink
+                              phone={c.cellphone ?? c.phone}
+                              className="inline-flex items-center gap-1 align-middle transition-colors hover:text-green-500"
+                            >
+                              {c.cellphone ?? c.phone}
+                            </WhatsAppLink>
+                          ) : "—")}
+                        </p>
                       </td>
                       <td className="hidden px-5 py-3.5 text-text-muted md:table-cell">{c.email ?? "—"}</td>
-                      <td className="hidden px-5 py-3.5 text-text-muted lg:table-cell">{c.cellphone ?? c.phone ?? "—"}</td>
+                      <td className="hidden px-5 py-3.5 text-text-muted lg:table-cell">
+                        <WhatsAppLink
+                          phone={c.cellphone ?? c.phone}
+                          className="inline-flex items-center gap-1.5 transition-colors hover:text-green-500"
+                          fallback={<>—</>}
+                        >
+                          {c.cellphone ?? c.phone}
+                        </WhatsAppLink>
+                      </td>
                       <td className="px-5 py-3.5">
                         {c.leadStatus ? (
                           <span className="inline-flex items-center gap-1.5">
@@ -512,14 +538,12 @@ export function ContactosClient({
                       </button>
                     )}
                     {c.phone ? (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(c.phone!); toast.success("Teléfono copiado"); }}
-                        className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                      <WhatsAppLink
+                        phone={c.phone}
+                        className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted transition-colors hover:border-green-500/40 hover:text-green-500 active:bg-surface/80"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 016.19 15.9a19.79 19.79 0 01-3.07-8.67A2 2 0 015.11 5h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L9.09 12.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" /></svg>
                         {c.phone}
-                      </button>
+                      </WhatsAppLink>
                     ) : (
                       !c.email && <span className="text-xs text-text-muted/50">Sin contacto</span>
                     )}
@@ -587,6 +611,10 @@ export function ContactosClient({
             <label className="mb-1 block text-xs font-medium text-text-muted">Notas</label>
             <textarea name="notes" rows={3} defaultValue={editClient?.notes ?? ""} placeholder="Notas sobre el cliente..."
               className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-text-muted">Audio / adjuntos</label>
+            <MediaUploader attachments={clientAttachments} onChange={setClientAttachments} signedUrls={clientSignedUrls} />
           </div>
         </form>
       </Sheet>

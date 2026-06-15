@@ -11,6 +11,8 @@ import {
 import { TimePicker } from "./time-picker";
 import { formatDate, parseVisualDate } from "@/lib/datetime";
 import type { CalendarEvent } from "./calendar";
+import { MediaUploader, type NoteAttachment } from "@/components/notes/media-uploader";
+import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
 
 interface VisitaModalProps {
   open: boolean;
@@ -39,20 +41,23 @@ export function VisitaModal({
   const [error, setError] = useState<string | null>(null);
   const [property, setProperty] = useState<SearchableSelectOption | null>(null);
   const [client, setClient] = useState<SearchableSelectOption | null>(null);
+  const [attachments, setAttachments] = useState<NoteAttachment[]>([]);
+  const signedUrls = useNoteSignedUrls(attachments.map((a) => a.path));
 
   // Pre-fill property/client when editing
   useEffect(() => {
-    if (editEvent && open) {
+    if (open) {
       setProperty(
-        editEvent.propertyId
+        editEvent?.propertyId
           ? { id: editEvent.propertyId, label: editEvent.property ?? "Propiedad" }
           : null
       );
       setClient(
-        editEvent.clientId
+        editEvent?.clientId
           ? { id: editEvent.clientId, label: editEvent.client ?? "Cliente" }
           : null
       );
+      setAttachments(editEvent?.attachments ?? []);
       setError(null);
     }
   }, [editEvent, open]);
@@ -144,6 +149,7 @@ export function VisitaModal({
       propertyId: property?.id ?? null,
       clientId: client?.id ?? null,
       description: (form.get("description") as string) || undefined,
+      attachments,
     };
 
     try {
@@ -336,6 +342,9 @@ export function VisitaModal({
                   placeholder="Notas adicionales..."
                   className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
                 />
+                <div className="mt-2">
+                  <MediaUploader attachments={attachments} onChange={setAttachments} signedUrls={signedUrls} />
+                </div>
               </div>
 
               {/* Error */}

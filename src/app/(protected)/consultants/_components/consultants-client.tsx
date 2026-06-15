@@ -7,6 +7,7 @@ import { Spinner } from "../../_components/spinner";
 import { Pagination } from "../../_components/pagination";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import { formatDateTime } from "@/lib/datetime";
+import { WhatsAppLink } from "@/components/whatsapp-link";
 
 interface ConsultantItem {
   id: string;
@@ -354,14 +355,12 @@ export function ConsultantsClient({
                   </button>
                 )}
                 {(item.cellphone || item.phone) && (
-                  <button
-                    type="button"
-                    onClick={() => { navigator.clipboard.writeText(item.cellphone ?? item.phone!); toast.success("Teléfono copiado"); }}
-                    className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                  <WhatsAppLink
+                    phone={item.cellphone ?? item.phone}
+                    className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted transition-colors hover:border-green-500/40 hover:text-green-500 active:bg-surface/80"
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 016.19 15.9a19.79 19.79 0 01-3.07-8.67A2 2 0 015.11 5h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L9.09 12.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" /></svg>
                     {item.cellphone ?? item.phone}
-                  </button>
+                  </WhatsAppLink>
                 )}
                 {!item.email && !item.cellphone && !item.phone && (
                   <span className="text-xs text-text-muted/50">Sin contacto</span>
@@ -408,12 +407,12 @@ export function ConsultantsClient({
                       </button>
                     )}
                     {(item.cellphone || item.phone) && (
-                      <button
-                        onClick={() => { navigator.clipboard.writeText(item.cellphone ?? item.phone!); toast.success("Teléfono copiado"); }}
-                        className="block max-w-[200px] truncate text-xs text-text-muted/80 transition-colors hover:text-text active:opacity-60"
+                      <WhatsAppLink
+                        phone={item.cellphone ?? item.phone}
+                        className="flex max-w-[200px] items-center gap-1.5 truncate text-xs text-text-muted/80 transition-colors hover:text-green-500 active:opacity-60"
                       >
                         {item.cellphone ?? item.phone}
-                      </button>
+                      </WhatsAppLink>
                     )}
                     {!item.email && !item.cellphone && !item.phone && (
                       <p className="text-xs text-text-muted/50">Sin contacto</p>

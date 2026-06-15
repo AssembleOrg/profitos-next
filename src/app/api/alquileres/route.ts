@@ -64,6 +64,7 @@ export const POST = withHandler(async (request: NextRequest) => {
     firstDueDate,
     gracePeriodDays,
     notes,
+    attachments,
     additionals,
   } = body as {
     propertyId?: string;
@@ -77,6 +78,7 @@ export const POST = withHandler(async (request: NextRequest) => {
     firstDueDate?: string;
     gracePeriodDays?: number;
     notes?: string;
+    attachments?: unknown[];
     additionals?: AdditionalInput[];
   };
 
@@ -150,6 +152,7 @@ export const POST = withHandler(async (request: NextRequest) => {
         firstDueDate: first,
         gracePeriodDays: grace,
         notes: notes?.trim() || null,
+        ...(Array.isArray(attachments) && attachments.length > 0 && { attachments: attachments as never }),
         createdByUserId: auth.userId,
         additionals: {
           create: cleanAdditionals.map((a, idx) => ({

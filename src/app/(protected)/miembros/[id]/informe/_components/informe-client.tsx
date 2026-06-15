@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { formatDate, formatDateTime } from "@/lib/datetime";
+import { WhatsAppLink } from "@/components/whatsapp-link";
 
 interface InformeData {
   member: {
@@ -496,7 +497,14 @@ export function InformeClient({ memberId, from, to }: Props) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-text">{c.name}</p>
                   <p className="text-xs text-text-muted">
-                    {c.email ?? c.phone ?? "Sin contacto"}
+                    {c.email ?? (c.phone ? (
+                      <WhatsAppLink
+                        phone={c.phone}
+                        className="inline-flex items-center gap-1 align-middle transition-colors hover:text-green-500"
+                      >
+                        {c.phone}
+                      </WhatsAppLink>
+                    ) : "Sin contacto")}
                     {" · "}{c._count.visitas} visita{c._count.visitas !== 1 ? "s" : ""}
                   </p>
                 </div>

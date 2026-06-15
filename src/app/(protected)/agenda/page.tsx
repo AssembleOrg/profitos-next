@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { SIGNATURE_VISIT_TYPES } from "@/lib/signatures";
 import type { CalendarEvent } from "./_components/calendar";
+import type { NoteAttachment } from "@/components/notes/media-uploader";
 import { AgendaClient } from "./_components/agenda-client";
 
 export default async function AgendaPage() {
@@ -35,6 +36,7 @@ export default async function AgendaPage() {
     endTime: string;
     type: string;
     description: string | null;
+    attachments: unknown;
     client: { name: string } | null;
     clientId: string | null;
     property: { address: string } | null;
@@ -48,6 +50,7 @@ export default async function AgendaPage() {
     endTime: v.endTime,
     type: v.type as CalendarEvent["type"],
     description: v.description ?? undefined,
+    attachments: (v.attachments as NoteAttachment[] | null) ?? null,
     client: v.client?.name ?? undefined,
     clientId: v.clientId ?? undefined,
     property: v.property?.address ?? undefined,

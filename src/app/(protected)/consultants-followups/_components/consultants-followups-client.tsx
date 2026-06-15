@@ -1,12 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
 import { Spinner } from "../../_components/spinner";
 import { formatDateTime as fmtDateTime } from "@/lib/datetime";
+import { WhatsAppLink } from "@/components/whatsapp-link";
+import { MediaUploader, AttachmentPreview, type NoteAttachment } from "@/components/notes/media-uploader";
+import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
 
 interface UserOption {
   id: string;
@@ -44,6 +47,7 @@ interface FollowUpAction {
   type: string;
   description: string;
   audioUrl: string | null;
+  attachments: NoteAttachment[] | null;
   actionAt: string;
   createdAt: string;
   createdByUser: UserOption | null;
@@ -124,6 +128,24 @@ export function ConsultantsFollowUpsClient({
   const [savingStatus, setSavingStatus] = useState(false);
   const [savingAction, setSavingAction] = useState(false);
   const [savingMeta, setSavingMeta] = useState(false);
+  const [actionAttachments, setActionAttachments] = useState<NoteAttachment[]>([]);
+  const actionDescriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  function appendActionTranscription(text: string) {
+    const el = actionDescriptionRef.current;
+    if (!el) return;
+    el.value = el.value.trim() ? `${el.value.trim()}\n${text}` : text;
+  }
+
+  const actionAttachmentPaths = useMemo(() => {
+    const paths: string[] = [];
+    for (const a of detail?.actions ?? []) {
+      if (Array.isArray(a.attachments)) for (const att of a.attachments) paths.push(att.path);
+    }
+    for (const att of actionAttachments) paths.push(att.path);
+    return paths;
+  }, [detail?.actions, actionAttachments]);
+  const actionSignedUrls = useNoteSignedUrls(actionAttachmentPaths);
 
   const activeFilters = useMemo(() => {
     const responsable = assignedToUserId
@@ -213,14 +235,18 @@ export function ConsultantsFollowUpsClient({
     const form = new FormData(e.currentTarget);
     const type = String(form.get("type") ?? "nota");
     const description = String(form.get("description") ?? "").trim();
-    const audioUrl = String(form.get("audioUrl") ?? "").trim();
     const actionAt = String(form.get("actionAt") ?? "").trim();
+    if (!description && actionAttachments.length === 0) {
+      toast.error("Agregá una descripción o un audio/adjunto");
+      return;
+    }
+    const formEl = e.currentTarget;
     setSavingAction(true);
     try {
       const res = await fetch(`/api/consultants-followups/${selectedId}/actions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, description, audioUrl, actionAt }),
+        body: JSON.stringify({ type, description, actionAt, attachments: actionAttachments }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -228,9 +254,10 @@ export function ConsultantsFollowUpsClient({
         return;
       }
       toast.success("Acción registrada");
+      setActionAttachments([]);
       await loadDetail(selectedId);
       router.refresh();
-      (e.currentTarget as HTMLFormElement).reset();
+      formEl.reset();
     } catch {
       toast.error("Error de conexión");
     } finally {
@@ -362,14 +389,12 @@ export function ConsultantsFollowUpsClient({
                   </button>
                 )}
                 {(item.recentContact.cellphone || item.recentContact.phone) && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.recentContact.cellphone ?? item.recentContact.phone!); toast.success("Teléfono copiado"); }}
-                    className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                  <WhatsAppLink
+                    phone={item.recentContact.cellphone ?? item.recentContact.phone}
+                    className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted transition-colors hover:border-green-500/40 hover:text-green-500 active:bg-surface/80"
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 016.19 15.9a19.79 19.79 0 01-3.07-8.67A2 2 0 015.11 5h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L9.09 12.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" /></svg>
                     {item.recentContact.cellphone ?? item.recentContact.phone}
-                  </button>
+                  </WhatsAppLink>
                 )}
                 {!item.recentContact.email && !item.recentContact.cellphone && !item.recentContact.phone && (
                   <span className="text-xs text-text-muted/50">Sin contacto</span>
@@ -415,12 +440,12 @@ export function ConsultantsFollowUpsClient({
                       </button>
                     )}
                     {(item.recentContact.cellphone || item.recentContact.phone) && (
-                      <button
-                        onClick={() => { navigator.clipboard.writeText(item.recentContact.cellphone ?? item.recentContact.phone!); toast.success("Teléfono copiado"); }}
-                        className="block max-w-[200px] truncate text-xs text-text-muted/80 transition-colors hover:text-text active:opacity-60"
+                      <WhatsAppLink
+                        phone={item.recentContact.cellphone ?? item.recentContact.phone}
+                        className="flex max-w-[200px] items-center gap-1.5 truncate text-xs text-text-muted/80 transition-colors hover:text-green-500 active:opacity-60"
                       >
                         {item.recentContact.cellphone ?? item.recentContact.phone}
-                      </button>
+                      </WhatsAppLink>
                     )}
                     {!item.recentContact.email && !item.recentContact.cellphone && !item.recentContact.phone && (
                       <p className="text-xs text-text-muted/50">Sin contacto</p>
@@ -461,7 +486,14 @@ export function ConsultantsFollowUpsClient({
         {detail && (
           <div>
               <p className="mb-4 text-sm text-text-muted">
-                {detail.recentContact.email ?? detail.recentContact.cellphone ?? detail.recentContact.phone ?? "Sin dato"}
+                {detail.recentContact.email ?? ((detail.recentContact.cellphone || detail.recentContact.phone) ? (
+                  <WhatsAppLink
+                    phone={detail.recentContact.cellphone ?? detail.recentContact.phone}
+                    className="inline-flex items-center gap-1.5 align-middle transition-colors hover:text-green-500"
+                  >
+                    {detail.recentContact.cellphone ?? detail.recentContact.phone}
+                  </WhatsAppLink>
+                ) : "Sin dato")}
               </p>
 
               <div className="grid gap-5">
@@ -543,16 +575,21 @@ export function ConsultantsFollowUpsClient({
                       ))}
                     </select>
                     <textarea
+                      ref={actionDescriptionRef}
                       name="description"
-                      required
                       placeholder="Ej: Comunicación por WhatsApp, en espera de respuesta..."
                       className="min-h-20 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none"
                     />
-                    <input
-                      name="audioUrl"
-                      placeholder="URL de audio (opcional)"
-                      className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none"
-                    />
+                    <div className="rounded-xl border border-border bg-bg px-3 py-2.5">
+                      <p className="mb-2 text-xs text-text-muted">Audio / adjuntos (el audio se transcribe al texto)</p>
+                      <MediaUploader
+                        attachments={actionAttachments}
+                        onChange={setActionAttachments}
+                        signedUrls={actionSignedUrls}
+                        transcribe
+                        onTranscription={appendActionTranscription}
+                      />
+                    </div>
                     <input
                       type="datetime-local"
                       name="actionAt"
@@ -598,7 +635,7 @@ export function ConsultantsFollowUpsClient({
                       detail.actions.map((action) => (
                         <div key={action.id} className="rounded-lg border border-border bg-bg/40 px-3 py-2">
                           <p className="text-sm text-text">{action.type}</p>
-                          <p className="text-xs text-text-muted">{action.description}</p>
+                          {action.description && <p className="text-xs text-text-muted">{action.description}</p>}
                           {action.audioUrl && (
                             <a
                               href={action.audioUrl}
@@ -608,6 +645,13 @@ export function ConsultantsFollowUpsClient({
                             >
                               Escuchar audio
                             </a>
+                          )}
+                          {Array.isArray(action.attachments) && action.attachments.length > 0 && (
+                            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                              {action.attachments.map((att) => (
+                                <AttachmentPreview key={att.path} attachment={att} url={actionSignedUrls[att.path]} />
+                              ))}
+                            </div>
                           )}
                           <p className="text-xs text-text-muted/80">
                             {formatDateTime(action.actionAt)} · {userLabel(action.createdByUser)}

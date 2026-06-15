@@ -84,6 +84,25 @@ const PROPERTY_STATUSES = [
   { value: "suspendida", label: "Suspendida", color: "bg-red-500" },
 ];
 
+/**
+ * Distintivo para propiedades cargadas a mano (no sincronizadas de Tokko).
+ * Chip con lápiz + "Manual" para que se entienda el origen de un vistazo.
+ */
+function ManualChip() {
+  return (
+    <span
+      title="Propiedad cargada manualmente"
+      className="inline-flex flex-shrink-0 items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-400"
+    >
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+      </svg>
+      Manual
+    </span>
+  );
+}
+
 function getStatusColor(status: string) {
   return PROPERTY_STATUSES.find((s) => s.value === status)?.color ?? "bg-text-muted";
 }
@@ -765,7 +784,10 @@ export function PropiedadesClient({
             >
               <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-text">{p.address}</p>
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <p className="truncate font-medium text-text">{p.address}</p>
+                    {p.source === "manual" && <ManualChip />}
+                  </div>
                   <p className="mt-0.5 truncate text-xs text-text-muted">
                     {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
                   </p>
@@ -820,7 +842,10 @@ export function PropiedadesClient({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-text">{p.address}</p>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <p className="truncate font-medium text-text">{p.address}</p>
+                      {p.source === "manual" && <ManualChip />}
+                    </div>
                     <p className="mt-0.5 truncate text-xs text-text-muted">
                       {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
                     </p>
@@ -901,7 +926,10 @@ export function PropiedadesClient({
                     className="cursor-pointer border-b border-border/50 transition-colors last:border-b-0 hover:bg-surface/50"
                   >
                     <td className="px-5 py-3.5">
-                      <p className="font-medium text-text">{p.address}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-medium text-text">{p.address}</p>
+                        {p.source === "manual" && <ManualChip />}
+                      </div>
                       <p className="text-xs text-text-muted">{p.publicationTitle ?? p.realAddress ?? "Sin título"}</p>
                     </td>
                     <td className="px-5 py-3.5 text-text-muted">{p.referenceCode ?? (p.tokkoId ? `#${p.tokkoId}` : "—")}</td>
@@ -1028,8 +1056,9 @@ export function PropiedadesClient({
 
               {/* Header fijo */}
               <div className="flex flex-shrink-0 items-center justify-between border-b border-border-olive/40 px-5 py-4">
-                <h2 className="text-base font-medium text-text">
+                <h2 className="flex items-center gap-2 text-base font-medium text-text">
                   {isEdit ? "Editar propiedad" : "Nueva propiedad"}
+                  {isEdit && editProperty?.source === "manual" && <ManualChip />}
                 </h2>
                 <button
                   onClick={handleClose}

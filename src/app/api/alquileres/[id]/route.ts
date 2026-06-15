@@ -8,6 +8,7 @@ import {
   contractInclude,
   getContractOrThrow,
 } from "@/lib/api/rentals";
+import { serializeContract } from "@/app/(protected)/alquileres/_components/serialize";
 
 export const GET = withHandler(async (request: NextRequest, context) => {
   const path = request.nextUrl.pathname;
@@ -15,7 +16,7 @@ export const GET = withHandler(async (request: NextRequest, context) => {
   const { id } = await context!.params;
 
   const contract = await getContractOrThrow(id);
-  return ok(contract, "Contrato obtenido correctamente", path);
+  return ok(serializeContract(contract), "Contrato obtenido correctamente", path);
 });
 
 export const PATCH = withHandler(async (request: NextRequest, context) => {

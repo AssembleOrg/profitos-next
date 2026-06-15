@@ -32,7 +32,7 @@ export const POST = withHandler(async (request: NextRequest) => {
   const { userId } = await getAuthContext();
   const body = await request.json();
 
-  const { title, description, date, startTime, endTime, type, propertyId, clientId } = body as {
+  const { title, description, date, startTime, endTime, type, propertyId, clientId, attachments } = body as {
     title?: string;
     description?: string;
     date?: string;
@@ -41,6 +41,7 @@ export const POST = withHandler(async (request: NextRequest) => {
     type?: string;
     propertyId?: string;
     clientId?: string;
+    attachments?: unknown[];
   };
 
   if (!title) throw new AppError(400, "El campo 'title' es obligatorio");
@@ -81,6 +82,7 @@ export const POST = withHandler(async (request: NextRequest) => {
       type: type ?? "visita",
       propertyId: propertyId ?? null,
       clientId: clientId ?? null,
+      ...(Array.isArray(attachments) && { attachments: attachments as never }),
       googleEventId,
       userId,
     },

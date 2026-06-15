@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth/session";
 import type { Prisma } from "@/generated/prisma/client";
 import { AlquileresClient } from "./_components/alquileres-client";
 import { serializeContract } from "./_components/serialize";
+import { summarizeDueDates } from "@/lib/rentals";
+import type { CobrosContractHeader, RentalDueSummary, SerializedContract } from "./_components/types";
 
 const PAGE_SIZE = 20;
 
@@ -70,14 +72,10 @@ export default async function AlquileresPage({ searchParams }: Readonly<Props>) 
     },
   } satisfies Prisma.RentalContractInclude;
 
-  const [contracts, total, properties, tenants, additionals] = await Promise.all([
-    prisma.rentalContract.findMany({
-      where,
-      include,
-      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
+  const orderBy = [{ updatedAt: "desc" as const }, { createdAt: "desc" as const }];
+  const skip = (page - 1) * limit;
+
+  const [total, properties, tenants, additionals] = await Promise.all([
     prisma.rentalContract.count({ where }),
     prisma.property.findMany({
       select: { id: true, address: true, city: true, zone: true, coverImageUrl: true },
@@ -95,11 +93,60 @@ export default async function AlquileresPage({ searchParams }: Readonly<Props>) 
     }),
   ]);
 
-  const serialized = contracts.map(serializeContract);
+  // Pestaña Cobros: solo cabeceras livianas con resumen (las cuotas se traen
+  // al expandir cada contrato vía GET /api/alquileres/[id]).
+  let serialized: SerializedContract[] = [];
+  let cobrosHeaders: CobrosContractHeader[] = [];
+  let kpis: RentalDueSummary | undefined;
+
+  if (tab === "cobros") {
+    const lite = await prisma.rentalContract.findMany({
+      where,
+      select: {
+        id: true,
+        title: true,
+        gracePeriodDays: true,
+        property: { select: { address: true } },
+        tenant: { select: { fullName: true } },
+        dueDates: {
+          select: {
+            dueDate: true,
+            status: true,
+            expectedAmount: true,
+            transactions: { select: { amountPaid: true, commissionAmount: true, ownerAmount: true } },
+          },
+        },
+      },
+      orderBy,
+      skip,
+      take: limit,
+    });
+
+    cobrosHeaders = lite.map((c) => ({
+      id: c.id,
+      propertyAddress: c.property.address,
+      tenantName: c.tenant.fullName,
+      title: c.title,
+      dueCount: c.dueDates.length,
+      summary: summarizeDueDates(c.dueDates, c.gracePeriodDays),
+    }));
+    kpis = summarizeDueDates(lite.flatMap((c) => c.dueDates), 0);
+  } else {
+    const contracts = await prisma.rentalContract.findMany({
+      where,
+      include,
+      orderBy,
+      skip,
+      take: limit,
+    });
+    serialized = contracts.map(serializeContract);
+  }
 
   return (
     <AlquileresClient
       initialContracts={serialized}
+      cobrosHeaders={cobrosHeaders}
+      kpis={kpis}
       page={page}
       totalPages={Math.max(1, Math.ceil(total / limit))}
       total={total}

@@ -41,6 +41,7 @@ export const POST = withHandler(async (request: NextRequest, context) => {
     scheduledDate,
     scheduledTime,
     metadata,
+    attachments,
   } = body as {
     type?: string;
     description?: string;
@@ -49,21 +50,27 @@ export const POST = withHandler(async (request: NextRequest, context) => {
     scheduledDate?: string;
     scheduledTime?: string;
     metadata?: unknown;
+    attachments?: unknown[];
   };
 
-  if (!description) throw new AppError(400, "El campo 'description' es obligatorio");
+  const cleanDescription = description?.trim() ?? "";
+  const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+  if (!cleanDescription && !hasAttachments) {
+    throw new AppError(400, "La acción no puede estar vacía (texto o adjuntos)");
+  }
   const parsedMetadata = metadata === undefined || metadata === null ? undefined : metadata;
 
   const action = await prisma.followUpAction.create({
     data: {
       followUpId: id,
       type: type ?? "nota",
-      description,
+      description: cleanDescription,
       actionAt: actionAt ? new Date(actionAt) : new Date(),
       shownToName: shownToName ?? null,
       scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
       scheduledTime: scheduledTime ?? null,
       ...(parsedMetadata !== undefined && { metadata: parsedMetadata as never }),
+      ...(hasAttachments && { attachments: attachments as never }),
       createdByUserId: auth.userId,
     },
     include: {

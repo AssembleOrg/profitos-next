@@ -126,6 +126,7 @@ model Client {
   phone     String?
   email     String?
   notes     String?
+  attachments Json?
   userId    String   @map("user_id")
   user      User     @relation(fields: [userId], references: [id])
   visitas   Visit[]
@@ -139,6 +140,7 @@ model Visit {
   id              String    @id @default(cuid())
   title           String
   description     String?
+  attachments     Json?
   date            DateTime
   startTime       String    @map("start_time")
   endTime         String    @map("end_time")
@@ -186,6 +188,7 @@ model FollowUpAction {
   scheduledDate   DateTime?        @map("scheduled_date")
   scheduledTime   String?          @map("scheduled_time")
   metadata        Json?
+  attachments     Json?
   createdByUserId String           @map("created_by_user_id")
   createdByUser   User             @relation("FollowUpActionCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
   createdAt       DateTime         @default(now()) @map("created_at")
@@ -245,6 +248,7 @@ model ContactFollowUpAction {
   type            String          @default("nota")
   description     String
   audioUrl        String?         @map("audio_url")
+  attachments     Json?
   actionAt        DateTime        @map("action_at")
   createdByUserId String?         @map("created_by_user_id")
   createdByUser   User?           @relation("ContactFollowUpActionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
@@ -421,6 +425,7 @@ model Tenant {
   phone       String?
   email       String?
   notes       String?
+  attachments Json?
   contracts   RentalContract[]
   createdAt   DateTime         @default(now()) @map("created_at")
   updatedAt   DateTime         @updatedAt @map("updated_at")
@@ -457,6 +462,7 @@ model RentalContract {
   firstDueDate    DateTime                   @map("first_due_date") @db.Date
   gracePeriodDays Int                        @default(0) @map("grace_period_days")
   notes           String?
+  attachments     Json?
   createdByUserId String                     @map("created_by_user_id")
   createdByUser   User                       @relation("RentalContractCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
   additionals     RentalContractAdditional[]

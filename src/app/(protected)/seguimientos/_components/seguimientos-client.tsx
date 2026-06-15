@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
 import { formatDate as formatDateLib, formatDateTime as formatDateTimeLib } from "@/lib/datetime";
+import { MediaUploader, AttachmentPreview, type NoteAttachment } from "@/components/notes/media-uploader";
+import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
 
 interface UserOption {
   id: string;
@@ -43,6 +45,7 @@ interface FollowUpAction {
   shownToName: string | null;
   scheduledDate: string | null;
   scheduledTime: string | null;
+  attachments: NoteAttachment[] | null;
   createdAt: string;
   createdByUser: UserOption;
 }
@@ -124,6 +127,24 @@ export function SeguimientosClient({
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [savingFollowUp, setSavingFollowUp] = useState(false);
   const [savingAction, setSavingAction] = useState(false);
+  const [actionAttachments, setActionAttachments] = useState<NoteAttachment[]>([]);
+  const actionDescriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  function appendActionTranscription(text: string) {
+    const el = actionDescriptionRef.current;
+    if (!el) return;
+    el.value = el.value.trim() ? `${el.value.trim()}\n${text}` : text;
+  }
+
+  const actionAttachmentPaths = useMemo(() => {
+    const paths: string[] = [];
+    for (const a of detail?.actions ?? []) {
+      if (Array.isArray(a.attachments)) for (const att of a.attachments) paths.push(att.path);
+    }
+    for (const att of actionAttachments) paths.push(att.path);
+    return paths;
+  }, [detail?.actions, actionAttachments]);
+  const actionSignedUrls = useNoteSignedUrls(actionAttachmentPaths);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -239,7 +260,8 @@ export function SeguimientosClient({
     if (!selectedId) return;
     setSavingAction(true);
 
-    const form = new FormData(e.currentTarget);
+    const formEl = e.currentTarget;
+    const form = new FormData(formEl);
     const body = {
       type: form.get("type") || "nota",
       description: form.get("description"),
@@ -247,6 +269,7 @@ export function SeguimientosClient({
       shownToName: form.get("shownToName") || null,
       scheduledDate: form.get("scheduledDate") || null,
       scheduledTime: form.get("scheduledTime") || null,
+      attachments: actionAttachments,
     };
 
     try {
@@ -261,7 +284,8 @@ export function SeguimientosClient({
         return;
       }
       toast.success("Acción registrada");
-      (e.target as HTMLFormElement).reset();
+      formEl.reset();
+      setActionAttachments([]);
       await loadDetail(selectedId);
       router.refresh();
     } catch {
@@ -574,7 +598,18 @@ export function SeguimientosClient({
                           <input name="shownToName" placeholder="Mostrado a..." className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
                         </div>
 
-                        <textarea name="description" required rows={3} placeholder="Detalle de la acción realizada..." className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+                        <textarea ref={actionDescriptionRef} name="description" rows={3} placeholder="Detalle de la acción realizada..." className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+
+                        <div className="rounded-lg border border-border bg-bg px-3 py-2.5">
+                          <p className="mb-2 text-xs text-text-muted">Audio / adjuntos (el audio se transcribe al texto)</p>
+                          <MediaUploader
+                            attachments={actionAttachments}
+                            onChange={setActionAttachments}
+                            signedUrls={actionSignedUrls}
+                            transcribe
+                            onTranscription={appendActionTranscription}
+                          />
+                        </div>
 
                         <div className="grid grid-cols-3 gap-3">
                           <input name="actionAt" type="datetime-local" className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]" />
@@ -604,7 +639,14 @@ export function SeguimientosClient({
                                   {formatDateTime(action.actionAt)}
                                 </span>
                               </div>
-                              <p className="text-sm text-text">{action.description}</p>
+                              {action.description && <p className="text-sm text-text">{action.description}</p>}
+                              {Array.isArray(action.attachments) && action.attachments.length > 0 && (
+                                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                  {action.attachments.map((att) => (
+                                    <AttachmentPreview key={att.path} attachment={att} url={actionSignedUrls[att.path]} />
+                                  ))}
+                                </div>
+                              )}
                               <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-text-muted">
                                 {action.shownToName && <span>Mostrado a: {action.shownToName}</span>}
                                 {action.scheduledDate && (

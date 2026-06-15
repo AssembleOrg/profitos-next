@@ -52,6 +52,8 @@ export async function CobrosMesCard({
         dueDate: d.dueDate,
         status: d.status,
         gracePeriodDays: d.contract.gracePeriodDays,
+        expectedAmount: d.expectedAmount,
+        collected: d.transactions.reduce((acc, t) => acc + t.amountPaid, 0),
       });
       return { d, effective };
     })

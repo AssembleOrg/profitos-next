@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/session";
 import type { Prisma } from "@/generated/prisma/client";
 import { InquilinosClient } from "./_components/inquilinos-client";
+import type { NoteAttachment } from "@/components/notes/media-uploader";
 
 const PAGE_SIZE = 20;
 
@@ -50,6 +51,7 @@ export default async function InquilinosPage({ searchParams }: Readonly<Props>) 
         phone: t.phone,
         email: t.email,
         notes: t.notes,
+        attachments: (t.attachments as NoteAttachment[] | null) ?? null,
         contractsCount: t._count.contracts,
         createdAt: t.createdAt.toISOString(),
       }))}

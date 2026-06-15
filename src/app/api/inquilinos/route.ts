@@ -48,6 +48,7 @@ export const POST = withHandler(async (request: NextRequest) => {
     phone,
     email,
     notes,
+    attachments,
   } = body as {
     fullName?: string;
     idType?: string;
@@ -55,6 +56,7 @@ export const POST = withHandler(async (request: NextRequest) => {
     phone?: string;
     email?: string;
     notes?: string;
+    attachments?: unknown[];
   };
 
   if (!fullName?.trim()) throw new AppError(400, "El nombre completo es obligatorio");
@@ -69,6 +71,7 @@ export const POST = withHandler(async (request: NextRequest) => {
       phone: phone?.trim() || null,
       email: email?.trim() || null,
       notes: notes?.trim() || null,
+      ...(Array.isArray(attachments) && { attachments: attachments as never }),
     },
   });
 

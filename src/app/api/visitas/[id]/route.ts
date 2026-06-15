@@ -26,6 +26,7 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
 
   const body = await request.json();
   const { title, description, date, startTime, endTime, type, propertyId, clientId } = body as Record<string, string | undefined>;
+  const attachments = (body as { attachments?: unknown[] }).attachments;
 
   const visit = await prisma.visit.update({
     where: { id },
@@ -38,6 +39,7 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
       ...(type !== undefined && { type }),
       ...(propertyId !== undefined && { propertyId }),
       ...(clientId !== undefined && { clientId }),
+      ...(Array.isArray(attachments) && { attachments: attachments as never }),
     },
   });
 

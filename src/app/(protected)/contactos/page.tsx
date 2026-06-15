@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { ContactosClient } from "./_components/contactos-client";
+import type { NoteAttachment } from "@/components/notes/media-uploader";
 import { Prisma } from "@/generated/prisma/client";
 
 const PAGE_SIZE = 20;
@@ -69,6 +70,7 @@ export default async function ContactosPage({ searchParams }: Props) {
       phone: c.phone,
       email: c.email,
       notes: c.notes,
+      attachments: (c.attachments as NoteAttachment[] | null) ?? null,
       createdAt: c.createdAt.toISOString(),
       _count: c._count,
     }));

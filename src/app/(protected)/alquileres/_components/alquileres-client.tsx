@@ -18,7 +18,9 @@ import {
 import { ContractWizard } from "./contract-wizard";
 import { DueDetailModal } from "./due-detail-modal";
 import type {
+  CobrosContractHeader,
   RentalAdditionalCatalogItem,
+  RentalDueSummary,
   RentalProperty,
   RentalTenant,
   SerializedContract,
@@ -27,6 +29,8 @@ import type {
 
 interface AlquileresClientProps {
   initialContracts: SerializedContract[];
+  cobrosHeaders?: CobrosContractHeader[];
+  kpis?: RentalDueSummary;
   page: number;
   totalPages: number;
   total: number;
@@ -42,6 +46,8 @@ interface AlquileresClientProps {
 
 export function AlquileresClient({
   initialContracts,
+  cobrosHeaders = [],
+  kpis,
   page,
   totalPages,
   total,
@@ -60,6 +66,7 @@ export function AlquileresClient({
   const [pending, startTransition] = useTransition();
   const [contracts, setContracts] = useState(initialContracts);
   const [tenantList, setTenantList] = useState(tenants);
+  const [propertyList, setPropertyList] = useState(properties);
   const [wizardOpen, setWizardOpen] = useState(false);
 
   // Detail modal state
@@ -67,7 +74,31 @@ export function AlquileresClient({
   const [activeContract, setActiveContract] = useState<SerializedContract | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
+  // Lazy-load de cuotas por contrato (pestaña Cobros).
+  const [loadedContracts, setLoadedContracts] = useState<Record<string, SerializedContract>>({});
+  const [loadingContractIds, setLoadingContractIds] = useState<Set<string>>(new Set());
+
+  async function loadContractDetail(id: string) {
+    if (loadedContracts[id] || loadingContractIds.has(id)) return;
+    setLoadingContractIds((prev) => new Set(prev).add(id));
+    try {
+      const res = await fetch(`/api/alquileres/${id}`, { cache: "no-store" });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.message ?? "No se pudo cargar el contrato");
+      setLoadedContracts((prev) => ({ ...prev, [id]: body.data as SerializedContract }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al cargar las cuotas");
+    } finally {
+      setLoadingContractIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
+
   const aggregatedKpis = useMemo(() => {
+    if (kpis) return kpis;
     const allDues = contracts.flatMap((c) =>
       c.dueDates.map((d) => ({
         ...d,
@@ -75,7 +106,7 @@ export function AlquileresClient({
       })),
     );
     return summarizeDueDates(allDues, 0);
-  }, [contracts]);
+  }, [contracts, kpis]);
 
   function updateQuery(patch: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -102,12 +133,24 @@ export function AlquileresClient({
           : c,
       ),
     );
+    // Parchear el contrato lazy-cargado (pestaña Cobros).
+    setLoadedContracts((prev) => {
+      const c = prev[next.contractId];
+      if (!c) return prev;
+      return {
+        ...prev,
+        [next.contractId]: { ...c, dueDates: c.dueDates.map((d) => (d.id === next.id ? next : d)) },
+      };
+    });
     setActiveDue(next);
+    // Refrescar los resúmenes/KPIs calculados en el server.
+    router.refresh();
   }
 
   function handleContractCreated(contract: SerializedContract) {
     setContracts((prev) => [contract, ...prev]);
     toast.success(`Contrato creado · ${contract.dueDates.length} cuotas generadas`);
+    router.refresh();
   }
 
   function handleContractDelete(contract: SerializedContract) {
@@ -198,7 +241,10 @@ export function AlquileresClient({
         )
       ) : (
         <CobrosList
-          contracts={contracts}
+          headers={cobrosHeaders}
+          loaded={loadedContracts}
+          loadingIds={loadingContractIds}
+          onExpand={loadContractDetail}
           onOpenDue={openDue}
         />
       )}
@@ -208,11 +254,12 @@ export function AlquileresClient({
       <ContractWizard
         open={wizardOpen}
         onOpenChange={setWizardOpen}
-        properties={properties}
+        properties={propertyList}
         tenants={tenantList}
         additionals={additionalsCatalog}
         onCreated={handleContractCreated}
         onTenantCreated={(t) => setTenantList((prev) => [t, ...prev])}
+        onPropertyCreated={(p) => setPropertyList((prev) => [p, ...prev])}
       />
 
       <DueDetailModal
@@ -273,11 +320,7 @@ function ContractCard({ contract, onOpenDue, onDelete, canDelete }: ContractCard
   const summary = summarizeDueDates(contract.dueDates, contract.gracePeriodDays);
   const completion = summary.expectedTotal > 0 ? (summary.collectedTotal / summary.expectedTotal) * 100 : 0;
   const next = contract.dueDates.find((d) => {
-    const eff = getDueEffectiveStatus({
-      dueDate: d.dueDate,
-      status: d.status,
-      gracePeriodDays: contract.gracePeriodDays,
-    });
+    const eff = dueEffective(d, contract.gracePeriodDays);
     return eff === "esperando" || eff === "vencido" || eff === "parcial";
   });
 
@@ -390,27 +433,45 @@ function ContractCard({ contract, onOpenDue, onDelete, canDelete }: ContractCard
 }
 
 interface CobrosListProps {
-  contracts: SerializedContract[];
+  headers: CobrosContractHeader[];
+  loaded: Record<string, SerializedContract>;
+  loadingIds: Set<string>;
+  onExpand: (id: string) => void;
   onOpenDue: (contract: SerializedContract, due: SerializedDueDate) => void;
 }
 
-function CobrosList({ contracts, onOpenDue }: CobrosListProps) {
-  // Aplanar todos los dueDates con su contract, ordenados por fecha
-  const allDues = contracts
-    .flatMap((c) =>
-      c.dueDates.map((d) => ({
-        contract: c,
-        due: d,
-        effective: getDueEffectiveStatus({
-          dueDate: d.dueDate,
-          status: d.status,
-          gracePeriodDays: c.gracePeriodDays,
-        }),
-      })),
-    )
-    .sort((a, b) => a.due.dueDate.localeCompare(b.due.dueDate));
+function dueCollectedAmount(due: SerializedDueDate): number {
+  return due.transactions.reduce((acc, t) => acc + t.amountPaid, 0);
+}
 
-  if (allDues.length === 0) {
+function dueEffective(due: SerializedDueDate, gracePeriodDays: number): RentalDueEffectiveStatus {
+  return getDueEffectiveStatus({
+    dueDate: due.dueDate,
+    status: due.status,
+    gracePeriodDays,
+    expectedAmount: due.expectedAmount,
+    collected: dueCollectedAmount(due),
+  });
+}
+
+function CobrosList({ headers, loaded, loadingIds, onExpand, onOpenDue }: CobrosListProps) {
+  // Truly lazy: arrancan colapsados; al expandir se trae el detalle del contrato.
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+
+  function toggle(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+        onExpand(id);
+      }
+      return next;
+    });
+  }
+
+  if (headers.length === 0) {
     return (
       <p className="rounded-2xl border border-dashed border-border bg-surface/30 px-6 py-12 text-center text-sm text-text-muted">
         No hay cuotas todavía. Creá un contrato para empezar.
@@ -419,98 +480,186 @@ function CobrosList({ contracts, onOpenDue }: CobrosListProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border">
-      {/* Mobile cards */}
-      <div className="flex flex-col divide-y divide-border/60 sm:hidden">
-        {allDues.map(({ contract, due, effective }) => {
-          const collected = due.transactions.reduce((acc, t) => acc + t.amountPaid, 0);
-          const style = RENTAL_DUE_STATUS_STYLE[effective];
-          return (
+    <div className="flex flex-col gap-2">
+      {headers.map((header) => {
+        const summary = header.summary;
+        const completion =
+          summary.expectedTotal > 0
+            ? Math.round((summary.collectedTotal / summary.expectedTotal) * 100)
+            : 0;
+        const isOpen = expanded.has(header.id);
+        const contract = loaded[header.id];
+        const isLoading = loadingIds.has(header.id);
+        const dues = contract
+          ? [...contract.dueDates].sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+          : [];
+
+        return (
+          <div key={header.id} className="overflow-hidden rounded-2xl border border-border bg-surface/30">
+            {/* Cabecera del contrato (toggle) */}
             <button
-              key={due.id}
               type="button"
-              onClick={() => onOpenDue(contract, due)}
-              className="flex flex-col gap-2 bg-bg/30 px-4 py-3 text-left transition-colors active:bg-surface/40"
+              onClick={() => toggle(header.id)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface/50"
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-mono text-xs text-text">
-                  {formatDate(due.dueDate)}
-                  <span className="ml-1 text-[10px] text-text-faint">#{due.position}</span>
-                </span>
-                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${style.chip}`}>
-                  <span className={`h-1 w-1 rounded-full ${style.dot}`} />
-                  {RENTAL_DUE_STATUS_LABEL[effective]}
-                </span>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`shrink-0 text-text-faint transition-transform ${isOpen ? "rotate-90" : ""}`}
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-1 text-sm font-semibold text-text">{header.propertyAddress}</p>
+                <p className="truncate text-[11px] text-text-faint">
+                  {header.tenantName}
+                  {header.title ? ` · ${header.title}` : ""}
+                </p>
               </div>
-              <p className="line-clamp-1 text-sm text-text">{contract.property.address}</p>
-              <p className="text-xs text-text-muted">{contract.tenant.fullName}</p>
-              <div className="flex items-center gap-4">
-                <span className="text-[11px] text-text-muted">
-                  Esperado: <span className="font-mono text-text">{formatARS(due.expectedAmount)}</span>
-                </span>
-                <span className="text-[11px] text-text-muted">
-                  Cobrado: <span className="font-mono text-emerald-300">{formatARS(collected)}</span>
-                </span>
+              <div className="hidden flex-wrap items-center justify-end gap-1 lg:flex">
+                {(Object.keys(summary.counts) as RentalDueEffectiveStatus[])
+                  .filter((k) => summary.counts[k] > 0)
+                  .map((k) => (
+                    <span
+                      key={k}
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] ${RENTAL_DUE_STATUS_STYLE[k].chip}`}
+                    >
+                      <span className={`h-1 w-1 rounded-full ${RENTAL_DUE_STATUS_STYLE[k].dot}`} />
+                      {RENTAL_DUE_STATUS_LABEL[k]} · {summary.counts[k]}
+                    </span>
+                  ))}
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="font-mono text-xs">
+                  <span className="text-emerald-300">{formatARS(summary.collectedTotal)}</span>
+                  <span className="text-text-faint"> / {formatARS(summary.expectedTotal)}</span>
+                </p>
+                <p className="text-[10px] text-text-faint">{completion}% cobrado</p>
               </div>
             </button>
-          );
-        })}
-      </div>
 
-      {/* Desktop table */}
-      <table className="hidden w-full text-sm sm:table">
-        <thead className="bg-surface/40 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-          <tr>
-            <th className="px-4 py-2.5 text-left">Vencimiento</th>
-            <th className="px-4 py-2.5 text-left">Propiedad</th>
-            <th className="hidden px-4 py-2.5 text-left md:table-cell">Inquilino</th>
-            <th className="px-4 py-2.5 text-right">Esperado</th>
-            <th className="px-4 py-2.5 text-right">Cobrado</th>
-            <th className="px-4 py-2.5 text-left">Estado</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border/60 bg-bg/30">
-          {allDues.map(({ contract, due, effective }) => {
-            const collected = due.transactions.reduce((acc, t) => acc + t.amountPaid, 0);
-            const style = RENTAL_DUE_STATUS_STYLE[effective];
-            return (
-              <tr
-                key={due.id}
-                onClick={() => onOpenDue(contract, due)}
-                className="cursor-pointer transition-colors hover:bg-surface/40"
-              >
-                <td className="px-4 py-2.5 font-mono text-xs text-text">
-                  {formatDate(due.dueDate)}
-                  <span className="ml-1 text-[10px] text-text-faint">#{due.position}</span>
-                </td>
-                <td className="px-4 py-2.5 text-text">
-                  <p className="line-clamp-1">{contract.property.address}</p>
-                  {contract.title && (
-                    <p className="text-[11px] text-text-faint">{contract.title}</p>
+            {/* Cuotas del contrato (se cargan al expandir) */}
+            <AnimatePresence initial={false}>
+              {isOpen && (
+                <motion.div
+                  key="body"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  className="overflow-hidden border-t border-border/60"
+                >
+                  {!contract ? (
+                    <div className="flex items-center justify-center gap-2 px-4 py-6 text-xs text-text-muted">
+                      {isLoading ? (
+                        <>
+                          <span className="h-3 w-3 animate-spin rounded-full border-2 border-olive-bright border-t-transparent" />
+                          Cargando cuotas…
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onExpand(header.id)}
+                          className="rounded-lg border border-border px-3 py-1.5 text-text-muted hover:text-text"
+                        >
+                          No se pudieron cargar. Reintentar
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                  <>
+                  {/* Mobile cards */}
+                  <div className="flex flex-col divide-y divide-border/60 sm:hidden">
+                    {dues.map((due) => {
+                      const collected = dueCollectedAmount(due);
+                      const effective = dueEffective(due, contract.gracePeriodDays);
+                      const style = RENTAL_DUE_STATUS_STYLE[effective];
+                      return (
+                        <button
+                          key={due.id}
+                          type="button"
+                          onClick={() => onOpenDue(contract, due)}
+                          className="flex flex-col gap-2 bg-bg/30 px-4 py-3 text-left transition-colors active:bg-surface/40"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono text-xs text-text">
+                              {formatDate(due.dueDate)}
+                              <span className="ml-1 text-[10px] text-text-faint">#{due.position}</span>
+                            </span>
+                            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${style.chip}`}>
+                              <span className={`h-1 w-1 rounded-full ${style.dot}`} />
+                              {RENTAL_DUE_STATUS_LABEL[effective]}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-[11px] text-text-muted">
+                              Esperado: <span className="font-mono text-text">{formatARS(due.expectedAmount)}</span>
+                            </span>
+                            <span className="text-[11px] text-text-muted">
+                              Cobrado: <span className="font-mono text-emerald-300">{formatARS(collected)}</span>
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop table */}
+                  <table className="hidden w-full text-sm sm:table">
+                    <thead className="bg-surface/40 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+                      <tr>
+                        <th className="px-4 py-2.5 text-left">Vencimiento</th>
+                        <th className="px-4 py-2.5 text-right">Esperado</th>
+                        <th className="px-4 py-2.5 text-right">Cobrado</th>
+                        <th className="px-4 py-2.5 text-left">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60 bg-bg/30">
+                      {dues.map((due) => {
+                        const collected = dueCollectedAmount(due);
+                        const effective = dueEffective(due, contract.gracePeriodDays);
+                        const style = RENTAL_DUE_STATUS_STYLE[effective];
+                        return (
+                          <tr
+                            key={due.id}
+                            onClick={() => onOpenDue(contract, due)}
+                            className="cursor-pointer transition-colors hover:bg-surface/40"
+                          >
+                            <td className="px-4 py-2.5 font-mono text-xs text-text">
+                              {formatDate(due.dueDate)}
+                              <span className="ml-1 text-[10px] text-text-faint">#{due.position}</span>
+                            </td>
+                            <td className="px-4 py-2.5 text-right font-mono text-xs text-text">
+                              {formatARS(due.expectedAmount)}
+                            </td>
+                            <td className="px-4 py-2.5 text-right font-mono text-xs text-emerald-300">
+                              {formatARS(collected)}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${style.chip}`}>
+                                <span className={`h-1 w-1 rounded-full ${style.dot}`} />
+                                {RENTAL_DUE_STATUS_LABEL[effective]}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  </>
                   )}
-                </td>
-                <td className="hidden px-4 py-2.5 text-xs text-text-muted md:table-cell">
-                  {contract.tenant.fullName}
-                </td>
-                <td className="px-4 py-2.5 text-right font-mono text-xs text-text">
-                  {formatARS(due.expectedAmount)}
-                </td>
-                <td className="px-4 py-2.5 text-right font-mono text-xs text-emerald-300">
-                  {formatARS(collected)}
-                </td>
-                <td className="px-4 py-2.5">
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${style.chip}`}
-                  >
-                    <span className={`h-1 w-1 rounded-full ${style.dot}`} />
-                    {RENTAL_DUE_STATUS_LABEL[effective]}
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        );
+      })}
     </div>
   );
 }

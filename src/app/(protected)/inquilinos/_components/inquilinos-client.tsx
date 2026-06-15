@@ -6,6 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Pagination } from "../../_components/pagination";
+import { WhatsAppLink } from "@/components/whatsapp-link";
+import { MediaUploader, type NoteAttachment } from "@/components/notes/media-uploader";
+import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
 
 export interface SerializedTenant {
   id: string;
@@ -15,6 +18,7 @@ export interface SerializedTenant {
   phone: string | null;
   email: string | null;
   notes: string | null;
+  attachments: NoteAttachment[] | null;
   contractsCount: number;
   createdAt: string;
 }
@@ -140,7 +144,14 @@ export function InquilinosClient({
                   </div>
                   {(t.phone || t.email) && (
                     <div className="flex flex-col gap-0.5">
-                      {t.phone && <span className="text-xs text-text-muted">{t.phone}</span>}
+                      {t.phone && (
+                        <WhatsAppLink
+                          phone={t.phone}
+                          className="flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-green-500"
+                        >
+                          {t.phone}
+                        </WhatsAppLink>
+                      )}
                       {t.email && <span className="text-xs text-text-faint">{t.email}</span>}
                     </div>
                   )}
@@ -199,7 +210,14 @@ export function InquilinosClient({
                     </td>
                     <td className="hidden px-4 py-2.5 text-xs text-text-muted md:table-cell">
                       <div className="flex flex-col">
-                        {t.phone && <span>{t.phone}</span>}
+                        {t.phone && (
+                          <WhatsAppLink
+                            phone={t.phone}
+                            className="flex items-center gap-1.5 transition-colors hover:text-green-500"
+                          >
+                            {t.phone}
+                          </WhatsAppLink>
+                        )}
                         {t.email && <span className="text-text-faint">{t.email}</span>}
                         {!t.phone && !t.email && <span className="text-text-faint">—</span>}
                       </div>
@@ -275,7 +293,9 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
+  const [attachments, setAttachments] = useState<NoteAttachment[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const signedUrls = useNoteSignedUrls(attachments.map((a) => a.path));
 
   // Sync form when opening/editing
   if (open && editing && editing.id !== "__internal_synced__") {
@@ -300,6 +320,7 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
         phone: phone.trim() || null,
         email: email.trim() || null,
         notes: notes.trim() || null,
+        attachments,
       };
       const res = await fetch(editing ? `/api/inquilinos/${editing.id}` : "/api/inquilinos", {
         method: editing ? "PATCH" : "POST",
@@ -316,6 +337,7 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
         phone: body.data.phone,
         email: body.data.email,
         notes: body.data.notes,
+        attachments: body.data.attachments ?? null,
         contractsCount: editing?.contractsCount ?? 0,
         createdAt: body.data.createdAt,
       };
@@ -340,6 +362,7 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
           setPhone(editing?.phone ?? "");
           setEmail(editing?.email ?? "");
           setNotes(editing?.notes ?? "");
+          setAttachments(editing?.attachments ?? []);
         }
         onOpenChange(next);
       }}
@@ -457,6 +480,13 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
                         onChange={(e) => setNotes(e.target.value)}
                         className="w-full resize-none rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
                       />
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                        Audio / adjuntos <span className="text-text-faint">(opcional)</span>
+                      </label>
+                      <MediaUploader attachments={attachments} onChange={setAttachments} signedUrls={signedUrls} />
                     </div>
                   </div>
                 </div>
