@@ -6,7 +6,7 @@ import { getAuthContext } from "@/lib/api/auth";
 import { getAccountReport, type MovementFilters } from "@/lib/account/server";
 import { validateEntry, type EntryBody } from "@/lib/account/validate";
 import { isCurrency, isEntryType, type Currency, type MovementSource } from "@/lib/account";
-import { createCostearExpense, isCostearOwner } from "@/lib/costear/client";
+import { createCostearExpense, getCostearPhoneForEmail } from "@/lib/costear/client";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -43,7 +43,7 @@ export const GET = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
   const auth = await getAuthContext();
   const report = await getAccountReport(parseFilters(request.nextUrl.searchParams), {
-    includeCostear: isCostearOwner(auth.email),
+    costearPhone: getCostearPhoneForEmail(auth.email),
   });
   return ok(report, "Estado de cuenta obtenido correctamente", path);
 });
@@ -71,7 +71,8 @@ export const POST = withHandler(async (request: NextRequest) => {
 
   // ── Gasto personal → Costear (no se persiste en profitos) ──
   if (raw.personal === true) {
-    if (!isCostearOwner(auth.email)) {
+    const phone = getCostearPhoneForEmail(auth.email);
+    if (!phone) {
       throw new AppError(403, "No autorizado para crear gastos personales de Costear");
     }
     const amount = Number(raw.amount);
@@ -81,7 +82,7 @@ export const POST = withHandler(async (request: NextRequest) => {
     const title = raw.description?.trim();
     if (!title) throw new AppError(400, "Ingresá una descripción para el gasto");
 
-    const expense = await createCostearExpense({
+    const expense = await createCostearExpense(phone, {
       title,
       amountMinor: Math.round(amount * 100),
       currency: raw.currency,

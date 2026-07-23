@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { withHandler, AppError } from "@/lib/api/handler";
 import { ok } from "@/lib/api/response";
 import { getAuthContext } from "@/lib/api/auth";
-import { extractCostear, isCostearOwner } from "@/lib/costear/client";
+import { extractCostear, getCostearPhoneForEmail } from "@/lib/costear/client";
 
 const MAX_BYTES = 25 * 1024 * 1024; // 25 MiB (límite de Costear)
 
@@ -14,7 +14,8 @@ const MAX_BYTES = 25 * 1024 * 1024; // 25 MiB (límite de Costear)
 export const POST = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
   const auth = await getAuthContext();
-  if (!isCostearOwner(auth.email)) {
+  const phone = getCostearPhoneForEmail(auth.email);
+  if (!phone) {
     throw new AppError(403, "No autorizado para usar la extracción de Costear");
   }
 
@@ -32,7 +33,7 @@ export const POST = withHandler(async (request: NextRequest) => {
       const isAudio = file.type.startsWith("audio/");
       if (!isImage && !isAudio) throw new AppError(400, "Solo se aceptan imágenes o audios");
 
-      result = await extractCostear({
+      result = await extractCostear(phone, {
         kind: isImage ? "photo" : "audio",
         file,
         filename: file.name || (isImage ? "imagen" : "audio"),
@@ -41,7 +42,7 @@ export const POST = withHandler(async (request: NextRequest) => {
       const body = (await request.json().catch(() => ({}))) as { text?: string };
       const text = body.text?.trim();
       if (!text || text.length < 3) throw new AppError(400, "Ingresá al menos 3 caracteres");
-      result = await extractCostear({ kind: "text", text });
+      result = await extractCostear(phone, { kind: "text", text });
     }
   } catch (err) {
     if (err instanceof AppError) throw err;

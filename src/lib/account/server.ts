@@ -34,10 +34,10 @@ export interface MovementFilters {
 
 export interface ReportOptions {
   /**
-   * Incluir los gastos personales de Costear (solo la dueña, ver isCostearOwner).
-   * Se listan con badge pero no entran en el saldo de la inmobiliaria.
+   * Teléfono de Costear del usuario que consulta. Si viene, se incluyen SUS
+   * gastos personales de Costear (con badge, fuera del saldo de la inmobiliaria).
    */
-  includeCostear?: boolean;
+  costearPhone?: string | null;
 }
 
 function userName(user: { fullName: string | null; email: string } | null): string | null {
@@ -205,9 +205,9 @@ function shouldIncludeCostear(filters: MovementFilters, includeCostear: boolean)
   return true;
 }
 
-async function loadCostear(filters: MovementFilters): Promise<AccountMovement[]> {
+async function loadCostear(phone: string, filters: MovementFilters): Promise<AccountMovement[]> {
   try {
-    const expenses = await fetchCostearExpenses({
+    const expenses = await fetchCostearExpenses(phone, {
       from: filters.from,
       to: filters.to,
       currency: filters.currency,
@@ -229,8 +229,9 @@ export async function getMovements(
   filters: MovementFilters,
   options: ReportOptions = {}
 ): Promise<AccountMovement[]> {
+  const phone = options.costearPhone ?? null;
   const includeRental = shouldIncludeRental(filters);
-  const includeCostear = shouldIncludeCostear(filters, options.includeCostear ?? false);
+  const includeCostear = Boolean(phone) && shouldIncludeCostear(filters, true);
   const onlyCostear = filters.source === "costear";
 
   const [manual, rental, costear] = await Promise.all([
@@ -248,7 +249,7 @@ export async function getMovements(
           orderBy: [{ paidAt: "desc" }],
         })
       : Promise.resolve([]),
-    includeCostear ? loadCostear(filters) : Promise.resolve([]),
+    includeCostear && phone ? loadCostear(phone, filters) : Promise.resolve([]),
   ]);
 
   return [...manual.map(mapManual), ...rental.map(mapRental), ...costear];

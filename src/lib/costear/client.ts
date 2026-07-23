@@ -1,15 +1,15 @@
 // ────────────────────────────────────────────────────────────────────
 // Cliente de la API de Costear (backend NestJS externo).
-// Juliana es clienta de Costear; acá se leen/crean SUS gastos personales
-// vía la "API" que se le vendió, para verlos dentro de profitos sin
-// duplicar datos (cada gasto vive en un solo lugar).
+// Cada usuario habilitado (mapa email→teléfono en COSTEAR_USERS) lee/crea
+// SUS propios gastos personales de Costear dentro de profitos, sin duplicar
+// datos (cada gasto vive en un solo lugar).
 //
 // Auth M2M: POST /bot/token con header X-Bot-Secret + { phone } devuelve
-// un JWT de usuario (Bearer, TTL ~30d). Se cachea en memoria y se refresca
-// solo cuando expira o si un request devuelve 401.
+// un JWT del usuario dueño de ese teléfono (Bearer, TTL ~30d). Se cachea en
+// memoria POR TELÉFONO y se refresca al expirar o ante un 401.
 //
 // Lectura en vivo: no se persiste nada en la DB de profitos.
-// Acceso restringido al email COSTEAR_OWNER_EMAIL (ver isCostearOwner).
+// Acceso restringido a los emails con teléfono mapeado (ver getCostearPhoneForEmail).
 // ────────────────────────────────────────────────────────────────────
 
 import { randomUUID } from "node:crypto";
@@ -77,28 +77,71 @@ export interface ExpenseFilters {
   currency?: string;
 }
 
-// Cache de token en memoria del proceso (sobrevive entre requests).
+// Cache de tokens en memoria del proceso, POR TELÉFONO (cada usuario de
+// Costear tiene su propio JWT). Sobrevive entre requests.
 const g = globalThis as {
-  _costearToken?: { value: string; expiresAt: number };
+  _costearTokens?: Map<string, { value: string; expiresAt: number }>;
 };
+function tokenCache(): Map<string, { value: string; expiresAt: number }> {
+  g._costearTokens ??= new Map();
+  return g._costearTokens;
+}
 
 // Refrescar el token un poco antes de que expire de verdad.
 const TOKEN_SKEW_MS = 60 * 1000;
 const PAGE_LIMIT = 100;
 const MAX_PAGES = 20; // techo defensivo: hasta 2000 gastos por consulta.
 
-function getConfig() {
+function getBaseConfig() {
   const base = process.env.COSTEAR_API_URL;
   const secret = process.env.COSTEAR_BOT_SECRET;
-  const phone = process.env.COSTEAR_USER_PHONE;
   if (!base) throw new Error("Falta COSTEAR_API_URL en variables de entorno");
   if (!secret) throw new Error("Falta COSTEAR_BOT_SECRET en variables de entorno");
-  if (!phone) throw new Error("Falta COSTEAR_USER_PHONE en variables de entorno");
-  return { base: base.replace(/\/+$/, ""), secret, phone };
+  return { base: base.replace(/\/+$/, ""), secret };
 }
 
-async function mintToken(): Promise<string> {
-  const { base, secret, phone } = getConfig();
+/**
+ * Registro de usuarios de Costear: mapa email→teléfono. Cada usuario de
+ * profitos con entrada acá ve/crea SUS propios gastos de Costear.
+ *
+ * Fuentes de env (se combinan):
+ *  - COSTEAR_USERS: "email:telefono,email:telefono" (coma o punto y coma).
+ *  - Legacy: COSTEAR_OWNER_EMAIL + COSTEAR_USER_PHONE (una sola entrada).
+ */
+function getCostearUsers(): Map<string, string> {
+  const map = new Map<string, string>();
+
+  const raw = process.env.COSTEAR_USERS?.trim();
+  if (raw) {
+    for (const entry of raw.split(/[,;\n]/)) {
+      const trimmed = entry.trim();
+      if (!trimmed) continue;
+      const idx = trimmed.indexOf(":");
+      if (idx < 0) continue;
+      const email = trimmed.slice(0, idx).trim().toLowerCase();
+      const phone = trimmed.slice(idx + 1).trim();
+      if (email && phone) map.set(email, phone);
+    }
+  }
+
+  // Compatibilidad con la config vieja de un solo usuario.
+  const legacyEmail = process.env.COSTEAR_OWNER_EMAIL?.trim().toLowerCase();
+  const legacyPhone = process.env.COSTEAR_USER_PHONE?.trim();
+  if (legacyEmail && legacyPhone && !map.has(legacyEmail)) {
+    map.set(legacyEmail, legacyPhone);
+  }
+
+  return map;
+}
+
+/** Teléfono de Costear para un email de profitos, o null si no está habilitado. */
+export function getCostearPhoneForEmail(email: string | null | undefined): string | null {
+  if (!email) return null;
+  return getCostearUsers().get(email.trim().toLowerCase()) ?? null;
+}
+
+async function mintToken(phone: string): Promise<string> {
+  const { base, secret } = getBaseConfig();
   const res = await fetch(`${base}/bot/token`, {
     method: "POST",
     headers: {
@@ -116,37 +159,38 @@ async function mintToken(): Promise<string> {
   const token = body.data?.accessToken;
   const ttl = body.data?.expiresInSec ?? 0;
   if (!token) throw new Error("Costear /bot/token no devolvió accessToken");
-  g._costearToken = {
+  tokenCache().set(phone, {
     value: token,
     expiresAt: Date.now() + Math.max(0, ttl * 1000 - TOKEN_SKEW_MS),
-  };
+  });
   return token;
 }
 
-async function getToken(forceRefresh = false): Promise<string> {
-  const cached = g._costearToken;
+async function getToken(phone: string, forceRefresh = false): Promise<string> {
+  const cached = tokenCache().get(phone);
   if (!forceRefresh && cached && cached.expiresAt > Date.now()) return cached.value;
-  return mintToken();
+  return mintToken(phone);
+}
+
+/** Ejecuta un fetch autenticado (para `phone`) con reintento único ante 401. */
+async function authedFetch(phone: string, run: (token: string) => Promise<Response>): Promise<Response> {
+  let token = await getToken(phone);
+  let res = await run(token);
+  if (res.status === 401) {
+    token = await getToken(phone, true);
+    res = await run(token);
+  }
+  return res;
 }
 
 /** GET autenticado a Costear con reintento único ante 401 (token vencido). */
-async function costearGet<T>(path: string, params: URLSearchParams): Promise<CostearEnvelope<T>> {
-  const { base } = getConfig();
+async function costearGet<T>(phone: string, path: string, params: URLSearchParams): Promise<CostearEnvelope<T>> {
+  const { base } = getBaseConfig();
   const url = `${base}${path}?${params.toString()}`;
 
-  const doFetch = async (token: string) =>
-    fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
-
-  let token = await getToken();
-  let res = await doFetch(token);
-
-  if (res.status === 401) {
-    token = await getToken(true);
-    res = await doFetch(token);
-  }
+  const res = await authedFetch(phone, (token) =>
+    fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
+  );
 
   if (!res.ok) {
     const text = await res.text();
@@ -164,8 +208,8 @@ function baseParams(filters: ExpenseFilters): URLSearchParams {
   return params;
 }
 
-/** Trae TODOS los gastos del rango, paginando internamente. */
-export async function fetchCostearExpenses(filters: ExpenseFilters): Promise<CostearExpense[]> {
+/** Trae TODOS los gastos del rango (del usuario `phone`), paginando internamente. */
+export async function fetchCostearExpenses(phone: string, filters: ExpenseFilters): Promise<CostearExpense[]> {
   const items: CostearExpense[] = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
     const params = baseParams(filters);
@@ -173,7 +217,7 @@ export async function fetchCostearExpenses(filters: ExpenseFilters): Promise<Cos
     params.set("limit", String(PAGE_LIMIT));
     params.set("sort", "spentAt:desc");
 
-    const body = await costearGet<CostearExpense[]>("/expenses", params);
+    const body = await costearGet<CostearExpense[]>(phone, "/expenses", params);
     const pageItems = Array.isArray(body.data) ? body.data : [];
     items.push(...pageItems);
 
@@ -183,12 +227,12 @@ export async function fetchCostearExpenses(filters: ExpenseFilters): Promise<Cos
   return items;
 }
 
-/** Resumen agregado (total gastado, cantidad, por categoría). */
-export async function fetchCostearSummary(filters: ExpenseFilters): Promise<CostearSummary> {
+/** Resumen agregado (total gastado, cantidad, por categoría) del usuario `phone`. */
+export async function fetchCostearSummary(phone: string, filters: ExpenseFilters): Promise<CostearSummary> {
   const params = baseParams(filters);
   // El summary no pagina.
   params.delete("text");
-  const body = await costearGet<CostearSummary>("/expenses/summary", params);
+  const body = await costearGet<CostearSummary>(phone, "/expenses/summary", params);
   return body.data ?? { spentMinor: 0, count: 0, byCategory: [] };
 }
 
@@ -206,22 +250,11 @@ export interface CreateCostearExpenseInput {
   extractionId?: string | null;
 }
 
-/** Ejecuta un fetch autenticado con reintento único ante 401 (token vencido). */
-async function authedFetch(run: (token: string) => Promise<Response>): Promise<Response> {
-  let token = await getToken();
-  let res = await run(token);
-  if (res.status === 401) {
-    token = await getToken(true);
-    res = await run(token);
-  }
-  return res;
-}
-
 /** Crea un gasto personal en Costear (POST /expenses, requiere Idempotency-Key). */
-export async function createCostearExpense(input: CreateCostearExpenseInput): Promise<CostearExpense> {
-  const { base } = getConfig();
+export async function createCostearExpense(phone: string, input: CreateCostearExpenseInput): Promise<CostearExpense> {
+  const { base } = getBaseConfig();
 
-  const res = await authedFetch((token) =>
+  const res = await authedFetch(phone, (token) =>
     fetch(`${base}/expenses`, {
       method: "POST",
       headers: {
@@ -273,12 +306,13 @@ export interface CostearExtraction {
 }
 
 async function createExtractionFile(
+  phone: string,
   kind: "photo" | "audio",
   file: Blob,
   filename: string
 ): Promise<CostearExtraction> {
-  const { base } = getConfig();
-  const res = await authedFetch((token) => {
+  const { base } = getBaseConfig();
+  const res = await authedFetch(phone, (token) => {
     const form = new FormData();
     form.append("file", file, filename);
     return fetch(`${base}/extractions/${kind}`, {
@@ -296,9 +330,9 @@ async function createExtractionFile(
   return (await res.json() as CostearEnvelope<CostearExtraction>).data;
 }
 
-async function createExtractionText(text: string): Promise<CostearExtraction> {
-  const { base } = getConfig();
-  const res = await authedFetch((token) =>
+async function createExtractionText(phone: string, text: string): Promise<CostearExtraction> {
+  const { base } = getBaseConfig();
+  const res = await authedFetch(phone, (token) =>
     fetch(`${base}/extractions/text`, {
       method: "POST",
       headers: {
@@ -317,9 +351,9 @@ async function createExtractionText(text: string): Promise<CostearExtraction> {
   return (await res.json() as CostearEnvelope<CostearExtraction>).data;
 }
 
-async function waitExtraction(id: string, timeoutMs = 25000): Promise<CostearExtraction> {
-  const { base } = getConfig();
-  const res = await authedFetch((token) =>
+async function waitExtraction(phone: string, id: string, timeoutMs = 25000): Promise<CostearExtraction> {
+  const { base } = getBaseConfig();
+  const res = await authedFetch(phone, (token) =>
     fetch(`${base}/extractions/${id}/wait?timeoutMs=${timeoutMs}`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
@@ -336,40 +370,38 @@ async function waitExtraction(id: string, timeoutMs = 25000): Promise<CostearExt
  * Crea una extracción (foto/audio/texto) y espera hasta el estado terminal,
  * devolviendo el borrador `proposed` para que la dueña lo revise/edite.
  */
-export async function extractCostear(input: {
-  kind: "photo" | "audio" | "text";
-  file?: Blob;
-  filename?: string;
-  text?: string;
-}): Promise<CostearExtraction> {
+export async function extractCostear(
+  phone: string,
+  input: {
+    kind: "photo" | "audio" | "text";
+    file?: Blob;
+    filename?: string;
+    text?: string;
+  }
+): Promise<CostearExtraction> {
   let ext =
     input.kind === "text"
-      ? await createExtractionText(input.text ?? "")
-      : await createExtractionFile(input.kind, input.file!, input.filename ?? "upload");
+      ? await createExtractionText(phone, input.text ?? "")
+      : await createExtractionFile(phone, input.kind, input.file!, input.filename ?? "upload");
 
   // El worker procesa en background: se hace long-poll hasta ~50s.
   for (let i = 0; i < 2 && ext.status === "PROCESSING"; i++) {
-    ext = await waitExtraction(ext.id);
+    ext = await waitExtraction(phone, ext.id);
   }
   return ext;
 }
 
 /**
- * ¿Este email es la dueña de los gastos de Costear? Solo ese usuario
- * ve/crea gastos personales de Costear dentro de profitos.
+ * ¿Este email tiene gastos de Costear habilitados en profitos? (tiene teléfono
+ * mapeado). Solo esos usuarios ven/crean sus gastos personales de Costear.
  */
 export function isCostearOwner(email: string | null | undefined): boolean {
-  const owner = process.env.COSTEAR_OWNER_EMAIL?.trim().toLowerCase();
-  if (!owner || !email) return false;
-  return email.trim().toLowerCase() === owner;
+  return getCostearPhoneForEmail(email) !== null;
 }
 
 /** ¿Está configurada la integración de Costear? (evita errores si faltan envs) */
 export function isCostearConfigured(): boolean {
   return Boolean(
-    process.env.COSTEAR_API_URL &&
-      process.env.COSTEAR_BOT_SECRET &&
-      process.env.COSTEAR_USER_PHONE &&
-      process.env.COSTEAR_OWNER_EMAIL
+    process.env.COSTEAR_API_URL && process.env.COSTEAR_BOT_SECRET && getCostearUsers().size > 0
   );
 }
