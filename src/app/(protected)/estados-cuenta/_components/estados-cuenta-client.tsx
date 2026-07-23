@@ -53,7 +53,7 @@ interface Props {
 }
 
 const selectClass =
-  "rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none";
+  "w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none";
 
 export function EstadosCuentaClient({ report, categories, agents, filters, isAdmin, isCostearOwner }: Readonly<Props>) {
   const router = useRouter();
@@ -175,7 +175,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
           </div>
         </div>
 
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
           <Field label="Desde">
             <DatePicker value={filters.from} onChange={(iso) => apply({ from: iso })} className={selectClass} />
           </Field>
@@ -364,7 +364,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
 
 function Field({ label, children }: Readonly<{ label: string; children: React.ReactNode }>) {
   return (
-    <label className="flex flex-col gap-1">
+    <label className="flex w-full min-w-0 flex-col gap-1">
       <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">{label}</span>
       {children}
     </label>
@@ -399,9 +399,9 @@ function ViewTab({ active, onClick, children }: Readonly<{ active: boolean; onCl
 
 function Stat({ label, value, tone }: Readonly<{ label: string; value: string; tone: "income" | "expense" }>) {
   return (
-    <div>
+    <div className="min-w-0">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">{label}</p>
-      <p className={`mt-0.5 font-mono text-sm font-semibold ${tone === "income" ? "text-emerald-300" : "text-red-300"}`}>
+      <p className={`mt-0.5 break-words font-mono text-xs font-semibold tabular-nums sm:text-sm ${tone === "income" ? "text-emerald-300" : "text-red-300"}`}>
         {value}
       </p>
     </div>

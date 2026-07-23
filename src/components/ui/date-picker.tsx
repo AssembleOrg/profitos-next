@@ -49,15 +49,23 @@ export function DatePicker({
   const current = (isControlled ? value ?? "" : internal).slice(0, 10);
 
   const [open, setOpen] = useState(false);
+  const [alignRight, setAlignRight] = useState(false);
   const [viewMonth, setViewMonth] = useState<DateTime>(() =>
     (current ? DateTime.fromISO(current) : DateTime.now()).startOf("month")
   );
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Al abrir, posicionar el calendario en el mes del valor actual.
+  const POPOVER_WIDTH = 288; // ~18rem, para decidir si abre a izquierda o derecha
+
+  // Al abrir, posicionar el calendario en el mes del valor actual y elegir
+  // la alineación (der/izq) según el espacio disponible para no salir de pantalla.
   function toggleOpen() {
     const next = !open;
-    if (next) setViewMonth((current ? DateTime.fromISO(current) : DateTime.now()).startOf("month"));
+    if (next) {
+      setViewMonth((current ? DateTime.fromISO(current) : DateTime.now()).startOf("month"));
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) setAlignRight(rect.left + POPOVER_WIDTH > window.innerWidth - 8);
+    }
     setOpen(next);
   }
 
@@ -135,7 +143,7 @@ export function DatePicker({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-[17rem] overflow-hidden rounded-xl border border-border bg-surface p-3 shadow-xl">
+        <div className={`absolute top-full z-50 mt-1 w-[17rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-border bg-surface p-3 shadow-xl ${alignRight ? "right-0" : "left-0"}`}>
           {/* Cabecera: navegación de mes */}
           <div className="mb-2 flex items-center justify-between">
             <button
