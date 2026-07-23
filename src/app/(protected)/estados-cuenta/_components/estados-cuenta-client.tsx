@@ -47,12 +47,14 @@ interface Props {
   agents: SerializedAgent[];
   filters: AccountFilters;
   isAdmin: boolean;
+  /** La dueña de los gastos Costear: ve el subtotal personal y puede cargar gastos personales. */
+  isCostearOwner: boolean;
 }
 
 const selectClass =
   "rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none";
 
-export function EstadosCuentaClient({ report, categories, agents, filters, isAdmin }: Readonly<Props>) {
+export function EstadosCuentaClient({ report, categories, agents, filters, isAdmin, isCostearOwner }: Readonly<Props>) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -261,6 +263,17 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
               <Stat label="Egresos" value={formatMoney(cr.totalExpense, cr.currency)} tone="expense" />
               <Stat label="Neto" value={formatMoney(cr.net, cr.currency)} tone={cr.net >= 0 ? "income" : "expense"} />
             </div>
+            {isCostearOwner && cr.personalExpense > 0 && (
+              <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
+                <span className="flex items-center gap-1.5 text-text-muted">
+                  <CostearBadge />
+                  Gastos personales (Costear) · no entran al neto
+                </span>
+                <span className="font-mono font-semibold text-violet-300">
+                  −{formatMoney(cr.personalExpense, cr.currency)}
+                </span>
+              </div>
+            )}
             {filters.view === "mensual" && (
               <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
                 <span className="text-text-muted">
@@ -323,6 +336,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
         expenseCategories={expenseCategories}
         agents={agents}
         defaultDate={filters.to}
+        isCostearOwner={isCostearOwner}
       />
 
       <CategoryManagerModal
@@ -424,6 +438,7 @@ function MonthGroupHeader({ monthKeyStr, items }: Readonly<{ monthKeyStr: string
 
 function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: AccountMovement) => void }>) {
   const isRental = m.source === "rental_commission";
+  const isCostear = m.source === "costear";
   const attachmentCount = Array.isArray(m.attachments) ? m.attachments.length : 0;
   const meta = [
     formatDate(m.date),
@@ -432,15 +447,19 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
     m.propertyAddress,
   ].filter(Boolean).join(" · ");
 
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(m)}
-      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-bg/30"
-    >
+  const rowClass = `flex w-full items-center gap-3 px-4 py-3 text-left ${
+    isCostear ? "" : "transition-colors hover:bg-bg/30"
+  }`;
+
+  const content = (
+    <>
       <span
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-          m.type === "income" ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"
+          isCostear
+            ? "bg-violet-500/15 text-violet-300"
+            : m.type === "income"
+              ? "bg-emerald-500/15 text-emerald-300"
+              : "bg-red-500/15 text-red-300"
         }`}
       >
         {m.type === "income" ? (
@@ -453,6 +472,7 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium text-text">{m.categoryName ?? "Sin categoría"}</span>
+          {isCostear && <CostearBadge />}
           {isRental && (
             <span className="shrink-0 rounded-full bg-olive-deep px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-accent">
               Auto · alquiler
@@ -475,12 +495,33 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
       </div>
 
       <div className="shrink-0 text-right">
-        <p className={`font-mono text-sm font-semibold ${m.type === "income" ? "text-emerald-300" : "text-red-300"}`}>
+        <p className={`font-mono text-sm font-semibold ${
+          isCostear ? "text-violet-300" : m.type === "income" ? "text-emerald-300" : "text-red-300"
+        }`}>
           {m.type === "income" ? "+" : "−"}
           {formatMoney(m.amount, m.currency)}
         </p>
       </div>
+    </>
+  );
+
+  // Los gastos de Costear son de solo lectura acá (se editan en Costear): fila no clickable.
+  if (isCostear) {
+    return <div className={rowClass}>{content}</div>;
+  }
+  return (
+    <button type="button" onClick={() => onOpen(m)} className={rowClass}>
+      {content}
     </button>
+  );
+}
+
+function CostearBadge() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-300">
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
+      Costear
+    </span>
   );
 }
 

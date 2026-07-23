@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { now } from "@/lib/datetime";
 import { getAccountReport, type MovementFilters } from "@/lib/account/server";
 import { isCurrency, isEntryType } from "@/lib/account";
+import { isCostearOwner } from "@/lib/costear/client";
 import { EstadosCuentaClient, type AccountFilters } from "./_components/estados-cuenta-client";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -44,8 +45,10 @@ export default async function EstadosCuentaPage({ searchParams }: Readonly<Props
   if (sp.agentUserId) filters.agentUserId = sp.agentUserId;
   if (isShared !== undefined) filters.isShared = isShared;
 
+  const isCostearUser = isCostearOwner(user.email);
+
   const [report, categories, agents] = await Promise.all([
-    getAccountReport(filters),
+    getAccountReport(filters, { includeCostear: isCostearUser }),
     prisma.accountCategory.findMany({
       where: { archivedAt: null },
       orderBy: [{ kind: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
@@ -80,6 +83,7 @@ export default async function EstadosCuentaPage({ searchParams }: Readonly<Props
       agents={agents.map((a) => ({ id: a.id, name: a.fullName?.trim() || a.email }))}
       filters={appliedFilters}
       isAdmin={user.role === "admin"}
+      isCostearOwner={isCostearUser}
     />
   );
 }

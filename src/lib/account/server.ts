@@ -7,9 +7,11 @@
 import { prisma } from "@/lib/prisma/client";
 import { fromISO, fromJSDate } from "@/lib/datetime";
 import type { Prisma } from "@/generated/prisma/client";
+import { fetchCostearExpenses, type CostearExpense } from "@/lib/costear/client";
 import {
   buildReport,
   CURRENCIES,
+  isCurrency,
   RENTAL_COMMISSION_CATEGORY_ID,
   type AccountMovement,
   type AccountReport,
@@ -28,6 +30,14 @@ export interface MovementFilters {
   agentUserId?: string;
   isShared?: boolean;
   source?: MovementSource;
+}
+
+export interface ReportOptions {
+  /**
+   * Incluir los gastos personales de Costear (solo la dueña, ver isCostearOwner).
+   * Se listan con badge pero no entran en el saldo de la inmobiliaria.
+   */
+  includeCostear?: boolean;
 }
 
 function userName(user: { fullName: string | null; email: string } | null): string | null {
@@ -154,30 +164,94 @@ function mapRental(tx: Prisma.RentalPaymentTransactionGetPayload<{ include: type
   };
 }
 
-/**
- * Devuelve los movimientos del rango filtrado (manuales + comisiones de alquiler).
- */
-export async function getMovements(filters: MovementFilters): Promise<AccountMovement[]> {
-  const includeRental = shouldIncludeRental(filters);
+/** Gasto personal de Costear → AccountMovement (solo lectura, source "costear"). */
+function mapCostear(e: CostearExpense): AccountMovement {
+  return {
+    id: `costear:${e.id}`,
+    source: "costear",
+    type: "expense",
+    categoryId: null,
+    categoryName: e.title?.trim() || e.merchant?.trim() || "Gasto personal",
+    categoryColor: null,
+    amount: e.amountMinor / 100,
+    currency: e.currency as Currency,
+    date: e.spentAt.slice(0, 10),
+    description: [e.merchant, e.notes].filter(Boolean).join(" · ") || null,
+    agentUserId: null,
+    agentName: null,
+    propertyId: null,
+    propertyAddress: null,
+    agentPercentage: null,
+    agentShareType: "percent",
+    isShared: false,
+    attachments: null,
+    createdByUserId: "",
+    createdByName: null,
+    createdAt: e.createdAt,
+  };
+}
 
-  const [manual, rental] = await Promise.all([
-    filters.source === "rental_commission"
+/**
+ * ¿Corresponde traer gastos de Costear con estos filtros? Solo si se pidió
+ * (dueña) y los filtros no descartan gastos personales de egreso.
+ */
+function shouldIncludeCostear(filters: MovementFilters, includeCostear: boolean): boolean {
+  if (!includeCostear) return false;
+  if (filters.source && filters.source !== "costear") return false;
+  if (filters.type && filters.type !== "expense") return false;
+  if (filters.categoryId) return false; // categorías de negocio no aplican
+  if (filters.agentUserId) return false;
+  if (filters.isShared === true) return false;
+  return true;
+}
+
+async function loadCostear(filters: MovementFilters): Promise<AccountMovement[]> {
+  try {
+    const expenses = await fetchCostearExpenses({
+      from: filters.from,
+      to: filters.to,
+      currency: filters.currency,
+    });
+    // profitos solo maneja ARS/USD; se descartan otras monedas (raro).
+    return expenses.filter((e) => isCurrency(e.currency)).map(mapCostear);
+  } catch (err) {
+    // Costear caído no debe romper estados-cuenta: se loguea y se sigue.
+    console.error("[estados-cuenta] fallo al traer gastos de Costear:", err);
+    return [];
+  }
+}
+
+/**
+ * Devuelve los movimientos del rango filtrado (manuales + comisiones de alquiler
+ * + gastos personales de Costear si se pidió).
+ */
+export async function getMovements(
+  filters: MovementFilters,
+  options: ReportOptions = {}
+): Promise<AccountMovement[]> {
+  const includeRental = shouldIncludeRental(filters);
+  const includeCostear = shouldIncludeCostear(filters, options.includeCostear ?? false);
+  const onlyCostear = filters.source === "costear";
+
+  const [manual, rental, costear] = await Promise.all([
+    filters.source === "rental_commission" || onlyCostear
       ? Promise.resolve([])
       : prisma.accountEntry.findMany({
           where: manualWhere(filters),
           include: manualInclude,
           orderBy: [{ date: "desc" }, { createdAt: "desc" }],
         }),
-    includeRental
+    includeRental && !onlyCostear
       ? prisma.rentalPaymentTransaction.findMany({
           where: rentalWhere(filters),
           include: rentalInclude,
           orderBy: [{ paidAt: "desc" }],
         })
       : Promise.resolve([]),
+    includeCostear ? loadCostear(filters) : Promise.resolve([]),
   ]);
 
-  return [...manual.map(mapManual), ...rental.map(mapRental)];
+  return [...manual.map(mapManual), ...rental.map(mapRental), ...costear];
 }
 
 /**
@@ -237,8 +311,14 @@ async function getOpeningBalances(filters: MovementFilters): Promise<OpeningByCu
 /**
  * Reporte completo: lista de movimientos + desglose por moneda con saldo acumulado.
  */
-export async function getAccountReport(filters: MovementFilters): Promise<AccountReport> {
-  const [movements, opening] = await Promise.all([getMovements(filters), getOpeningBalances(filters)]);
+export async function getAccountReport(
+  filters: MovementFilters,
+  options: ReportOptions = {}
+): Promise<AccountReport> {
+  const [movements, opening] = await Promise.all([
+    getMovements(filters, options),
+    getOpeningBalances(filters),
+  ]);
   const currencies: Currency[] = filters.currency ? [filters.currency] : CURRENCIES;
   return buildReport(movements, opening, currencies);
 }

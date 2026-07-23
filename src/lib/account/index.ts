@@ -5,7 +5,7 @@
 
 export type Currency = "ARS" | "USD";
 export type EntryType = "income" | "expense";
-export type MovementSource = "manual" | "rental_commission";
+export type MovementSource = "manual" | "rental_commission" | "costear";
 
 export const CURRENCIES: Currency[] = ["ARS", "USD"];
 export const ENTRY_TYPES: EntryType[] = ["income", "expense"];
@@ -129,6 +129,11 @@ export interface CurrencyReport {
   totalIncome: number;
   totalExpense: number;
   net: number;
+  /**
+   * Total de gastos personales de Costear en el rango. Informativo, NO entra
+   * en totalExpense/net ni en el saldo acumulado (no es plata de la inmobiliaria).
+   */
+  personalExpense: number;
   /** Saldo acumulado anterior al rango filtrado. */
   opening: number;
   /** Saldo acumulado al final del rango (opening + net). */
@@ -178,12 +183,19 @@ export function buildReport(
     let running = opening[currency] ?? 0;
     let totalIncome = 0;
     let totalExpense = 0;
+    let personalExpense = 0;
 
     const months: MonthBucket[] = monthKeys.map((key) => {
       const items = monthMap.get(key)!;
       let income = 0;
       let expense = 0;
       for (const m of items) {
+        // Los gastos personales (Costear) se listan pero NO afectan el saldo
+        // de la inmobiliaria: se acumulan aparte.
+        if (m.source === "costear") {
+          personalExpense += m.amount;
+          continue;
+        }
         if (m.type === "income") income += m.amount;
         else expense += m.amount;
       }
@@ -212,6 +224,7 @@ export function buildReport(
       currency,
       totalIncome,
       totalExpense,
+      personalExpense,
       net: totalIncome - totalExpense,
       opening: openingBalance,
       closing: openingBalance + (totalIncome - totalExpense),
