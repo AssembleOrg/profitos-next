@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DatePicker } from "@/components/ui/date-picker";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { formatDate, formatDateTime } from "@/lib/datetime";
@@ -222,18 +223,18 @@ export function InformeClient({ memberId, from, to }: Props) {
 
         {/* Date range */}
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="date"
+          <DatePicker
             value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="min-w-0 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            onChange={setFromDate}
+            aria-label="Desde"
+            className="min-w-0 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
           />
           <span className="text-xs text-text-muted">a</span>
-          <input
-            type="date"
+          <DatePicker
             value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            className="min-w-0 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            onChange={setToDate}
+            aria-label="Hasta"
+            className="min-w-0 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
           />
           <button
             onClick={applyDateRange}

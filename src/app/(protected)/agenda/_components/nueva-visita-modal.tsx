@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Spinner } from "../../_components/spinner";
 import {
   SearchableSelect,
@@ -185,36 +187,10 @@ export function NuevaVisitaModal({
                   <label className="mb-1 block text-xs font-medium text-text-muted">
                     Fecha *
                   </label>
-                  <input
-                    name="date"
-                    type="date"
-                    required
-                    lang="es"
-                    className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
-                  />
+                  <DatePicker name="date" required className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none" />
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-text-muted">
-                    Inicio *
-                  </label>
-                  <input
-                    name="startTime"
-                    type="time"
-                    required
-                    className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-text-muted">
-                    Fin *
-                  </label>
-                  <input
-                    name="endTime"
-                    type="time"
-                    required
-                    className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
-                  />
-                </div>
+                <TimePicker name="startTime" label="Inicio" required defaultValue="09:00" />
+                <TimePicker name="endTime" label="Fin" required defaultValue="10:00" />
               </div>
 
               {/* Type */}

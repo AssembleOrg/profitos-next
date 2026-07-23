@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { DatePicker } from "@/components/ui/date-picker";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
@@ -157,19 +158,17 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
           <option value="borrador">Borrador</option>
           <option value="completada">Completada</option>
         </select>
-        <input
-          type="date"
+        <DatePicker
           value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-          className="min-w-0 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
-          title="Desde"
+          onChange={setFromDate}
+          aria-label="Desde"
+          className="min-w-0 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none"
         />
-        <input
-          type="date"
+        <DatePicker
           value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
-          className="min-w-0 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
-          title="Hasta"
+          onChange={setToDate}
+          aria-label="Hasta"
+          className="min-w-0 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none"
         />
         <button
           onClick={() => applyFilters(1)}

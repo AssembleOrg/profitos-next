@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Spinner } from "../../_components/spinner";
 import { Pagination } from "../../_components/pagination";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
@@ -281,18 +282,18 @@ export function ConsultantsClient({
             ))}
           </select>
 
-          <input
-            type="date"
+          <DatePicker
             value={fromFilter}
-            onChange={(e) => setFromFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none scheme-dark"
+            onChange={setFromFilter}
+            aria-label="Desde"
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none"
           />
 
-          <input
-            type="date"
+          <DatePicker
             value={toFilter}
-            onChange={(e) => setToFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none scheme-dark"
+            onChange={setToFilter}
+            aria-label="Hasta"
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none"
           />
 
           <select

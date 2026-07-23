@@ -3,6 +3,9 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import { DatePicker } from "@/components/ui/date-picker";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
@@ -472,7 +475,7 @@ export function SeguimientosClient({
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-text-muted">Vencimiento</label>
-                <input name="dueDate" type="date" className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]" />
+                <DatePicker name="dueDate" className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none" />
               </div>
             </div>
             <div>
@@ -539,11 +542,10 @@ export function SeguimientosClient({
                         </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-text-muted">Vencimiento</label>
-                          <input
+                          <DatePicker
                             name="dueDate"
-                            type="date"
                             defaultValue={detail.dueDate ? detail.dueDate.slice(0, 10) : ""}
-                            className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                            className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
                           />
                         </div>
                       </div>
@@ -611,10 +613,21 @@ export function SeguimientosClient({
                           />
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3">
-                          <input name="actionAt" type="datetime-local" className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]" />
-                          <input name="scheduledDate" type="date" className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]" />
-                          <input name="scheduledTime" type="time" className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]" />
+                        <div className="flex flex-col gap-3">
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-text-muted">Fecha y hora de la acción</label>
+                            <DateTimePicker name="actionAt" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-text-muted">Próximo seguimiento</label>
+                              <DatePicker name="scheduledDate" className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none" />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-text-muted">Hora</label>
+                              <TimePicker name="scheduledTime" defaultValue="09:00" />
+                            </div>
+                          </div>
                         </div>
 
                         <button type="submit" disabled={savingAction} className="mt-1 rounded-xl bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30 disabled:opacity-50">

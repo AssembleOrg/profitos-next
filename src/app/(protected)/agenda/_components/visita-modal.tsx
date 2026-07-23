@@ -8,7 +8,8 @@ import {
   SearchableSelect,
   type SearchableSelectOption,
 } from "./searchable-select";
-import { TimePicker } from "./time-picker";
+import { TimePicker } from "@/components/ui/time-picker";
+import { DatePicker } from "@/components/ui/date-picker";
 import { formatDate, parseVisualDate } from "@/lib/datetime";
 import type { CalendarEvent } from "./calendar";
 import { MediaUploader, type NoteAttachment } from "@/components/notes/media-uploader";
@@ -259,19 +260,11 @@ export function VisitaModal({
                   <label className="mb-1 block text-xs font-medium text-text-muted">
                     Fecha *
                   </label>
-                  <input
+                  <DatePicker
                     name="date"
-                    type="text"
                     required
-                    inputMode="numeric"
-                    autoComplete="off"
-                    placeholder="DD/MM/AAAA"
-                    defaultValue={
-                      editEvent?.date
-                        ? formatDate(editEvent.date)
-                        : formatDate(new Date())
-                    }
-                    className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                    defaultValue={parseVisualDate(formatDate(editEvent?.date ?? new Date()))}
+                    className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
                   />
                 </div>
                 <TimePicker

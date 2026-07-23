@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
 import { now } from "@/lib/datetime";
+import { DatePicker } from "@/components/ui/date-picker";
 import { CurrencyInput } from "../../alquileres/_components/currency-input";
 import { MediaUploader } from "../../alquileres/_components/media-uploader";
 import type { RentalAttachment } from "../../alquileres/_components/voice-recorder";
@@ -577,7 +578,7 @@ export function MovementFormModal({
                     {/* Fecha */}
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">Fecha</label>
-                      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
+                      <DatePicker value={date} onChange={setDate} className={inputClass} />
                     </div>
 
                     {/* Agente + Propiedad (no aplican a gastos personales de Costear) */}

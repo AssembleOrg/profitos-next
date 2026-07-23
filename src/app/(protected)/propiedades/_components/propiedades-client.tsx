@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { DatePicker } from "@/components/ui/date-picker";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
@@ -1482,10 +1483,9 @@ export function PropiedadesClient({
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-text-muted">Vencimiento</label>
-                    <input
+                    <DatePicker
                       name="dueDate"
-                      type="date"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
                     />
                   </div>
                 </div>

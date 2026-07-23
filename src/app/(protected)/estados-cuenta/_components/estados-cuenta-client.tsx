@@ -13,6 +13,7 @@ import {
   type Currency,
   type EntryType,
 } from "@/lib/account";
+import { DatePicker } from "@/components/ui/date-picker";
 import { MovementFormModal } from "./movement-form-modal";
 import { CategoryManagerModal } from "./category-manager-modal";
 import { MovementDetailModal } from "./movement-detail-modal";
@@ -176,10 +177,10 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
 
         <div className="flex flex-wrap items-end gap-3">
           <Field label="Desde">
-            <input type="date" value={filters.from} onChange={(e) => apply({ from: e.target.value })} className={selectClass} />
+            <DatePicker value={filters.from} onChange={(iso) => apply({ from: iso })} className={selectClass} />
           </Field>
           <Field label="Hasta">
-            <input type="date" value={filters.to} onChange={(e) => apply({ to: e.target.value })} className={selectClass} />
+            <DatePicker value={filters.to} onChange={(iso) => apply({ to: iso })} className={selectClass} />
           </Field>
           <Field label="Tipo">
             <select

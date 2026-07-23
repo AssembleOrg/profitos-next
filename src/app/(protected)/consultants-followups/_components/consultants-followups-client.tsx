@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
 import { Spinner } from "../../_components/spinner";
@@ -590,11 +591,7 @@ export function ConsultantsFollowUpsClient({
                         onTranscription={appendActionTranscription}
                       />
                     </div>
-                    <input
-                      type="datetime-local"
-                      name="actionAt"
-                      className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
-                    />
+                    <DateTimePicker name="actionAt" />
                     <button
                       type="submit"
                       disabled={savingAction}
