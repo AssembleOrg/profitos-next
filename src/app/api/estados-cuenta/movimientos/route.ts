@@ -1,11 +1,12 @@
 import type { NextRequest } from "next/server";
-import { withHandler } from "@/lib/api/handler";
+import { withHandler, AppError } from "@/lib/api/handler";
 import { ok, created } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
 import { getAccountReport, type MovementFilters } from "@/lib/account/server";
 import { validateEntry, type EntryBody } from "@/lib/account/validate";
-import { isCurrency, isEntryType, type MovementSource } from "@/lib/account";
+import { isCurrency, isEntryType, type Currency, type MovementSource } from "@/lib/account";
+import { createCostearExpense, isCostearOwner } from "@/lib/costear/client";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -28,7 +29,9 @@ function parseFilters(sp: URLSearchParams): MovementFilters {
   if (agentUserId) filters.agentUserId = agentUserId;
   if (shared === "1") filters.isShared = true;
   else if (shared === "0") filters.isShared = false;
-  if (source === "manual" || source === "rental_commission") filters.source = source as MovementSource;
+  if (source === "manual" || source === "rental_commission" || source === "costear") {
+    filters.source = source as MovementSource;
+  }
   return filters;
 }
 
@@ -38,18 +41,56 @@ function parseFilters(sp: URLSearchParams): MovementFilters {
  */
 export const GET = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
-  await getAuthContext();
-  const report = await getAccountReport(parseFilters(request.nextUrl.searchParams));
+  const auth = await getAuthContext();
+  const report = await getAccountReport(parseFilters(request.nextUrl.searchParams), {
+    includeCostear: isCostearOwner(auth.email),
+  });
   return ok(report, "Estado de cuenta obtenido correctamente", path);
 });
 
+interface PersonalExpenseBody {
+  personal?: boolean;
+  amount?: number;
+  currency?: Currency;
+  date?: string; // YYYY-MM-DD
+  description?: string | null;
+}
+
 /**
- * Crea un movimiento manual. Lo puede crear cualquier usuario.
+ * Crea un movimiento. Por defecto es un movimiento manual de la inmobiliaria
+ * (jp_account_entries). Si el body trae `personal: true` es un gasto personal
+ * de la dueña: NO se guarda en profitos, va directo a Costear.
  */
 export const POST = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
   const auth = await getAuthContext();
-  const data = await validateEntry((await request.json()) as EntryBody);
+  const raw = (await request.json()) as EntryBody & PersonalExpenseBody;
+
+  // ── Gasto personal → Costear (no se persiste en profitos) ──
+  if (raw.personal === true) {
+    if (!isCostearOwner(auth.email)) {
+      throw new AppError(403, "No autorizado para crear gastos personales de Costear");
+    }
+    const amount = Number(raw.amount);
+    if (!Number.isFinite(amount) || amount <= 0) throw new AppError(400, "Monto inválido");
+    if (!isCurrency(raw.currency)) throw new AppError(400, "Moneda inválida");
+    if (!raw.date || !DATE_RE.test(raw.date)) throw new AppError(400, "Fecha inválida");
+    const title = raw.description?.trim();
+    if (!title) throw new AppError(400, "Ingresá una descripción para el gasto");
+
+    const expense = await createCostearExpense({
+      title,
+      amountMinor: Math.round(amount * 100),
+      currency: raw.currency,
+      // Fecha contable a mediodía UTC para evitar corrimiento de día por zona.
+      spentAt: `${raw.date}T12:00:00.000Z`,
+    });
+
+    return created({ source: "costear", id: expense.id }, "Gasto personal registrado en Costear", path);
+  }
+
+  // ── Movimiento normal de la inmobiliaria ──
+  const data = await validateEntry(raw);
 
   const entry = await prisma.accountEntry.create({
     data: { ...data, createdByUserId: auth.userId },

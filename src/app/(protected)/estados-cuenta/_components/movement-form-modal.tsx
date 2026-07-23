@@ -25,7 +25,11 @@ interface Props {
   expenseCategories: SerializedCategory[];
   agents: SerializedAgent[];
   defaultDate: string;
+  /** La dueña de Costear puede marcar un egreso como gasto personal → va a Costear. */
+  isCostearOwner: boolean;
 }
+
+type Destino = "inmobiliaria" | "costear";
 
 const inputClass =
   "w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none";
@@ -38,9 +42,11 @@ export function MovementFormModal({
   expenseCategories,
   agents,
   defaultDate,
+  isCostearOwner,
 }: Readonly<Props>) {
   const router = useRouter();
   const [type, setType] = useState<EntryType>("income");
+  const [destino, setDestino] = useState<Destino>("inmobiliaria");
   const [categoryId, setCategoryId] = useState("");
   const [amount, setAmount] = useState<number | null>(null);
   const [currency, setCurrency] = useState<Currency>("ARS");
@@ -57,6 +63,8 @@ export function MovementFormModal({
   const [submitting, setSubmitting] = useState(false);
 
   const categories = type === "income" ? incomeCategories : expenseCategories;
+  // Gasto personal de la dueña → va a Costear (no a la caja de la inmobiliaria).
+  const isCostear = isCostearOwner && type === "expense" && destino === "costear";
 
   async function loadSignedUrls(atts: RentalAttachment[]) {
     const paths = atts.map((a) => a.path).filter(Boolean);
@@ -78,6 +86,7 @@ export function MovementFormModal({
   }
 
   function init() {
+    setDestino("inmobiliaria");
     if (editing) {
       const atts = asAttachments(editing.attachments);
       setType(editing.type);
@@ -114,12 +123,54 @@ export function MovementFormModal({
 
   function changeType(next: EntryType) {
     setType(next);
+    // Los ingresos nunca son gastos personales de Costear.
+    if (next === "income") setDestino("inmobiliaria");
     // si la categoría elegida no pertenece al nuevo tipo, la limpiamos
     const pool = next === "income" ? incomeCategories : expenseCategories;
     if (!pool.some((c) => c.id === categoryId)) setCategoryId("");
   }
 
   async function submit() {
+    // El gasto personal (Costear) no necesita categoría; sí descripción.
+    if (isCostear) {
+      if (!amount || amount <= 0) {
+        toast.error("Ingresá un monto válido");
+        return;
+      }
+      if (!date) {
+        toast.error("Elegí una fecha");
+        return;
+      }
+      if (!description.trim()) {
+        toast.error("Ingresá una descripción (título del gasto)");
+        return;
+      }
+      setSubmitting(true);
+      try {
+        const res = await fetch("/api/estados-cuenta/movimientos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            personal: true,
+            amount,
+            currency,
+            date,
+            description: description.trim(),
+          }),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body?.message ?? "Error");
+        toast.success("Gasto personal registrado en Costear");
+        onOpenChange(false);
+        router.refresh();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "No se pudo guardar en Costear");
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     if (!categoryId) {
       toast.error("Elegí una categoría");
       return;
@@ -236,7 +287,47 @@ export function MovementFormModal({
                       </button>
                     </div>
 
+                    {/* Destino: inmobiliaria vs gasto personal (Costear). Solo la dueña, solo egresos. */}
+                    {isCostearOwner && type === "expense" && (
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                          Destino del gasto
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setDestino("inmobiliaria")}
+                            className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
+                              destino === "inmobiliaria"
+                                ? "border-olive-bright/40 bg-olive-mid/20 text-accent"
+                                : "border-border bg-bg text-text-muted hover:text-text"
+                            }`}
+                          >
+                            Inmobiliaria
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDestino("costear")}
+                            className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
+                              destino === "costear"
+                                ? "border-violet-500/40 bg-violet-500/15 text-violet-300"
+                                : "border-border bg-bg text-text-muted hover:text-text"
+                            }`}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
+                            Mis gastos (Costear)
+                          </button>
+                        </div>
+                        {isCostear && (
+                          <p className="mt-1.5 text-xs text-text-faint">
+                            Va directo a Costear, no a la caja de la inmobiliaria.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {/* Compartido (informativo) */}
+                    {!isCostear && (
                     <button
                       type="button"
                       onClick={() => setIsShared((v) => !v)}
@@ -256,8 +347,10 @@ export function MovementFormModal({
                         <span className={`h-4 w-4 rounded-full bg-text transition-transform ${isShared ? "translate-x-4" : ""}`} />
                       </span>
                     </button>
+                    )}
 
-                    {/* Categoría */}
+                    {/* Categoría (no aplica a gastos personales de Costear) */}
+                    {!isCostear && (
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">Categoría</label>
                       <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputClass}>
@@ -267,6 +360,7 @@ export function MovementFormModal({
                         ))}
                       </select>
                     </div>
+                    )}
 
                     {/* Monto + Moneda */}
                     <div className="grid grid-cols-[1fr_auto] gap-2">
@@ -294,7 +388,7 @@ export function MovementFormModal({
                     </div>
 
                     {/* Valor al agente (solo egresos, informativo): % o monto fijo */}
-                    {type === "expense" && (
+                    {type === "expense" && !isCostear && (
                       <div>
                         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
                           Valor al agente <span className="text-text-faint">(informativo)</span>
@@ -345,7 +439,8 @@ export function MovementFormModal({
                       <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
                     </div>
 
-                    {/* Agente */}
+                    {/* Agente + Propiedad (no aplican a gastos personales de Costear) */}
+                    {!isCostear && (
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
                         Agente <span className="text-text-faint">(opcional)</span>
@@ -357,8 +452,9 @@ export function MovementFormModal({
                         ))}
                       </select>
                     </div>
+                    )}
 
-                    {/* Propiedad */}
+                    {!isCostear && (
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
                         Propiedad <span className="text-text-faint">(opcional)</span>
@@ -372,22 +468,25 @@ export function MovementFormModal({
                         }}
                       />
                     </div>
+                    )}
 
-                    {/* Descripción */}
+                    {/* Descripción (para Costear es el título del gasto, requerido) */}
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
-                        Descripción <span className="text-text-faint">(opcional)</span>
+                        Descripción {isCostear ? <span className="text-violet-300">(título del gasto)</span> : <span className="text-text-faint">(opcional)</span>}
                       </label>
                       <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} className={`${inputClass} resize-none`} />
                     </div>
 
-                    {/* Comprobantes */}
+                    {/* Comprobantes (no aplican a gastos personales de Costear) */}
+                    {!isCostear && (
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
                         Comprobantes <span className="text-text-faint">(opcional)</span>
                       </label>
                       <MediaUploader attachments={attachments} onChange={setAttachments} signedUrls={signedUrls} />
                     </div>
+                    )}
                   </div>
                 </div>
 
