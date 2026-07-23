@@ -54,6 +54,9 @@ interface PersonalExpenseBody {
   currency?: Currency;
   date?: string; // YYYY-MM-DD
   description?: string | null;
+  merchant?: string | null;
+  /** Id de extracción de IA de Costear (foto/audio/texto) a consumir. */
+  extractionId?: string | null;
 }
 
 /**
@@ -84,6 +87,8 @@ export const POST = withHandler(async (request: NextRequest) => {
       currency: raw.currency,
       // Fecha contable a mediodía UTC para evitar corrimiento de día por zona.
       spentAt: `${raw.date}T12:00:00.000Z`,
+      merchant: raw.merchant?.trim() || undefined,
+      extractionId: raw.extractionId?.trim() || undefined,
     });
 
     return created({ source: "costear", id: expense.id }, "Gasto personal registrado en Costear", path);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -62,6 +62,15 @@ export function MovementFormModal({
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
+  // Extracción con IA de Costear (foto/audio/texto → borrador de gasto).
+  const [merchant, setMerchant] = useState("");
+  const [extractionId, setExtractionId] = useState<string | null>(null);
+  const [iaText, setIaText] = useState("");
+  const [iaOpen, setIaOpen] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+
   const categories = type === "income" ? incomeCategories : expenseCategories;
   // Gasto personal de la dueña → va a Costear (no a la caja de la inmobiliaria).
   const isCostear = isCostearOwner && type === "expense" && destino === "costear";
@@ -87,6 +96,11 @@ export function MovementFormModal({
 
   function init() {
     setDestino("inmobiliaria");
+    setMerchant("");
+    setExtractionId(null);
+    setIaText("");
+    setIaOpen(false);
+    setExtracting(false);
     if (editing) {
       const atts = asAttachments(editing.attachments);
       setType(editing.type);
@@ -130,6 +144,64 @@ export function MovementFormModal({
     if (!pool.some((c) => c.id === categoryId)) setCategoryId("");
   }
 
+  interface ProposedDraft {
+    title: string;
+    merchant?: string;
+    amountMinor: number;
+    currency: string;
+    spentAt: string;
+  }
+
+  function applyProposed(proposed: ProposedDraft, id: string) {
+    setExtractionId(id);
+    if (proposed.title) setDescription(proposed.title);
+    if (proposed.merchant) setMerchant(proposed.merchant);
+    if (Number.isFinite(proposed.amountMinor)) setAmount(proposed.amountMinor / 100);
+    if (proposed.currency === "ARS" || proposed.currency === "USD") setCurrency(proposed.currency);
+    const day = proposed.spentAt?.slice(0, 10);
+    if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) setDate(day);
+  }
+
+  async function extractFile(file: File) {
+    setExtracting(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/estados-cuenta/costear/extract", { method: "POST", body: form });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.message ?? "Error");
+      applyProposed(body.data.proposed, body.data.extractionId);
+      toast.success("Gasto detectado por IA. Revisá los datos.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo procesar");
+    } finally {
+      setExtracting(false);
+    }
+  }
+
+  async function extractText() {
+    if (iaText.trim().length < 3) {
+      toast.error("Escribí al menos 3 caracteres");
+      return;
+    }
+    setExtracting(true);
+    try {
+      const res = await fetch("/api/estados-cuenta/costear/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: iaText.trim() }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.message ?? "Error");
+      applyProposed(body.data.proposed, body.data.extractionId);
+      toast.success("Gasto detectado por IA. Revisá los datos.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo procesar");
+    } finally {
+      setExtracting(false);
+    }
+  }
+
   async function submit() {
     // El gasto personal (Costear) no necesita categoría; sí descripción.
     if (isCostear) {
@@ -156,6 +228,8 @@ export function MovementFormModal({
             currency,
             date,
             description: description.trim(),
+            merchant: merchant.trim() || null,
+            extractionId,
           }),
         });
         const body = await res.json();
@@ -326,6 +400,73 @@ export function MovementFormModal({
                       </div>
                     )}
 
+                    {/* Detectar con IA (Costear): foto de ticket, audio o texto */}
+                    {isCostear && (
+                      <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-3">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-violet-300">
+                            Detectar con IA
+                          </span>
+                          {extractionId && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-violet-300">
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                              Detectado
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <IaButton label="Imagen" onClick={() => imageInputRef.current?.click()} disabled={extracting} />
+                          <IaButton label="Audio" onClick={() => audioInputRef.current?.click()} disabled={extracting} />
+                          <IaButton label="Texto" onClick={() => setIaOpen((v) => !v)} disabled={extracting} />
+                        </div>
+                        {iaOpen && (
+                          <div className="mt-2 flex flex-col gap-2">
+                            <textarea
+                              rows={2}
+                              value={iaText}
+                              onChange={(e) => setIaText(e.target.value)}
+                              placeholder="ej: gasté 5000 en nafta ayer"
+                              className={`${inputClass} resize-none`}
+                            />
+                            <button
+                              type="button"
+                              onClick={extractText}
+                              disabled={extracting}
+                              className="self-end rounded-lg border border-violet-500/40 bg-violet-500/15 px-3 py-1.5 text-xs font-semibold text-violet-300 transition-colors hover:bg-violet-500/25 disabled:opacity-60"
+                            >
+                              Extraer texto
+                            </button>
+                          </div>
+                        )}
+                        {extracting && (
+                          <p className="mt-2 text-xs text-violet-300">Procesando… puede tardar unos segundos.</p>
+                        )}
+                        <input
+                          ref={imageInputRef}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) void extractFile(f);
+                            e.target.value = "";
+                          }}
+                        />
+                        <input
+                          ref={audioInputRef}
+                          type="file"
+                          accept="audio/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) void extractFile(f);
+                            e.target.value = "";
+                          }}
+                        />
+                      </div>
+                    )}
+
                     {/* Compartido (informativo) */}
                     {!isCostear && (
                     <button
@@ -478,6 +619,16 @@ export function MovementFormModal({
                       <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} className={`${inputClass} resize-none`} />
                     </div>
 
+                    {/* Comercio (solo Costear, opcional) */}
+                    {isCostear && (
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                          Comercio <span className="text-text-faint">(opcional)</span>
+                        </label>
+                        <input type="text" value={merchant} onChange={(e) => setMerchant(e.target.value)} className={inputClass} />
+                      </div>
+                    )}
+
                     {/* Comprobantes (no aplican a gastos personales de Costear) */}
                     {!isCostear && (
                     <div>
@@ -511,5 +662,18 @@ export function MovementFormModal({
         )}
       </AnimatePresence>
     </Dialog.Root>
+  );
+}
+
+function IaButton({ label, onClick, disabled }: Readonly<{ label: string; onClick: () => void; disabled: boolean }>) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-lg border border-border bg-bg px-2 py-2 text-xs font-semibold text-text-muted transition-colors hover:border-violet-500/40 hover:text-violet-300 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {label}
+    </button>
   );
 }

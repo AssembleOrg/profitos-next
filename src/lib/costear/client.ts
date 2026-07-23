@@ -200,14 +200,28 @@ export interface CreateCostearExpenseInput {
   currency: string;
   /** ISO date-time. */
   spentAt: string;
+  merchant?: string | null;
   notes?: string | null;
+  /** Si viene de una extracción de IA: la consume, setea source y adjunta el archivo. */
+  extractionId?: string | null;
+}
+
+/** Ejecuta un fetch autenticado con reintento único ante 401 (token vencido). */
+async function authedFetch(run: (token: string) => Promise<Response>): Promise<Response> {
+  let token = await getToken();
+  let res = await run(token);
+  if (res.status === 401) {
+    token = await getToken(true);
+    res = await run(token);
+  }
+  return res;
 }
 
 /** Crea un gasto personal en Costear (POST /expenses, requiere Idempotency-Key). */
 export async function createCostearExpense(input: CreateCostearExpenseInput): Promise<CostearExpense> {
   const { base } = getConfig();
 
-  const doPost = async (token: string) =>
+  const res = await authedFetch((token) =>
     fetch(`${base}/expenses`, {
       method: "POST",
       headers: {
@@ -220,18 +234,13 @@ export async function createCostearExpense(input: CreateCostearExpenseInput): Pr
         amountMinor: input.amountMinor,
         currency: input.currency,
         spentAt: input.spentAt,
+        merchant: input.merchant ?? undefined,
         notes: input.notes ?? undefined,
+        extractionId: input.extractionId ?? undefined,
       }),
       cache: "no-store",
-    });
-
-  let token = await getToken();
-  let res = await doPost(token);
-
-  if (res.status === 401) {
-    token = await getToken(true);
-    res = await doPost(token);
-  }
+    })
+  );
 
   if (!res.ok) {
     const text = await res.text();
@@ -239,6 +248,110 @@ export async function createCostearExpense(input: CreateCostearExpenseInput): Pr
   }
   const body = (await res.json()) as CostearEnvelope<CostearExpense>;
   return body.data;
+}
+
+// ── Extracción con IA (foto de ticket / audio / texto → borrador de gasto) ──
+
+export interface ProposedExpense {
+  title: string;
+  merchant?: string;
+  amountMinor: number;
+  currency: string;
+  spentAt: string;
+  /** Etiqueta de categoría sugerida (NO un id). */
+  categoryGuess?: string;
+  items?: Array<{ description: string; quantity?: number; unitAmountMinor?: number; amountMinor: number }>;
+}
+
+export interface CostearExtraction {
+  id: string;
+  type: "PHOTO" | "AUDIO" | "TEXT";
+  status: "PROCESSING" | "READY" | "FAILED" | "CONSUMED" | "DISCARDED";
+  transcript: string | null;
+  proposed: ProposedExpense | null;
+  error: string | null;
+}
+
+async function createExtractionFile(
+  kind: "photo" | "audio",
+  file: Blob,
+  filename: string
+): Promise<CostearExtraction> {
+  const { base } = getConfig();
+  const res = await authedFetch((token) => {
+    const form = new FormData();
+    form.append("file", file, filename);
+    return fetch(`${base}/extractions/${kind}`, {
+      method: "POST",
+      // No seteamos Content-Type: FormData pone su boundary solo.
+      headers: { Authorization: `Bearer ${token}`, "Idempotency-Key": randomUUID() },
+      body: form,
+      cache: "no-store",
+    });
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Costear /extractions/${kind} error ${res.status}: ${text.slice(0, 300)}`);
+  }
+  return (await res.json() as CostearEnvelope<CostearExtraction>).data;
+}
+
+async function createExtractionText(text: string): Promise<CostearExtraction> {
+  const { base } = getConfig();
+  const res = await authedFetch((token) =>
+    fetch(`${base}/extractions/text`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "Idempotency-Key": randomUUID(),
+      },
+      body: JSON.stringify({ text }),
+      cache: "no-store",
+    })
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Costear /extractions/text error ${res.status}: ${body.slice(0, 300)}`);
+  }
+  return (await res.json() as CostearEnvelope<CostearExtraction>).data;
+}
+
+async function waitExtraction(id: string, timeoutMs = 25000): Promise<CostearExtraction> {
+  const { base } = getConfig();
+  const res = await authedFetch((token) =>
+    fetch(`${base}/extractions/${id}/wait?timeoutMs=${timeoutMs}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    })
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Costear extraction wait error ${res.status}: ${body.slice(0, 300)}`);
+  }
+  return (await res.json() as CostearEnvelope<CostearExtraction>).data;
+}
+
+/**
+ * Crea una extracción (foto/audio/texto) y espera hasta el estado terminal,
+ * devolviendo el borrador `proposed` para que la dueña lo revise/edite.
+ */
+export async function extractCostear(input: {
+  kind: "photo" | "audio" | "text";
+  file?: Blob;
+  filename?: string;
+  text?: string;
+}): Promise<CostearExtraction> {
+  let ext =
+    input.kind === "text"
+      ? await createExtractionText(input.text ?? "")
+      : await createExtractionFile(input.kind, input.file!, input.filename ?? "upload");
+
+  // El worker procesa en background: se hace long-poll hasta ~50s.
+  for (let i = 0; i < 2 && ext.status === "PROCESSING"; i++) {
+    ext = await waitExtraction(ext.id);
+  }
+  return ext;
 }
 
 /**
