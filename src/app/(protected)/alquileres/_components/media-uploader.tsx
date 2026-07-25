@@ -139,7 +139,7 @@ export function AttachmentPreview({ attachment, url, onRemove }: Readonly<Attach
           type="button"
           onClick={onRemove}
           aria-label={`Quitar ${name}`}
-          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-bg/80 text-text-muted opacity-0 transition-all hover:bg-red-500/20 hover:text-red-300 group-hover:opacity-100"
+          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-bg/80 text-text-muted opacity-0 transition-all hover:bg-danger-chip hover:text-danger group-hover:opacity-100"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" />

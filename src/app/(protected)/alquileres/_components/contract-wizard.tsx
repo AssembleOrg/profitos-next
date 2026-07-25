@@ -326,7 +326,7 @@ export function ContractWizard({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
-                className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm"
+                className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
               />
             </Dialog.Overlay>
             <Dialog.Content asChild>
@@ -522,7 +522,7 @@ export function ContractWizard({
                                     <WhatsAppLink
                                       phone={selectedTenant.phone}
                                       iconSize={10}
-                                      className="inline-flex items-center gap-1 align-middle transition-colors hover:text-green-500"
+                                      className="inline-flex items-center gap-1 align-middle transition-colors hover:text-success"
                                     >
                                       {selectedTenant.phone}
                                     </WhatsAppLink>
@@ -783,7 +783,7 @@ export function ContractWizard({
                                         prev.filter((p) => p.additionalId !== sa.additionalId),
                                       )
                                     }
-                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition-colors hover:border-red-500/40 hover:text-red-300"
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition-colors hover:border-danger/30 hover:text-danger"
                                     aria-label="Quitar"
                                   >
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

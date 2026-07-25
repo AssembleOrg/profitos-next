@@ -4,7 +4,7 @@ interface SpinnerProps {
 }
 
 export function Spinner({ size = 14, variant = "default" }: SpinnerProps) {
-  const track = variant === "red" ? "border-red-500/30" : "border-secondary/30";
+  const track = variant === "red" ? "border-danger/30" : "border-secondary/30";
   const head = variant === "red" ? "border-t-red-400" : "border-t-secondary";
   return (
     <span

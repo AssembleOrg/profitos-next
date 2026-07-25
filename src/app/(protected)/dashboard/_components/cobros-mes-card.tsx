@@ -128,7 +128,7 @@ export async function CobrosMesCard({
               <Link
                 key={d.id}
                 href={`/alquileres?tab=cobros&q=${encodeURIComponent(d.contract.property.address)}`}
-                className={`flex items-center gap-3 rounded-xl border bg-bg/40 px-3 py-2.5 transition-colors hover:bg-bg/70 ${effective === "vencido" ? "border-red-500/30 hover:border-red-500/50" : "border-border hover:border-olive-bright/40"}`}
+                className={`flex items-center gap-3 rounded-xl border bg-bg/40 px-3 py-2.5 transition-colors hover:bg-bg/70 ${effective === "vencido" ? "border-danger/30 hover:border-danger/30" : "border-border hover:border-olive-bright/40"}`}
               >
                 <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${style.chip}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
@@ -145,7 +145,7 @@ export async function CobrosMesCard({
                 <div className="flex flex-col items-end gap-0.5 text-right">
                   <span className="font-mono text-xs text-text">{formatARS(pending)}</span>
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${effective === "vencido" ? "bg-red-500/10 text-red-300" : daysAway <= 1 ? "bg-amber-500/10 text-amber-300" : "bg-surface text-text-muted"}`}
+                    className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${effective === "vencido" ? "bg-danger-chip text-danger" : daysAway <= 1 ? "bg-warning-chip text-warning" : "bg-surface text-text-muted"}`}
                   >
                     {distance}
                   </span>
@@ -160,7 +160,7 @@ export async function CobrosMesCard({
 }
 
 function MonthStat({ label, value, tone }: { label: string; value: string; tone?: "emerald" | "amber" }) {
-  const v = tone === "emerald" ? "text-emerald-300" : tone === "amber" ? "text-amber-300" : "text-text";
+  const v = tone === "emerald" ? "text-success" : tone === "amber" ? "text-warning" : "text-text";
   return (
     <div className="flex flex-col gap-0.5 rounded-xl border border-border bg-bg/40 px-3 py-2">
       <span className="text-[9px] font-semibold uppercase tracking-widest text-text-muted">{label}</span>

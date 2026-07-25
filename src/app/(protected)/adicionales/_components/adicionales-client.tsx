@@ -111,7 +111,7 @@ export function AdicionalesClient({ initialItems }: Readonly<AdicionalesClientPr
                     <button
                       type="button"
                       onClick={() => handleDelete(it)}
-                      className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-[11px] text-red-300 transition-colors hover:bg-red-500/20"
+                      className="rounded-md border border-danger/30 bg-danger-chip px-3 py-2 text-[11px] text-danger transition-colors hover:bg-danger-chip"
                     >
                       Eliminar
                     </button>
@@ -213,7 +213,7 @@ function AdditionalFormDialog({ open, onOpenChange, editing, onSaved }: Readonly
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
-                className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm"
+                className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
               />
             </Dialog.Overlay>
             <Dialog.Content asChild>

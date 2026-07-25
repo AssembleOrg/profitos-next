@@ -312,7 +312,7 @@ export function MovementFormModal({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
-                className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm"
+                className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
               />
             </Dialog.Overlay>
             <Dialog.Content asChild>
@@ -343,7 +343,7 @@ export function MovementFormModal({
                         onClick={() => changeType("income")}
                         className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
                           type === "income"
-                            ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                            ? "border-success/30 bg-success-chip text-success"
                             : "border-border bg-bg text-text-muted hover:text-text"
                         }`}
                       >
@@ -354,7 +354,7 @@ export function MovementFormModal({
                         onClick={() => changeType("expense")}
                         className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
                           type === "expense"
-                            ? "border-red-500/40 bg-red-500/15 text-red-300"
+                            ? "border-danger/30 bg-danger-chip text-danger"
                             : "border-border bg-bg text-text-muted hover:text-text"
                         }`}
                       >
@@ -385,7 +385,7 @@ export function MovementFormModal({
                             onClick={() => setDestino("costear")}
                             className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
                               destino === "costear"
-                                ? "border-violet-500/40 bg-violet-500/15 text-violet-300"
+                                ? "border-olive-bright/30 bg-olive-chip text-olive-light"
                                 : "border-border bg-bg text-text-muted hover:text-text"
                             }`}
                           >
@@ -403,13 +403,13 @@ export function MovementFormModal({
 
                     {/* Detectar con IA (Costear): foto de ticket, audio o texto */}
                     {isCostear && (
-                      <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-3">
+                      <div className="rounded-xl border border-olive-bright/30 bg-olive-chip p-3">
                         <div className="mb-2 flex items-center justify-between">
-                          <span className="text-xs font-semibold uppercase tracking-wider text-violet-300">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-olive-light">
                             Detectar con IA
                           </span>
                           {extractionId && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-violet-300">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-olive-light">
                               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                               Detectado
                             </span>
@@ -433,14 +433,14 @@ export function MovementFormModal({
                               type="button"
                               onClick={extractText}
                               disabled={extracting}
-                              className="self-end rounded-lg border border-violet-500/40 bg-violet-500/15 px-3 py-1.5 text-xs font-semibold text-violet-300 transition-colors hover:bg-violet-500/25 disabled:opacity-60"
+                              className="self-end rounded-lg border border-olive-bright/30 bg-olive-chip px-3 py-1.5 text-xs font-semibold text-olive-light transition-colors hover:bg-olive-chip disabled:opacity-60"
                             >
                               Extraer texto
                             </button>
                           </div>
                         )}
                         {extracting && (
-                          <p className="mt-2 text-xs text-violet-300">Procesando… puede tardar unos segundos.</p>
+                          <p className="mt-2 text-xs text-olive-light">Procesando… puede tardar unos segundos.</p>
                         )}
                         <input
                           ref={imageInputRef}
@@ -615,7 +615,7 @@ export function MovementFormModal({
                     {/* Descripción (para Costear es el título del gasto, requerido) */}
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
-                        Descripción {isCostear ? <span className="text-violet-300">(título del gasto)</span> : <span className="text-text-faint">(opcional)</span>}
+                        Descripción {isCostear ? <span className="text-olive-light">(título del gasto)</span> : <span className="text-text-faint">(opcional)</span>}
                       </label>
                       <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} className={`${inputClass} resize-none`} />
                     </div>
@@ -672,7 +672,7 @@ function IaButton({ label, onClick, disabled }: Readonly<{ label: string; onClic
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="rounded-lg border border-border bg-bg px-2 py-2 text-xs font-semibold text-text-muted transition-colors hover:border-violet-500/40 hover:text-violet-300 disabled:cursor-not-allowed disabled:opacity-60"
+      className="rounded-lg border border-border bg-bg px-2 py-2 text-xs font-semibold text-text-muted transition-colors hover:border-olive-bright/30 hover:text-olive-light disabled:cursor-not-allowed disabled:opacity-60"
     >
       {label}
     </button>

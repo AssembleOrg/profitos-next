@@ -79,10 +79,10 @@ const PROPERTY_TYPES = [
 ];
 
 const PROPERTY_STATUSES = [
-  { value: "activa", label: "Activa", color: "bg-emerald-500" },
-  { value: "vendida", label: "Vendida", color: "bg-blue-500" },
-  { value: "alquilada", label: "Alquilada", color: "bg-amber-500" },
-  { value: "suspendida", label: "Suspendida", color: "bg-red-500" },
+  { value: "activa", label: "Activa", color: "bg-success" },
+  { value: "vendida", label: "Vendida", color: "bg-info" },
+  { value: "alquilada", label: "Alquilada", color: "bg-warning" },
+  { value: "suspendida", label: "Suspendida", color: "bg-danger" },
 ];
 
 /**
@@ -93,7 +93,7 @@ function ManualChip() {
   return (
     <span
       title="Propiedad cargada manualmente"
-      className="inline-flex flex-shrink-0 items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-400"
+      className="inline-flex flex-shrink-0 items-center gap-1 rounded-full border border-warning/30 bg-warning-chip px-1.5 py-0.5 text-[10px] font-medium text-warning"
     >
       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 20h9" />
@@ -594,7 +594,7 @@ export function PropiedadesClient({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            className="w-full rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
           >
             <option value="">Todos los estados</option>
             {PROPERTY_STATUSES.map((s) => (
@@ -609,7 +609,7 @@ export function PropiedadesClient({
             <select
               value={operationFilter}
               onChange={(e) => setOperationFilter(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
             >
               <option value="">Todas las operaciones</option>
               <option value="venta">Venta</option>
@@ -618,7 +618,7 @@ export function PropiedadesClient({
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
             >
               <option value="">Todos los tipos</option>
               {PROPERTY_TYPES.filter((t) => t.value).map((t) => (
@@ -634,7 +634,7 @@ export function PropiedadesClient({
             <select
               value={currencyFilter}
               onChange={(e) => setCurrencyFilter(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
             >
               <option value="">Moneda</option>
               <option value="USD">USD</option>
@@ -643,7 +643,7 @@ export function PropiedadesClient({
             <select
               value={sortFilter}
               onChange={(e) => setSortFilter(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
             >
               <option value="created_desc">Más recientes</option>
               <option value="price_asc">Precio menor</option>
@@ -671,7 +671,7 @@ export function PropiedadesClient({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
           >
             <option value="">Todos los estados</option>
             {PROPERTY_STATUSES.map((s) => (
@@ -681,7 +681,7 @@ export function PropiedadesClient({
           <select
             value={operationFilter}
             onChange={(e) => setOperationFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
           >
             <option value="">Todas las operaciones</option>
             <option value="venta">Venta</option>
@@ -690,7 +690,7 @@ export function PropiedadesClient({
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
           >
             <option value="">Todos los tipos</option>
             {PROPERTY_TYPES.filter((t) => t.value).map((t) => (
@@ -706,7 +706,7 @@ export function PropiedadesClient({
           <select
             value={currencyFilter}
             onChange={(e) => setCurrencyFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
           >
             <option value="">Moneda</option>
             <option value="USD">USD</option>
@@ -715,7 +715,7 @@ export function PropiedadesClient({
           <select
             value={sortFilter}
             onChange={(e) => setSortFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
           >
             <option value="created_desc">Más recientes</option>
             <option value="price_asc">Precio menor</option>
@@ -805,7 +805,7 @@ export function PropiedadesClient({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 text-[11px] font-medium text-emerald-400"
+                  className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-success/30 bg-success-chip px-2.5 text-[11px] font-medium text-success"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
@@ -863,7 +863,7 @@ export function PropiedadesClient({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 text-[11px] font-medium text-emerald-400"
+                    className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-success/30 bg-success-chip px-2.5 text-[11px] font-medium text-success"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
@@ -952,7 +952,7 @@ export function PropiedadesClient({
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(event) => event.stopPropagation()}
-                          className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20"
+                          className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-success/30 bg-success-chip px-3 text-xs font-medium text-success transition-colors hover:bg-success-chip"
                           title="Compartir por WhatsApp"
                         >
                           WhatsApp
@@ -1034,7 +1034,7 @@ export function PropiedadesClient({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
               onClick={handleClose}
             />
 
@@ -1143,7 +1143,7 @@ export function PropiedadesClient({
                     <select
                       name="type"
                       defaultValue={editProperty?.type ?? ""}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:light]"
                     >
                       {PROPERTY_TYPES.map((t) => (
                         <option key={t.value} value={t.value}>{t.label}</option>
@@ -1155,7 +1155,7 @@ export function PropiedadesClient({
                     <select
                       name="status"
                       defaultValue={editProperty?.status ?? "activa"}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
                     >
                       {PROPERTY_STATUSES.map((s) => (
                         <option key={s.value} value={s.value}>{s.label}</option>
@@ -1268,7 +1268,7 @@ export function PropiedadesClient({
                 </div>
 
                 {error && (
-                  <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>
+                  <p className="rounded-lg bg-danger-chip px-3 py-2 text-sm text-danger">{error}</p>
                 )}
               </form>
 
@@ -1282,7 +1282,7 @@ export function PropiedadesClient({
                     type="button"
                     onClick={() => setConfirmAction("delete")}
                     disabled={deleting}
-                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-red-400 transition-colors active:bg-red-500/10 disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-danger transition-colors active:bg-danger-chip disabled:opacity-50"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="3 6 5 6 21 6" />
@@ -1350,7 +1350,7 @@ export function PropiedadesClient({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-[70] bg-scrim backdrop-blur-sm"
               onClick={() => setConfirmAction(null)}
             />
             <motion.div
@@ -1381,7 +1381,7 @@ export function PropiedadesClient({
                   <button
                     type="button"
                     onClick={() => { setConfirmAction(null); handleDelete(); }}
-                    className="rounded-xl bg-red-500/20 px-5 py-2 text-sm font-medium text-red-400 transition-colors active:bg-red-500/30"
+                    className="rounded-xl bg-danger-chip px-5 py-2 text-sm font-medium text-danger transition-colors active:bg-danger-chip"
                   >
                     Eliminar
                   </button>
@@ -1409,7 +1409,7 @@ export function PropiedadesClient({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
               onClick={() => setAssignModalOpen(false)}
             />
             <motion.div
@@ -1445,7 +1445,7 @@ export function PropiedadesClient({
                     <select
                       name="propertyId"
                       required
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:light]"
                     >
                       <option value="">Seleccionar...</option>
                       {propertiesForAssignments.map((property) => (
@@ -1460,7 +1460,7 @@ export function PropiedadesClient({
                     <select
                       name="assignedToUserId"
                       required
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:light]"
                     >
                       <option value="">Seleccionar...</option>
                       {usersForAssignments.map((user) => (

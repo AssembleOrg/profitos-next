@@ -317,7 +317,7 @@ export function ConsultantsFollowUpsClient({
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="flex-1 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+            className="flex-1 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
           >
             <option value="">Todos los estados</option>
             {STATUS_OPTIONS.map((option) => (
@@ -330,7 +330,7 @@ export function ConsultantsFollowUpsClient({
             <select
               value={assignedToUserId}
               onChange={(e) => setAssignedToUserId(e.target.value)}
-              className="flex-1 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+              className="flex-1 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
             >
               <option value="">Todos los responsables</option>
               {assignableUsers.map((user) => (
@@ -392,7 +392,7 @@ export function ConsultantsFollowUpsClient({
                 {(item.recentContact.cellphone || item.recentContact.phone) && (
                   <WhatsAppLink
                     phone={item.recentContact.cellphone ?? item.recentContact.phone}
-                    className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted transition-colors hover:border-green-500/40 hover:text-green-500 active:bg-surface/80"
+                    className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted transition-colors hover:border-success/30 hover:text-success active:bg-surface/80"
                   >
                     {item.recentContact.cellphone ?? item.recentContact.phone}
                   </WhatsAppLink>
@@ -443,7 +443,7 @@ export function ConsultantsFollowUpsClient({
                     {(item.recentContact.cellphone || item.recentContact.phone) && (
                       <WhatsAppLink
                         phone={item.recentContact.cellphone ?? item.recentContact.phone}
-                        className="flex max-w-[200px] items-center gap-1.5 truncate text-xs text-text-muted/80 transition-colors hover:text-green-500 active:opacity-60"
+                        className="flex max-w-[200px] items-center gap-1.5 truncate text-xs text-text-muted/80 transition-colors hover:text-success active:opacity-60"
                       >
                         {item.recentContact.cellphone ?? item.recentContact.phone}
                       </WhatsAppLink>
@@ -490,7 +490,7 @@ export function ConsultantsFollowUpsClient({
                 {detail.recentContact.email ?? ((detail.recentContact.cellphone || detail.recentContact.phone) ? (
                   <WhatsAppLink
                     phone={detail.recentContact.cellphone ?? detail.recentContact.phone}
-                    className="inline-flex items-center gap-1.5 align-middle transition-colors hover:text-green-500"
+                    className="inline-flex items-center gap-1.5 align-middle transition-colors hover:text-success"
                   >
                     {detail.recentContact.cellphone ?? detail.recentContact.phone}
                   </WhatsAppLink>
@@ -511,7 +511,7 @@ export function ConsultantsFollowUpsClient({
                       <select
                         name="assignedToUserId"
                         defaultValue={detail.assignedToUser?.id ?? ""}
-                        className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                        className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
                       >
                         <option value="">Sin asignar</option>
                         {assignableUsers.map((user) => (
@@ -537,7 +537,7 @@ export function ConsultantsFollowUpsClient({
                     <select
                       name="status"
                       defaultValue={detail.status}
-                      className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                      className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
                     >
                       {STATUS_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -567,7 +567,7 @@ export function ConsultantsFollowUpsClient({
                     <select
                       name="type"
                       defaultValue="nota"
-                      className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                      className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
                     >
                       {ACTION_TYPES.map((option) => (
                         <option key={option.value} value={option.value}>

@@ -76,7 +76,7 @@ export function ImageUploader({ value, onChange, label, className }: Readonly<Pr
             <button type="button" onClick={() => inputRef.current?.click()}
               className="rounded-md bg-bg/80 px-2 py-1 text-xs text-text-muted backdrop-blur hover:text-text">Cambiar</button>
             <button type="button" onClick={() => { onChange(""); setPreviewUrl(null); }}
-              className="rounded-md bg-bg/80 px-2 py-1 text-xs text-red-400 backdrop-blur hover:text-red-300">Quitar</button>
+              className="rounded-md bg-bg/80 px-2 py-1 text-xs text-danger backdrop-blur hover:text-danger">Quitar</button>
           </div>
         </div>
       ) : (
@@ -195,7 +195,7 @@ export function MultiImageUploader({ images, onChange }: MultiImageUploaderProps
                   <div className="flex h-24 items-center justify-center bg-surface text-xs text-text-faint">Cargando...</div>
                 )}
                 <button type="button" onClick={() => removeImage(i)}
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-bg/80 text-red-400 opacity-0 transition-opacity group-hover:opacity-100">
+                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-bg/80 text-danger opacity-0 transition-opacity group-hover:opacity-100">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                   </svg>

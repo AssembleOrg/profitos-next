@@ -147,7 +147,7 @@ export function InquilinosClient({
                       {t.phone && (
                         <WhatsAppLink
                           phone={t.phone}
-                          className="flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-green-500"
+                          className="flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-success"
                         >
                           {t.phone}
                         </WhatsAppLink>
@@ -170,7 +170,7 @@ export function InquilinosClient({
                       <button
                         type="button"
                         onClick={() => handleDelete(t.id, t.fullName)}
-                        className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300 transition-colors active:bg-red-500/20"
+                        className="rounded-md border border-danger/30 bg-danger-chip px-3 py-2 text-xs text-danger transition-colors active:bg-danger-chip"
                       >
                         Eliminar
                       </button>
@@ -213,7 +213,7 @@ export function InquilinosClient({
                         {t.phone && (
                           <WhatsAppLink
                             phone={t.phone}
-                            className="flex items-center gap-1.5 transition-colors hover:text-green-500"
+                            className="flex items-center gap-1.5 transition-colors hover:text-success"
                           >
                             {t.phone}
                           </WhatsAppLink>
@@ -241,7 +241,7 @@ export function InquilinosClient({
                           <button
                             type="button"
                             onClick={() => handleDelete(t.id, t.fullName)}
-                            className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-[11px] text-red-300 transition-colors hover:bg-red-500/20"
+                            className="rounded-md border border-danger/30 bg-danger-chip px-3 py-2 text-[11px] text-danger transition-colors hover:bg-danger-chip"
                           >
                             Eliminar
                           </button>
@@ -376,7 +376,7 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
-                className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm"
+                className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
               />
             </Dialog.Overlay>
             <Dialog.Content asChild>

@@ -90,7 +90,7 @@ export async function ProximasFirmasCard({
               <Link
                 key={`${item.proposalId}-${item.dateField}`}
                 href={`/firmas?q=${encodeURIComponent(item.propertyAddress)}`}
-                className={`flex items-center gap-3 rounded-xl border bg-bg/40 px-3 py-2.5 transition-colors hover:border-olive-bright/40 hover:bg-bg/70 ${overdue ? "border-red-500/30" : "border-border"}`}
+                className={`flex items-center gap-3 rounded-xl border bg-bg/40 px-3 py-2.5 transition-colors hover:border-olive-bright/40 hover:bg-bg/70 ${overdue ? "border-danger/30" : "border-border"}`}
               >
                 <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${statusStyle.chip}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${statusStyle.dot}`} />
@@ -105,7 +105,7 @@ export async function ProximasFirmasCard({
                   </p>
                 </div>
                 <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${overdue ? "bg-red-500/10 text-red-300" : item.daysAway <= 1 ? "bg-amber-500/10 text-amber-300" : "bg-surface text-text-muted"}`}
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${overdue ? "bg-danger-chip text-danger" : item.daysAway <= 1 ? "bg-warning-chip text-warning" : "bg-surface text-text-muted"}`}
                 >
                   {distance}
                 </span>

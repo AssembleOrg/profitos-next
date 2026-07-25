@@ -30,8 +30,8 @@ interface Props {
 }
 
 const ROLE_CONFIG = {
-  admin: { label: "Admin", color: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-  user: { label: "Usuario", color: "bg-sky-500/15 text-sky-400 border-sky-500/30" },
+  admin: { label: "Admin", color: "bg-warning-chip text-warning border-warning/30" },
+  user: { label: "Usuario", color: "bg-info-chip text-info border-info/30" },
   viewer: { label: "Viewer", color: "bg-text-faint/10 text-text-faint border-border" },
 } as const;
 
@@ -146,7 +146,7 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
         </div>
         <button
           onClick={() => setModalOpen(true)}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-primary-hover"
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-bg transition-colors hover:bg-primary-hover"
         >
           + Agregar
         </button>
@@ -209,7 +209,7 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
                   {item.hasAccount && (
                     <Link
                       href={`/miembros/${item.id}/informe`}
-                      className="rounded-lg bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-400 transition-colors hover:bg-sky-500/20"
+                      className="rounded-lg bg-info-chip px-3 py-1.5 text-xs font-medium text-info transition-colors hover:bg-info-chip"
                     >
                       Informe
                     </Link>
@@ -219,7 +219,7 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
                       value={item.role ?? "user"}
                       onChange={(e) => handleChangeRole(item, e.target.value as "admin" | "user" | "viewer")}
                       disabled={changingRoleId === item.id}
-                      className="flex-1 rounded-lg border border-border bg-bg px-2 py-1.5 text-xs text-text focus:border-secondary focus:outline-none disabled:opacity-50 lg:flex-none [color-scheme:dark]"
+                      className="flex-1 rounded-lg border border-border bg-bg px-2 py-1.5 text-xs text-text focus:border-secondary focus:outline-none disabled:opacity-50 lg:flex-none [color-scheme:light]"
                     >
                       <option value="admin">Admin</option>
                       <option value="user">Usuario</option>
@@ -235,8 +235,8 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
                     disabled={togglingId === item.id}
                     className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors lg:flex-none ${
                       item.isActive
-                        ? "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
-                        : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                        ? "bg-warning-chip text-warning hover:bg-warning-chip"
+                        : "bg-success-chip text-success hover:bg-success-chip"
                     } disabled:opacity-50`}
                     title={item.isActive ? "Desactivar acceso" : "Activar acceso"}
                   >
@@ -249,7 +249,7 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
                   <button
                     onClick={() => handleDelete(item.id)}
                     disabled={deletingId === item.id}
-                    className="flex-1 rounded-lg bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50 lg:flex-none"
+                    className="flex-1 rounded-lg bg-danger-chip px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger-chip disabled:opacity-50 lg:flex-none"
                     title="Eliminar"
                   >
                     {deletingId === item.id ? <Spinner variant="red" size={12} /> : "Eliminar"}
@@ -297,7 +297,7 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
             <button
               onClick={handleCreate}
               disabled={loading || !email.trim()}
-              className="flex flex-1 items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-text transition-colors hover:bg-primary-hover disabled:opacity-50"
+              className="flex flex-1 items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-primary-hover disabled:opacity-50"
             >
               {loading ? <Spinner /> : "Agregar"}
             </button>
@@ -327,7 +327,7 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
             <select
               value={newRole}
               onChange={(e) => setNewRole(e.target.value as "admin" | "user" | "viewer")}
-              className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+              className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
             >
               <option value="user">Usuario</option>
               <option value="admin">Admin</option>

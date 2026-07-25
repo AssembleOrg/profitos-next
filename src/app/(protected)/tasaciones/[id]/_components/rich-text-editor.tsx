@@ -51,7 +51,7 @@ export function RichTextEditor({ content, onChange, placeholder }: Props) {
     editorProps: {
       attributes: {
         class:
-          "prose prose-invert prose-sm max-w-none w-full min-w-0 overflow-hidden px-4 py-3 min-h-[200px] focus:outline-none text-text",
+          "prose prose-sm max-w-none w-full min-w-0 overflow-hidden px-4 py-3 min-h-[200px] focus:outline-none text-text",
       },
     },
   });
@@ -156,12 +156,12 @@ export function RichTextEditor({ content, onChange, placeholder }: Props) {
         .ProseMirror h1 { font-size: 1.5rem; font-weight: 700; margin: 0.75rem 0 0.5rem; }
         .ProseMirror h2 { font-size: 1.25rem; font-weight: 600; margin: 0.75rem 0 0.5rem; }
         .ProseMirror h3 { font-size: 1.1rem; font-weight: 600; margin: 0.5rem 0 0.25rem; }
-        .ProseMirror blockquote { border-left: 3px solid rgba(255,255,255,0.15); padding-left: 1rem; margin: 0.5rem 0; color: rgba(240,237,232,0.5); }
+        .ProseMirror blockquote { border-left: 3px solid var(--color-border-strong); padding-left: 1rem; margin: 0.5rem 0; color: var(--color-text-dim); }
         .ProseMirror p { margin: 0.35rem 0; }
         .ProseMirror strong { font-weight: 700; }
         .ProseMirror p.is-editor-empty:first-child::before {
           content: "${placeholder ?? ""}";
-          color: rgba(240, 237, 232, 0.28);
+          color: var(--color-text-faint);
           float: left;
           pointer-events: none;
           height: 0;

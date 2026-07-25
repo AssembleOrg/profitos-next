@@ -75,25 +75,28 @@ export const RENTAL_DUE_STATUS_STYLE: Record<
   RentalDueEffectiveStatus,
   { dot: string; chip: string }
 > = {
+  // "A vencer" es el estado neutro por defecto: sin color, para que los que sí
+  // requieren acción destaquen. Ver docs/design.md § Mapa de estados.
   esperando: {
-    dot: "bg-text-faint",
-    chip: "border-border-strong bg-surface text-text-muted",
+    dot: "bg-text-dim",
+    chip: "border-border-strong bg-surface-elevated text-text-muted",
   },
   vencido: {
-    dot: "bg-red-400",
-    chip: "border-red-500/40 bg-red-500/10 text-red-300",
+    dot: "bg-danger",
+    chip: "border-danger/30 bg-danger-chip text-danger",
   },
   pagado: {
-    dot: "bg-emerald-400",
-    chip: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+    dot: "bg-success",
+    chip: "border-success/30 bg-success-chip text-success",
   },
   parcial: {
-    dot: "bg-amber-400",
-    chip: "border-amber-500/40 bg-amber-500/10 text-amber-300",
+    dot: "bg-warning",
+    chip: "border-warning/30 bg-warning-chip text-warning",
   },
+  // Resuelto pero no cobrado: cierre administrativo, va con la marca.
   condonado: {
-    dot: "bg-violet-400",
-    chip: "border-violet-500/40 bg-violet-500/10 text-violet-300",
+    dot: "bg-olive-bright",
+    chip: "border-olive-bright/30 bg-olive-chip text-olive-light",
   },
 };
 

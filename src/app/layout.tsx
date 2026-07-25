@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0d0f12",
+  themeColor: "#EDEFE8",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -39,12 +39,12 @@ export default function RootLayout({
       <body className="font-sans antialiased" suppressHydrationWarning>
         {children}
         <Toaster
-          theme="dark"
+          theme="light"
           position="top-right"
           toastOptions={{
             style: {
               background: "var(--color-surface-elevated)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
+              border: "1px solid var(--color-border)",
               color: "var(--color-text)",
             },
           }}

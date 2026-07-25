@@ -140,7 +140,7 @@ export function DateField({
             type="button"
             onClick={handleClear}
             aria-label="Limpiar fecha"
-            className="flex h-9 w-7 items-center justify-center text-text-faint transition-colors hover:text-red-300"
+            className="flex h-9 w-7 items-center justify-center text-text-faint transition-colors hover:text-danger"
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />

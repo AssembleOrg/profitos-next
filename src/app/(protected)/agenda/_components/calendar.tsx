@@ -39,12 +39,12 @@ interface CalendarProps {
 
 const typeColors: Record<CalendarEvent["type"], { bg: string; text: string; dot: string }> = {
   visita: { bg: "bg-secondary/15", text: "text-secondary", dot: "bg-secondary" },
-  firma: { bg: "bg-amber-500/15", text: "text-amber-400", dot: "bg-amber-400" },
-  tasacion: { bg: "bg-blue-500/15", text: "text-blue-400", dot: "bg-blue-400" },
-  otro: { bg: "bg-purple-500/15", text: "text-purple-400", dot: "bg-purple-400" },
-  firma_informes: { bg: "bg-cyan-500/15", text: "text-cyan-400", dot: "bg-cyan-400" },
-  firma_acordada: { bg: "bg-amber-500/15", text: "text-amber-400", dot: "bg-amber-400" },
-  entrega_llaves: { bg: "bg-emerald-500/15", text: "text-emerald-400", dot: "bg-emerald-400" },
+  firma: { bg: "bg-warning-chip", text: "text-warning", dot: "bg-warning" },
+  tasacion: { bg: "bg-info-chip", text: "text-info", dot: "bg-info" },
+  otro: { bg: "bg-olive-chip", text: "text-olive-light", dot: "bg-olive-bright" },
+  firma_informes: { bg: "bg-info-chip", text: "text-info", dot: "bg-info" },
+  firma_acordada: { bg: "bg-warning-chip", text: "text-warning", dot: "bg-warning" },
+  entrega_llaves: { bg: "bg-success-chip", text: "text-success", dot: "bg-success" },
 };
 
 const typeLabels: Record<string, string> = {
@@ -58,7 +58,7 @@ const typeLabels: Record<string, string> = {
 };
 
 /** Estilo distintivo para eventos externos de Google Calendar. */
-const googleStyle = { bg: "bg-indigo-500/15", text: "text-indigo-300", dot: "bg-indigo-400" };
+const googleStyle = { bg: "bg-info-chip", text: "text-info", dot: "bg-info" };
 
 function eventStyle(ev: CalendarEvent): { bg: string; text: string; dot: string } {
   return ev.source === "google" ? googleStyle : typeColors[ev.type];
@@ -189,11 +189,11 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
               title={showGoogle ? "Ocultar Google Calendar" : "Mostrar Google Calendar"}
               className={`flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] transition-colors ${
                 showGoogle
-                  ? "border-indigo-400/40 bg-indigo-500/15 text-indigo-300"
+                  ? "border-info/30 bg-info-chip text-info"
                   : "border-border text-text-muted hover:bg-surface hover:text-text"
               }`}
             >
-              <span className={`h-1.5 w-1.5 rounded-full ${showGoogle ? "bg-indigo-400" : "bg-text-faint"}`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${showGoogle ? "bg-info" : "bg-text-faint"}`} />
               Google
             </button>
           </div>
@@ -471,11 +471,11 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
             onClick={() => setShowGoogle((v) => !v)}
             className={`ml-auto flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs transition-colors ${
               showGoogle
-                ? "border-indigo-400/40 bg-indigo-500/15 text-indigo-300"
+                ? "border-info/30 bg-info-chip text-info"
                 : "border-border text-text-muted hover:bg-surface hover:text-text"
             }`}
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${showGoogle ? "bg-indigo-400" : "bg-text-faint"}`} />
+            <span className={`h-1.5 w-1.5 rounded-full ${showGoogle ? "bg-info" : "bg-text-faint"}`} />
             {showGoogle ? "Google Calendar visible" : "Mostrar Google Calendar"}
           </button>
         </div>

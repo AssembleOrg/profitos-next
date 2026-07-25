@@ -182,7 +182,7 @@ export function CreateObjetivoModal({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
-                className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm"
+                className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
               />
             </Dialog.Overlay>
             <Dialog.Content asChild>
@@ -354,7 +354,7 @@ export function CreateObjetivoModal({
                                 type="button"
                                 onClick={() => setItems((prev) => prev.filter((i) => i.id !== item.id))}
                                 disabled={items.length === 1}
-                                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-text-faint transition-colors hover:border-red-500/40 hover:text-red-300 disabled:opacity-40"
+                                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-text-faint transition-colors hover:border-danger/30 hover:text-danger disabled:opacity-40"
                                 aria-label="Quitar ítem"
                               >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

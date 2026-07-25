@@ -62,7 +62,7 @@ export function LoginForm({ step, urlError }: Props) {
         <motion.p
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-[13px] font-light text-red-400"
+          className="text-[13px] font-light text-danger"
         >
           {error}
         </motion.p>

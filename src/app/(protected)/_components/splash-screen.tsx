@@ -18,7 +18,9 @@ export function SplashScreen() {
     <AnimatePresence>
       {visible && (
         <motion.div
-          className="fixed inset-0 z-100 flex items-center justify-center bg-bg"
+          // Oscuro explícito: encadena con el login (que sigue en dark) y
+          // resuelve en la app clara al salir. No usa --color-bg a propósito.
+          className="fixed inset-0 z-100 flex items-center justify-center bg-[#131410]"
           exit={{
             opacity: 0,
             scale: 1.15,
@@ -32,7 +34,7 @@ export function SplashScreen() {
           <div className="relative flex flex-col items-start">
             {/* "Juliana" — slides in from the left */}
             <motion.h1
-              className="font-display text-[72px] font-medium leading-none tracking-tight text-text"
+              className="font-display text-[72px] font-medium leading-none tracking-tight text-[#f0ede8]"
               initial={{ x: -150, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{
@@ -46,7 +48,7 @@ export function SplashScreen() {
 
             {/* "Profitos" — slides in from the right */}
             <motion.h1
-              className="font-display self-end text-[72px] font-medium leading-none tracking-tight text-text"
+              className="font-display self-end text-[72px] font-medium leading-none tracking-tight text-[#f0ede8]"
               initial={{ x: 150, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{

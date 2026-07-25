@@ -144,7 +144,7 @@ export function FirmaCard({ firma, onOpen }: Readonly<FirmaCardProps>) {
         </div>
 
         {isRejected && (
-          <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2 py-1.5 text-[11px] font-medium text-red-300">
+          <p className="rounded-md border border-danger/30 bg-danger-chip px-2 py-1.5 text-[11px] font-medium text-danger">
             Propuesta rechazada · proceso cerrado
           </p>
         )}

@@ -55,11 +55,11 @@ interface ContactosClientProps {
 }
 
 const LEAD_STATUS_COLORS: Record<string, string> = {
-  "Activo": "bg-emerald-500",
-  "Cerrado": "bg-red-500",
-  "En espera": "bg-amber-500",
-  "Esperando respuesta": "bg-sky-500",
-  "Nuevo": "bg-violet-500",
+  "Activo": "bg-success",
+  "Cerrado": "bg-danger",
+  "En espera": "bg-warning",
+  "Esperando respuesta": "bg-info",
+  "Nuevo": "bg-olive-bright",
 };
 
 function getLeadStatusColor(status: string | null) {
@@ -292,7 +292,7 @@ export function ContactosClient({
         <button
           onClick={() => switchTab("tokko")}
           className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-            tab === "tokko" ? "bg-primary text-text" : "text-text-muted hover:text-text"
+            tab === "tokko" ? "bg-primary text-bg" : "text-text-muted hover:text-text"
           }`}
         >
           Tokko
@@ -300,7 +300,7 @@ export function ContactosClient({
         <button
           onClick={() => switchTab("manual")}
           className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-            tab === "manual" ? "bg-primary text-text" : "text-text-muted hover:text-text"
+            tab === "manual" ? "bg-primary text-bg" : "text-text-muted hover:text-text"
           }`}
         >
           Manuales
@@ -327,7 +327,7 @@ export function ContactosClient({
             <select
               value={leadStatusFilter}
               onChange={(e) => setLeadStatusFilter(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
             >
               <option value="">Todos los estados</option>
               {leadStatusOptions.map((s) => (
@@ -401,7 +401,7 @@ export function ContactosClient({
                         {(c.cellphone || c.phone) && (
                           <WhatsAppLink
                             phone={c.cellphone ?? c.phone}
-                            className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted transition-colors hover:border-green-500/40 hover:text-green-500 active:bg-surface/80"
+                            className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted transition-colors hover:border-success/30 hover:text-success active:bg-surface/80"
                           >
                             {c.cellphone ?? c.phone}
                           </WhatsAppLink>
@@ -451,13 +451,13 @@ export function ContactosClient({
                       <td className="px-5 py-3.5">
                         <p className="font-medium text-text">{c.name}</p>
                         {c.tokkoDeletedAt && (
-                          <p className="text-[10px] text-red-400">Eliminado en Tokko</p>
+                          <p className="text-[10px] text-danger">Eliminado en Tokko</p>
                         )}
                         <p className="mt-0.5 text-xs text-text-muted md:hidden">
                           {c.email ?? ((c.cellphone || c.phone) ? (
                             <WhatsAppLink
                               phone={c.cellphone ?? c.phone}
-                              className="inline-flex items-center gap-1 align-middle transition-colors hover:text-green-500"
+                              className="inline-flex items-center gap-1 align-middle transition-colors hover:text-success"
                             >
                               {c.cellphone ?? c.phone}
                             </WhatsAppLink>
@@ -468,7 +468,7 @@ export function ContactosClient({
                       <td className="hidden px-5 py-3.5 text-text-muted lg:table-cell">
                         <WhatsAppLink
                           phone={c.cellphone ?? c.phone}
-                          className="inline-flex items-center gap-1.5 transition-colors hover:text-green-500"
+                          className="inline-flex items-center gap-1.5 transition-colors hover:text-success"
                           fallback={<>—</>}
                         >
                           {c.cellphone ?? c.phone}
@@ -540,7 +540,7 @@ export function ContactosClient({
                     {c.phone ? (
                       <WhatsAppLink
                         phone={c.phone}
-                        className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted transition-colors hover:border-green-500/40 hover:text-green-500 active:bg-surface/80"
+                        className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted transition-colors hover:border-success/30 hover:text-success active:bg-surface/80"
                       >
                         {c.phone}
                       </WhatsAppLink>
@@ -571,7 +571,7 @@ export function ContactosClient({
           <>
             {isEdit ? (
               <button type="button" onClick={handleDelete} disabled={deleting}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-red-400 active:bg-red-500/10 disabled:opacity-50">
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-danger active:bg-danger-chip disabled:opacity-50">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="3 6 5 6 21 6" />
                   <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />

@@ -60,7 +60,7 @@ export function DueDetailModal({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
-                className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm"
+                className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
               />
             </Dialog.Overlay>
             <Dialog.Content asChild>
@@ -375,7 +375,7 @@ function SummaryCard({
   tone?: "emerald" | "olive";
 }) {
   const valueClass =
-    tone === "emerald" ? "text-emerald-300" : tone === "olive" ? "text-accent" : "text-text";
+    tone === "emerald" ? "text-success" : tone === "olive" ? "text-accent" : "text-text";
   return (
     <div className="flex flex-col gap-0.5 rounded-xl border border-border bg-surface/40 p-3">
       <span className="text-[9px] font-semibold uppercase tracking-widest text-text-muted">
@@ -421,8 +421,8 @@ function PaymentRow({ tx, signedUrls, canDelete, dueDateId, onDeleted }: Payment
           <span
             className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
               tx.isFull
-                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                : "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                ? "border-success/30 bg-success-chip text-success"
+                : "border-warning/30 bg-warning-chip text-warning"
             }`}
           >
             {tx.isFull ? "Total" : "Parcial"}
@@ -481,7 +481,7 @@ function PaymentRow({ tx, signedUrls, canDelete, dueDateId, onDeleted }: Payment
           <button
             type="button"
             onClick={deleteThis}
-            className="ml-auto rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-[10px] text-red-300 transition-colors hover:bg-red-500/20"
+            className="ml-auto rounded-md border border-danger/30 bg-danger-chip px-2.5 py-1 text-[10px] text-danger transition-colors hover:bg-danger-chip"
           >
             Eliminar pago
           </button>
@@ -531,9 +531,9 @@ function Timeline({ actions, signedUrls, currentUserId, isAdmin, dueDateId, onAc
           action.createdByUser.fullName?.trim() || action.createdByUser.email.split("@")[0];
         const dotColor =
           action.type === "payment"
-            ? "bg-emerald-400"
+            ? "bg-success"
             : action.type === "status_change"
-              ? "bg-violet-400"
+              ? "bg-olive-bright"
               : action.type === "creation"
                 ? "bg-olive-bright"
                 : "bg-text-faint";
@@ -559,7 +559,7 @@ function Timeline({ actions, signedUrls, currentUserId, isAdmin, dueDateId, onAc
                     <button
                       type="button"
                       onClick={() => deleteNote(action.id)}
-                      className="text-text-faint transition-colors hover:text-red-300"
+                      className="text-text-faint transition-colors hover:text-danger"
                       aria-label="Eliminar nota"
                     >
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -605,7 +605,7 @@ function ActionBadge({ action }: { action: DueDateAction }) {
   }
   if (action.type === "payment") {
     return (
-      <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-300">
+      <span className="rounded-full border border-success/30 bg-success-chip px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-success">
         Pago
       </span>
     );

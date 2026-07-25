@@ -69,10 +69,10 @@ interface Props {
 }
 
 const STATUS_OPTIONS = [
-  { value: "pendiente", label: "Pendiente", color: "bg-amber-500" },
-  { value: "en_progreso", label: "En progreso", color: "bg-blue-500" },
-  { value: "hecho", label: "Hecho", color: "bg-emerald-500" },
-  { value: "cancelado", label: "Cancelado", color: "bg-red-500" },
+  { value: "pendiente", label: "Pendiente", color: "bg-warning" },
+  { value: "en_progreso", label: "En progreso", color: "bg-info" },
+  { value: "hecho", label: "Hecho", color: "bg-success" },
+  { value: "cancelado", label: "Cancelado", color: "bg-danger" },
 ];
 
 const ACTION_TYPES = [
@@ -337,7 +337,7 @@ export function SeguimientosClient({
         <select
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
-          className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
         >
           <option value="">Todos los estados</option>
           {STATUS_OPTIONS.map((option) => (
@@ -455,14 +455,14 @@ export function SeguimientosClient({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs font-medium text-text-muted">Propiedad *</label>
-                <select name="propertyId" required className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]">
+                <select name="propertyId" required className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:light]">
                   <option value="">Seleccionar...</option>
                   {assignableProperties.map((p) => <option key={p.id} value={p.id}>{p.address}</option>)}
                 </select>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-text-muted">Asignado a *</label>
-                <select name="assignedToUserId" required className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]">
+                <select name="assignedToUserId" required className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:light]">
                   <option value="">Seleccionar...</option>
                   {assignableUsers.map((u) => <option key={u.id} value={u.id}>{userLabel(u)}</option>)}
                 </select>
@@ -480,7 +480,7 @@ export function SeguimientosClient({
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-text-muted">Estado</label>
-              <select name="status" defaultValue="pendiente" className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:dark]">
+              <select name="status" defaultValue="pendiente" className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:light]">
                 {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
@@ -498,7 +498,7 @@ export function SeguimientosClient({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
             onClick={closeDetail}
           >
             <motion.div
@@ -532,7 +532,7 @@ export function SeguimientosClient({
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
                           <label className="mb-1 block text-xs font-medium text-text-muted">Estado</label>
-                          <select name="status" defaultValue={detail.status} className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]">
+                          <select name="status" defaultValue={detail.status} className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]">
                             {STATUS_OPTIONS.map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
@@ -556,7 +556,7 @@ export function SeguimientosClient({
                           <select
                             name="assignedToUserId"
                             defaultValue={detail.assignedToUser.id}
-                            className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                            className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
                           >
                             {assignableUsers.map((option) => (
                               <option key={option.id} value={option.id}>
@@ -590,7 +590,7 @@ export function SeguimientosClient({
                       <h3 className="mb-2 text-sm font-medium text-text">Nueva acción</h3>
                       <form className="flex flex-col gap-3" onSubmit={handleCreateAction}>
                         <div className="grid grid-cols-2 gap-3">
-                          <select name="type" defaultValue="nota" className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]">
+                          <select name="type" defaultValue="nota" className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]">
                             {ACTION_TYPES.map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}

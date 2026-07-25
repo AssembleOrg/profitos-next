@@ -196,9 +196,9 @@ export function AlquileresClient({
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <KPI label="Cobrado" value={formatARS(aggregatedKpis.collectedTotal)} hint="suma de pagos" tone="text-emerald-300" />
+        <KPI label="Cobrado" value={formatARS(aggregatedKpis.collectedTotal)} hint="suma de pagos" tone="text-success" />
         <KPI label="Esperado" value={formatARS(aggregatedKpis.expectedTotal)} hint="todas las cuotas" tone="text-text" />
-        <KPI label="Vencidos" value={aggregatedKpis.counts.vencido.toString()} hint="cuotas sin pago" tone="text-red-300" />
+        <KPI label="Vencidos" value={aggregatedKpis.counts.vencido.toString()} hint="cuotas sin pago" tone="text-danger" />
         <KPI label="Comisión" value={formatARS(aggregatedKpis.commissionTotal)} hint="ingresos inmobiliaria" tone="text-accent" />
       </div>
 
@@ -353,7 +353,7 @@ function ContractCard({ contract, onOpenDue, onDelete, canDelete }: ContractCard
             type="button"
             onClick={onDelete}
             aria-label="Eliminar contrato"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-red-500/10 hover:text-red-300"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-danger-chip hover:text-danger"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="3 6 5 6 21 6" />
@@ -544,7 +544,7 @@ function CobrosList({ headers, loaded, loadingIds, onExpand, onOpenDue }: Cobros
               </div>
               <div className="shrink-0 text-right">
                 <p className="font-mono text-xs">
-                  <span className="text-emerald-300">{formatARS(summary.collectedTotal)}</span>
+                  <span className="text-success">{formatARS(summary.collectedTotal)}</span>
                   <span className="text-text-faint"> / {formatARS(summary.expectedTotal)}</span>
                 </p>
                 <p className="text-[10px] text-text-faint">{completion}% cobrado</p>
@@ -609,7 +609,7 @@ function CobrosList({ headers, loaded, loadingIds, onExpand, onOpenDue }: Cobros
                               Esperado: <span className="font-mono text-text">{formatARS(due.expectedAmount)}</span>
                             </span>
                             <span className="text-[11px] text-text-muted">
-                              Cobrado: <span className="font-mono text-emerald-300">{formatARS(collected)}</span>
+                              Cobrado: <span className="font-mono text-success">{formatARS(collected)}</span>
                             </span>
                           </div>
                         </button>
@@ -645,7 +645,7 @@ function CobrosList({ headers, loaded, loadingIds, onExpand, onOpenDue }: Cobros
                             <td className="px-4 py-2.5 text-right font-mono text-xs text-text">
                               {formatARS(due.expectedAmount)}
                             </td>
-                            <td className="px-4 py-2.5 text-right font-mono text-xs text-emerald-300">
+                            <td className="px-4 py-2.5 text-right font-mono text-xs text-success">
                               {formatARS(collected)}
                             </td>
                             <td className="px-4 py-2.5">

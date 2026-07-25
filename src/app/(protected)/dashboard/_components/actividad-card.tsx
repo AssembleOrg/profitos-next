@@ -9,19 +9,19 @@ const actividades = [
     tiempo: "Hace 1h",
     texto: "Visita confirmada por cliente",
     tag: "Visita",
-    tagColor: "bg-blue-500/20 text-blue-400",
+    tagColor: "bg-info-chip text-info",
   },
   {
     tiempo: "Hace 3h",
     texto: "Contrato enviado para firma",
     tag: "Contrato",
-    tagColor: "bg-amber-500/20 text-amber-400",
+    tagColor: "bg-warning-chip text-warning",
   },
   {
     tiempo: "Ayer",
     texto: "Propiedad publicada en portal",
     tag: "Propiedad",
-    tagColor: "bg-purple-500/20 text-purple-400",
+    tagColor: "bg-olive-chip text-olive-light",
   },
 ];
 

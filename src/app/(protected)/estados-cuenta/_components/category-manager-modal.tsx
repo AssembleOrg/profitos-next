@@ -94,7 +94,7 @@ export function CategoryManagerModal({ open, onOpenChange, categories, isAdmin }
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
-                className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm"
+                className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
               />
             </Dialog.Overlay>
             <Dialog.Content asChild>
@@ -204,7 +204,7 @@ function CategoryColumn({
                     type="button"
                     onClick={() => onRemove(c)}
                     aria-label="Borrar"
-                    className="flex h-7 w-7 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-red-500/10 hover:text-red-300"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-danger-chip hover:text-danger"
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
                   </button>

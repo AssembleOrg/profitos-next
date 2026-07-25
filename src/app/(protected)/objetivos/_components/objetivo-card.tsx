@@ -38,9 +38,9 @@ const STATUS_STYLE: Record<CardStatus, { dot: string; chip: string; ring: string
     ring: "ring-olive-bright/30",
   },
   completed: {
-    dot: "bg-emerald-400",
-    chip: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
-    ring: "ring-emerald-500/30",
+    dot: "bg-success",
+    chip: "border-success/30 bg-success-chip text-success",
+    ring: "ring-success/30",
   },
 };
 
@@ -51,12 +51,12 @@ const ITEM_STATUS_STYLE: Record<ItemStatus, { box: string; label: string; line: 
     line: "",
   },
   done: {
-    box: "border-emerald-400/70 bg-emerald-500/15 text-emerald-300",
+    box: "border-success/30 bg-success-chip text-success",
     label: "text-text-muted",
     line: "line-through decoration-emerald-400/40 decoration-1",
   },
   failed: {
-    box: "border-red-400/70 bg-red-500/15 text-red-300",
+    box: "border-danger/30 bg-danger-chip text-danger",
     label: "text-text-muted",
     line: "line-through decoration-red-400/40 decoration-1",
   },
@@ -267,7 +267,7 @@ export function ObjetivoCard({
                         type="button"
                         disabled={pending}
                         onClick={handleDelete}
-                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50"
+                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-danger transition-colors hover:bg-danger-chip disabled:opacity-50"
                       >
                         {pending ? <Spinner variant="red" size={12} /> : "Eliminar"}
                       </button>
@@ -372,7 +372,7 @@ export function ObjetivoCard({
           <span className="font-semibold text-text-muted">
             {progress.done}/{progress.total} cumplidos
             {progress.failed > 0 && (
-              <span className="ml-1 text-red-300/90">· {progress.failed} no</span>
+              <span className="ml-1 text-danger">· {progress.failed} no</span>
             )}
           </span>
           <span className="font-mono text-accent">{progress.percent}%</span>

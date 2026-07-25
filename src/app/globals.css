@@ -1,41 +1,64 @@
 @import "tailwindcss";
 
 :root {
-  /* Backgrounds — Camino C: undertone warm + green muy sutil para coherencia con olive branding */
-  --color-bg: #131410;
-  --color-surface: #1a1c17;
-  --color-surface-elevated: #232620;
-  --color-surface-overlay: #2d3128;
+  /* ── Superficies — Salvia: tinte olive en el fondo (H=77°, a 10° de la marca) ──
+     El branding es la raíz del sistema, no un color aplicado encima. */
+  --color-bg: #EDEFE8;
+  --color-surface: #FBFCF8;
+  --color-surface-elevated: #F4F6EF;
+  --color-surface-overlay: #FBFCF8;
 
-  /* Olive scale */
-  --color-olive-deep: #2e3427;
-  --color-olive-mid: #4b5340;
-  --color-olive-vivid: #6b7a5c;
-  --color-olive-bright: #8fa870;
-  --color-olive-light: #b8cc9e;
-  --color-olive-subtle: rgba(107, 122, 92, 0.15);
+  /* ── Olive — marca. Recalibrado para fondo claro ── */
+  --color-olive-deep: #E4EAD9;   /* fondo de estado activo (nav, selección) */
+  --color-olive-mid: #4b5340;    /* 7.6:1 — sin cambios */
+  --color-olive-vivid: #4a6330;  /* hover */
+  /* Doble rol: relleno sólido (texto claro encima, 4.6:1) y texto sobre card (5.1:1).
+     Los 36 usos de `text-bg` sobre `bg-olive-bright` dependen del primero. */
+  --color-olive-bright: #587434;
+  --color-olive-light: #3F5527;  /* texto/acento sobre claro */
+  --color-olive-subtle: rgba(91, 120, 54, 0.10);
 
   /* Legacy tokens — preserved for zero breaking changes */
   --color-primary: var(--color-olive-mid);
   --color-primary-hover: var(--color-olive-vivid);
   --color-primary-subtle: var(--color-olive-subtle);
   --color-secondary: var(--color-olive-bright);
-  --color-secondary-subtle: rgba(143, 168, 128, 0.12);
+  --color-secondary-subtle: rgba(91, 120, 54, 0.10);
   --color-accent: var(--color-olive-light);
 
-  /* Text */
-  --color-text: #f0ede8;
-  --color-text-muted: rgba(240, 237, 232, 0.72);
-  --color-text-subtle: rgba(240, 237, 232, 0.40);
-  --color-text-faint: rgba(240, 237, 232, 0.55);
+  /* ── Texto — SÓLIDO, no opacidad.
+     Antes -subtle (0.40) era más tenue que -faint (0.55), al revés de sus nombres.
+     Ahora -subtle es alias de -dim: sus 189 usos suben de 3.42:1 a 4.8:1. ── */
+  --color-text: #1B1D17;         /* 14.7:1 — dato primario */
+  --color-text-muted: #4A4E44;   /*  7.4:1 — secundario */
+  --color-text-dim: #666A5E;     /*  4.8:1 — labels, metadata */
+  --color-text-subtle: #666A5E;  /*  4.8:1 — alias de -dim */
+  --color-text-faint: #8C9083;   /*  3.1:1 — SOLO decorativo/disabled */
 
-  /* Borders */
-  --color-border: rgba(255, 255, 255, 0.12);
-  --color-border-strong: rgba(255, 255, 255, 0.22);
-  --color-border-olive: rgba(143, 168, 112, 0.32);
+  /* ── Bordes — en claro necesitan más peso que en oscuro ── */
+  --color-border: #C9CFBC;
+  --color-border-strong: #BFC6B0;
+  --color-border-olive: rgba(91, 120, 54, 0.28);
+
+  /* ── Semánticos — paleta Botánico (análogo frío del olive) ── */
+  --color-success: #247f4a;  /* 4.8:1 · H=145° */
+  --color-warning: #916717;  /* 4.9:1 · H=39°  */
+  --color-danger: #ca3121;   /* 5.1:1 · H=6°   */
+  --color-info: #27787c;     /* 5.0:1 · H=183° */
+
+  /* ── Chips — tinte del matiz sobre surface.
+     Reemplaza el patrón bg-{color}-500/10 + text-{color}-300. ── */
+  --color-success-chip: #EBF7F0;
+  --color-warning-chip: #FAF4E8;
+  --color-danger-chip: #FBEDEB;
+  --color-info-chip: #EAF5F6;
+  --color-olive-chip: #F0F4EC;
+
+  /* Scrim de modal — reemplaza los bg-black/60 */
+  --color-scrim: rgba(30, 34, 26, 0.36);
 
   /* Favorites */
-  --color-fav-gold: #d4a84a;
+  --color-fav-gold: #8a6a1f;
 
   /* Safe area */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -61,11 +84,22 @@
   --color-accent: var(--color-accent);
   --color-text: var(--color-text);
   --color-text-muted: var(--color-text-muted);
+  --color-text-dim: var(--color-text-dim);
   --color-text-subtle: var(--color-text-subtle);
   --color-text-faint: var(--color-text-faint);
   --color-border: var(--color-border);
   --color-border-strong: var(--color-border-strong);
   --color-border-olive: var(--color-border-olive);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+  --color-info: var(--color-info);
+  --color-success-chip: var(--color-success-chip);
+  --color-warning-chip: var(--color-warning-chip);
+  --color-danger-chip: var(--color-danger-chip);
+  --color-info-chip: var(--color-info-chip);
+  --color-olive-chip: var(--color-olive-chip);
+  --color-scrim: var(--color-scrim);
   --color-fav-gold: var(--color-fav-gold);
   --font-sans: var(--font-montserrat);
   --font-display: var(--font-playfair);
@@ -89,7 +123,7 @@ body {
   background: var(--color-bg);
   background-image: radial-gradient(
     ellipse 80% 50% at 50% -10%,
-    rgba(107, 122, 92, 0.05) 0%,
+    rgba(91, 120, 54, 0.07) 0%,
     transparent 70%
   );
   background-attachment: fixed;
@@ -137,18 +171,37 @@ input[type="number"] {
   [class*="hover:text-"]:hover {
     color: inherit !important;
   }
-  [class*="hover:opacity"]:hover {
-    opacity: inherit !important;
-  }
-  [class*="hover:border-"]:hover {
-    border-color: inherit !important;
-  }
+  /*
+    `opacity` y `border-color` quedaron fuera a propósito: sobre fondo claro un
+    borde es señal de estructura, no decoración, y forzarlo a `inherit` lo hacía
+    desaparecer. `active:` no se ve afectado — sigue siendo el feedback táctil.
+  */
 }
 
 *:focus-visible {
   outline: 2px solid var(--color-olive-bright);
   outline-offset: 2px;
   border-radius: inherit;
+}
+
+/*
+  Elevación. En fondo oscuro las sombras casi no se ven y la jerarquía la daba
+  el color de superficie; en claro la sombra es el recurso principal.
+  Tintadas con el verde del fondo (no negro puro) para no ensuciar la paleta.
+  Redefine shadow-lg/xl/2xl de Tailwind, ya usados ~26 veces en el proyecto.
+*/
+.shadow-lg {
+  box-shadow: 0 4px 12px rgba(30, 34, 26, 0.08) !important;
+}
+
+.shadow-xl {
+  box-shadow: 0 10px 28px rgba(30, 34, 26, 0.12) !important;
+}
+
+.shadow-2xl {
+  box-shadow:
+    0 18px 48px rgba(30, 34, 26, 0.20),
+    0 3px 10px rgba(30, 34, 26, 0.10) !important;
 }
 
 /* V4 login card: transparent on mobile, glassmorphic on desktop */

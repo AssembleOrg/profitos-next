@@ -80,7 +80,7 @@ export function PriceTableEditor({ tablas, onChange }: Readonly<Props>) {
             />
             <button
               onClick={() => removeTabla(ti)}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-red-400 transition-colors hover:bg-red-500/10"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-danger transition-colors hover:bg-danger-chip"
               title="Eliminar tabla"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -109,7 +109,7 @@ export function PriceTableEditor({ tablas, onChange }: Readonly<Props>) {
                 </span>
                 <button
                   onClick={() => removeFila(ti, fi)}
-                  className="flex h-7 w-7 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-red-500/10 hover:text-red-400 active:bg-red-500/15"
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-danger-chip hover:text-danger active:bg-danger-chip"
                   title="Eliminar fila"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -142,7 +142,7 @@ export function PriceTableEditor({ tablas, onChange }: Readonly<Props>) {
               {/* Desktop: delete en la última columna del grid */}
               <button
                 onClick={() => removeFila(ti, fi)}
-                className="hidden h-9 w-9 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-red-500/10 hover:text-red-400 md:flex"
+                className="hidden h-9 w-9 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-danger-chip hover:text-danger md:flex"
                 title="Eliminar fila"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -121,7 +121,7 @@ export function RegisterPaymentForm({ due, onRegistered }: Readonly<RegisterPaym
             type="button"
             onClick={() => setIsFull(true)}
             className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-              isFull ? "bg-emerald-500/20 text-emerald-300" : "text-text-muted hover:text-text"
+              isFull ? "bg-success-chip text-success" : "text-text-muted hover:text-text"
             }`}
           >
             Pago total
@@ -130,7 +130,7 @@ export function RegisterPaymentForm({ due, onRegistered }: Readonly<RegisterPaym
             type="button"
             onClick={() => setIsFull(false)}
             className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-              !isFull ? "bg-amber-500/20 text-amber-300" : "text-text-muted hover:text-text"
+              !isFull ? "bg-warning-chip text-warning" : "text-text-muted hover:text-text"
             }`}
           >
             Pago parcial

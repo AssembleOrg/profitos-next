@@ -201,7 +201,7 @@ export function NuevaVisitaModal({
                 <select
                   name="type"
                   defaultValue="visita"
-                  className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+                  className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
                 >
                   {VISIT_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>
@@ -253,7 +253,7 @@ export function NuevaVisitaModal({
 
               {/* Error */}
               {error && (
-                <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                <p className="rounded-lg bg-danger-chip px-3 py-2 text-sm text-danger">
                   {error}
                 </p>
               )}

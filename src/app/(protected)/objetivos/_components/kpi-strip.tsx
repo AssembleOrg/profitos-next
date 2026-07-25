@@ -35,7 +35,7 @@ export function KPIStrip({ kpis, periodLabel }: Readonly<KPIStripProps>) {
       label: "Finalizados",
       value: kpis.completed.toString(),
       hint: kpis.totalCards > 0 ? `${Math.round((kpis.completed / kpis.totalCards) * 100)}% del total` : "—",
-      tone: "text-emerald-300",
+      tone: "text-success",
     },
   ];
 

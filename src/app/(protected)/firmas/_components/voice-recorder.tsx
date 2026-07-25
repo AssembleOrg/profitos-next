@@ -168,10 +168,10 @@ export function VoiceRecorder({ onUploaded, disabled }: Readonly<VoiceRecorderPr
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-bg px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:border-red-500/40 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-bg px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:border-danger/30 hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
             title="Grabar nota de voz"
           >
-            <span className="flex h-2 w-2 rounded-full bg-red-400" />
+            <span className="flex h-2 w-2 rounded-full bg-danger" />
             Grabar
           </motion.button>
         )}
@@ -187,15 +187,15 @@ export function VoiceRecorder({ onUploaded, disabled }: Readonly<VoiceRecorderPr
             <button
               type="button"
               onClick={stopRecording}
-              className="inline-flex items-center gap-2 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/20"
+              className="inline-flex items-center gap-2 rounded-xl border border-danger/30 bg-danger-chip px-3 py-2 text-xs font-medium text-danger transition-colors hover:bg-danger-chip"
             >
               <span className="relative flex h-2 w-2">
                 <motion.span
-                  className="absolute inline-flex h-full w-full rounded-full bg-red-400/60"
+                  className="absolute inline-flex h-full w-full rounded-full bg-danger-chip"
                   animate={{ scale: [1, 1.8, 1], opacity: [0.6, 0, 0.6] }}
                   transition={{ duration: 1.4, repeat: Infinity }}
                 />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-red-400" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-danger" />
               </span>
               Detener
             </button>
@@ -222,7 +222,7 @@ export function VoiceRecorder({ onUploaded, disabled }: Readonly<VoiceRecorderPr
             <button
               type="button"
               onClick={discard}
-              className="rounded-xl border border-border px-2.5 py-2 text-xs text-text-muted transition-colors hover:border-red-500/40 hover:text-red-300"
+              className="rounded-xl border border-border px-2.5 py-2 text-xs text-text-muted transition-colors hover:border-danger/30 hover:text-danger"
               title="Descartar"
             >
               ✕

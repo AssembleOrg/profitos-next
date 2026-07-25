@@ -293,7 +293,7 @@ export function CommandPalette({ role }: CommandPaletteProps = {}) {
         <button
           type="button"
           aria-label="Cerrar búsqueda"
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 bg-scrim backdrop-blur-sm"
           onClick={() => setOpen(false)}
         />
 

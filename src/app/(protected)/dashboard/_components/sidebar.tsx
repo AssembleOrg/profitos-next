@@ -90,19 +90,19 @@ function formatNotificationDate(value: string) {
 
 // Estilos y etiquetas por tipo de notificación (evita ternarios anidados).
 const NOTIF_CARD_CLASS: Record<NotificationItem["kind"], string> = {
-  contact: "border-sky-500/30 bg-sky-500/10",
-  followup_assignment: "border-amber-500/30 bg-amber-500/10",
-  contact_followup: "border-fuchsia-500/30 bg-fuchsia-500/10",
-  overdue_followup: "border-red-500/30 bg-red-500/10",
-  property: "border-emerald-500/30 bg-emerald-500/10",
+  contact: "border-info/30 bg-info-chip",
+  followup_assignment: "border-warning/30 bg-warning-chip",
+  contact_followup: "border-olive-bright/30 bg-olive-chip",
+  overdue_followup: "border-danger/30 bg-danger-chip",
+  property: "border-success/30 bg-success-chip",
 };
 
 const NOTIF_BADGE_CLASS: Record<NotificationItem["kind"], string> = {
-  contact: "bg-sky-500/20 text-sky-300",
-  followup_assignment: "bg-amber-500/20 text-amber-300",
-  contact_followup: "bg-fuchsia-500/20 text-fuchsia-300",
-  overdue_followup: "bg-red-500/20 text-red-300",
-  property: "bg-emerald-500/20 text-emerald-300",
+  contact: "bg-info-chip text-info",
+  followup_assignment: "bg-warning-chip text-warning",
+  contact_followup: "bg-olive-chip text-olive-light",
+  overdue_followup: "bg-danger-chip text-danger",
+  property: "bg-success-chip text-success",
 };
 
 const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
@@ -158,7 +158,7 @@ function SidebarNotifBody({ item }: Readonly<{ item: NotificationItem }>) {
       return (
         <>
           <p className="text-sm font-medium leading-tight text-text">{item.property?.address ?? "Propiedad sin dirección"}</p>
-          <p className="mt-0.5 text-xs text-red-300">Vencido: {item.dueDate ? formatNotificationDate(item.dueDate) : "sin fecha"}</p>
+          <p className="mt-0.5 text-xs text-danger">Vencido: {item.dueDate ? formatNotificationDate(item.dueDate) : "sin fecha"}</p>
           <p className="text-xs text-text-muted">Responsable: {responsable}</p>
         </>
       );

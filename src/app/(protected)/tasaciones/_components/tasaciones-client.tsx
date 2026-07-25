@@ -32,8 +32,8 @@ interface Props {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  borrador: { label: "Borrador", color: "bg-amber-500" },
-  completada: { label: "Completada", color: "bg-emerald-500" },
+  borrador: { label: "Borrador", color: "bg-warning" },
+  completada: { label: "Completada", color: "bg-success" },
 };
 
 export function TasacionesClient({ items, page, totalPages, total, limit, isAdmin, filters }: Props) {
@@ -152,7 +152,7 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="min-w-0 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:dark]"
+          className="min-w-0 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
         >
           <option value="">Todos los estados</option>
           <option value="borrador">Borrador</option>
@@ -274,7 +274,7 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
                         <button
                           onClick={(e) => handleDelete(e, t.id)}
                           disabled={deletingId === t.id}
-                          className="rounded-lg bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
+                          className="rounded-lg bg-danger-chip px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger-chip disabled:opacity-50"
                         >
                           {deletingId === t.id ? <Spinner variant="red" size={12} /> : "Eliminar"}
                         </button>
@@ -307,7 +307,7 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
             <button
               onClick={handleCreate}
               disabled={createLoading || !newDireccion.trim()}
-              className="flex flex-1 items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-text hover:bg-primary-hover disabled:opacity-50"
+              className="flex flex-1 items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-bg hover:bg-primary-hover disabled:opacity-50"
             >
               {createLoading ? <Spinner /> : "Crear y editar"}
             </button>

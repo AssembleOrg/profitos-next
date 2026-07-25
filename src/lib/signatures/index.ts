@@ -43,40 +43,43 @@ export const SIGNATURE_STATUS_STYLE: Record<
   SignatureStatus,
   { dot: string; chip: string; line: string }
 > = {
+  // Flujo de 7 pasos: los intermedios usan `info` (en curso) y `success` queda
+  // reservado para el cierre real. Ver docs/design.md § Mapa de estados.
   propuesta_enviada: {
-    dot: "bg-sky-400",
-    chip: "border-sky-500/40 bg-sky-500/10 text-sky-300",
-    line: "bg-sky-500/40",
+    dot: "bg-info",
+    chip: "border-info/30 bg-info-chip text-info",
+    line: "bg-info/40",
   },
   propuesta_aceptada: {
-    dot: "bg-olive-bright",
-    chip: "border-olive-bright/40 bg-olive-subtle text-olive-light",
-    line: "bg-olive-bright/40",
+    dot: "bg-success",
+    chip: "border-success/30 bg-success-chip text-success",
+    line: "bg-success/40",
   },
   propuesta_rechazada: {
-    dot: "bg-red-400",
-    chip: "border-red-500/40 bg-red-500/10 text-red-300",
-    line: "bg-red-500/40",
+    dot: "bg-danger",
+    chip: "border-danger/30 bg-danger-chip text-danger",
+    line: "bg-danger/40",
   },
   espera_informes: {
-    dot: "bg-cyan-400",
-    chip: "border-cyan-500/40 bg-cyan-500/10 text-cyan-300",
-    line: "bg-cyan-500/40",
+    dot: "bg-info",
+    chip: "border-info/30 bg-info-chip text-info",
+    line: "bg-info/40",
   },
   comunicacion_partes_finales: {
-    dot: "bg-violet-400",
-    chip: "border-violet-500/40 bg-violet-500/10 text-violet-300",
-    line: "bg-violet-500/40",
+    dot: "bg-info",
+    chip: "border-info/30 bg-info-chip text-info",
+    line: "bg-info/40",
   },
   fecha_acordada: {
-    dot: "bg-amber-400",
-    chip: "border-amber-500/40 bg-amber-500/10 text-amber-300",
-    line: "bg-amber-500/40",
+    dot: "bg-warning",
+    chip: "border-warning/30 bg-warning-chip text-warning",
+    line: "bg-warning/40",
   },
+  // Cierre del flujo: se marca con la identidad de marca, no con un semántico.
   entrega_llaves: {
-    dot: "bg-emerald-400",
-    chip: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
-    line: "bg-emerald-500/40",
+    dot: "bg-olive-bright",
+    chip: "border-olive-bright/30 bg-olive-chip text-olive-light",
+    line: "bg-olive-bright/40",
   },
 };
 

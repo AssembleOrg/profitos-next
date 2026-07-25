@@ -12,7 +12,7 @@ const visitas = [
     propiedad: "Casa jardín - San Isidro",
     cliente: "Marta López",
     estado: "Pendiente",
-    estadoColor: "bg-amber-500/20 text-amber-400",
+    estadoColor: "bg-warning-chip text-warning",
     img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=120&h=80&fit=crop",
   },
   {
@@ -20,7 +20,7 @@ const visitas = [
     propiedad: "Oficina premium - Microcentro",
     cliente: "Roberto Fernández",
     estado: "Pendiente",
-    estadoColor: "bg-amber-500/20 text-amber-400",
+    estadoColor: "bg-warning-chip text-warning",
     img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=120&h=80&fit=crop",
   },
 ];

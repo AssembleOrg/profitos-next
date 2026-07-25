@@ -143,25 +143,25 @@ function KpiStrip({
   function cardClasses(variant: "default" | "red" | "green", isActive: boolean, mobile: boolean) {
     const base = "flex flex-col rounded-2xl border p-3 transition-opacity";
     const opacity = mobile ? (isActive ? "opacity-100" : "opacity-60") : "";
-    if (variant === "red") return `${base} border-red-500/30 bg-red-500/8 ${opacity}`;
+    if (variant === "red") return `${base} border-danger/30 bg-danger-chip ${opacity}`;
     if (variant === "green") return `${base} border-secondary/30 bg-secondary/8 ${opacity}`;
     return `${base} border-border bg-surface/40 ${opacity}`;
   }
 
   function labelClasses(variant: "default" | "red" | "green") {
-    if (variant === "red") return "text-[10px] font-medium uppercase tracking-widest text-red-400";
+    if (variant === "red") return "text-[10px] font-medium uppercase tracking-widest text-danger";
     if (variant === "green") return "text-[10px] font-medium uppercase tracking-widest text-secondary";
     return "text-[10px] font-medium uppercase tracking-widest text-text-muted";
   }
 
   function valueClasses(variant: "default" | "red" | "green") {
-    if (variant === "red") return "mt-1 text-3xl font-light tabular-nums text-red-300";
+    if (variant === "red") return "mt-1 text-3xl font-light tabular-nums text-danger";
     if (variant === "green") return "mt-1 text-3xl font-light tabular-nums text-secondary";
     return "mt-1 text-3xl font-light tabular-nums text-text";
   }
 
   function subClasses(variant: "default" | "red" | "green") {
-    if (variant === "red") return "mt-0.5 text-[10px] text-red-400/70";
+    if (variant === "red") return "mt-0.5 text-[10px] text-danger";
     if (variant === "green") return "mt-0.5 text-[10px] text-secondary/60";
     return "mt-0.5 text-[10px] text-text-muted/60";
   }
@@ -366,7 +366,7 @@ function FeedRow({
 }) {
   const badgeClass =
     badgeColor === "red"
-      ? "bg-red-500/10 text-red-400"
+      ? "bg-danger-chip text-danger"
       : badgeColor === "olive"
       ? "bg-secondary/10 text-secondary"
       : "bg-surface text-text-muted";
@@ -437,7 +437,7 @@ export function DashboardOverviewClient() {
   if (error || !data) {
     return (
       <div className="rounded-2xl border border-border bg-surface/40 p-6">
-        <p className="text-sm text-red-300">{error ?? "No se pudo cargar dashboard"}</p>
+        <p className="text-sm text-danger">{error ?? "No se pudo cargar dashboard"}</p>
       </div>
     );
   }

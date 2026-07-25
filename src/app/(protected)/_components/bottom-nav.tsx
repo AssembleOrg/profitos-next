@@ -28,19 +28,19 @@ function formatNotifDate(value: string) {
 
 // Estilos y etiquetas por tipo de notificación (evita ternarios anidados).
 const NOTIF_CARD_CLASS: Record<NotificationItem["kind"], string> = {
-  contact: "border-sky-500/30 bg-sky-500/10",
-  followup_assignment: "border-amber-500/30 bg-amber-500/10",
-  contact_followup: "border-fuchsia-500/30 bg-fuchsia-500/10",
-  overdue_followup: "border-red-500/30 bg-red-500/10",
-  property: "border-emerald-500/30 bg-emerald-500/10",
+  contact: "border-info/30 bg-info-chip",
+  followup_assignment: "border-warning/30 bg-warning-chip",
+  contact_followup: "border-olive-bright/30 bg-olive-chip",
+  overdue_followup: "border-danger/30 bg-danger-chip",
+  property: "border-success/30 bg-success-chip",
 };
 
 const NOTIF_BADGE_CLASS: Record<NotificationItem["kind"], string> = {
-  contact: "bg-sky-500/20 text-sky-300",
-  followup_assignment: "bg-amber-500/20 text-amber-300",
-  contact_followup: "bg-fuchsia-500/20 text-fuchsia-300",
-  overdue_followup: "bg-red-500/20 text-red-300",
-  property: "bg-emerald-500/20 text-emerald-300",
+  contact: "bg-info-chip text-info",
+  followup_assignment: "bg-warning-chip text-warning",
+  contact_followup: "bg-olive-chip text-olive-light",
+  overdue_followup: "bg-danger-chip text-danger",
+  property: "bg-success-chip text-success",
 };
 
 const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
@@ -96,7 +96,7 @@ function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
       return (
         <>
           <p className="text-sm font-medium leading-tight text-text">{item.property?.address ?? "Propiedad sin dirección"}</p>
-          <p className="mt-0.5 text-xs text-red-300">Vencido: {item.dueDate ? formatNotifDate(item.dueDate) : "sin fecha"}</p>
+          <p className="mt-0.5 text-xs text-danger">Vencido: {item.dueDate ? formatNotifDate(item.dueDate) : "sin fecha"}</p>
           <p className="text-xs text-text-muted">Responsable: {responsable}</p>
         </>
       );
@@ -172,7 +172,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
         {showNotifications && (
           <>
             <motion.div
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-40 bg-scrim backdrop-blur-sm md:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -187,9 +187,9 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
               style={{ paddingBottom: "calc(var(--safe-bottom, 0px) + 88px)" }}
             >
-              <div className="mx-auto my-3 h-1 w-10 rounded-full bg-white/20" />
+              <div className="mx-auto my-3 h-1 w-10 rounded-full bg-border-strong" />
 
-              <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 pb-3 pt-1">
+              <div className="flex items-center justify-between gap-3 border-b border-border px-5 pb-3 pt-1">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Notificaciones</p>
                   <p className="mt-0.5 text-xs text-text-muted/70">
@@ -198,7 +198,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                 </div>
                 <button
                   onClick={() => { markAsSeen(); }}
-                  className="rounded-md border border-white/10 px-2.5 py-1 text-[11px] font-medium text-text-muted transition-colors active:bg-white/5"
+                  className="rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-text-muted transition-colors active:bg-surface-elevated"
                 >
                   Marcar leídas
                 </button>
@@ -206,7 +206,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
 
               <div className="max-h-[55dvh] space-y-2 overflow-y-auto p-3">
                 {notifications.length === 0 ? (
-                  <p className="rounded-lg border border-white/10 bg-white/5 px-3 py-4 text-sm text-text-muted">
+                  <p className="rounded-lg border border-border bg-surface-elevated px-3 py-4 text-sm text-text-muted">
                     Sin notificaciones.
                   </p>
                 ) : (
@@ -216,27 +216,27 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 border-t border-white/10">
+              <div className="grid grid-cols-2 border-t border-border">
                 <Link
                   href="/consultants"
                   onClick={() => setShowNotifications(false)}
-                  className="block border-r border-white/10 px-4 py-3 text-xs font-medium text-secondary active:bg-white/5"
+                  className="block border-r border-border px-4 py-3 text-xs font-medium text-secondary active:bg-surface-elevated"
                 >
                   Ver últimos contactos
                 </Link>
                 <Link
                   href="/seguimientos"
                   onClick={() => setShowNotifications(false)}
-                  className="block px-4 py-3 text-xs font-medium text-secondary active:bg-white/5"
+                  className="block px-4 py-3 text-xs font-medium text-secondary active:bg-surface-elevated"
                 >
                   Ver seg. propiedades
                 </Link>
               </div>
-              <div className="border-t border-white/10">
+              <div className="border-t border-border">
                 <Link
                   href="/consultants-followups"
                   onClick={() => setShowNotifications(false)}
-                  className="block px-4 py-3 text-xs font-medium text-secondary active:bg-white/5"
+                  className="block px-4 py-3 text-xs font-medium text-secondary active:bg-surface-elevated"
                 >
                   Ver seg. consultas
                 </Link>
@@ -251,7 +251,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
         {showMore && (
           <>
             <motion.div
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-40 bg-scrim backdrop-blur-sm md:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -267,7 +267,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
               style={{ paddingBottom: "calc(var(--safe-bottom, 0px) + 88px)" }}
             >
               {/* Handle */}
-              <div className="mx-auto my-3 h-1 w-10 rounded-full bg-white/20" />
+              <div className="mx-auto my-3 h-1 w-10 rounded-full bg-border-strong" />
 
               <p className="px-5 pb-3 pt-1 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
                 Más secciones
@@ -282,7 +282,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                     loadNotifications().catch(() => {});
                     setShowNotifications(true);
                   }}
-                  className="flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 transition-colors text-text-muted active:bg-white/5 relative"
+                  className="flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 transition-colors text-text-muted active:bg-surface-elevated relative"
                 >
                   <span className="relative text-olive-vivid">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -314,7 +314,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                         className={`flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 transition-colors active:scale-95 ${
                           isActive
                             ? "bg-accent/15 text-accent"
-                            : "text-text-muted active:bg-white/5"
+                            : "text-text-muted active:bg-surface-elevated"
                         }`}
                       >
                         <span className={isActive ? "text-accent" : "text-olive-vivid"}>

@@ -270,7 +270,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
                   <CostearBadge />
                   Gastos personales (Costear) · no entran al neto
                 </span>
-                <span className="font-mono font-semibold text-violet-300">
+                <span className="font-mono font-semibold text-olive-light">
                   −{formatMoney(cr.personalExpense, cr.currency)}
                 </span>
               </div>
@@ -282,7 +282,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
                 </span>
                 <span className="text-text-muted">
                   Saldo final:{" "}
-                  <span className={`font-mono font-semibold ${cr.closing >= 0 ? "text-emerald-300" : "text-red-300"}`}>
+                  <span className={`font-mono font-semibold ${cr.closing >= 0 ? "text-success" : "text-danger"}`}>
                     {formatMoney(cr.closing, cr.currency)}
                   </span>
                 </span>
@@ -401,7 +401,7 @@ function Stat({ label, value, tone }: Readonly<{ label: string; value: string; t
   return (
     <div className="min-w-0">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">{label}</p>
-      <p className={`mt-0.5 break-words font-mono text-xs font-semibold tabular-nums sm:text-sm ${tone === "income" ? "text-emerald-300" : "text-red-300"}`}>
+      <p className={`mt-0.5 break-words font-mono text-xs font-semibold tabular-nums sm:text-sm ${tone === "income" ? "text-success" : "text-danger"}`}>
         {value}
       </p>
     </div>
@@ -428,8 +428,8 @@ function MonthGroupHeader({ monthKeyStr, items }: Readonly<{ monthKeyStr: string
       <div className="flex flex-wrap items-center gap-2 text-[11px]">
         {byCurrency.map(([cur, v]) => (
           <span key={cur} className="rounded-full bg-bg px-2.5 py-0.5 font-mono text-text-muted">
-            {cur}: <span className="text-emerald-300">+{formatMoney(v.income, cur)}</span>{" "}
-            <span className="text-red-300">−{formatMoney(v.expense, cur)}</span>
+            {cur}: <span className="text-success">+{formatMoney(v.income, cur)}</span>{" "}
+            <span className="text-danger">−{formatMoney(v.expense, cur)}</span>
           </span>
         ))}
       </div>
@@ -457,10 +457,10 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
       <span
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
           isCostear
-            ? "bg-violet-500/15 text-violet-300"
+            ? "bg-olive-chip text-olive-light"
             : m.type === "income"
-              ? "bg-emerald-500/15 text-emerald-300"
-              : "bg-red-500/15 text-red-300"
+              ? "bg-success-chip text-success"
+              : "bg-danger-chip text-danger"
         }`}
       >
         {m.type === "income" ? (
@@ -497,7 +497,7 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
 
       <div className="shrink-0 text-right">
         <p className={`font-mono text-sm font-semibold ${
-          isCostear ? "text-violet-300" : m.type === "income" ? "text-emerald-300" : "text-red-300"
+          isCostear ? "text-olive-light" : m.type === "income" ? "text-success" : "text-danger"
         }`}>
           {m.type === "income" ? "+" : "−"}
           {formatMoney(m.amount, m.currency)}
@@ -519,7 +519,7 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
 
 function CostearBadge() {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-300">
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-olive-chip px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-olive-light">
       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
       Costear
     </span>
@@ -552,10 +552,10 @@ function MonthRow({
         <span className="w-32 shrink-0 text-sm font-medium text-text">{bucket.label}</span>
         <span className="hidden flex-1 items-center justify-end gap-4 font-mono text-xs sm:flex">
           <span className="text-text-muted">Inicial {formatMoney(bucket.opening, currency)}</span>
-          <span className="text-emerald-300">+{formatMoney(bucket.income, currency)}</span>
-          <span className="text-red-300">−{formatMoney(bucket.expense, currency)}</span>
+          <span className="text-success">+{formatMoney(bucket.income, currency)}</span>
+          <span className="text-danger">−{formatMoney(bucket.expense, currency)}</span>
         </span>
-        <span className={`ml-auto shrink-0 font-mono text-sm font-semibold sm:ml-4 ${bucket.closing >= 0 ? "text-emerald-300" : "text-red-300"}`}>
+        <span className={`ml-auto shrink-0 font-mono text-sm font-semibold sm:ml-4 ${bucket.closing >= 0 ? "text-success" : "text-danger"}`}>
           {formatMoney(bucket.closing, currency)}
         </span>
       </button>

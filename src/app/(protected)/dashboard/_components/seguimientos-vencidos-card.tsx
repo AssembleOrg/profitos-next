@@ -18,7 +18,7 @@ export function SeguimientosVencidosCard({ count }: Props) {
       </div>
       <p className="mt-3 text-4xl font-light tracking-tight text-text">{count}</p>
       <div className="mt-1 border-t border-border pt-2">
-        <Link href="/seguimientos" className="text-xs text-red-400 transition-colors hover:text-red-300">
+        <Link href="/seguimientos" className="text-xs text-danger transition-colors hover:text-danger">
           Revisar vencidos
         </Link>
       </div>

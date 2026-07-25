@@ -65,7 +65,7 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
         {open && (
           <Dialog.Portal forceMount>
             <Dialog.Overlay asChild>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm" />
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm" />
             </Dialog.Overlay>
             <Dialog.Content asChild>
               <motion.div
@@ -99,7 +99,7 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
                 <div className="flex-1 overflow-y-auto px-5 py-5">
                   {/* Monto */}
                   <div className="mb-4 text-center">
-                    <p className={`font-mono text-3xl font-bold ${movement.type === "income" ? "text-emerald-300" : "text-red-300"}`}>
+                    <p className={`font-mono text-3xl font-bold ${movement.type === "income" ? "text-success" : "text-danger"}`}>
                       {movement.type === "income" ? "+" : "−"}
                       {formatMoney(movement.amount, movement.currency)}
                     </p>
@@ -153,7 +153,7 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
                           onOpenChange(false);
                           onDelete(movement);
                         }}
-                        className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/20"
+                        className="rounded-xl border border-danger/30 bg-danger-chip px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger-chip"
                       >
                         Borrar
                       </button>

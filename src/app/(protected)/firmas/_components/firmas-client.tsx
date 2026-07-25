@@ -116,8 +116,8 @@ export function FirmasClient({
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KPICard label="Total" value={kpis.total.toString()} hint="todas las propuestas" tone="text-text" />
         <KPICard label="En proceso" value={kpis.inProgress.toString()} hint="activas (no cerradas)" tone="text-olive-light" />
-        <KPICard label="Concretadas" value={kpis.successful.toString()} hint="entrega de llaves" tone="text-emerald-300" />
-        <KPICard label="Rechazadas" value={kpis.rejected.toString()} hint="propuestas caídas" tone="text-red-300" />
+        <KPICard label="Concretadas" value={kpis.successful.toString()} hint="entrega de llaves" tone="text-success" />
+        <KPICard label="Rechazadas" value={kpis.rejected.toString()} hint="propuestas caídas" tone="text-danger" />
       </div>
 
       {/* Filters */}

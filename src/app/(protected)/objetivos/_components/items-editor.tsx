@@ -91,7 +91,7 @@ export function ItemsEditorPopover({ card, onChanged }: Readonly<ItemsEditorPopo
                       <button
                         type="button"
                         onClick={() => removeItem(item)}
-                        className="text-text-faint transition-colors hover:text-red-300"
+                        className="text-text-faint transition-colors hover:text-danger"
                         aria-label={`Quitar ${item.text}`}
                       >
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

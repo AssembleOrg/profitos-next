@@ -50,7 +50,7 @@ export function FirmaDetailModal({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
-                className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm"
+                className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
               />
             </Dialog.Overlay>
             <Dialog.Content asChild>
@@ -241,7 +241,7 @@ function DetailContent({
             <button
               type="button"
               onClick={handleDelete}
-              className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/20"
+              className="rounded-xl border border-danger/30 bg-danger-chip px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger-chip"
             >
               Eliminar propuesta
             </button>
@@ -431,7 +431,7 @@ function Timeline({
                     <button
                       type="button"
                       onClick={() => deleteNote(action.id)}
-                      className="flex h-8 w-8 items-center justify-center rounded text-text-faint transition-colors hover:bg-red-500/10 hover:text-red-300"
+                      className="flex h-8 w-8 items-center justify-center rounded text-text-faint transition-colors hover:bg-danger-chip hover:text-danger"
                       aria-label="Eliminar nota"
                       title="Eliminar nota"
                     >

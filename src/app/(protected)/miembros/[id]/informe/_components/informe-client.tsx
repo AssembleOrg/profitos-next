@@ -93,26 +93,26 @@ interface Props {
 }
 
 const ESTADO_CONFIG = {
-  alto: { label: "Alta actividad", color: "text-emerald-400", bg: "bg-emerald-500/15 border-emerald-500/30" },
-  moderado: { label: "Actividad moderada", color: "text-amber-400", bg: "bg-amber-500/15 border-amber-500/30" },
-  bajo: { label: "Baja actividad", color: "text-red-400", bg: "bg-red-500/15 border-red-500/30" },
+  alto: { label: "Alta actividad", color: "text-success", bg: "bg-success-chip border-success/30" },
+  moderado: { label: "Actividad moderada", color: "text-warning", bg: "bg-warning-chip border-warning/30" },
+  bajo: { label: "Baja actividad", color: "text-danger", bg: "bg-danger-chip border-danger/30" },
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  pendiente: "bg-amber-500",
-  hecho: "bg-emerald-500",
-  cancelado: "bg-red-500",
-  iniciada: "bg-sky-500",
-  activa: "bg-emerald-500",
+  pendiente: "bg-warning",
+  hecho: "bg-success",
+  cancelado: "bg-danger",
+  iniciada: "bg-info",
+  activa: "bg-success",
   cerrada: "bg-text-muted",
-  en_progreso: "bg-sky-500",
+  en_progreso: "bg-info",
 };
 
 const TIMELINE_COLORS: Record<string, string> = {
-  accion_seguimiento: "border-amber-500/30 bg-amber-500/5",
-  accion_contacto: "border-fuchsia-500/30 bg-fuchsia-500/5",
-  cambio_estado: "border-sky-500/30 bg-sky-500/5",
-  visita: "border-emerald-500/30 bg-emerald-500/5",
+  accion_seguimiento: "border-warning/30 bg-warning-chip",
+  accion_contacto: "border-olive-bright/30 bg-olive-chip",
+  cambio_estado: "border-info/30 bg-info-chip",
+  visita: "border-success/30 bg-success-chip",
 };
 
 const TIMELINE_LABELS: Record<string, string> = {
@@ -169,7 +169,7 @@ export function InformeClient({ memberId, from, to }: Props) {
         <Link href="/miembros" className="text-sm text-secondary hover:underline">
           &larr; Volver a miembros
         </Link>
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-6 py-8 text-center text-sm text-red-400">
+        <div className="rounded-xl border border-danger/30 bg-danger-chip px-6 py-8 text-center text-sm text-danger">
           {error ?? "No se pudo cargar el informe"}
         </div>
       </div>
@@ -284,7 +284,7 @@ export function InformeClient({ memberId, from, to }: Props) {
             <p className="text-xs text-text-muted">Acciones totales</p>
           </div>
           <div>
-            <p className={`text-2xl font-bold ${resumen.segVencidos > 0 ? "text-red-400" : "text-text"}`}>{resumen.segVencidos}</p>
+            <p className={`text-2xl font-bold ${resumen.segVencidos > 0 ? "text-danger" : "text-text"}`}>{resumen.segVencidos}</p>
             <p className="text-xs text-text-muted">Seg. vencidos</p>
           </div>
         </div>
@@ -501,7 +501,7 @@ export function InformeClient({ memberId, from, to }: Props) {
                     {c.email ?? (c.phone ? (
                       <WhatsAppLink
                         phone={c.phone}
-                        className="inline-flex items-center gap-1 align-middle transition-colors hover:text-green-500"
+                        className="inline-flex items-center gap-1 align-middle transition-colors hover:text-success"
                       >
                         {c.phone}
                       </WhatsAppLink>
