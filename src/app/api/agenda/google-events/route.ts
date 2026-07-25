@@ -20,6 +20,15 @@ export interface GoogleAgendaEvent {
   htmlLink?: string;
 }
 
+/**
+ * Respuesta del overlay. `connected: false` permite a la UI distinguir
+ * "el usuario no conectó Google" de "conectó pero no tiene reuniones".
+ */
+export interface GoogleAgendaPayload {
+  connected: boolean;
+  events: GoogleAgendaEvent[];
+}
+
 function mapEvent(e: GoogleCalendarListEvent): GoogleAgendaEvent | null {
   const title = e.summary?.trim() || "(sin título)";
 
@@ -68,14 +77,24 @@ export const GET = withHandler(async (request: NextRequest) => {
   const from = sp.get("from");
   const to = sp.get("to");
   if (!from || !DATE_RE.test(from) || !to || !DATE_RE.test(to)) {
-    return ok<GoogleAgendaEvent[]>([], "Rango inválido", path);
+    return ok<GoogleAgendaPayload>({ connected: true, events: [] }, "Rango inválido", path);
   }
 
   const token = await getValidGoogleToken(auth.userId);
-  if (!token) return ok<GoogleAgendaEvent[]>([], "Usuario sin Google Calendar conectado", path);
+  if (!token) {
+    return ok<GoogleAgendaPayload>(
+      { connected: false, events: [] },
+      "Usuario sin Google Calendar conectado",
+      path
+    );
+  }
 
   const { events } = await listCalendarEvents(token, from, to);
   const mapped = events.map(mapEvent).filter((e): e is GoogleAgendaEvent => e !== null);
 
-  return ok(mapped, "Eventos de Google Calendar obtenidos", path);
+  return ok<GoogleAgendaPayload>(
+    { connected: true, events: mapped },
+    "Eventos de Google Calendar obtenidos",
+    path
+  );
 });

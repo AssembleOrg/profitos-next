@@ -64,6 +64,55 @@ function eventStyle(ev: CalendarEvent): { bg: string; text: string; dot: string 
   return ev.source === "google" ? googleStyle : typeColors[ev.type];
 }
 
+/**
+ * Control del overlay de Google Calendar. Compartido por los headers de mobile
+ * y desktop para que ambos ofrezcan el mismo control en el mismo lugar.
+ * Cuando el usuario no tiene Google conectado muestra un enlace para conectarlo,
+ * de modo que "sin conectar" no se confunda con "sin reuniones".
+ */
+function GoogleToggle({
+  connected,
+  showGoogle,
+  onToggle,
+  compact = false,
+}: {
+  connected: boolean | null;
+  showGoogle: boolean;
+  onToggle: () => void;
+  compact?: boolean;
+}) {
+  const size = compact ? "px-2 py-0.5 text-[11px]" : "px-3 py-1 text-xs";
+
+  if (connected === false) {
+    return (
+      <a
+        href="/login"
+        title="Iniciá sesión con Google para ver tus reuniones en la agenda"
+        className={`flex items-center gap-1.5 rounded-lg border border-border text-text-muted transition-colors hover:bg-surface hover:text-text ${size}`}
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-text-faint" />
+        Conectar Google
+      </a>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      title={showGoogle ? "Ocultar Google Calendar" : "Mostrar Google Calendar"}
+      className={`flex items-center gap-1.5 rounded-lg border transition-colors ${size} ${
+        showGoogle
+          ? "border-info/30 bg-info-chip text-info"
+          : "border-border text-text-muted hover:bg-surface hover:text-text"
+      }`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${showGoogle ? "bg-info" : "bg-text-faint"}`} />
+      Google
+    </button>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -73,6 +122,10 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
   const [selectedDate, setSelectedDate] = useState(() => DateTime.now());
   const [googleEvents, setGoogleEvents] = useState<CalendarEvent[]>([]);
   const [showGoogle, setShowGoogle] = useState(true);
+  /** null = aún no sabemos; false = usuario sin Google Calendar conectado. */
+  const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
+  /** Día cuyo detalle se expande en desktop (al tocar "+N más"). */
+  const [dayPopover, setDayPopover] = useState<string | null>(null);
 
   const weekdays = Info.weekdays("short", { locale: "es" });
   const weekdaysNarrow = Info.weekdays("narrow", { locale: "es" });
@@ -87,7 +140,10 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
       try {
         const res = await fetch(`/api/agenda/google-events?from=${from}&to=${to}`);
         const body = await res.json();
-        if (active) setGoogleEvents(Array.isArray(body?.data) ? (body.data as CalendarEvent[]) : []);
+        if (!active) return;
+        const payload = body?.data;
+        setGoogleEvents(Array.isArray(payload?.events) ? (payload.events as CalendarEvent[]) : []);
+        setGoogleConnected(payload?.connected ?? null);
       } catch {
         if (active) setGoogleEvents([]);
       }
@@ -131,6 +187,14 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
       const key = ev.date;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(ev);
+    }
+    // Orden cronológico dentro del día: si no se ordena, los internos van
+    // siempre primero y los de Google caen fuera del corte de 3 visibles.
+    for (const list of map.values()) {
+      list.sort((a, b) => {
+        if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
+        return a.startTime.localeCompare(b.startTime);
+      });
     }
     return map;
   }, [allEvents]);
@@ -184,18 +248,12 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
             >
               Hoy
             </button>
-            <button
-              onClick={() => setShowGoogle((v) => !v)}
-              title={showGoogle ? "Ocultar Google Calendar" : "Mostrar Google Calendar"}
-              className={`flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] transition-colors ${
-                showGoogle
-                  ? "border-info/30 bg-info-chip text-info"
-                  : "border-border text-text-muted hover:bg-surface hover:text-text"
-              }`}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${showGoogle ? "bg-info" : "bg-text-faint"}`} />
-              Google
-            </button>
+            <GoogleToggle
+              connected={googleConnected}
+              showGoogle={showGoogle}
+              onToggle={() => setShowGoogle((v) => !v)}
+              compact
+            />
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -355,6 +413,11 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
             >
               Hoy
             </button>
+            <GoogleToggle
+              connected={googleConnected}
+              showGoogle={showGoogle}
+              onToggle={() => setShowGoogle((v) => !v)}
+            />
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -403,7 +466,7 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
               return (
                 <div
                   key={i}
-                  className={`min-h-[120px] border-b border-r border-border/50 p-2 transition-colors last:border-r-0 ${
+                  className={`relative min-h-[120px] border-b border-r border-border/50 p-2 transition-colors last:border-r-0 ${
                     isCurrentMonth ? "" : "opacity-30"
                   } ${isToday ? "bg-secondary/5" : "hover:bg-surface/30"}`}
                   style={{
@@ -443,11 +506,67 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                       );
                     })}
                     {overflow > 0 && (
-                      <span className="pl-1 text-[10px] text-text-muted">
+                      <button
+                        type="button"
+                        onClick={() => setDayPopover(iso)}
+                        className="w-fit rounded px-1 text-left text-[10px] text-text-muted transition-colors hover:text-text"
+                      >
                         +{overflow} más
-                      </span>
+                      </button>
                     )}
                   </div>
+
+                  {/* Detalle completo del día (al tocar "+N más") */}
+                  {dayPopover === iso && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setDayPopover(null)}
+                      />
+                      <div className="absolute z-50 mt-1 w-64 rounded-xl border border-border bg-bg p-3 shadow-xl">
+                        <div className="mb-2 flex items-center justify-between">
+                          <p className="text-xs font-medium capitalize text-text">
+                            {day.toFormat("cccc d 'de' MMMM", { locale: "es" })}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setDayPopover(null)}
+                            className="text-text-muted transition-colors hover:text-text"
+                            aria-label="Cerrar"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                              <line x1="18" y1="6" x2="6" y2="18" />
+                              <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                          </button>
+                        </div>
+                        <div className="flex max-h-64 flex-col gap-1 overflow-y-auto">
+                          {dayEvents.map((ev) => {
+                            const colors = eventStyle(ev);
+                            return (
+                              <button
+                                key={ev.id}
+                                type="button"
+                                onClick={() => {
+                                  setDayPopover(null);
+                                  handleEventClick(ev);
+                                }}
+                                className={`flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left transition-colors ${colors.bg} hover:brightness-125`}
+                              >
+                                <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${colors.dot}`} />
+                                <span className="flex-shrink-0 text-[10px] text-text-muted">
+                                  {ev.allDay ? "Todo el día" : ev.startTime}
+                                </span>
+                                <span className={`truncate text-[11px] font-medium ${colors.text}`}>
+                                  {ev.title}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -466,18 +585,6 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
             <span className={`h-2 w-2 rounded-full ${googleStyle.dot}`} />
             <span className="text-xs text-text-muted">Google Calendar</span>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowGoogle((v) => !v)}
-            className={`ml-auto flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs transition-colors ${
-              showGoogle
-                ? "border-info/30 bg-info-chip text-info"
-                : "border-border text-text-muted hover:bg-surface hover:text-text"
-            }`}
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${showGoogle ? "bg-info" : "bg-text-faint"}`} />
-            {showGoogle ? "Google Calendar visible" : "Mostrar Google Calendar"}
-          </button>
         </div>
       </div>
     </div>
