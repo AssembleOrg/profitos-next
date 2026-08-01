@@ -38,13 +38,13 @@ interface CalendarProps {
 /* ------------------------------------------------------------------ */
 
 const typeColors: Record<CalendarEvent["type"], { bg: string; text: string; dot: string }> = {
-  visita: { bg: "bg-secondary/15", text: "text-secondary", dot: "bg-secondary" },
-  firma: { bg: "bg-warning-chip", text: "text-warning", dot: "bg-warning" },
+  visita: { bg: "bg-sage-chip", text: "text-olive-light", dot: "bg-olive-light" },
+  firma: { bg: "bg-sand-chip", text: "text-warning", dot: "bg-warning" },
   tasacion: { bg: "bg-info-chip", text: "text-info", dot: "bg-info" },
-  otro: { bg: "bg-olive-chip", text: "text-olive-light", dot: "bg-olive-bright" },
+  otro: { bg: "bg-sand-chip", text: "text-warning", dot: "bg-warning" },
   firma_informes: { bg: "bg-info-chip", text: "text-info", dot: "bg-info" },
-  firma_acordada: { bg: "bg-warning-chip", text: "text-warning", dot: "bg-warning" },
-  entrega_llaves: { bg: "bg-success-chip", text: "text-success", dot: "bg-success" },
+  firma_acordada: { bg: "bg-sand-chip", text: "text-warning", dot: "bg-warning" },
+  entrega_llaves: { bg: "bg-sage-chip", text: "text-olive-light", dot: "bg-olive-light" },
 };
 
 const typeLabels: Record<string, string> = {
@@ -81,14 +81,14 @@ function GoogleToggle({
   onToggle: () => void;
   compact?: boolean;
 }) {
-  const size = compact ? "px-2 py-0.5 text-[11px]" : "px-3 py-1 text-xs";
+  const size = compact ? "px-2.5 py-0.5 text-[11px]" : "px-3 py-1 text-xs";
 
   if (connected === false) {
     return (
       <a
         href="/login"
         title="Iniciá sesión con Google para ver tus reuniones en la agenda"
-        className={`flex items-center gap-1.5 rounded-lg border border-border text-text-muted transition-colors hover:bg-surface hover:text-text ${size}`}
+        className={`flex items-center gap-1.5 rounded-full border border-border bg-surface font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text ${size}`}
       >
         <span className="h-1.5 w-1.5 rounded-full bg-text-faint" />
         Conectar Google
@@ -101,14 +101,22 @@ function GoogleToggle({
       type="button"
       onClick={onToggle}
       title={showGoogle ? "Ocultar Google Calendar" : "Mostrar Google Calendar"}
-      className={`flex items-center gap-1.5 rounded-lg border transition-colors ${size} ${
-        showGoogle
-          ? "border-info/30 bg-info-chip text-info"
-          : "border-border text-text-muted hover:bg-surface hover:text-text"
-      }`}
+      className="flex items-center gap-2"
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${showGoogle ? "bg-info" : "bg-text-faint"}`} />
-      Google
+      <span className={`${compact ? "text-[11px]" : "text-xs"} font-semibold ${showGoogle ? "text-text" : "text-text-faint"}`}>
+        Google
+      </span>
+      <span
+        className={`relative inline-flex ${compact ? "h-5 w-9" : "h-6 w-11"} flex-shrink-0 items-center rounded-full transition-colors duration-200 ${
+          showGoogle ? "bg-olive-light" : "bg-border"
+        }`}
+      >
+        <span
+          className={`absolute left-0.5 ${compact ? "h-4 w-4" : "h-5 w-5"} rounded-full bg-white shadow-sm transition-transform duration-200 ${
+            showGoogle ? (compact ? "translate-x-4" : "translate-x-5") : "translate-x-0"
+          }`}
+        />
+      </span>
     </button>
   );
 }
@@ -239,12 +247,12 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
         {/* Mobile header */}
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-medium capitalize text-text">
+            <h2 className="font-display text-lg font-semibold capitalize text-text">
               {current.toFormat("MMMM yyyy", { locale: "es" })}
             </h2>
             <button
               onClick={goToday}
-              className="rounded-lg border border-border px-2.5 py-0.5 text-[11px] text-text-muted transition-colors hover:bg-surface hover:text-text"
+              className="rounded-full bg-sand-chip px-2.5 py-0.5 text-[11px] font-bold text-warning transition-opacity hover:opacity-80"
             >
               Hoy
             </button>
@@ -258,7 +266,7 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
           <div className="flex items-center gap-1">
             <button
               onClick={prevMonth}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface hover:text-text"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-surface text-text-muted transition-colors hover:bg-bg hover:text-text"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6" />
@@ -266,7 +274,7 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
             </button>
             <button
               onClick={nextMonth}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface hover:text-text"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-surface text-text-muted transition-colors hover:bg-bg hover:text-text"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6" />
@@ -276,13 +284,13 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
         </div>
 
         {/* Compact month grid */}
-        <div className="mb-4 overflow-hidden rounded-xl border border-border bg-surface/30">
+        <div className="mb-4 overflow-hidden rounded-[20px] border border-border bg-surface">
           {/* Weekday headers */}
           <div className="grid grid-cols-7 border-b border-border">
             {weekdaysNarrow.map((d, i) => (
               <div
                 key={i}
-                className="py-1.5 text-center text-[10px] font-semibold uppercase tracking-wider text-text-muted"
+                className="py-1.5 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint"
               >
                 {d}
               </div>
@@ -304,17 +312,15 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                   onClick={() => selectDay(day)}
                   className={`flex flex-col items-center gap-0.5 py-1.5 transition-colors ${
                     !isCurrentMonth ? "opacity-25" : ""
-                  } ${isSelected ? "bg-secondary/15" : ""}`}
+                  } ${isSelected ? "bg-sand-chip/60" : ""}`}
                 >
                   <span
                     className={`flex h-8 w-8 items-center justify-center rounded-full text-xs ${
-                      isToday && isSelected
-                        ? "bg-secondary font-bold text-bg"
-                        : isToday
-                          ? "bg-secondary/30 font-semibold text-secondary"
-                          : isSelected
-                            ? "font-semibold text-text"
-                            : "text-text/70"
+                      isToday
+                        ? "bg-dark font-bold text-accent"
+                        : isSelected
+                          ? "bg-surface font-semibold text-text shadow-sm"
+                          : "text-text/70"
                     }`}
                   >
                     {day.day}
@@ -333,10 +339,10 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
 
         {/* Selected day summary */}
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-medium capitalize text-text">
+          <p className="font-display text-sm font-semibold capitalize text-text">
             {selectedDate.toFormat("cccc d 'de' MMMM", { locale: "es" })}
           </p>
-          <span className="text-xs text-text-muted">
+          <span className="rounded-full bg-bg px-2.5 py-1 text-[11px] font-bold text-text-faint">
             {selectedDayEvents.length} evento{selectedDayEvents.length !== 1 ? "s" : ""}
           </span>
         </div>
@@ -344,7 +350,7 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
         {/* Day agenda cards */}
         <div className="flex flex-col gap-2">
           {selectedDayEvents.length === 0 ? (
-            <div className="rounded-2xl border border-border/50 bg-surface/20 px-4 py-8 text-center text-sm text-text-muted">
+            <div className="rounded-[20px] bg-bg px-6 py-8 text-center text-[12.5px] text-text-faint">
               Sin eventos para este día
             </div>
           ) : (
@@ -355,15 +361,15 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                 <button
                   key={ev.id}
                   onClick={() => handleEventClick(ev)}
-                  className="flex items-start gap-3 rounded-xl border border-border/50 p-4 text-left transition-colors hover:bg-surface/50"
+                  className="flex items-start gap-3 rounded-[16px] border border-border bg-surface p-4 text-left transition-colors active:bg-bg hover:bg-bg"
                 >
                   {/* Color bar */}
                   <div className={`mt-0.5 h-10 w-1 flex-shrink-0 rounded-full ${colors.dot}`} />
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-medium text-text">{ev.title}</p>
-                      <span className={`flex-shrink-0 rounded-md px-2 py-0.5 text-[10px] font-medium ${colors.bg} ${colors.text}`}>
+                      <p className="truncate text-[13.5px] font-bold text-text">{ev.title}</p>
+                      <span className={`inline-flex flex-shrink-0 items-center rounded-full px-2.5 py-1 text-[10px] font-bold ${colors.bg} ${colors.text}`}>
                         {isGoogle ? "Google" : typeLabels[ev.type]}
                       </span>
                     </div>
@@ -404,12 +410,12 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h2 className="text-xl font-medium capitalize text-text">
+            <h2 className="font-display text-xl font-semibold capitalize text-text">
               {current.toFormat("MMMM yyyy", { locale: "es" })}
             </h2>
             <button
               onClick={goToday}
-              className="rounded-lg border border-border px-3 py-1 text-xs text-text-muted transition-colors hover:bg-surface hover:text-text"
+              className="rounded-full bg-sand-chip px-3 py-1 text-xs font-bold text-warning transition-opacity hover:opacity-80"
             >
               Hoy
             </button>
@@ -419,10 +425,10 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
               onToggle={() => setShowGoogle((v) => !v)}
             />
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={prevMonth}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface hover:text-text"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-text-muted transition-colors hover:bg-bg hover:text-text"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6" />
@@ -430,7 +436,7 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
             </button>
             <button
               onClick={nextMonth}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface hover:text-text"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-text-muted transition-colors hover:bg-bg hover:text-text"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6" />
@@ -440,13 +446,13 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
         </div>
 
         {/* Calendar grid */}
-        <div className="overflow-hidden rounded-2xl border border-border bg-surface/30">
+        <div className="overflow-hidden rounded-[20px] border border-border bg-surface">
           {/* Weekday headers */}
           <div className="grid grid-cols-7 border-b border-border">
             {weekdays.map((d) => (
               <div
                 key={d}
-                className="px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-widest text-text-muted"
+                className="px-3 py-2.5 text-center text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint"
               >
                 {d}
               </div>
@@ -466,9 +472,9 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
               return (
                 <div
                   key={i}
-                  className={`relative min-h-[120px] border-b border-r border-border/50 p-2 transition-colors last:border-r-0 ${
+                  className={`relative min-h-[120px] border-b border-r border-border p-2 transition-colors last:border-r-0 ${
                     isCurrentMonth ? "" : "opacity-30"
-                  } ${isToday ? "bg-secondary/5" : "hover:bg-surface/30"}`}
+                  } ${isToday ? "bg-sand-chip" : "hover:bg-bg"}`}
                   style={{
                     borderRight: (i + 1) % 7 === 0 ? "none" : undefined,
                   }}
@@ -478,7 +484,7 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                     <span
                       className={`flex h-7 w-7 items-center justify-center rounded-full text-sm ${
                         isToday
-                          ? "bg-secondary font-semibold text-bg"
+                          ? "bg-dark font-display font-bold text-accent"
                           : "font-medium text-text"
                       }`}
                     >
@@ -495,11 +501,11 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                         <div
                           key={ev.id}
                           onClick={() => handleEventClick(ev)}
-                          className={`group flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors ${colors.bg} hover:brightness-125`}
+                          className="group flex cursor-pointer items-center gap-1.5 rounded-lg bg-bg px-1.5 py-1 transition-colors hover:bg-border/40"
                           title={`${timeLabel} · ${ev.title}${ev.source === "google" ? " · Google" : ""}${ev.client ? ` · ${ev.client}` : ""}${ev.userName ? ` · ${ev.userName}` : ""}`}
                         >
-                          <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${colors.dot}`} />
-                          <span className={`truncate text-[11px] font-medium ${colors.text}`}>
+                          <span className={`h-3.5 w-1 flex-shrink-0 rounded-full ${colors.dot}`} />
+                          <span className="truncate text-[11px] font-semibold text-text">
                             {ev.title}
                           </span>
                         </div>
@@ -509,7 +515,7 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                       <button
                         type="button"
                         onClick={() => setDayPopover(iso)}
-                        className="w-fit rounded px-1 text-left text-[10px] text-text-muted transition-colors hover:text-text"
+                        className="w-fit rounded-full bg-bg px-2 py-0.5 text-left text-[10px] font-bold text-text-muted transition-colors hover:text-text"
                       >
                         +{overflow} más
                       </button>
@@ -523,9 +529,9 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                         className="fixed inset-0 z-40"
                         onClick={() => setDayPopover(null)}
                       />
-                      <div className="absolute z-50 mt-1 w-64 rounded-xl border border-border bg-bg p-3 shadow-xl">
+                      <div className="absolute z-50 mt-1 w-64 rounded-2xl border border-border bg-surface p-3 shadow-2xl">
                         <div className="mb-2 flex items-center justify-between">
-                          <p className="text-xs font-medium capitalize text-text">
+                          <p className="font-display text-xs font-semibold capitalize text-text">
                             {day.toFormat("cccc d 'de' MMMM", { locale: "es" })}
                           </p>
                           <button
@@ -551,13 +557,13 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                                   setDayPopover(null);
                                   handleEventClick(ev);
                                 }}
-                                className={`flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left transition-colors ${colors.bg} hover:brightness-125`}
+                                className="flex items-center gap-1.5 rounded-lg bg-bg px-1.5 py-1 text-left transition-colors hover:bg-border/40"
                               >
-                                <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${colors.dot}`} />
-                                <span className="flex-shrink-0 text-[10px] text-text-muted">
+                                <span className={`h-3.5 w-1 flex-shrink-0 rounded-full ${colors.dot}`} />
+                                <span className="flex-shrink-0 text-[10px] text-text-faint">
                                   {ev.allDay ? "Todo el día" : ev.startTime}
                                 </span>
-                                <span className={`truncate text-[11px] font-medium ${colors.text}`}>
+                                <span className="truncate text-[11px] font-semibold text-text">
                                   {ev.title}
                                 </span>
                               </button>

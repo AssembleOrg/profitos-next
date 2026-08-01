@@ -30,9 +30,9 @@ interface Props {
 }
 
 const ROLE_CONFIG = {
-  admin: { label: "Admin", color: "bg-warning-chip text-warning border-warning/30" },
-  user: { label: "Usuario", color: "bg-info-chip text-info border-info/30" },
-  viewer: { label: "Viewer", color: "bg-text-faint/10 text-text-faint border-border" },
+  admin: { label: "Admin", color: "bg-sand-chip text-warning" },
+  user: { label: "Usuario", color: "bg-info-chip text-info" },
+  viewer: { label: "Viewer", color: "bg-bg text-text-faint" },
 } as const;
 
 export function MiembrosClient({ items, page, totalPages, total, limit }: Props) {
@@ -139,16 +139,16 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-medium text-text">Miembros</h1>
-          <p className="mt-1 text-sm text-text-muted">
+          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Miembros</h1>
+          <p className="mt-1 text-[12.5px] text-text-faint">
             {total} miembro{total !== 1 ? "s" : ""} con acceso al sistema
           </p>
         </div>
         <button
           onClick={() => setModalOpen(true)}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-bg transition-colors hover:bg-primary-hover"
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
         >
-          + Agregar
+          <span className="text-accent">+</span> Agregar
         </button>
       </div>
 
@@ -162,15 +162,17 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-4 py-3 lg:flex-row lg:items-center lg:justify-between"
+              className={`flex flex-col gap-3 rounded-[18px] border border-border bg-surface px-4 py-3.5 lg:flex-row lg:items-center lg:justify-between ${
+                item.isActive ? "" : "opacity-60"
+              }`}
             >
               <div className="flex items-center gap-3">
                 {/* Avatar */}
                 <div
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-semibold ${
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full font-display text-[12px] font-bold ${
                     item.isActive
-                      ? "bg-secondary/15 text-secondary"
-                      : "bg-text-faint/10 text-text-faint"
+                      ? "bg-sand-chip text-text-muted"
+                      : "bg-bg text-text-faint"
                   }`}
                 >
                   {item.avatarUrl ? (
@@ -181,22 +183,22 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className={`truncate text-sm font-medium ${item.isActive ? "text-text" : "text-text-muted line-through"}`}>
+                    <p className={`truncate text-[13.5px] font-bold ${item.isActive ? "text-text" : "text-text-muted line-through"}`}>
                       {item.fullName ?? item.email}
                     </p>
                     {/* Role badge */}
                     {item.role && (
-                      <span className={`inline-flex shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${ROLE_CONFIG[item.role].color}`}>
+                      <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${ROLE_CONFIG[item.role].color}`}>
                         {ROLE_CONFIG[item.role].label}
                       </span>
                     )}
                     {!item.hasAccount && (
-                      <span className="inline-flex shrink-0 rounded-md border border-border bg-bg px-1.5 py-0.5 text-[10px] font-medium text-text-faint">
+                      <span className="inline-flex shrink-0 items-center rounded-full bg-bg px-2.5 py-1 text-[11px] font-bold text-text-faint">
                         Sin cuenta
                       </span>
                     )}
                   </div>
-                  <p className="truncate text-xs text-text-muted">
+                  <p className="truncate text-[11.5px] text-text-faint">
                     {item.fullName ? item.email : `Agregado ${formatDate(item.createdAt)}`}
                     {!item.isActive && " · Inactivo"}
                   </p>
@@ -209,22 +211,27 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
                   {item.hasAccount && (
                     <Link
                       href={`/miembros/${item.id}/informe`}
-                      className="rounded-lg bg-info-chip px-3 py-1.5 text-xs font-medium text-info transition-colors hover:bg-info-chip"
+                      className="inline-flex items-center rounded-full bg-sage-chip px-3 py-1.5 text-[12px] font-bold text-olive-light transition-opacity hover:opacity-80"
                     >
                       Informe
                     </Link>
                   )}
                   {item.role && (
-                    <select
-                      value={item.role ?? "user"}
-                      onChange={(e) => handleChangeRole(item, e.target.value as "admin" | "user" | "viewer")}
-                      disabled={changingRoleId === item.id}
-                      className="flex-1 rounded-lg border border-border bg-bg px-2 py-1.5 text-xs text-text focus:border-secondary focus:outline-none disabled:opacity-50 lg:flex-none [color-scheme:light]"
-                    >
-                      <option value="admin">Admin</option>
-                      <option value="user">Usuario</option>
-                      <option value="viewer">Viewer</option>
-                    </select>
+                    <span className="relative flex-1 lg:flex-none">
+                      <select
+                        value={item.role ?? "user"}
+                        onChange={(e) => handleChangeRole(item, e.target.value as "admin" | "user" | "viewer")}
+                        disabled={changingRoleId === item.id}
+                        className="w-full appearance-none rounded-full border border-border bg-bg py-1.5 pl-3 pr-7 text-[12px] font-semibold text-text-muted focus:border-border-strong focus:outline-none disabled:opacity-50 [color-scheme:light]"
+                      >
+                        <option value="admin">Admin</option>
+                        <option value="user">Usuario</option>
+                        <option value="viewer">Viewer</option>
+                      </select>
+                      <svg className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-text-faint" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 4.5 6 7.5 9 4.5" />
+                      </svg>
+                    </span>
                   )}
                 </div>
 
@@ -233,10 +240,10 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
                   <button
                     onClick={() => handleToggle(item)}
                     disabled={togglingId === item.id}
-                    className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors lg:flex-none ${
+                    className={`flex-1 rounded-full px-3 py-1.5 text-[12px] font-bold transition-opacity hover:opacity-80 lg:flex-none ${
                       item.isActive
-                        ? "bg-warning-chip text-warning hover:bg-warning-chip"
-                        : "bg-success-chip text-success hover:bg-success-chip"
+                        ? "bg-warning-chip text-warning"
+                        : "bg-success-chip text-success"
                     } disabled:opacity-50`}
                     title={item.isActive ? "Desactivar acceso" : "Activar acceso"}
                   >
@@ -249,10 +256,16 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
                   <button
                     onClick={() => handleDelete(item.id)}
                     disabled={deletingId === item.id}
-                    className="flex-1 rounded-lg bg-danger-chip px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger-chip disabled:opacity-50 lg:flex-none"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-clay-chip text-terra transition-opacity hover:opacity-80 disabled:opacity-50"
                     title="Eliminar"
                   >
-                    {deletingId === item.id ? <Spinner variant="red" size={12} /> : "Eliminar"}
+                    {deletingId === item.id ? (
+                      <Spinner variant="red" size={12} />
+                    ) : (
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2.5 4h11M6.5 4V2.5h3V4M5 4v9.5h6V4M6.8 6.5v4.5M9.2 6.5v4.5" />
+                      </svg>
+                    )}
                   </button>
                 </div>
               </div>
@@ -261,8 +274,8 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
         </AnimatePresence>
 
         {items.length === 0 && (
-          <div className="col-span-full rounded-xl border border-border bg-surface px-6 py-12 text-center">
-            <p className="text-sm text-text-muted">No hay miembros registrados</p>
+          <div className="col-span-full rounded-[20px] bg-bg px-6 py-8 text-center">
+            <p className="font-display text-[15px] font-semibold text-text">No hay miembros registrados</p>
           </div>
         )}
       </div>
@@ -290,14 +303,14 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
                 setModalOpen(false);
                 setEmail("");
               }}
-              className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-text-muted transition-colors hover:bg-bg"
+              className="flex-1 rounded-full px-4 py-2.5 text-[13px] font-semibold text-text-faint transition-colors hover:bg-bg"
             >
               Cancelar
             </button>
             <button
               onClick={handleCreate}
               disabled={loading || !email.trim()}
-              className="flex flex-1 items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-primary-hover disabled:opacity-50"
+              className="flex h-11 flex-1 items-center justify-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {loading ? <Spinner /> : "Agregar"}
             </button>
@@ -305,17 +318,17 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
         }
       >
         <div className="space-y-4">
-          <p className="text-sm text-text-muted">
+          <p className="text-[12.5px] text-text-muted">
             Agregá un email para dar acceso al sistema. El miembro podrá iniciar sesión con este email.
           </p>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-text-muted">Email</label>
+            <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="nombre@ejemplo.com"
-              className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+              className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleCreate();
               }}
@@ -323,16 +336,21 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-text-muted">Rol</label>
-            <select
-              value={newRole}
-              onChange={(e) => setNewRole(e.target.value as "admin" | "user" | "viewer")}
-              className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
-            >
-              <option value="user">Usuario</option>
-              <option value="admin">Admin</option>
-              <option value="viewer">Viewer</option>
-            </select>
+            <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Rol</label>
+            <span className="relative block">
+              <select
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value as "admin" | "user" | "viewer")}
+                className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 pr-9 text-sm text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
+              >
+                <option value="user">Usuario</option>
+                <option value="admin">Admin</option>
+                <option value="viewer">Viewer</option>
+              </select>
+              <svg className="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-faint" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 4.5 6 7.5 9 4.5" />
+              </svg>
+            </span>
             <p className="mt-1 text-xs text-text-faint">
               El rol se aplicará cuando el miembro inicie sesión por primera vez.
             </p>

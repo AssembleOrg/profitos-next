@@ -176,17 +176,17 @@ export function AlquileresClient({
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl text-text md:text-3xl">Alquileres temporales</h1>
-          <p className="mt-1 text-sm text-text-muted">
+          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Alquileres temporales</h1>
+          <p className="mt-1 text-[12.5px] text-text-faint">
             Contratos, cuotas y cobros con generación automática de comprobantes.
           </p>
         </div>
         <button
           type="button"
           onClick={() => setWizardOpen(true)}
-          className="inline-flex items-center gap-2 self-start rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2.5 text-sm font-semibold text-bg shadow-[0_0_0_1px_rgba(143,168,112,0.15),0_8px_24px_-8px_rgba(143,168,112,0.5)] transition-colors hover:bg-olive-vivid sm:self-auto"
+          className="inline-flex h-11 items-center gap-2 self-start rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 sm:self-auto"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
@@ -196,14 +196,14 @@ export function AlquileresClient({
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <KPI label="Cobrado" value={formatARS(aggregatedKpis.collectedTotal)} hint="suma de pagos" tone="text-success" />
-        <KPI label="Esperado" value={formatARS(aggregatedKpis.expectedTotal)} hint="todas las cuotas" tone="text-text" />
-        <KPI label="Vencidos" value={aggregatedKpis.counts.vencido.toString()} hint="cuotas sin pago" tone="text-danger" />
-        <KPI label="Comisión" value={formatARS(aggregatedKpis.commissionTotal)} hint="ingresos inmobiliaria" tone="text-accent" />
+        <KPI label="Cobrado" value={formatARS(aggregatedKpis.collectedTotal)} hint="suma de pagos" tone="text-olive-light" surface="bg-sage-chip" />
+        <KPI label="Esperado" value={formatARS(aggregatedKpis.expectedTotal)} hint="todas las cuotas" tone="text-text" surface="border border-border bg-surface" />
+        <KPI label="Vencidos" value={aggregatedKpis.counts.vencido.toString()} hint="cuotas sin pago" tone="text-terra" surface="bg-clay-chip" />
+        <KPI label="Comisión" value={formatARS(aggregatedKpis.commissionTotal)} hint="ingresos inmobiliaria" tone="text-text" surface="bg-sand-chip" />
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 rounded-2xl border border-border bg-surface/40 p-1">
+      <div className="inline-flex items-center gap-0.5 self-start rounded-full border border-border bg-surface p-1">
         <TabButton active={tab === "contratos"} onClick={() => updateQuery({ tab: null })}>
           Contratos
         </TabButton>
@@ -213,7 +213,7 @@ export function AlquileresClient({
       </div>
 
       {/* Filters */}
-      <div className={`flex items-center gap-3 rounded-2xl border border-border bg-surface/40 p-3 transition-opacity ${pending ? "opacity-70" : ""}`}>
+      <div className={`flex items-center gap-3 transition-opacity ${pending ? "opacity-70" : ""}`}>
         <input
           type="text"
           defaultValue={filterQ}
@@ -224,7 +224,7 @@ export function AlquileresClient({
             if (e.target.value !== filterQ) updateQuery({ q: e.target.value });
           }}
           placeholder="Buscar por dirección, inquilino, DNI o título…"
-          className="h-10 flex-1 rounded-xl border border-border bg-bg px-3 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+          className="h-11 flex-1 rounded-full border border-border bg-surface pl-4 pr-3 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
         />
       </div>
 
@@ -285,11 +285,11 @@ export function AlquileresClient({
   );
 }
 
-function KPI({ label, value, hint, tone }: { label: string; value: string; hint: string; tone: string }) {
+function KPI({ label, value, hint, tone, surface }: { label: string; value: string; hint: string; tone: string; surface: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-2xl border border-border bg-surface/40 px-4 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">{label}</p>
-      <p className={`font-mono text-lg leading-none md:text-xl ${tone}`}>{value}</p>
+    <div className={`flex flex-col gap-1 rounded-[18px] px-4 py-3.5 ${surface}`}>
+      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">{label}</p>
+      <p className={`font-display text-xl font-bold leading-none md:text-2xl ${tone}`}>{value}</p>
       <p className="text-[11px] text-text-faint">{hint}</p>
     </div>
   );
@@ -300,14 +300,14 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
     <button
       type="button"
       onClick={onClick}
-      className={`relative flex-1 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
-        active ? "text-text" : "text-text-muted hover:text-text"
+      className={`relative rounded-full px-4 py-1.5 text-[12.5px] transition-colors ${
+        active ? "font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
       }`}
     >
       {active && (
         <motion.span
           layoutId="rentals-tab"
-          className="absolute inset-0 rounded-xl bg-bg"
+          className="absolute inset-0 rounded-full bg-dark"
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
         />
       )}
@@ -338,11 +338,11 @@ function ContractCard({ contract, onOpenDue, onDelete, canDelete }: ContractCard
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-      className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface/60"
+      className="flex h-full flex-col overflow-hidden rounded-[20px] border border-border bg-surface"
     >
-      <header className="flex items-start gap-3 border-b border-border/60 px-4 py-3">
+      <header className="flex items-start gap-3 border-b border-border px-4 py-3">
         <div className="min-w-0 flex-1">
-          <h3 className="line-clamp-1 text-sm font-semibold text-text">{contract.property.address}</h3>
+          <h3 className="line-clamp-1 font-display text-[15px] font-semibold text-text">{contract.property.address}</h3>
           {contract.title && <p className="text-[11px] text-text-muted">{contract.title}</p>}
           <p className="mt-0.5 truncate text-[11px] text-text-faint">
             {contract.tenant.fullName} · {contract.tenant.idType.toUpperCase()} {contract.tenant.idNumber}
@@ -353,7 +353,7 @@ function ContractCard({ contract, onOpenDue, onDelete, canDelete }: ContractCard
             type="button"
             onClick={onDelete}
             aria-label="Eliminar contrato"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-danger-chip hover:text-danger"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-clay-chip text-terra transition-opacity hover:opacity-80"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="3 6 5 6 21 6" />
@@ -375,7 +375,7 @@ function ContractCard({ contract, onOpenDue, onDelete, canDelete }: ContractCard
           </span>
           <span>
             <span className="text-text-faint">Base: </span>
-            <span className="font-mono">{formatARS(contract.baseAmount)}</span>
+            <span className="font-display font-bold">{formatARS(contract.baseAmount)}</span>
           </span>
         </div>
 
@@ -386,9 +386,8 @@ function ContractCard({ contract, onOpenDue, onDelete, canDelete }: ContractCard
             .map((k) => (
               <span
                 key={k}
-                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] ${RENTAL_DUE_STATUS_STYLE[k].chip}`}
+                className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${RENTAL_DUE_STATUS_STYLE[k].chip}`}
               >
-                <span className={`h-1 w-1 rounded-full ${RENTAL_DUE_STATUS_STYLE[k].dot}`} />
                 {RENTAL_DUE_STATUS_LABEL[k]} · {summary.counts[k]}
               </span>
             ))}
@@ -400,14 +399,14 @@ function ContractCard({ contract, onOpenDue, onDelete, canDelete }: ContractCard
             <span className="font-semibold text-text-muted">
               Cobrado {formatARS(summary.collectedTotal)} / {formatARS(summary.expectedTotal)}
             </span>
-            <span className="font-mono text-accent">{Math.round(completion)}%</span>
+            <span className="font-display font-bold text-olive-light">{Math.round(completion)}%</span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg">
             <motion.div
               initial={false}
               animate={{ width: `${Math.min(100, completion)}%` }}
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="h-full rounded-full bg-gradient-to-r from-olive-mid to-olive-bright"
+              className="h-full rounded-full bg-olive-light"
             />
           </div>
         </div>
@@ -417,15 +416,15 @@ function ContractCard({ contract, onOpenDue, onDelete, canDelete }: ContractCard
           <button
             type="button"
             onClick={() => onOpenDue(next)}
-            className="flex items-center justify-between rounded-xl border border-border bg-bg/40 px-3 py-2 text-left transition-colors hover:border-olive-bright/40"
+            className="flex items-center justify-between rounded-[12px] bg-bg px-3 py-2.5 text-left transition-colors hover:bg-sand-chip"
           >
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Próxima cuota</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Próxima cuota</p>
               <p className="truncate text-xs text-text">
                 Cuota Nº {next.position} · {formatDate(next.dueDate)}
               </p>
             </div>
-            <span className="font-mono text-sm font-semibold text-text">
+            <span className="font-display text-sm font-bold text-text">
               {formatARS(next.expectedAmount)}
             </span>
           </button>
@@ -480,7 +479,7 @@ function CobrosList({ headers, loaded, loadingIds, onExpand, onOpenDue }: Cobros
 
   if (headers.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-border bg-surface/30 px-6 py-12 text-center text-sm text-text-muted">
+      <p className="rounded-[20px] bg-bg px-6 py-8 text-center text-[12.5px] text-text-faint">
         No hay cuotas todavía. Creá un contrato para empezar.
       </p>
     );
@@ -502,12 +501,12 @@ function CobrosList({ headers, loaded, loadingIds, onExpand, onOpenDue }: Cobros
           : [];
 
         return (
-          <div key={header.id} className="overflow-hidden rounded-2xl border border-border bg-surface/30">
+          <div key={header.id} className="overflow-hidden rounded-[18px] border border-border bg-surface">
             {/* Cabecera del contrato (toggle) */}
             <button
               type="button"
               onClick={() => toggle(header.id)}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface/50"
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-bg"
             >
               <svg
                 width="14"
@@ -523,8 +522,8 @@ function CobrosList({ headers, loaded, loadingIds, onExpand, onOpenDue }: Cobros
                 <polyline points="9 18 15 12 9 6" />
               </svg>
               <div className="min-w-0 flex-1">
-                <p className="line-clamp-1 text-sm font-semibold text-text">{header.propertyAddress}</p>
-                <p className="truncate text-[11px] text-text-faint">
+                <p className="line-clamp-1 text-[13.5px] font-bold text-text">{header.propertyAddress}</p>
+                <p className="truncate text-[11.5px] text-text-faint">
                   {header.tenantName}
                   {header.title ? ` · ${header.title}` : ""}
                 </p>
@@ -535,16 +534,15 @@ function CobrosList({ headers, loaded, loadingIds, onExpand, onOpenDue }: Cobros
                   .map((k) => (
                     <span
                       key={k}
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] ${RENTAL_DUE_STATUS_STYLE[k].chip}`}
+                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${RENTAL_DUE_STATUS_STYLE[k].chip}`}
                     >
-                      <span className={`h-1 w-1 rounded-full ${RENTAL_DUE_STATUS_STYLE[k].dot}`} />
                       {RENTAL_DUE_STATUS_LABEL[k]} · {summary.counts[k]}
                     </span>
                   ))}
               </div>
               <div className="shrink-0 text-right">
-                <p className="font-mono text-xs">
-                  <span className="text-success">{formatARS(summary.collectedTotal)}</span>
+                <p className="font-display text-xs font-bold">
+                  <span className="text-olive-light">{formatARS(summary.collectedTotal)}</span>
                   <span className="text-text-faint"> / {formatARS(summary.expectedTotal)}</span>
                 </p>
                 <p className="text-[10px] text-text-faint">{completion}% cobrado</p>
@@ -560,20 +558,20 @@ function CobrosList({ headers, loaded, loadingIds, onExpand, onOpenDue }: Cobros
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  className="overflow-hidden border-t border-border/60"
+                  className="overflow-hidden border-t border-border"
                 >
                   {!contract ? (
                     <div className="flex items-center justify-center gap-2 px-4 py-6 text-xs text-text-muted">
                       {isLoading ? (
                         <>
-                          <span className="h-3 w-3 animate-spin rounded-full border-2 border-olive-bright border-t-transparent" />
+                          <span className="h-3 w-3 animate-spin rounded-full border-2 border-olive-light border-t-transparent" />
                           Cargando cuotas…
                         </>
                       ) : (
                         <button
                           type="button"
                           onClick={() => onExpand(header.id)}
-                          className="rounded-lg border border-border px-3 py-1.5 text-text-muted hover:text-text"
+                          className="rounded-full border border-border bg-surface px-3 py-1.5 font-semibold text-text-muted hover:bg-bg"
                         >
                           No se pudieron cargar. Reintentar
                         </button>
@@ -582,7 +580,7 @@ function CobrosList({ headers, loaded, loadingIds, onExpand, onOpenDue }: Cobros
                   ) : (
                   <>
                   {/* Mobile cards */}
-                  <div className="flex flex-col divide-y divide-border/60 sm:hidden">
+                  <div className="flex flex-col divide-y divide-border sm:hidden">
                     {dues.map((due) => {
                       const collected = dueCollectedAmount(due);
                       const effective = dueEffective(due, contract.gracePeriodDays);
@@ -592,24 +590,23 @@ function CobrosList({ headers, loaded, loadingIds, onExpand, onOpenDue }: Cobros
                           key={due.id}
                           type="button"
                           onClick={() => onOpenDue(contract, due)}
-                          className="flex flex-col gap-2 bg-bg/30 px-4 py-3 text-left transition-colors active:bg-surface/40"
+                          className="flex flex-col gap-2 px-4 py-3 text-left transition-colors active:bg-bg"
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="font-mono text-xs text-text">
+                            <span className="text-xs font-bold text-text">
                               {formatDate(due.dueDate)}
-                              <span className="ml-1 text-[10px] text-text-faint">#{due.position}</span>
+                              <span className="ml-1 text-[10px] font-medium text-text-faint">#{due.position}</span>
                             </span>
-                            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${style.chip}`}>
-                              <span className={`h-1 w-1 rounded-full ${style.dot}`} />
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${style.chip}`}>
                               {RENTAL_DUE_STATUS_LABEL[effective]}
                             </span>
                           </div>
                           <div className="flex items-center gap-4">
                             <span className="text-[11px] text-text-muted">
-                              Esperado: <span className="font-mono text-text">{formatARS(due.expectedAmount)}</span>
+                              Esperado: <span className="font-display font-bold text-text">{formatARS(due.expectedAmount)}</span>
                             </span>
                             <span className="text-[11px] text-text-muted">
-                              Cobrado: <span className="font-mono text-success">{formatARS(collected)}</span>
+                              Cobrado: <span className="font-display font-bold text-olive-light">{formatARS(collected)}</span>
                             </span>
                           </div>
                         </button>
@@ -619,15 +616,15 @@ function CobrosList({ headers, loaded, loadingIds, onExpand, onOpenDue }: Cobros
 
                   {/* Desktop table */}
                   <table className="hidden w-full text-sm sm:table">
-                    <thead className="bg-surface/40 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+                    <thead className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
                       <tr>
-                        <th className="px-4 py-2.5 text-left">Vencimiento</th>
-                        <th className="px-4 py-2.5 text-right">Esperado</th>
-                        <th className="px-4 py-2.5 text-right">Cobrado</th>
-                        <th className="px-4 py-2.5 text-left">Estado</th>
+                        <th className="px-4 py-3 text-left">Vencimiento</th>
+                        <th className="px-4 py-3 text-right">Esperado</th>
+                        <th className="px-4 py-3 text-right">Cobrado</th>
+                        <th className="px-4 py-3 text-left">Estado</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/60 bg-bg/30">
+                    <tbody className="divide-y divide-border">
                       {dues.map((due) => {
                         const collected = dueCollectedAmount(due);
                         const effective = dueEffective(due, contract.gracePeriodDays);
@@ -636,21 +633,20 @@ function CobrosList({ headers, loaded, loadingIds, onExpand, onOpenDue }: Cobros
                           <tr
                             key={due.id}
                             onClick={() => onOpenDue(contract, due)}
-                            className="cursor-pointer transition-colors hover:bg-surface/40"
+                            className="cursor-pointer transition-colors hover:bg-bg"
                           >
-                            <td className="px-4 py-2.5 font-mono text-xs text-text">
+                            <td className="px-4 py-2.5 text-xs font-bold text-text">
                               {formatDate(due.dueDate)}
-                              <span className="ml-1 text-[10px] text-text-faint">#{due.position}</span>
+                              <span className="ml-1 text-[10px] font-medium text-text-faint">#{due.position}</span>
                             </td>
-                            <td className="px-4 py-2.5 text-right font-mono text-xs text-text">
+                            <td className="px-4 py-2.5 text-right font-display text-xs font-bold text-text">
                               {formatARS(due.expectedAmount)}
                             </td>
-                            <td className="px-4 py-2.5 text-right font-mono text-xs text-success">
+                            <td className="px-4 py-2.5 text-right font-display text-xs font-bold text-olive-light">
                               {formatARS(collected)}
                             </td>
                             <td className="px-4 py-2.5">
-                              <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${style.chip}`}>
-                                <span className={`h-1 w-1 rounded-full ${style.dot}`} />
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${style.chip}`}>
                                 {RENTAL_DUE_STATUS_LABEL[effective]}
                               </span>
                             </td>
@@ -673,21 +669,21 @@ function CobrosList({ headers, loaded, loadingIds, onExpand, onOpenDue }: Cobros
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-surface/30 px-6 py-12 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full border border-border-olive bg-olive-subtle">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-olive-light">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-[20px] bg-bg px-6 py-8 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sand-chip">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
           <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
       </div>
-      <p className="font-display text-lg text-text">Todavía no hay contratos</p>
-      <p className="max-w-sm text-sm text-text-muted">
+      <p className="font-display text-[15px] font-semibold text-text">Todavía no hay contratos</p>
+      <p className="max-w-sm text-[12.5px] text-text-faint">
         Cargá tu primer contrato y se generan automáticamente las cuotas según la frecuencia.
       </p>
       <button
         type="button"
         onClick={onCreate}
-        className="mt-2 inline-flex items-center gap-2 rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2 text-sm font-semibold text-bg transition-colors hover:bg-olive-vivid"
+        className="mt-2 inline-flex h-10 items-center gap-2 rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90"
       >
         Crear el primero
       </button>

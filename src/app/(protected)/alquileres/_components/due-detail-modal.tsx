@@ -69,7 +69,7 @@ export function DueDetailModal({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 20, scale: 0.98 }}
                 transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed left-1/2 top-1/2 z-50 flex max-h-[94dvh] w-[min(820px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+                className="fixed left-1/2 top-1/2 z-50 flex max-h-[94dvh] w-[min(820px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
               >
                 <Body
                   due={due}
@@ -163,9 +163,9 @@ function Body({
 
   return (
     <>
-      <header className="flex items-start justify-between gap-3 border-b border-border-olive/40 px-5 py-4">
+      <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div className="min-w-0">
-          <Dialog.Title className="line-clamp-1 text-base font-semibold text-text">
+          <Dialog.Title className="line-clamp-1 font-display text-[17px] font-semibold text-text">
             Cuota Nº {due.position} — {formatDate(due.dueDate)}
           </Dialog.Title>
           <p className="mt-0.5 truncate text-xs text-text-muted">
@@ -175,16 +175,15 @@ function Body({
         </div>
         <div className="flex items-center gap-2">
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${style.chip}`}
+            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${style.chip}`}
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
             {RENTAL_DUE_STATUS_LABEL[effective]}
           </span>
           <Dialog.Close asChild>
             <button
               type="button"
               aria-label="Cerrar"
-              className="flex h-8 w-8 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-bg hover:text-text"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -207,8 +206,8 @@ function Body({
 
           {/* Adicionales toggle */}
           {due.additionals.length > 0 && (
-            <section className="rounded-xl border border-border bg-bg/30 p-4">
-              <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+            <section className="rounded-[16px] bg-bg p-4">
+              <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
                 Adicionales en esta cuota
               </h4>
               <p className="mb-3 text-[11px] text-text-faint">
@@ -220,10 +219,10 @@ function Body({
                   return (
                     <label
                       key={da.id}
-                      className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
+                      className={`flex cursor-pointer items-center gap-3 rounded-[12px] border px-3 py-2 transition-colors ${
                         da.included
-                          ? "border-olive-bright/40 bg-olive-subtle"
-                          : "border-border bg-bg/30 opacity-70"
+                          ? "border-transparent bg-sage-chip"
+                          : "border-border bg-surface opacity-70"
                       }`}
                     >
                       <input
@@ -232,12 +231,12 @@ function Body({
                         onChange={(e) =>
                           toggleAdditional(da.contractAdditionalId, e.target.checked)
                         }
-                        className="h-3.5 w-3.5 accent-olive-bright"
+                        className="h-3.5 w-3.5 accent-olive-light"
                       />
                       <span className="flex-1 text-sm text-text">
                         {da.contractAdditional.additional.name}
                       </span>
-                      <span className="font-mono text-xs text-text-muted">
+                      <span className="font-display text-xs font-bold text-text-muted">
                         {formatARS(amount)}
                       </span>
                     </label>
@@ -248,18 +247,18 @@ function Body({
           )}
 
           {/* Status manual */}
-          <section className="rounded-xl border border-border bg-bg/30 p-4">
-            <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+          <section className="rounded-[16px] bg-bg p-4">
+            <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
               Estado
             </h4>
             <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
                 onClick={() => patchDue({ status: null })}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
                   due.status === null
-                    ? "border-olive-bright/40 bg-olive-subtle text-text"
-                    : "border-border bg-bg text-text-muted hover:text-text"
+                    ? "border-transparent bg-dark font-bold text-dark-fg"
+                    : "border-border bg-surface font-medium text-text-muted hover:text-text"
                 }`}
               >
                 Automático (según fecha)
@@ -269,10 +268,10 @@ function Body({
                   key={s}
                   type="button"
                   onClick={() => patchDue({ status: s })}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
                     due.status === s
-                      ? `${RENTAL_DUE_STATUS_STYLE[s].chip}`
-                      : "border-border bg-bg text-text-muted hover:text-text"
+                      ? `font-bold ${RENTAL_DUE_STATUS_STYLE[s].chip}`
+                      : "border-border bg-surface font-medium text-text-muted hover:text-text"
                   }`}
                 >
                   {RENTAL_DUE_STATUS_LABEL[s]}
@@ -284,7 +283,7 @@ function Body({
           {/* Pagos registrados */}
           {due.transactions.length > 0 && (
             <section>
-              <h4 className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+              <h4 className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
                 Pagos registrados
               </h4>
               <ol className="flex flex-col gap-2">
@@ -324,7 +323,7 @@ function Body({
 
           {/* Timeline */}
           <section>
-            <h4 className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+            <h4 className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
               Línea de tiempo
             </h4>
             <Timeline
@@ -352,11 +351,11 @@ function Body({
         </div>
       </div>
 
-      <footer className="flex items-center justify-end gap-2 border-t border-border bg-bg/30 px-5 py-3">
+      <footer className="flex items-center justify-end gap-2 border-t border-border px-5 py-3">
         <button
           type="button"
           onClick={onClose}
-          className="rounded-xl border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:border-border-strong hover:text-text"
+          className="text-[13px] font-semibold text-text-faint transition-colors hover:text-text"
         >
           Cerrar
         </button>
@@ -375,13 +374,13 @@ function SummaryCard({
   tone?: "emerald" | "olive";
 }) {
   const valueClass =
-    tone === "emerald" ? "text-success" : tone === "olive" ? "text-accent" : "text-text";
+    tone === "emerald" ? "text-olive-light" : tone === "olive" ? "text-accent" : "text-text";
   return (
-    <div className="flex flex-col gap-0.5 rounded-xl border border-border bg-surface/40 p-3">
-      <span className="text-[9px] font-semibold uppercase tracking-widest text-text-muted">
+    <div className="flex flex-col gap-0.5 rounded-[14px] bg-bg p-3">
+      <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-text-faint">
         {label}
       </span>
-      <span className={`font-mono text-sm font-semibold ${valueClass}`}>{value}</span>
+      <span className={`font-display text-sm font-bold ${valueClass}`}>{value}</span>
     </div>
   );
 }
@@ -415,19 +414,19 @@ function PaymentRow({ tx, signedUrls, canDelete, dueDateId, onDeleted }: Payment
   }
 
   return (
-    <li className="rounded-xl border border-border bg-bg/40 p-3">
+    <li className="rounded-[14px] bg-bg p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span
-            className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
+            className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
               tx.isFull
-                ? "border-success/30 bg-success-chip text-success"
-                : "border-warning/30 bg-warning-chip text-warning"
+                ? "bg-success-chip text-success"
+                : "bg-warning-chip text-warning"
             }`}
           >
             {tx.isFull ? "Total" : "Parcial"}
           </span>
-          <span className="text-sm font-semibold text-text">{formatARS(tx.amountPaid, { decimals: true })}</span>
+          <span className="font-display text-sm font-bold text-text">{formatARS(tx.amountPaid, { decimals: true })}</span>
           {tx.method && <span className="text-[11px] text-text-muted">· {tx.method}</span>}
         </div>
         <span className="text-[10px] text-text-faint">
@@ -437,11 +436,11 @@ function PaymentRow({ tx, signedUrls, canDelete, dueDateId, onDeleted }: Payment
       <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-text-muted">
         <span>
           <span className="text-text-faint">Comisión: </span>
-          <span className="font-mono text-text">{formatARS(tx.commissionAmount)}</span>
+          <span className="font-display font-bold text-text">{formatARS(tx.commissionAmount)}</span>
         </span>
         <span>
           <span className="text-text-faint">Para dueño: </span>
-          <span className="font-mono text-text">{formatARS(tx.ownerAmount)}</span>
+          <span className="font-display font-bold text-text">{formatARS(tx.ownerAmount)}</span>
         </span>
       </div>
       {tx.notes && (
@@ -456,7 +455,7 @@ function PaymentRow({ tx, signedUrls, canDelete, dueDateId, onDeleted }: Payment
       )}
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {tx.receiptNumber && (
-          <span className="rounded-full bg-bg px-2 py-0.5 font-mono text-[10px] text-text-muted">
+          <span className="rounded-full bg-surface px-2 py-0.5 font-mono text-[10px] text-text-muted">
             #{String(tx.receiptNumber).padStart(8, "0")}
           </span>
         )}
@@ -465,7 +464,7 @@ function PaymentRow({ tx, signedUrls, canDelete, dueDateId, onDeleted }: Payment
             href={receiptUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg px-2.5 py-1 text-[11px] font-medium text-text-muted transition-colors hover:border-olive-bright/40 hover:text-text"
+            className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-terra transition-opacity hover:opacity-80"
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -481,7 +480,7 @@ function PaymentRow({ tx, signedUrls, canDelete, dueDateId, onDeleted }: Payment
           <button
             type="button"
             onClick={deleteThis}
-            className="ml-auto rounded-md border border-danger/30 bg-danger-chip px-2.5 py-1 text-[10px] text-danger transition-colors hover:bg-danger-chip"
+            className="ml-auto rounded-full bg-clay-chip px-2.5 py-1 text-[10px] font-bold text-terra transition-opacity hover:opacity-80"
           >
             Eliminar pago
           </button>
@@ -503,7 +502,7 @@ interface TimelineProps {
 function Timeline({ actions, signedUrls, currentUserId, isAdmin, dueDateId, onActionDeleted }: TimelineProps) {
   if (actions.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-border bg-bg/20 px-3 py-4 text-center text-xs text-text-muted">
+      <p className="rounded-[14px] bg-bg px-3 py-4 text-center text-xs text-text-faint">
         Sin movimientos.
       </p>
     );
@@ -531,11 +530,11 @@ function Timeline({ actions, signedUrls, currentUserId, isAdmin, dueDateId, onAc
           action.createdByUser.fullName?.trim() || action.createdByUser.email.split("@")[0];
         const dotColor =
           action.type === "payment"
-            ? "bg-success"
+            ? "bg-olive-light"
             : action.type === "status_change"
-              ? "bg-olive-bright"
+              ? "bg-accent"
               : action.type === "creation"
-                ? "bg-olive-bright"
+                ? "bg-accent"
                 : "bg-text-faint";
         const canDelete = action.type === "nota" && (isAdmin || action.createdByUser.id === currentUserId);
         const attList = Array.isArray(action.attachments)
@@ -544,10 +543,12 @@ function Timeline({ actions, signedUrls, currentUserId, isAdmin, dueDateId, onAc
         return (
           <li key={action.id} className="relative flex gap-3 pb-4 last:pb-0">
             {idx < actions.length - 1 && (
-              <span className="absolute left-[7px] top-3 h-full w-px bg-border" />
+              <span className="absolute left-[13px] top-3 h-full w-px bg-border" />
             )}
-            <span className={`relative z-10 mt-1 h-3.5 w-3.5 shrink-0 rounded-full ring-4 ring-surface ${dotColor}`} />
-            <div className="flex-1 rounded-lg border border-border bg-bg/30 p-3">
+            <span className="relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bg ring-4 ring-surface">
+              <span className={`h-2 w-2 rounded-full ${dotColor}`} />
+            </span>
+            <div className="flex-1 rounded-[12px] bg-bg p-3">
               <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-text">{author}</span>
@@ -591,27 +592,27 @@ function Timeline({ actions, signedUrls, currentUserId, isAdmin, dueDateId, onAc
 function ActionBadge({ action }: { action: DueDateAction }) {
   if (action.type === "creation") {
     return (
-      <span className="rounded-full bg-olive-subtle px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-accent">
+      <span className="rounded-full bg-sand-chip px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-warning">
         Creación
       </span>
     );
   }
   if (action.type === "status_change") {
     return (
-      <span className="rounded-full border border-border bg-bg/40 px-1.5 py-0.5 text-[9px] font-medium text-text-muted">
+      <span className="rounded-full border border-border bg-surface px-1.5 py-0.5 text-[9px] font-medium text-text-muted">
         {action.fromStatus ? `${action.fromStatus} → ${action.toStatus ?? "—"}` : "estado"}
       </span>
     );
   }
   if (action.type === "payment") {
     return (
-      <span className="rounded-full border border-success/30 bg-success-chip px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-success">
+      <span className="rounded-full bg-sage-chip px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-olive-light">
         Pago
       </span>
     );
   }
   return (
-    <span className="rounded-full bg-bg/40 px-1.5 py-0.5 text-[9px] font-medium text-text-muted">
+    <span className="rounded-full border border-border bg-surface px-1.5 py-0.5 text-[9px] font-medium text-text-muted">
       Nota
     </span>
   );
@@ -671,8 +672,8 @@ function AddNote({ dueDateId, onAdded }: AddNoteProps) {
   }
 
   return (
-    <section className="rounded-xl border border-border bg-bg/40 p-4">
-      <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+    <section className="rounded-[16px] bg-bg p-4">
+      <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
         Agregar nota
       </h4>
       <textarea
@@ -680,7 +681,7 @@ function AddNote({ dueDateId, onAdded }: AddNoteProps) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Comentario, novedad, contexto…"
-        className="w-full resize-none rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+        className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
       />
       <div className="mt-2">
         <MediaUploader attachments={attachments} onChange={setAttachments} signedUrls={signedUrls} compact />
@@ -690,7 +691,7 @@ function AddNote({ dueDateId, onAdded }: AddNoteProps) {
           type="button"
           onClick={submit}
           disabled={submitting}
-          className="rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2 text-sm font-semibold text-bg transition-colors hover:bg-olive-vivid disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? "Enviando…" : "Agregar nota"}
         </button>

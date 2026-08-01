@@ -33,7 +33,7 @@ interface Props {
 type Destino = "inmobiliaria" | "costear";
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none";
+  "w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm text-text focus:border-border-strong focus:outline-none";
 
 export function MovementFormModal({
   open,
@@ -321,14 +321,14 @@ export function MovementFormModal({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 16, scale: 0.98 }}
                 transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(480px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+                className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(480px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
               >
-                <header className="flex items-center justify-between gap-3 border-b border-border-olive/40 px-5 py-4">
-                  <Dialog.Title className="text-base font-semibold text-text">
+                <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+                  <Dialog.Title className="font-display text-[17px] font-semibold text-text">
                     {editing ? "Editar movimiento" : "Nuevo movimiento"}
                   </Dialog.Title>
                   <Dialog.Close asChild>
-                    <button type="button" aria-label="Cerrar" className="flex h-8 w-8 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-bg hover:text-text">
+                    <button type="button" aria-label="Cerrar" className="flex h-8 w-8 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                     </button>
                   </Dialog.Close>
@@ -337,14 +337,14 @@ export function MovementFormModal({
                 <div className="flex-1 overflow-y-auto px-5 py-5">
                   <div className="flex flex-col gap-4">
                     {/* Tipo */}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-0.5 rounded-full border border-border bg-bg p-1">
                       <button
                         type="button"
                         onClick={() => changeType("income")}
-                        className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
+                        className={`flex-1 rounded-full px-4 py-2 text-[12.5px] transition-colors ${
                           type === "income"
-                            ? "border-success/30 bg-success-chip text-success"
-                            : "border-border bg-bg text-text-muted hover:text-text"
+                            ? "bg-dark font-bold text-dark-fg"
+                            : "font-medium text-text-faint hover:text-text"
                         }`}
                       >
                         Ingreso
@@ -352,10 +352,10 @@ export function MovementFormModal({
                       <button
                         type="button"
                         onClick={() => changeType("expense")}
-                        className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
+                        className={`flex-1 rounded-full px-4 py-2 text-[12.5px] transition-colors ${
                           type === "expense"
-                            ? "border-danger/30 bg-danger-chip text-danger"
-                            : "border-border bg-bg text-text-muted hover:text-text"
+                            ? "bg-dark font-bold text-dark-fg"
+                            : "font-medium text-text-faint hover:text-text"
                         }`}
                       >
                         Egreso
@@ -365,17 +365,17 @@ export function MovementFormModal({
                     {/* Destino: inmobiliaria vs gasto personal (Costear). Solo la dueña, solo egresos. */}
                     {isCostearOwner && type === "expense" && (
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                           Destino del gasto
                         </label>
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
                             onClick={() => setDestino("inmobiliaria")}
-                            className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
+                            className={`rounded-full border px-3 py-2.5 text-[13px] transition-colors ${
                               destino === "inmobiliaria"
-                                ? "border-olive-bright/40 bg-olive-mid/20 text-accent"
-                                : "border-border bg-bg text-text-muted hover:text-text"
+                                ? "border-transparent bg-dark font-bold text-dark-fg"
+                                : "border-border bg-surface font-semibold text-text-muted hover:bg-bg"
                             }`}
                           >
                             Inmobiliaria
@@ -383,10 +383,10 @@ export function MovementFormModal({
                           <button
                             type="button"
                             onClick={() => setDestino("costear")}
-                            className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
+                            className={`flex items-center justify-center gap-1.5 rounded-full border px-3 py-2.5 text-[13px] transition-colors ${
                               destino === "costear"
-                                ? "border-olive-bright/30 bg-olive-chip text-olive-light"
-                                : "border-border bg-bg text-text-muted hover:text-text"
+                                ? "border-transparent bg-sand-chip font-bold text-warning"
+                                : "border-border bg-surface font-semibold text-text-muted hover:bg-bg"
                             }`}
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
@@ -403,13 +403,14 @@ export function MovementFormModal({
 
                     {/* Detectar con IA (Costear): foto de ticket, audio o texto */}
                     {isCostear && (
-                      <div className="rounded-xl border border-olive-bright/30 bg-olive-chip p-3">
+                      <div className="rounded-[16px] bg-bg p-3">
                         <div className="mb-2 flex items-center justify-between">
-                          <span className="text-xs font-semibold uppercase tracking-wider text-olive-light">
+                          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-accent"><path d="M12 2l1.9 5.7a2 2 0 001.3 1.3L21 11l-5.8 1.9a2 2 0 00-1.3 1.3L12 20l-1.9-5.8a2 2 0 00-1.3-1.3L3 11l5.8-2a2 2 0 001.3-1.3L12 2z" /></svg>
                             Detectar con IA
                           </span>
                           {extractionId && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-olive-light">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-sage-chip px-2.5 py-1 text-[10px] font-bold text-olive-light">
                               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                               Detectado
                             </span>
@@ -433,14 +434,14 @@ export function MovementFormModal({
                               type="button"
                               onClick={extractText}
                               disabled={extracting}
-                              className="self-end rounded-lg border border-olive-bright/30 bg-olive-chip px-3 py-1.5 text-xs font-semibold text-olive-light transition-colors hover:bg-olive-chip disabled:opacity-60"
+                              className="self-end rounded-full bg-dark px-3.5 py-1.5 text-xs font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-60"
                             >
                               Extraer texto
                             </button>
                           </div>
                         )}
                         {extracting && (
-                          <p className="mt-2 text-xs text-olive-light">Procesando… puede tardar unos segundos.</p>
+                          <p className="mt-2 text-xs text-text-faint">Procesando… puede tardar unos segundos.</p>
                         )}
                         <input
                           ref={imageInputRef}
@@ -473,10 +474,10 @@ export function MovementFormModal({
                     <button
                       type="button"
                       onClick={() => setIsShared((v) => !v)}
-                      className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
+                      className={`flex items-center justify-between rounded-[14px] border px-3.5 py-2.5 text-sm font-semibold transition-colors ${
                         isShared
-                          ? "border-accent/40 bg-accent/15 text-accent"
-                          : "border-border bg-bg text-text-muted hover:text-text"
+                          ? "border-border-strong bg-bg text-text"
+                          : "border-border bg-surface text-text-muted hover:bg-bg"
                       }`}
                     >
                       <span className="flex items-center gap-2">
@@ -484,9 +485,9 @@ export function MovementFormModal({
                         Movimiento compartido
                       </span>
                       <span
-                        className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${isShared ? "bg-accent/40" : "bg-border"}`}
+                        className={`flex h-6 w-11 items-center rounded-full p-0.5 transition-colors ${isShared ? "bg-olive-light" : "bg-border"}`}
                       >
-                        <span className={`h-4 w-4 rounded-full bg-text transition-transform ${isShared ? "translate-x-4" : ""}`} />
+                        <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${isShared ? "translate-x-5" : ""}`} />
                       </span>
                     </button>
                     )}
@@ -494,7 +495,7 @@ export function MovementFormModal({
                     {/* Categoría (no aplica a gastos personales de Costear) */}
                     {!isCostear && (
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">Categoría</label>
+                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Categoría</label>
                       <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputClass}>
                         <option value="">Elegí una categoría…</option>
                         {categories.map((c) => (
@@ -507,19 +508,19 @@ export function MovementFormModal({
                     {/* Monto + Moneda */}
                     <div className="grid grid-cols-[1fr_auto] gap-2">
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">Monto</label>
+                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Monto</label>
                         <CurrencyInput value={amount} onChange={setAmount} placeholder="0" />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">Moneda</label>
-                        <div className="flex h-[38px] items-center gap-1 rounded-xl border border-border bg-bg p-1">
+                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Moneda</label>
+                        <div className="flex h-[42px] items-center gap-0.5 rounded-full border border-border bg-bg p-1">
                           {(["ARS", "USD"] as Currency[]).map((c) => (
                             <button
                               key={c}
                               type="button"
                               onClick={() => setCurrency(c)}
-                              className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
-                                currency === c ? "bg-accent/20 text-accent" : "text-text-muted hover:text-text"
+                              className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                                currency === c ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
                               }`}
                             >
                               {c}
@@ -532,10 +533,10 @@ export function MovementFormModal({
                     {/* Valor al agente (solo egresos, informativo): % o monto fijo */}
                     {type === "expense" && !isCostear && (
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                           Valor al agente <span className="text-text-faint">(informativo)</span>
                         </label>
-                        <div className="flex items-center gap-1 rounded-xl border border-border bg-bg pr-1 focus-within:border-secondary">
+                        <div className="flex items-center gap-1 rounded-[14px] border border-border bg-surface pr-1 focus-within:border-border-strong">
                           {agentShareType === "amount" && (
                             <span className="pl-3 text-sm text-text-faint">{currency === "USD" ? "US$" : "$"}</span>
                           )}
@@ -551,12 +552,12 @@ export function MovementFormModal({
                             className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-text focus:outline-none"
                           />
                           {/* Mini-selector dentro del input */}
-                          <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-surface p-0.5">
+                          <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-bg p-0.5">
                             <button
                               type="button"
                               onClick={() => setAgentShareType("percent")}
-                              className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors ${
-                                agentShareType === "percent" ? "bg-accent/20 text-accent" : "text-text-muted hover:text-text"
+                              className={`rounded-full px-2 py-1 text-xs transition-colors ${
+                                agentShareType === "percent" ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
                               }`}
                             >
                               %
@@ -564,8 +565,8 @@ export function MovementFormModal({
                             <button
                               type="button"
                               onClick={() => setAgentShareType("amount")}
-                              className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors ${
-                                agentShareType === "amount" ? "bg-accent/20 text-accent" : "text-text-muted hover:text-text"
+                              className={`rounded-full px-2 py-1 text-xs transition-colors ${
+                                agentShareType === "amount" ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
                               }`}
                             >
                               $ Fijo
@@ -577,14 +578,14 @@ export function MovementFormModal({
 
                     {/* Fecha */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">Fecha</label>
+                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Fecha</label>
                       <DatePicker value={date} onChange={setDate} className={inputClass} />
                     </div>
 
                     {/* Agente + Propiedad (no aplican a gastos personales de Costear) */}
                     {!isCostear && (
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Agente <span className="text-text-faint">(opcional)</span>
                       </label>
                       <select value={agentUserId} onChange={(e) => setAgentUserId(e.target.value)} className={inputClass}>
@@ -598,7 +599,7 @@ export function MovementFormModal({
 
                     {!isCostear && (
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Propiedad <span className="text-text-faint">(opcional)</span>
                       </label>
                       <PropertyPicker
@@ -614,8 +615,8 @@ export function MovementFormModal({
 
                     {/* Descripción (para Costear es el título del gasto, requerido) */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
-                        Descripción {isCostear ? <span className="text-olive-light">(título del gasto)</span> : <span className="text-text-faint">(opcional)</span>}
+                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
+                        Descripción {isCostear ? <span className="text-warning">(título del gasto)</span> : <span className="text-text-faint">(opcional)</span>}
                       </label>
                       <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} className={`${inputClass} resize-none`} />
                     </div>
@@ -623,7 +624,7 @@ export function MovementFormModal({
                     {/* Comercio (solo Costear, opcional) */}
                     {isCostear && (
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                           Comercio <span className="text-text-faint">(opcional)</span>
                         </label>
                         <input type="text" value={merchant} onChange={(e) => setMerchant(e.target.value)} className={inputClass} />
@@ -633,7 +634,7 @@ export function MovementFormModal({
                     {/* Comprobantes (no aplican a gastos personales de Costear) */}
                     {!isCostear && (
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Comprobantes <span className="text-text-faint">(opcional)</span>
                       </label>
                       <MediaUploader attachments={attachments} onChange={setAttachments} signedUrls={signedUrls} />
@@ -642,9 +643,9 @@ export function MovementFormModal({
                   </div>
                 </div>
 
-                <footer className="flex items-center justify-end gap-2 border-t border-border bg-bg/30 px-5 py-3">
+                <footer className="flex items-center justify-end gap-3 border-t border-border px-5 py-3">
                   <Dialog.Close asChild>
-                    <button type="button" className="rounded-xl border border-border bg-bg px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:border-border-strong hover:text-text">
+                    <button type="button" className="px-2 text-[13px] font-semibold text-text-faint transition-colors hover:text-text">
                       Cancelar
                     </button>
                   </Dialog.Close>
@@ -652,7 +653,7 @@ export function MovementFormModal({
                     type="button"
                     onClick={submit}
                     disabled={submitting}
-                    className="rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2 text-sm font-semibold text-bg transition-colors hover:bg-olive-vivid disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex h-11 items-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {submitting ? "Guardando…" : editing ? "Guardar cambios" : "Registrar"}
                   </button>
@@ -672,7 +673,7 @@ function IaButton({ label, onClick, disabled }: Readonly<{ label: string; onClic
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="rounded-lg border border-border bg-bg px-2 py-2 text-xs font-semibold text-text-muted transition-colors hover:border-olive-bright/30 hover:text-olive-light disabled:cursor-not-allowed disabled:opacity-60"
+      className="rounded-full border border-border bg-surface px-2 py-2 text-xs font-semibold text-text-muted transition-colors hover:bg-sand-chip hover:text-text disabled:cursor-not-allowed disabled:opacity-60"
     >
       {label}
     </button>

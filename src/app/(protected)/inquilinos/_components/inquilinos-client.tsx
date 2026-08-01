@@ -76,8 +76,8 @@ export function InquilinosClient({
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl text-text md:text-3xl">Inquilinos</h1>
-          <p className="mt-1 text-sm text-text-muted">
+          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Inquilinos</h1>
+          <p className="mt-1 text-[12.5px] text-text-faint">
             Personas o empresas con contratos de alquiler.
           </p>
         </div>
@@ -87,9 +87,9 @@ export function InquilinosClient({
             setEditing(null);
             setCreateOpen(true);
           }}
-          className="inline-flex items-center gap-2 self-start rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2.5 text-sm font-semibold text-bg shadow-[0_0_0_1px_rgba(143,168,112,0.15),0_8px_24px_-8px_rgba(143,168,112,0.5)] transition-colors hover:bg-olive-vivid sm:self-auto"
+          className="inline-flex h-11 items-center gap-2 self-start rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 sm:self-auto"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
@@ -97,7 +97,7 @@ export function InquilinosClient({
         </button>
       </header>
 
-      <div className={`flex items-center gap-3 rounded-2xl border border-border bg-surface/40 p-3 transition-opacity ${pending ? "opacity-70" : ""}`}>
+      <div className={`flex items-center transition-opacity ${pending ? "opacity-70" : ""}`}>
         <input
           type="text"
           defaultValue={filterQ}
@@ -108,18 +108,18 @@ export function InquilinosClient({
             if (e.target.value !== filterQ) updateQuery(e.target.value);
           }}
           placeholder="Buscar por nombre, DNI/CUIT, teléfono o email…"
-          className="h-10 flex-1 rounded-xl border border-border bg-bg px-3 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+          className="h-11 flex-1 rounded-full border border-border bg-surface pl-4 pr-3 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
         />
       </div>
 
       {tenants.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border bg-surface/30 px-6 py-12 text-center text-sm text-text-muted">
+        <p className="rounded-[20px] bg-bg px-6 py-8 text-center text-[12.5px] text-text-faint">
           {filterQ ? "Sin resultados" : "Todavía no hay inquilinos cargados."}
         </p>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border">
+        <div className="sm:overflow-hidden sm:rounded-[20px] sm:border sm:border-border sm:bg-surface">
           {/* Mobile cards */}
-          <div className="flex flex-col divide-y divide-border/60 sm:hidden">
+          <div className="flex flex-col gap-2.5 sm:hidden">
             <AnimatePresence>
               {tenants.map((t) => (
                 <motion.div
@@ -128,26 +128,26 @@ export function InquilinosClient({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="flex flex-col gap-2 bg-bg/30 px-4 py-3"
+                  className="flex flex-col gap-2 rounded-[18px] border border-border bg-surface p-3.5"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="text-sm font-medium text-text">{t.fullName}</p>
-                      <p className="font-mono text-xs text-text-muted">
-                        <span className="rounded bg-surface px-1.5 py-0.5 text-[10px] uppercase">{t.idType}</span>{" "}
-                        {t.idNumber}
+                      <p className="text-[13.5px] font-bold text-text">{t.fullName}</p>
+                      <p className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-bg px-2 py-1">
+                        <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-text-faint">{t.idType}</span>
+                        <span className="font-display text-[12px] font-bold text-text">{t.idNumber}</span>
                       </p>
                     </div>
-                    <span className="text-[11px] text-text-muted">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${t.contractsCount > 0 ? "bg-sage-chip text-olive-light" : "bg-bg text-text-faint"}`}>
                       {t.contractsCount} contrato{t.contractsCount !== 1 ? "s" : ""}
                     </span>
                   </div>
                   {(t.phone || t.email) && (
-                    <div className="flex flex-col gap-0.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       {t.phone && (
                         <WhatsAppLink
                           phone={t.phone}
-                          className="flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-success"
+                          className="inline-flex items-center gap-1.5 rounded-full bg-sage-chip px-2.5 py-1 text-[11px] font-bold text-olive-light transition-opacity hover:opacity-80"
                         >
                           {t.phone}
                         </WhatsAppLink>
@@ -158,21 +158,28 @@ export function InquilinosClient({
                   <div className="flex items-center gap-2 pt-1">
                     <button
                       type="button"
+                      aria-label="Editar"
                       onClick={() => {
                         setEditing(t);
                         setCreateOpen(true);
                       }}
-                      className="rounded-md border border-border px-3 py-2 text-xs text-text-muted transition-colors active:bg-surface active:text-text"
+                      className="flex h-11 w-11 items-center justify-center rounded-full bg-bg text-text-muted transition-colors active:text-text"
                     >
-                      Editar
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                      </svg>
                     </button>
                     {isAdmin && t.contractsCount === 0 && (
                       <button
                         type="button"
+                        aria-label="Eliminar"
                         onClick={() => handleDelete(t.id, t.fullName)}
-                        className="rounded-md border border-danger/30 bg-danger-chip px-3 py-2 text-xs text-danger transition-colors active:bg-danger-chip"
+                        className="flex h-11 w-11 items-center justify-center rounded-full bg-clay-chip text-terra transition-opacity active:opacity-80"
                       >
-                        Eliminar
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
                       </button>
                     )}
                   </div>
@@ -183,16 +190,16 @@ export function InquilinosClient({
 
           {/* Desktop table */}
           <table className="hidden w-full text-sm sm:table">
-            <thead className="bg-surface/40 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+            <thead>
               <tr>
-                <th className="px-4 py-2.5 text-left">Nombre</th>
-                <th className="px-4 py-2.5 text-left">Documento</th>
-                <th className="hidden px-4 py-2.5 text-left md:table-cell">Contacto</th>
-                <th className="px-4 py-2.5 text-right">Contratos</th>
-                <th className="px-4 py-2.5"></th>
+                <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Nombre</th>
+                <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Documento</th>
+                <th className="hidden px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint md:table-cell">Contacto</th>
+                <th className="px-4 py-3 text-right text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Contratos</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/60 bg-bg/30">
+            <tbody>
               <AnimatePresence>
                 {tenants.map((t) => (
                   <motion.tr
@@ -201,49 +208,60 @@ export function InquilinosClient({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="transition-colors hover:bg-surface/40"
+                    className="border-t border-border transition-colors hover:bg-bg"
                   >
-                    <td className="px-4 py-2.5 text-text">{t.fullName}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-text-muted">
-                      <span className="rounded bg-surface px-1.5 py-0.5 text-[10px] uppercase">{t.idType}</span>{" "}
-                      {t.idNumber}
+                    <td className="px-4 py-2.5 text-[13.5px] font-bold text-text">{t.fullName}</td>
+                    <td className="px-4 py-2.5">
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-bg px-2 py-1">
+                        <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-text-faint">{t.idType}</span>
+                        <span className="font-display text-[12px] font-bold text-text">{t.idNumber}</span>
+                      </span>
                     </td>
                     <td className="hidden px-4 py-2.5 text-xs text-text-muted md:table-cell">
-                      <div className="flex flex-col">
+                      <div className="flex flex-col items-start gap-1">
                         {t.phone && (
                           <WhatsAppLink
                             phone={t.phone}
-                            className="flex items-center gap-1.5 transition-colors hover:text-success"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-sage-chip px-2.5 py-1 text-[11px] font-bold text-olive-light transition-opacity hover:opacity-80"
                           >
                             {t.phone}
                           </WhatsAppLink>
                         )}
-                        {t.email && <span className="text-text-faint">{t.email}</span>}
+                        {t.email && <span className="text-[11.5px] text-text-faint">{t.email}</span>}
                         {!t.phone && !t.email && <span className="text-text-faint">—</span>}
                       </div>
                     </td>
-                    <td className="px-4 py-2.5 text-right text-xs">
-                      <span className="font-mono text-text">{t.contractsCount}</span>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${t.contractsCount > 0 ? "bg-sage-chip text-olive-light" : "bg-bg text-text-faint"}`}>
+                        {t.contractsCount}
+                      </span>
                     </td>
                     <td className="px-4 py-2.5 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
+                          aria-label="Editar"
                           onClick={() => {
                             setEditing(t);
                             setCreateOpen(true);
                           }}
-                          className="rounded-md border border-border px-3 py-2 text-[11px] text-text-muted transition-colors hover:bg-surface hover:text-text"
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-bg text-text-muted transition-colors hover:text-text"
                         >
-                          Editar
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                          </svg>
                         </button>
                         {isAdmin && t.contractsCount === 0 && (
                           <button
                             type="button"
+                            aria-label="Eliminar"
                             onClick={() => handleDelete(t.id, t.fullName)}
-                            className="rounded-md border border-danger/30 bg-danger-chip px-3 py-2 text-[11px] text-danger transition-colors hover:bg-danger-chip"
+                            className="flex h-9 w-9 items-center justify-center rounded-full bg-clay-chip text-terra transition-opacity hover:opacity-80"
                           >
-                            Eliminar
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
                           </button>
                         )}
                       </div>
@@ -385,17 +403,17 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 16, scale: 0.98 }}
                 transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(540px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+                className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(540px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
               >
-                <header className="flex items-center justify-between gap-3 border-b border-border-olive/40 px-5 py-4">
-                  <Dialog.Title className="text-base font-semibold text-text">
+                <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+                  <Dialog.Title className="font-display text-[17px] font-semibold text-text">
                     {editing ? "Editar inquilino" : "Nuevo inquilino"}
                   </Dialog.Title>
                   <Dialog.Close asChild>
                     <button
                       type="button"
                       aria-label="Cerrar"
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-bg hover:text-text"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18" />
@@ -408,82 +426,82 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
                 <div className="flex-1 overflow-y-auto px-5 py-5">
                   <div className="flex flex-col gap-4">
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Nombre completo
                       </label>
                       <input
                         type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                        className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
                       />
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                           Tipo
                         </label>
                         <select
                           value={idType}
                           onChange={(e) => setIdType(e.target.value as "dni" | "cuit")}
-                          className="h-10 w-full rounded-xl border border-border bg-bg px-3 text-sm text-text focus:border-secondary focus:outline-none scheme-dark"
+                          className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
                         >
                           <option value="dni">DNI</option>
                           <option value="cuit">CUIT</option>
                         </select>
                       </div>
                       <div className="col-span-2">
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                           Número
                         </label>
                         <input
                           type="text"
                           value={idNumber}
                           onChange={(e) => setIdNumber(e.target.value)}
-                          className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                          className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Teléfono
                       </label>
                       <input
                         type="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                        className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Email <span className="text-text-faint">(opcional)</span>
                       </label>
                       <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                        className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Notas <span className="text-text-faint">(opcional)</span>
                       </label>
                       <textarea
                         rows={2}
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        className="w-full resize-none rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                        className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm text-text focus:border-border-strong focus:outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Audio / adjuntos <span className="text-text-faint">(opcional)</span>
                       </label>
                       <MediaUploader attachments={attachments} onChange={setAttachments} signedUrls={signedUrls} />
@@ -491,11 +509,11 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
                   </div>
                 </div>
 
-                <footer className="flex items-center justify-end gap-2 border-t border-border bg-bg/30 px-5 py-3">
+                <footer className="flex items-center justify-end gap-3 border-t border-border px-5 py-3 pt-3">
                   <Dialog.Close asChild>
                     <button
                       type="button"
-                      className="rounded-xl border border-border bg-bg px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:border-border-strong hover:text-text"
+                      className="px-2 text-[13px] font-semibold text-text-faint transition-colors hover:text-text"
                     >
                       Cancelar
                     </button>
@@ -504,7 +522,7 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
                     type="button"
                     onClick={submit}
                     disabled={submitting}
-                    className="rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2 text-sm font-semibold text-bg transition-colors hover:bg-olive-vivid disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex h-11 items-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {submitting ? "Guardando…" : editing ? "Guardar cambios" : "Crear"}
                   </button>

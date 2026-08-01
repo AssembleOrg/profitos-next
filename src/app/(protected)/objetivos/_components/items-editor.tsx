@@ -55,11 +55,11 @@ export function ItemsEditorPopover({ card, onChanged }: Readonly<ItemsEditorPopo
   }
 
   return (
-    <div className="rounded-xl border border-border bg-surface/30">
+    <div className="rounded-[14px] border border-border bg-surface">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-[11px] font-medium text-text-muted transition-colors hover:text-text"
+        className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-[11px] font-semibold text-text-muted transition-colors hover:text-text"
       >
         <span className="inline-flex items-center gap-1.5">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -85,13 +85,13 @@ export function ItemsEditorPopover({ card, onChanged }: Readonly<ItemsEditorPopo
                   {card.items.map((item) => (
                     <li
                       key={item.id}
-                      className="flex items-center gap-2 rounded-md bg-bg/40 px-2 py-1 text-xs"
+                      className="flex items-center gap-2 rounded-[10px] bg-bg px-2.5 py-1.5 text-xs"
                     >
                       <span className="flex-1 truncate text-text-muted">{item.text}</span>
                       <button
                         type="button"
                         onClick={() => removeItem(item)}
-                        className="text-text-faint transition-colors hover:text-danger"
+                        className="text-text-faint transition-colors hover:text-terra"
                         aria-label={`Quitar ${item.text}`}
                       >
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -115,13 +115,13 @@ export function ItemsEditorPopover({ card, onChanged }: Readonly<ItemsEditorPopo
                     }
                   }}
                   placeholder="Nuevo ítem…"
-                  className="flex-1 rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+                  className="h-9 flex-1 rounded-full border border-border bg-surface px-3.5 text-xs text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={addItem}
                   disabled={submitting || !text.trim()}
-                  className="flex-shrink-0 rounded-lg border border-olive-bright/30 bg-olive-mid px-3 py-1.5 text-xs font-semibold text-bg transition-colors hover:bg-olive-vivid disabled:cursor-not-allowed disabled:opacity-50"
+                  className="h-9 flex-shrink-0 rounded-full bg-dark px-3.5 text-xs font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? <Spinner size={12} /> : (
                     <>

@@ -9,7 +9,7 @@ interface KPIStripProps {
 }
 
 const cardClass =
-  "flex flex-col gap-1 rounded-2xl border border-border bg-surface/40 px-4 py-3 transition-colors hover:border-border-strong";
+  "flex flex-col gap-1 rounded-[18px] border border-border bg-surface px-4 py-3 transition-colors hover:border-border-strong";
 
 export function KPIStrip({ kpis, periodLabel }: Readonly<KPIStripProps>) {
   const items = [
@@ -49,10 +49,10 @@ export function KPIStrip({ kpis, periodLabel }: Readonly<KPIStripProps>) {
           transition={{ duration: 0.3, delay: idx * 0.04, ease: [0.16, 1, 0.3, 1] }}
           className={cardClass}
         >
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
             {item.label}
           </p>
-          <p className={`font-display text-2xl leading-none md:text-3xl ${item.tone}`}>
+          <p className={`font-display text-2xl font-bold leading-none md:text-3xl ${item.tone}`}>
             {item.value}
           </p>
           <p className="text-[11px] text-text-faint">{item.hint}</p>

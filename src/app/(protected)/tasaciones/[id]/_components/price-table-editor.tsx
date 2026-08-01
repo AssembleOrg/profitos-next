@@ -70,17 +70,17 @@ export function PriceTableEditor({ tablas, onChange }: Readonly<Props>) {
   return (
     <div className="space-y-6">
       {tablas.map((tabla, ti) => (
-        <div key={ti} className="space-y-3 rounded-xl border border-border bg-bg p-3 sm:p-4">
+        <div key={ti} className="space-y-3 rounded-[14px] border border-border bg-surface p-3 sm:p-4">
           <div className="flex items-center gap-2">
             <input
               value={tabla.titulo}
               onChange={(e) => updateTabla(ti, "titulo", e.target.value)}
               placeholder="Ej: Unidades dos ambientes"
-              className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+              className="min-w-0 flex-1 rounded-[14px] border border-border bg-bg px-3.5 py-2 text-sm font-semibold text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
             <button
               onClick={() => removeTabla(ti)}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-danger transition-colors hover:bg-danger-chip"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-clay-chip text-terra transition-opacity hover:opacity-80"
               title="Eliminar tabla"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -91,7 +91,7 @@ export function PriceTableEditor({ tablas, onChange }: Readonly<Props>) {
           </div>
 
           {/* Desktop header */}
-          <div className="hidden grid-cols-[1fr_1fr_1fr_36px] gap-2 text-[10px] font-semibold uppercase tracking-widest text-text-muted md:grid">
+          <div className="hidden grid-cols-[1fr_1fr_1fr_36px] gap-2 rounded-lg bg-bg px-1 py-2 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint md:grid">
             <span className="px-1">Unidad</span>
             <span className="px-1">Valor (USD)</span>
             <span className="px-1">Observaciones</span>
@@ -104,7 +104,7 @@ export function PriceTableEditor({ tablas, onChange }: Readonly<Props>) {
 
               {/* Mobile: label + delete en la misma línea */}
               <div className="flex items-center justify-between md:hidden">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+                <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
                   Fila {fi + 1}
                 </span>
                 <button
@@ -123,20 +123,20 @@ export function PriceTableEditor({ tablas, onChange }: Readonly<Props>) {
                 value={fila.unidad}
                 onChange={(e) => updateFila(ti, fi, "unidad", e.target.value)}
                 placeholder="9°A"
-                className="rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+                className="rounded-xl border border-border bg-bg px-2.5 py-2 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
               />
               <input
                 value={formatThousands(fila.valor)}
                 onChange={(e) => updateFila(ti, fi, "valor", rawNumber(e.target.value))}
                 placeholder="118.000"
                 inputMode="numeric"
-                className="rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+                className="rounded-xl border border-border bg-bg px-2.5 py-2 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
               />
               <input
                 value={fila.observaciones}
                 onChange={(e) => updateFila(ti, fi, "observaciones", e.target.value)}
                 placeholder="Cochera"
-                className="rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+                className="rounded-xl border border-border bg-bg px-2.5 py-2 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
               />
 
               {/* Desktop: delete en la última columna del grid */}
@@ -155,7 +155,7 @@ export function PriceTableEditor({ tablas, onChange }: Readonly<Props>) {
 
           <button
             onClick={() => addFila(ti)}
-            className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border py-2.5 text-xs text-text-muted hover:border-secondary hover:text-secondary"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-full border border-border bg-surface text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg"
           >
             + Agregar fila
           </button>
@@ -164,7 +164,7 @@ export function PriceTableEditor({ tablas, onChange }: Readonly<Props>) {
 
       <button
         onClick={addTabla}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm text-text-muted transition-colors hover:border-secondary hover:text-secondary"
+        className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-sand-chip text-[13.5px] font-bold text-warning transition-opacity hover:opacity-80"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <line x1="12" y1="5" x2="12" y2="19" />
