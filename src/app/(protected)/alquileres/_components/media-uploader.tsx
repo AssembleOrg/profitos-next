@@ -56,7 +56,7 @@ export function MediaUploader({
           className={`inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-2 text-xs font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text ${uploading ? "pointer-events-none opacity-60" : ""}`}
         >
           {uploading ? (
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-olive-light border-t-transparent" />
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
           ) : (
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />

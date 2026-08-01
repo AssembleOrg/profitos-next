@@ -164,9 +164,13 @@ export function VoiceRecorder({ onUploaded, disabled }: Readonly<VoiceRecorderPr
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-bg px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:border-danger/30 hover:text-danger disabled:opacity-50"
+            className="inline-flex h-9 items-center gap-2 rounded-full bg-clay-chip px-3.5 text-[12px] font-bold text-terra transition-opacity hover:opacity-85 disabled:opacity-50"
           >
-            <span className="flex h-2 w-2 rounded-full bg-danger" />
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z" />
+              <path d="M19 10v2a7 7 0 01-14 0v-2" />
+              <line x1="12" y1="19" x2="12" y2="22" />
+            </svg>
             Grabar
           </motion.button>
         )}
@@ -175,7 +179,7 @@ export function VoiceRecorder({ onUploaded, disabled }: Readonly<VoiceRecorderPr
             <button
               type="button"
               onClick={stop}
-              className="inline-flex items-center gap-2 rounded-xl border border-danger/30 bg-danger-chip px-3 py-2 text-xs font-medium text-danger hover:bg-danger-chip"
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-clay-chip px-3.5 text-[12px] font-bold text-terra transition-opacity hover:opacity-85"
             >
               <span className="relative flex h-2 w-2">
                 <motion.span
@@ -196,22 +200,22 @@ export function VoiceRecorder({ onUploaded, disabled }: Readonly<VoiceRecorderPr
             <button
               type="button"
               onClick={upload}
-              className="rounded-xl border border-olive-bright/30 bg-olive-mid px-3 py-2 text-xs font-semibold text-bg hover:bg-olive-vivid"
+              className="h-9 rounded-full bg-dark px-4 text-[12px] font-bold text-dark-fg transition-opacity hover:opacity-90"
             >
               Adjuntar
             </button>
             <button
               type="button"
               onClick={discard}
-              className="rounded-xl border border-border px-2.5 py-2 text-xs text-text-muted hover:border-danger/30 hover:text-danger"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-text-faint transition-colors hover:bg-bg hover:text-terra"
             >
               ✕
             </button>
           </motion.div>
         )}
         {state === "uploading" && (
-          <motion.div key="up" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="inline-flex items-center gap-2 rounded-xl border border-border bg-bg px-3 py-2 text-xs text-text-muted">
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-olive-bright border-t-transparent" />
+          <motion.div key="up" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="inline-flex h-9 items-center gap-2 rounded-full border border-border bg-surface px-3.5 text-[12px] font-semibold text-text-muted">
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
             Subiendo…
           </motion.div>
         )}

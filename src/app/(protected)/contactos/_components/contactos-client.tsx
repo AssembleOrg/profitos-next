@@ -89,6 +89,23 @@ function SelectChevron() {
   );
 }
 
+/** Empty state V4: círculo tintado + título display + texto faint. */
+function EmptyState({ title, description }: Readonly<{ title: string; description: string }>) {
+  return (
+    <div className="flex flex-col items-center rounded-[20px] bg-bg px-6 py-8 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sand-chip">
+        <svg className="text-accent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 00-3-3.87" />
+        </svg>
+      </div>
+      <p className="mt-3 font-display text-[15px] font-semibold text-text">{title}</p>
+      <p className="mt-1 text-[12.5px] text-text-faint">{description}</p>
+    </div>
+  );
+}
+
 export function ContactosClient({
   tab,
   clients,
@@ -424,9 +441,14 @@ export function ContactosClient({
           {/* Mobile cards */}
           <div className="space-y-2 sm:hidden">
             {tokkoContacts.length === 0 ? (
-              <div className="rounded-[20px] bg-bg px-6 py-8 text-center text-[12.5px] text-text-faint">
-                {filters.q || filters.leadStatus ? "Sin resultados" : "No hay contactos sincronizados"}
-              </div>
+              <EmptyState
+                title={filters.q || filters.leadStatus ? "Sin resultados" : "No hay contactos"}
+                description={
+                  filters.q || filters.leadStatus
+                    ? "Probá ajustando la búsqueda o los filtros."
+                    : "Sincronizá con Tokko para traer tus contactos."
+                }
+              />
             ) : (
               tokkoContacts.map((c) => (
                 <div key={c.id} onClick={() => handleEditTokko(c)} className="cursor-pointer rounded-[18px] border border-border bg-surface p-3.5 active:bg-bg">
@@ -486,8 +508,15 @@ export function ContactosClient({
               <tbody>
                 {tokkoContacts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-[12.5px] text-text-faint">
-                      {filters.q || filters.leadStatus ? "Sin resultados para los filtros" : "No hay contactos sincronizados"}
+                    <td colSpan={5} className="px-4 py-6">
+                      <EmptyState
+                        title={filters.q || filters.leadStatus ? "Sin resultados" : "No hay contactos"}
+                        description={
+                          filters.q || filters.leadStatus
+                            ? "Probá ajustando la búsqueda o los filtros."
+                            : "Sincronizá con Tokko para traer tus contactos."
+                        }
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -496,7 +525,7 @@ export function ContactosClient({
                       <td className="px-4 py-3.5">
                         <p className="text-[13.5px] font-bold text-text">{c.name}</p>
                         {c.tokkoDeletedAt && (
-                          <p className="text-[10px] font-bold text-terra">Eliminado en Tokko</p>
+                          <p className="text-[10.5px] font-bold text-terra">Eliminado en Tokko</p>
                         )}
                         <p className="mt-0.5 text-[11.5px] text-text-faint md:hidden">
                           {c.email ?? ((c.cellphone || c.phone) ? (
@@ -543,8 +572,15 @@ export function ContactosClient({
         <AnimatePresence mode="popLayout">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {clients.length === 0 ? (
-              <div className="col-span-full py-12 text-center text-sm text-text-muted">
-                {filters.q ? "Sin resultados para la búsqueda" : "No hay clientes registrados"}
+              <div className="col-span-full">
+                <EmptyState
+                  title={filters.q ? "Sin resultados" : "No hay clientes"}
+                  description={
+                    filters.q
+                      ? "Probá con otro nombre, teléfono o email."
+                      : "Creá tu primer cliente manual para empezar."
+                  }
+                />
               </div>
             ) : (
               clients.map((c, index) => (
@@ -557,25 +593,25 @@ export function ContactosClient({
                   transition={{ type: "spring", stiffness: 400, damping: 30, delay: index * 0.03 }}
                   whileTap={{ scale: 0.96, opacity: 0.8 }}
                   onClick={() => handleEdit(c)}
-                  className="cursor-pointer rounded-2xl border border-border bg-surface/30 p-5"
+                  className="cursor-pointer rounded-[20px] border border-border bg-surface p-4 transition-colors hover:bg-bg active:bg-bg md:p-5"
                 >
                   <div className="flex items-start gap-3">
                     <motion.div
                       layoutId={`contact-avatar-${c.id}`}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-sm font-semibold text-secondary"
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-text-muted ${AVATAR_TINTS[index % AVATAR_TINTS.length]}`}
                     >
                       {c.name.charAt(0).toUpperCase()}
                     </motion.div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-text">{c.name}</p>
+                      <p className="truncate text-[13.5px] font-bold text-text">{c.name}</p>
                     </div>
                   </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-3">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
                     {c.email && (
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(c.email!); toast.success("Mail copiado"); }}
-                        className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                        className="flex min-h-[44px] items-center gap-1.5 rounded-full bg-bg px-3.5 text-[12px] font-semibold text-text-muted active:bg-surface"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" /></svg>
                         <span className="max-w-[140px] truncate">{c.email}</span>
@@ -584,14 +620,14 @@ export function ContactosClient({
                     {c.phone ? (
                       <WhatsAppLink
                         phone={c.phone}
-                        className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted transition-colors hover:border-success/30 hover:text-success active:bg-surface/80"
+                        className="flex min-h-[44px] items-center gap-1.5 rounded-full bg-sage-chip px-3.5 text-[12px] font-bold text-olive-light transition-opacity active:opacity-80"
                       >
                         {c.phone}
                       </WhatsAppLink>
                     ) : (
-                      !c.email && <span className="text-xs text-text-muted/50">Sin contacto</span>
+                      !c.email && <span className="text-[11.5px] text-text-faint">Sin contacto</span>
                     )}
-                    <span className="text-xs text-text-muted">
+                    <span className="text-[11.5px] text-text-faint">
                       {c._count?.visitas ?? 0} visita{(c._count?.visitas ?? 0) !== 1 ? "s" : ""}
                     </span>
                   </div>
@@ -637,18 +673,18 @@ export function ContactosClient({
           <div>
             <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Nombre *</label>
             <input name="name" required defaultValue={editClient?.name ?? ""} placeholder="Juan Pérez"
-              className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
+              className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Teléfono</label>
               <input name="phone" defaultValue={editClient?.phone ?? ""} placeholder="+54 11 1234-5678"
-                className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
+                className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
             </div>
             <div>
               <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Email</label>
               <input name="email" type="email" defaultValue={editClient?.email ?? ""} placeholder="juan@email.com"
-                className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
+                className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
             </div>
           </div>
           <div>
@@ -686,34 +722,34 @@ export function ContactosClient({
           <div>
             <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Nombre</label>
             <input name="name" defaultValue={editTokkoContact?.name ?? ""} placeholder="Nombre del contacto"
-              className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
+              className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Email</label>
               <input name="email" type="email" defaultValue={editTokkoContact?.email ?? ""} placeholder="email@ejemplo.com"
-                className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
+                className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
             </div>
             <div>
               <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Celular</label>
               <input name="cellphone" defaultValue={editTokkoContact?.cellphone ?? ""} placeholder="+54 11 1234-5678"
-                className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
+                className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
             </div>
           </div>
           <div>
             <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Teléfono</label>
             <input name="phone" defaultValue={editTokkoContact?.phone ?? ""} placeholder="Teléfono fijo"
-              className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
+              className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
           </div>
           {/* Estado (leadStatus) oculto del modal — visible solo en tabla y filtro
           <div>
             <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Estado</label>
             <input name="leadStatus" defaultValue={editTokkoContact?.leadStatus ?? ""} placeholder="Activo, Cerrado..."
-              className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
+              className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
           </div>
           */}
           {editTokkoContact?.tokkoCreatedAt && (
-            <p className="text-xs text-text-faint">Creado en Tokko: {formatDate(editTokkoContact.tokkoCreatedAt)}</p>
+            <p className="text-[11.5px] text-text-faint">Creado en Tokko: {formatDate(editTokkoContact.tokkoCreatedAt)}</p>
           )}
         </form>
       </Sheet>
