@@ -88,12 +88,12 @@ export function LoginV4({ step, urlError }: Props) {
             delay: step === 2 ? 0.2 : 0,
           }}
         >
-          <h2 className="font-display text-[36px] font-light leading-[1.15] tracking-wide text-[#FAF7F2]">
+          <h2 className="font-display text-[36px] font-semibold leading-[1.15] text-[#FAF7F2] [text-shadow:0_2px_18px_rgba(0,0,0,0.45)]">
             Tu patrimonio,
             <br />
             nuestra prioridad.
           </h2>
-          <p className="mt-5 text-[13px] font-light leading-relaxed text-white/45">
+          <p className="mt-5 text-[13.5px] leading-relaxed text-white/80 [text-shadow:0_1px_12px_rgba(0,0,0,0.5)]">
             Intermediaci&oacute;n profesional en compra,
             <br />
             venta y alquiler de inmuebles.

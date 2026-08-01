@@ -12,6 +12,7 @@ import { Sheet } from "../../_components/sheet";
 import { formatDate as formatDateLib, formatDateTime as formatDateTimeLib } from "@/lib/datetime";
 import { MediaUploader, AttachmentPreview, type NoteAttachment } from "@/components/notes/media-uploader";
 import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
+import { SelectField } from "@/components/ui/select-field";
 
 interface UserOption {
   id: string;
@@ -463,17 +464,17 @@ export function SeguimientosClient({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Propiedad *</label>
-                <select name="propertyId" required className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none [color-scheme:light]">
+                <SelectField name="propertyId" required wrapperClassName="w-full">
                   <option value="">Seleccionar...</option>
                   {assignableProperties.map((p) => <option key={p.id} value={p.id}>{p.address}</option>)}
-                </select>
+                </SelectField>
               </div>
               <div>
                 <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Asignado a *</label>
-                <select name="assignedToUserId" required className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none [color-scheme:light]">
+                <SelectField name="assignedToUserId" required wrapperClassName="w-full">
                   <option value="">Seleccionar...</option>
                   {assignableUsers.map((u) => <option key={u.id} value={u.id}>{userLabel(u)}</option>)}
-                </select>
+                </SelectField>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -488,9 +489,9 @@ export function SeguimientosClient({
             </div>
             <div>
               <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Estado</label>
-              <select name="status" defaultValue="pendiente" className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none [color-scheme:light]">
+              <SelectField name="status" defaultValue="pendiente" wrapperClassName="w-full">
                 {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              </SelectField>
             </div>
             <div>
               <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Notas</label>
@@ -540,13 +541,13 @@ export function SeguimientosClient({
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
                           <label className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Estado</label>
-                          <select name="status" defaultValue={detail.status} className="w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text focus:border-border-strong focus:outline-none [color-scheme:light]">
+                          <SelectField name="status" defaultValue={detail.status} className="h-10" wrapperClassName="w-full">
                             {STATUS_OPTIONS.map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
                               </option>
                             ))}
-                          </select>
+                          </SelectField>
                         </div>
                         <div>
                           <label className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Vencimiento</label>
@@ -561,17 +562,14 @@ export function SeguimientosClient({
                       {isAdmin && (
                         <div>
                           <label className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Responsable</label>
-                          <select
-                            name="assignedToUserId"
-                            defaultValue={detail.assignedToUser.id}
-                            className="w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-                          >
+                          <SelectField name="assignedToUserId"
+                            defaultValue={detail.assignedToUser.id} className="h-10" wrapperClassName="w-full">
                             {assignableUsers.map((option) => (
                               <option key={option.id} value={option.id}>
                                 {userLabel(option)}
                               </option>
                             ))}
-                          </select>
+                          </SelectField>
                         </div>
                       )}
 
@@ -598,13 +596,13 @@ export function SeguimientosClient({
                       <h3 className="mb-2 font-display text-base font-semibold text-text">Nueva acción</h3>
                       <form className="flex flex-col gap-3" onSubmit={handleCreateAction}>
                         <div className="grid grid-cols-2 gap-3">
-                          <select name="type" defaultValue="nota" className="appearance-none rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text focus:border-border-strong focus:outline-none [color-scheme:light]">
+                          <SelectField name="type" defaultValue="nota" className="h-10">
                             {ACTION_TYPES.map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
                               </option>
                             ))}
-                          </select>
+                          </SelectField>
                           <input name="shownToName" placeholder="Mostrado a..." className="rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
                         </div>
 

@@ -14,6 +14,7 @@ import { formatDate, parseVisualDate } from "@/lib/datetime";
 import type { CalendarEvent } from "./calendar";
 import { MediaUploader, type NoteAttachment } from "@/components/notes/media-uploader";
 import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
+import { SelectField } from "@/components/ui/select-field";
 
 interface VisitaModalProps {
   open: boolean;
@@ -286,17 +287,14 @@ export function VisitaModal({
                 <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
                   Tipo
                 </label>
-                <select
-                  name="type"
-                  defaultValue={editEvent?.type ?? "visita"}
-                  className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-                >
+                <SelectField name="type"
+                  defaultValue={editEvent?.type ?? "visita"} wrapperClassName="w-full">
                   {VISIT_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>
                       {t.label}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
 
               {/* Property selector */}

@@ -10,6 +10,7 @@ import {
 } from "./searchable-select";
 import { Sheet } from "../../_components/sheet";
 import { MediaUploader, type NoteAttachment } from "@/components/notes/media-uploader";
+import { SelectField } from "@/components/ui/select-field";
 
 interface NuevaVisitaModalProps {
   open: boolean;
@@ -198,17 +199,14 @@ export function NuevaVisitaModal({
                 <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
                   Tipo
                 </label>
-                <select
-                  name="type"
-                  defaultValue="visita"
-                  className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-                >
+                <SelectField name="type"
+                  defaultValue="visita" wrapperClassName="w-full">
                   {VISIT_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>
                       {t.label}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
 
               {/* Property selector */}

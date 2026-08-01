@@ -237,10 +237,8 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
                   <button
                     onClick={() => handleToggle(item)}
                     disabled={togglingId === item.id}
-                    className={`flex-1 rounded-full px-3 py-1.5 text-[12px] font-bold transition-opacity hover:opacity-80 lg:flex-none ${
-                      item.isActive
-                        ? "bg-warning-chip text-warning"
-                        : "bg-success-chip text-success"
+                    className={`flex h-8 flex-1 items-center justify-center rounded-full border border-border bg-surface px-3.5 text-[12px] font-semibold transition-colors hover:bg-bg lg:flex-none ${
+                      item.isActive ? "text-text-muted" : "text-olive-light"
                     } disabled:opacity-50`}
                     title={item.isActive ? "Desactivar acceso" : "Activar acceso"}
                   >
