@@ -1,7 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Sidebar } from "../dashboard/_components/sidebar";
+import { usePathname } from "next/navigation";
+import { Topbar } from "./topbar";
 import { CommandPalette } from "../dashboard/_components/command-palette";
 import { BottomNav } from "./bottom-nav";
 import { RolePreviewProvider, useRolePreview, type Role } from "./role-preview-context";
@@ -22,16 +23,28 @@ interface ProtectedShellProps {
 
 function Shell({ avatarUrl, greeting, children }: Readonly<Omit<ProtectedShellProps, "realRole" | "favorites" | "accessibleHrefs" | "isAdmin">>) {
   const { effectiveRole } = useRolePreview();
+  const pathname = usePathname();
+  const isDashboard = pathname === "/dashboard";
   return (
     <>
-      <Sidebar avatarUrl={avatarUrl} role={effectiveRole} />
-      <main className="flex-1 overflow-auto transition-[margin] duration-200 md:ml-[var(--sidebar-width,13rem)]">
+      {/* Desktop: topbar pill flotante */}
+      <Topbar avatarUrl={avatarUrl} role={effectiveRole} />
+
+      <main className="flex-1 overflow-auto">
         <RolePreviewBanner />
-        <header className="sticky top-0 z-30 flex flex-col gap-3 border-b border-border-olive/40 bg-bg/70 px-5 py-4 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between md:px-8 md:py-5">
+
+        {/* Mobile: header con saludo + buscador ⌘K */}
+        <header className="sticky top-0 z-30 flex flex-col gap-3 border-b border-border/70 bg-bg/80 px-5 py-4 backdrop-blur-xl md:hidden">
           {greeting}
           <CommandPalette role={effectiveRole} />
         </header>
-        <div className="px-5 pb-nav md:px-8 md:pb-8">{children}</div>
+
+        {/* Desktop: saludo solo en dashboard (las demás páginas tienen su propio encabezado) */}
+        {isDashboard && (
+          <div className="hidden px-6 pt-6 md:block lg:px-10">{greeting}</div>
+        )}
+
+        <div className="px-5 pb-nav pt-4 md:px-6 md:pb-10 md:pt-5 lg:px-10">{children}</div>
       </main>
       <BottomNav role={effectiveRole} />
     </>

@@ -1,64 +1,75 @@
 @import "tailwindcss";
 
 :root {
-  /* ── Superficies — Salvia: tinte olive en el fondo (H=77°, a 10° de la marca) ──
-     El branding es la raíz del sistema, no un color aplicado encima. */
-  --color-bg: #EDEFE8;
-  --color-surface: #FBFCF8;
-  --color-surface-elevated: #F4F6EF;
-  --color-surface-overlay: #FBFCF8;
+  /* ══ V4 · Cálido Expresivo ══
+     Fuente de verdad: pencil-new.pen (frame "V4 · Componentes" + tokens v4-*).
+     Canvas crema cálido, superficies blancas, tinta casi negra, acentos
+     dorado/terracota/oliva y tints sand/clay/sage. */
 
-  /* ── Olive — marca. Recalibrado para fondo claro ── */
-  --color-olive-deep: #E4EAD9;   /* fondo de estado activo (nav, selección) */
-  --color-olive-mid: #4b5340;    /* 7.6:1 — sin cambios */
-  --color-olive-vivid: #4a6330;  /* hover */
-  /* Doble rol: relleno sólido (texto claro encima, 4.6:1) y texto sobre card (5.1:1).
-     Los 36 usos de `text-bg` sobre `bg-olive-bright` dependen del primero. */
-  --color-olive-bright: #587434;
-  --color-olive-light: #3F5527;  /* texto/acento sobre claro */
-  --color-olive-subtle: rgba(91, 120, 54, 0.10);
+  /* ── Superficies ── */
+  --color-bg: #FAF7F2;              /* v4-canvas */
+  --color-surface: #FFFFFF;         /* v4-surface */
+  --color-surface-elevated: #F5F1E9;
+  --color-surface-overlay: #FFFFFF;
+
+  /* ── "Olive" (rol histórico: primario/activo) → mapeado a V4 ──
+     olive-deep  = fondo de estado activo/selección → tint sand
+     olive-mid/vivid/bright = rellenos sólidos con texto claro → tinta oscura
+     olive-light = texto/acento sobre claro → oliva V4 */
+  --color-olive-deep: #F3EAD9;      /* v4-tint-sand */
+  --color-olive-mid: #1B1916;       /* v4-dark */
+  --color-olive-vivid: #33302B;     /* hover del dark */
+  --color-olive-bright: #1B1916;    /* sólido con texto claro encima */
+  --color-olive-light: #6C7A5A;     /* v4-olive */
+  --color-olive-subtle: rgba(198, 161, 91, 0.12);
 
   /* Legacy tokens — preserved for zero breaking changes */
   --color-primary: var(--color-olive-mid);
   --color-primary-hover: var(--color-olive-vivid);
   --color-primary-subtle: var(--color-olive-subtle);
   --color-secondary: var(--color-olive-bright);
-  --color-secondary-subtle: rgba(91, 120, 54, 0.10);
-  --color-accent: var(--color-olive-light);
+  --color-secondary-subtle: rgba(198, 161, 91, 0.12);
+  --color-accent: #C6A15B;          /* v4-accent dorado */
 
-  /* ── Texto — SÓLIDO, no opacidad.
-     Antes -subtle (0.40) era más tenue que -faint (0.55), al revés de sus nombres.
-     Ahora -subtle es alias de -dim: sus 189 usos suben de 3.42:1 a 4.8:1. ── */
-  --color-text: #1B1D17;         /* 14.7:1 — dato primario */
-  --color-text-muted: #4A4E44;   /*  7.4:1 — secundario */
-  --color-text-dim: #666A5E;     /*  4.8:1 — labels, metadata */
-  --color-text-subtle: #666A5E;  /*  4.8:1 — alias de -dim */
-  --color-text-faint: #8C9083;   /*  3.1:1 — SOLO decorativo/disabled */
+  /* ── Texto ── */
+  --color-text: #1B1916;            /* v4-ink */
+  --color-text-muted: #57534A;      /* v4-ink2 */
+  --color-text-dim: #6E6A60;
+  --color-text-subtle: #6E6A60;
+  --color-text-faint: #8E897D;      /* v4-muted */
 
-  /* ── Bordes — en claro necesitan más peso que en oscuro ── */
-  --color-border: #C9CFBC;
-  --color-border-strong: #BFC6B0;
-  --color-border-olive: rgba(91, 120, 54, 0.28);
+  /* ── Bordes ── */
+  --color-border: #ECE6DA;          /* v4-border */
+  --color-border-strong: #DFD8C9;
+  --color-border-olive: rgba(198, 161, 91, 0.35);
 
-  /* ── Semánticos — paleta Botánico (análogo frío del olive) ── */
-  --color-success: #247f4a;  /* 4.8:1 · H=145° */
-  --color-warning: #916717;  /* 4.9:1 · H=39°  */
-  --color-danger: #ca3121;   /* 5.1:1 · H=6°   */
-  --color-info: #27787c;     /* 5.0:1 · H=183° */
+  /* ── Semánticos V4 ── */
+  --color-success: #6C7A5A;         /* v4-olive */
+  --color-warning: #B27A34;
+  --color-danger: #A94C45;          /* v4-danger */
+  --color-info: #5B7285;            /* v4-info */
+  --color-terra: #C56A4A;           /* v4-terra — links de acción, destructivo suave */
 
-  /* ── Chips — tinte del matiz sobre surface.
-     Reemplaza el patrón bg-{color}-500/10 + text-{color}-300. ── */
-  --color-success-chip: #EBF7F0;
-  --color-warning-chip: #FAF4E8;
-  --color-danger-chip: #FBEDEB;
-  --color-info-chip: #EAF5F6;
-  --color-olive-chip: #F0F4EC;
+  /* ── Chips / tints V4 ── */
+  --color-success-chip: #E9EDE0;    /* v4-tint-sage */
+  --color-warning-chip: #F3EAD9;    /* v4-tint-sand */
+  --color-danger-chip: #F6E3DB;     /* v4-tint-clay */
+  --color-info-chip: #E6EBEF;       /* v4-tint-info */
+  --color-olive-chip: #E9EDE0;      /* v4-tint-sage */
+  --color-sand-chip: #F3EAD9;
+  --color-clay-chip: #F6E3DB;
+  --color-sage-chip: #E9EDE0;
 
-  /* Scrim de modal — reemplaza los bg-black/60 */
-  --color-scrim: rgba(30, 34, 26, 0.36);
+  /* Scrim de modal */
+  --color-scrim: rgba(20, 19, 15, 0.55);
 
-  /* Favorites */
-  --color-fav-gold: #8a6a1f;
+  /* Favorites — dorado V4 */
+  --color-fav-gold: #C6A15B;
+
+  /* Dark card (hero KPI, botón primario) */
+  --color-dark: #1B1916;
+  --color-dark-fg: #FAF7F2;
+  --color-dark-muted: #B7B2A6;
 
   /* Safe area */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -94,15 +105,22 @@
   --color-warning: var(--color-warning);
   --color-danger: var(--color-danger);
   --color-info: var(--color-info);
+  --color-terra: var(--color-terra);
   --color-success-chip: var(--color-success-chip);
   --color-warning-chip: var(--color-warning-chip);
   --color-danger-chip: var(--color-danger-chip);
   --color-info-chip: var(--color-info-chip);
   --color-olive-chip: var(--color-olive-chip);
+  --color-sand-chip: var(--color-sand-chip);
+  --color-clay-chip: var(--color-clay-chip);
+  --color-sage-chip: var(--color-sage-chip);
   --color-scrim: var(--color-scrim);
   --color-fav-gold: var(--color-fav-gold);
-  --font-sans: var(--font-montserrat);
-  --font-display: var(--font-playfair);
+  --color-dark: var(--color-dark);
+  --color-dark-fg: var(--color-dark-fg);
+  --color-dark-muted: var(--color-dark-muted);
+  --font-sans: var(--font-figtree);
+  --font-display: var(--font-bricolage);
 }
 
 * {
@@ -121,12 +139,6 @@ html {
 
 body {
   background: var(--color-bg);
-  background-image: radial-gradient(
-    ellipse 80% 50% at 50% -10%,
-    rgba(91, 120, 54, 0.07) 0%,
-    transparent 70%
-  );
-  background-attachment: fixed;
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -150,10 +162,10 @@ input[type="number"] {
   appearance: textfield;
 }
 
-/* Padding bottom que incluye bottom nav + safe area — solo en mobile */
+/* Padding bottom que incluye bottom nav flotante + safe area — solo en mobile */
 @media (max-width: 767px) {
   .pb-nav {
-    padding-bottom: calc(88px + var(--safe-bottom));
+    padding-bottom: calc(96px + var(--safe-bottom));
   }
 }
 
@@ -161,47 +173,37 @@ input[type="number"] {
   Fix global hover sticky en iOS.
   Tailwind genera clases hover:xxx sin @media (hover:hover).
   En iOS, tocar un elemento aplica el hover y queda pegado.
-  Sobreescribimos con !important solo los patrones comunes.
 */
 @media not (hover: hover) {
-  /* Quitar todos los hover backgrounds en touch devices */
   [class*="hover:bg-"]:hover {
     background-color: inherit !important;
   }
   [class*="hover:text-"]:hover {
     color: inherit !important;
   }
-  /*
-    `opacity` y `border-color` quedaron fuera a propósito: sobre fondo claro un
-    borde es señal de estructura, no decoración, y forzarlo a `inherit` lo hacía
-    desaparecer. `active:` no se ve afectado — sigue siendo el feedback táctil.
-  */
 }
 
 *:focus-visible {
-  outline: 2px solid var(--color-olive-bright);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
   border-radius: inherit;
 }
 
 /*
-  Elevación. En fondo oscuro las sombras casi no se ven y la jerarquía la daba
-  el color de superficie; en claro la sombra es el recurso principal.
-  Tintadas con el verde del fondo (no negro puro) para no ensuciar la paleta.
-  Redefine shadow-lg/xl/2xl de Tailwind, ya usados ~26 veces en el proyecto.
+  Elevación V4 — sombras cortas, cálidas, tintadas con la tinta de marca.
 */
 .shadow-lg {
-  box-shadow: 0 4px 12px rgba(30, 34, 26, 0.08) !important;
+  box-shadow: 0 4px 12px rgba(27, 25, 22, 0.07) !important;
 }
 
 .shadow-xl {
-  box-shadow: 0 10px 28px rgba(30, 34, 26, 0.12) !important;
+  box-shadow: 0 10px 28px rgba(27, 25, 22, 0.10) !important;
 }
 
 .shadow-2xl {
   box-shadow:
-    0 18px 48px rgba(30, 34, 26, 0.20),
-    0 3px 10px rgba(30, 34, 26, 0.10) !important;
+    0 18px 48px rgba(27, 25, 22, 0.18),
+    0 3px 10px rgba(27, 25, 22, 0.08) !important;
 }
 
 /* V4 login card: transparent on mobile, glassmorphic on desktop */
@@ -215,8 +217,8 @@ input[type="number"] {
     -webkit-backdrop-filter: blur(48px);
     background: linear-gradient(
       to bottom,
-      rgba(19, 20, 16, 0.88),
-      rgba(19, 20, 16, 0.6)
+      rgba(20, 19, 15, 0.88),
+      rgba(20, 19, 15, 0.6)
     );
     box-shadow: 0 -30px 90px rgba(0, 0, 0, 0.53);
   }

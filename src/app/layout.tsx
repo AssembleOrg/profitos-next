@@ -1,19 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Montserrat, Playfair_Display } from "next/font/google";
+import { Figtree, Bricolage_Grotesque } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
+const figtree = Figtree({
+  variable: "--font-figtree",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
 
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
   subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: ["500", "600", "700"],
   display: "swap",
 });
 
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#EDEFE8",
+  themeColor: "#FAF7F2",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -35,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${montserrat.variable} ${playfair.variable}`}>
+    <html lang="es" className={`${figtree.variable} ${bricolage.variable}`}>
       <body className="font-sans antialiased" suppressHydrationWarning>
         {children}
         <Toaster
