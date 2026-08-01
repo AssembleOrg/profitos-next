@@ -16,6 +16,18 @@ function normalizeRole(role: string | null | undefined, fallbackEmail: string | 
 }
 
 export async function getAuthContext(): Promise<AuthContext> {
+  // TEMP_VISUAL_QA: bypass local de sesión para revisión visual del rediseño.
+  if (process.env.VISUAL_QA_USER_ID) {
+    const qa = await prisma.user.findUnique({
+      where: { id: process.env.VISUAL_QA_USER_ID },
+      select: { id: true, role: true, email: true },
+    });
+    if (qa) {
+      const qaRole = normalizeRole(qa.role, qa.email);
+      return { userId: qa.id, email: qa.email, role: qaRole, isAdmin: qaRole === "admin" };
+    }
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

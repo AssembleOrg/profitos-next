@@ -41,7 +41,7 @@ export default async function ProtectedLayout({
   );
 
   return (
-    <div className="flex min-h-dvh bg-bg">
+    <div className="flex min-h-dvh flex-col bg-bg">
       <NativeParityProvider />
       <SplashScreen />
       <ProtectedShell

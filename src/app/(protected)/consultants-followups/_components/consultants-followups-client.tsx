@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { SelectField } from "@/components/ui/select-field";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
 import { Spinner } from "../../_components/spinner";
@@ -331,41 +332,31 @@ export function ConsultantsFollowUpsClient({
             placeholder="Buscar por nombre, email, teléfono..."
             className="h-11 min-w-0 flex-1 basis-full rounded-full border border-border bg-surface px-4 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none sm:basis-auto"
           />
-          <div className="relative flex-1">
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 pr-9 text-sm text-text focus:border-border-strong focus:outline-none"
+          <SelectField
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            wrapperClassName="flex-1"
+          >
+            <option value="">Todos los estados</option>
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </SelectField>
+          {isAdmin && (
+            <SelectField
+              value={assignedToUserId}
+              onChange={(e) => setAssignedToUserId(e.target.value)}
+              wrapperClassName="flex-1"
             >
-              <option value="">Todos los estados</option>
-              {STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+              <option value="">Todos los responsables</option>
+              {assignableUsers.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {userLabel(user)}
                 </option>
               ))}
-            </select>
-            <svg className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </div>
-          {isAdmin && (
-            <div className="relative flex-1">
-              <select
-                value={assignedToUserId}
-                onChange={(e) => setAssignedToUserId(e.target.value)}
-                className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 pr-9 text-sm text-text focus:border-border-strong focus:outline-none"
-              >
-                <option value="">Todos los responsables</option>
-                {assignableUsers.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {userLabel(user)}
-                  </option>
-                ))}
-              </select>
-              <svg className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </div>
+            </SelectField>
           )}
           <button
             onClick={() => applyFilters(1)}
@@ -536,23 +527,17 @@ export function ConsultantsFollowUpsClient({
                       className="min-h-20 rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                     {isAdmin && (
-                      <div className="relative">
-                        <select
-                          name="assignedToUserId"
-                          defaultValue={detail.assignedToUser?.id ?? ""}
-                          className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 pr-9 text-sm text-text focus:border-border-strong focus:outline-none"
-                        >
-                          <option value="">Sin asignar</option>
-                          {assignableUsers.map((user) => (
-                            <option key={user.id} value={user.id}>
-                              {user.fullName?.trim() || user.email}
-                            </option>
-                          ))}
-                        </select>
-                        <svg className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                      </div>
+                      <SelectField
+                        name="assignedToUserId"
+                        defaultValue={detail.assignedToUser?.id ?? ""}
+                      >
+                        <option value="">Sin asignar</option>
+                        {assignableUsers.map((user) => (
+                          <option key={user.id} value={user.id}>
+                            {user.fullName?.trim() || user.email}
+                          </option>
+                        ))}
+                      </SelectField>
                     )}
                     <button
                       type="submit"
@@ -567,22 +552,13 @@ export function ConsultantsFollowUpsClient({
                 <form onSubmit={handleStatusChange} className="rounded-[14px] bg-bg p-4">
                   <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Cambio de estado (nota obligatoria)</p>
                   <div className="grid gap-3">
-                    <div className="relative">
-                      <select
-                        name="status"
-                        defaultValue={detail.status}
-                        className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 pr-9 text-sm text-text focus:border-border-strong focus:outline-none"
-                      >
-                        {STATUS_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <svg className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
-                    </div>
+                    <SelectField name="status" defaultValue={detail.status}>
+                      {STATUS_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </SelectField>
                     <textarea
                       name="note"
                       required
@@ -602,22 +578,13 @@ export function ConsultantsFollowUpsClient({
                 <form onSubmit={handleAddAction} className="rounded-[14px] bg-bg p-4">
                   <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Nueva acción</p>
                   <div className="grid gap-3">
-                    <div className="relative">
-                      <select
-                        name="type"
-                        defaultValue="nota"
-                        className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 pr-9 text-sm text-text focus:border-border-strong focus:outline-none"
-                      >
-                        {ACTION_TYPES.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <svg className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
-                    </div>
+                    <SelectField name="type" defaultValue="nota">
+                      {ACTION_TYPES.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </SelectField>
                     <textarea
                       ref={actionDescriptionRef}
                       name="description"

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { formatARS } from "@/lib/rentals";
 import { now } from "@/lib/datetime";
 import { CurrencyInput } from "./currency-input";
+import { SelectField } from "@/components/ui/select-field";
 import { MediaUploader } from "./media-uploader";
 import { useSignedUrls } from "./use-signed-urls";
 import { DateField } from "../../_components/date-field";
@@ -168,16 +169,15 @@ export function RegisterPaymentForm({ due, onRegistered }: Readonly<RegisterPaym
             <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
               Método
             </label>
-            <select
+            <SelectField
               value={method}
               onChange={(e) => setMethod(e.target.value)}
-              className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
             >
               <option value="transferencia">Transferencia</option>
               <option value="efectivo">Efectivo</option>
               <option value="mercadopago">MercadoPago</option>
               <option value="otro">Otro</option>
-            </select>
+            </SelectField>
           </div>
           <div>
             <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">

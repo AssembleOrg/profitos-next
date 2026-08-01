@@ -14,6 +14,7 @@ import {
   type SignatureDateField,
   type SignatureStatus,
 } from "@/lib/signatures";
+import { SelectField } from "@/components/ui/select-field";
 import { AttachmentPreview, MediaUploader } from "./media-uploader";
 import { useSignedUrls } from "./use-signed-urls";
 import { DateField } from "../../_components/date-field";
@@ -300,18 +301,18 @@ function ControlPanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
         <h4 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
           Estado y fechas
         </h4>
-        <select
+        <SelectField
           value={firma.status}
           disabled={busy}
           onChange={(e) => patch({ status: e.target.value })}
-          className="h-10 appearance-none rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text focus:border-border-strong focus:outline-none disabled:opacity-60 [color-scheme:light]"
+          className="h-10 rounded-full pl-4 text-[13px]"
         >
           {SIGNATURE_STATUSES.map((s) => (
             <option key={s} value={s}>
               {SIGNATURE_STATUS_LABEL[s]}
             </option>
           ))}
-        </select>
+        </SelectField>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {(["dateProcessStarted", "dateAgreed", "dateKeysHandover"] as SignatureDateField[]).map(

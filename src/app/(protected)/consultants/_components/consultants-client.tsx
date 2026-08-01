@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
 import { Spinner } from "../../_components/spinner";
 import { Pagination } from "../../_components/pagination";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
@@ -272,21 +273,15 @@ export function ConsultantsClient({
             />
           </div>
 
-          <div className="relative">
-            <select
-              value={agentFilter}
-              onChange={(e) => setAgentFilter(e.target.value)}
-              className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 pr-9 text-sm text-text focus:border-border-strong focus:outline-none"
-            >
-              <option value="">Todos los agentes</option>
-              {agentOptions.map((agent) => (
-                <option key={agent} value={agent}>{agent}</option>
-              ))}
-            </select>
-            <svg className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </div>
+          <SelectField
+            value={agentFilter}
+            onChange={(e) => setAgentFilter(e.target.value)}
+          >
+            <option value="">Todos los agentes</option>
+            {agentOptions.map((agent) => (
+              <option key={agent} value={agent}>{agent}</option>
+            ))}
+          </SelectField>
 
           <DatePicker
             value={fromFilter}
@@ -302,21 +297,15 @@ export function ConsultantsClient({
             className="h-11 rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
           />
 
-          <div className="relative">
-            <select
-              value={sortFilter}
-              onChange={(e) => setSortFilter(e.target.value)}
-              className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 pr-9 text-sm text-text focus:border-border-strong focus:outline-none"
-            >
-              <option value="created_desc">Más recientes</option>
-              <option value="created_asc">Más antiguos</option>
-              <option value="name_asc">Nombre A-Z</option>
-              <option value="name_desc">Nombre Z-A</option>
-            </select>
-            <svg className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-text-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </div>
+          <SelectField
+            value={sortFilter}
+            onChange={(e) => setSortFilter(e.target.value)}
+          >
+            <option value="created_desc">Más recientes</option>
+            <option value="created_asc">Más antiguos</option>
+            <option value="name_asc">Nombre A-Z</option>
+            <option value="name_desc">Nombre Z-A</option>
+          </SelectField>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">

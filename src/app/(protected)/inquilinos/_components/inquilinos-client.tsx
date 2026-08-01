@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Pagination } from "../../_components/pagination";
 import { WhatsAppLink } from "@/components/whatsapp-link";
+import { SelectField } from "@/components/ui/select-field";
 import { MediaUploader, type NoteAttachment } from "@/components/notes/media-uploader";
 import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
 
@@ -442,14 +443,13 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
                         <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                           Tipo
                         </label>
-                        <select
+                        <SelectField
                           value={idType}
                           onChange={(e) => setIdType(e.target.value as "dni" | "cuit")}
-                          className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
                         >
                           <option value="dni">DNI</option>
                           <option value="cuit">CUIT</option>
-                        </select>
+                        </SelectField>
                       </div>
                       <div className="col-span-2">
                         <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">

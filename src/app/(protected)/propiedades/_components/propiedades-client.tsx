@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
@@ -106,25 +107,6 @@ function ManualChip() {
 
 function getStatusColor(status: string) {
   return PROPERTY_STATUSES.find((s) => s.value === status)?.color ?? "bg-bg text-text-faint";
-}
-
-/** Chevron decorativo para selects estilizados (appearance-none). */
-function SelectChevron() {
-  return (
-    <svg
-      className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-text-faint"
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
 }
 
 function getStatusLabel(status: string) {
@@ -613,80 +595,61 @@ export function PropiedadesClient({
         </div>
 
         {/* Mobile: estado siempre visible */}
-        <div className="relative mt-2 sm:hidden">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface pl-3.5 pr-9 text-[13px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-          >
-            <option value="">Todos los estados</option>
-            {PROPERTY_STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
-          <SelectChevron />
-        </div>
+        <SelectField
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          wrapperClassName="mt-2 sm:hidden"
+        >
+          <option value="">Todos los estados</option>
+          {PROPERTY_STATUSES.map((s) => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </SelectField>
 
         {/* Mobile: panel colapsable */}
         {filtersOpen && (
           <div className="mt-2 grid grid-cols-1 gap-2 sm:hidden">
-            <div className="relative">
-              <select
-                value={operationFilter}
-                onChange={(e) => setOperationFilter(e.target.value)}
-                className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface pl-3.5 pr-9 text-[13px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-              >
-                <option value="">Todas las operaciones</option>
-                <option value="venta">Venta</option>
-                <option value="alquiler">Alquiler</option>
-              </select>
-              <SelectChevron />
-            </div>
-            <div className="relative">
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface pl-3.5 pr-9 text-[13px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-              >
-                <option value="">Todos los tipos</option>
-                {PROPERTY_TYPES.filter((t) => t.value).map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-              <SelectChevron />
-            </div>
+            <SelectField
+              value={operationFilter}
+              onChange={(e) => setOperationFilter(e.target.value)}
+            >
+              <option value="">Todas las operaciones</option>
+              <option value="venta">Venta</option>
+              <option value="alquiler">Alquiler</option>
+            </SelectField>
+            <SelectField
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+            >
+              <option value="">Todos los tipos</option>
+              {PROPERTY_TYPES.filter((t) => t.value).map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </SelectField>
             <input
               value={cityFilter}
               onChange={(e) => setCityFilter(e.target.value)}
               placeholder="Ciudad"
               className="h-11 rounded-[14px] border border-border bg-surface px-3.5 text-[13px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
-            <div className="relative">
-              <select
-                value={currencyFilter}
-                onChange={(e) => setCurrencyFilter(e.target.value)}
-                className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface pl-3.5 pr-9 text-[13px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-              >
-                <option value="">Moneda</option>
-                <option value="USD">USD</option>
-                <option value="ARS">ARS</option>
-              </select>
-              <SelectChevron />
-            </div>
-            <div className="relative">
-              <select
-                value={sortFilter}
-                onChange={(e) => setSortFilter(e.target.value)}
-                className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface pl-3.5 pr-9 text-[13px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-              >
-                <option value="created_desc">Más recientes</option>
-                <option value="price_asc">Precio menor</option>
-                <option value="price_desc">Precio mayor</option>
-                <option value="surface_desc">Mayor superficie</option>
-                <option value="tokko_newest">Más nuevas Tokko</option>
-              </select>
-              <SelectChevron />
-            </div>
+            <SelectField
+              value={currencyFilter}
+              onChange={(e) => setCurrencyFilter(e.target.value)}
+            >
+              <option value="">Moneda</option>
+              <option value="USD">USD</option>
+              <option value="ARS">ARS</option>
+            </SelectField>
+            <SelectField
+              value={sortFilter}
+              onChange={(e) => setSortFilter(e.target.value)}
+            >
+              <option value="created_desc">Más recientes</option>
+              <option value="price_asc">Precio menor</option>
+              <option value="price_desc">Precio mayor</option>
+              <option value="surface_desc">Mayor superficie</option>
+              <option value="tokko_newest">Más nuevas Tokko</option>
+            </SelectField>
           </div>
         )}
 
@@ -704,76 +667,56 @@ export function PropiedadesClient({
               className="h-11 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
           </div>
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface pl-3.5 pr-9 text-[13px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-            >
-              <option value="">Todos los estados</option>
-              {PROPERTY_STATUSES.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </select>
-            <SelectChevron />
-          </div>
-          <div className="relative">
-            <select
-              value={operationFilter}
-              onChange={(e) => setOperationFilter(e.target.value)}
-              className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface pl-3.5 pr-9 text-[13px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-            >
-              <option value="">Todas las operaciones</option>
-              <option value="venta">Venta</option>
-              <option value="alquiler">Alquiler</option>
-            </select>
-            <SelectChevron />
-          </div>
-          <div className="relative">
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface pl-3.5 pr-9 text-[13px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-            >
-              <option value="">Todos los tipos</option>
-              {PROPERTY_TYPES.filter((t) => t.value).map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-            <SelectChevron />
-          </div>
+          <SelectField
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">Todos los estados</option>
+            {PROPERTY_STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </SelectField>
+          <SelectField
+            value={operationFilter}
+            onChange={(e) => setOperationFilter(e.target.value)}
+          >
+            <option value="">Todas las operaciones</option>
+            <option value="venta">Venta</option>
+            <option value="alquiler">Alquiler</option>
+          </SelectField>
+          <SelectField
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+          >
+            <option value="">Todos los tipos</option>
+            {PROPERTY_TYPES.filter((t) => t.value).map((t) => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </SelectField>
           <input
             value={cityFilter}
             onChange={(e) => setCityFilter(e.target.value)}
             placeholder="Ciudad"
             className="h-11 rounded-[14px] border border-border bg-surface px-3.5 text-[13px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
           />
-          <div className="relative">
-            <select
-              value={currencyFilter}
-              onChange={(e) => setCurrencyFilter(e.target.value)}
-              className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface pl-3.5 pr-9 text-[13px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-            >
-              <option value="">Moneda</option>
-              <option value="USD">USD</option>
-              <option value="ARS">ARS</option>
-            </select>
-            <SelectChevron />
-          </div>
-          <div className="relative">
-            <select
-              value={sortFilter}
-              onChange={(e) => setSortFilter(e.target.value)}
-              className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface pl-3.5 pr-9 text-[13px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-            >
-              <option value="created_desc">Más recientes</option>
-              <option value="price_asc">Precio menor</option>
-              <option value="price_desc">Precio mayor</option>
-              <option value="surface_desc">Mayor superficie</option>
-              <option value="tokko_newest">Más nuevas Tokko</option>
-            </select>
-            <SelectChevron />
-          </div>
+          <SelectField
+            value={currencyFilter}
+            onChange={(e) => setCurrencyFilter(e.target.value)}
+          >
+            <option value="">Moneda</option>
+            <option value="USD">USD</option>
+            <option value="ARS">ARS</option>
+          </SelectField>
+          <SelectField
+            value={sortFilter}
+            onChange={(e) => setSortFilter(e.target.value)}
+          >
+            <option value="created_desc">Más recientes</option>
+            <option value="price_asc">Precio menor</option>
+            <option value="price_desc">Precio mayor</option>
+            <option value="surface_desc">Mayor superficie</option>
+            <option value="tokko_newest">Más nuevas Tokko</option>
+          </SelectField>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1190,33 +1133,25 @@ export function PropiedadesClient({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Tipo</label>
-                    <div className="relative">
-                      <select
-                        name="type"
-                        defaultValue={editProperty?.type ?? ""}
-                        className="w-full appearance-none rounded-[14px] border border-border bg-surface py-2.5 pl-3.5 pr-9 text-[13.5px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-                      >
-                        {PROPERTY_TYPES.map((t) => (
-                          <option key={t.value} value={t.value}>{t.label}</option>
-                        ))}
-                      </select>
-                      <SelectChevron />
-                    </div>
+                    <SelectField
+                      name="type"
+                      defaultValue={editProperty?.type ?? ""}
+                    >
+                      {PROPERTY_TYPES.map((t) => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                      ))}
+                    </SelectField>
                   </div>
                   <div>
                     <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Estado</label>
-                    <div className="relative">
-                      <select
-                        name="status"
-                        defaultValue={editProperty?.status ?? "activa"}
-                        className="w-full appearance-none rounded-[14px] border border-border bg-surface py-2.5 pl-3.5 pr-9 text-[13.5px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-                      >
-                        {PROPERTY_STATUSES.map((s) => (
-                          <option key={s.value} value={s.value}>{s.label}</option>
-                        ))}
-                      </select>
-                      <SelectChevron />
-                    </div>
+                    <SelectField
+                      name="status"
+                      defaultValue={editProperty?.status ?? "activa"}
+                    >
+                      {PROPERTY_STATUSES.map((s) => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                      ))}
+                    </SelectField>
                   </div>
                 </div>
 
@@ -1498,39 +1433,25 @@ export function PropiedadesClient({
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Propiedad *</label>
-                    <div className="relative">
-                      <select
-                        name="propertyId"
-                        required
-                        className="w-full appearance-none rounded-[14px] border border-border bg-surface py-2.5 pl-3.5 pr-9 text-[13.5px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-                      >
-                        <option value="">Seleccionar...</option>
-                        {propertiesForAssignments.map((property) => (
-                          <option key={property.id} value={property.id}>
-                            {property.address}
-                          </option>
-                        ))}
-                      </select>
-                      <SelectChevron />
-                    </div>
+                    <SelectField name="propertyId" required>
+                      <option value="">Seleccionar...</option>
+                      {propertiesForAssignments.map((property) => (
+                        <option key={property.id} value={property.id}>
+                          {property.address}
+                        </option>
+                      ))}
+                    </SelectField>
                   </div>
                   <div>
                     <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Asignado a *</label>
-                    <div className="relative">
-                      <select
-                        name="assignedToUserId"
-                        required
-                        className="w-full appearance-none rounded-[14px] border border-border bg-surface py-2.5 pl-3.5 pr-9 text-[13.5px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-                      >
-                        <option value="">Seleccionar...</option>
-                        {usersForAssignments.map((user) => (
-                          <option key={user.id} value={user.id}>
-                            {getUserLabel(user)}
-                          </option>
-                        ))}
-                      </select>
-                      <SelectChevron />
-                    </div>
+                    <SelectField name="assignedToUserId" required>
+                      <option value="">Seleccionar...</option>
+                      {usersForAssignments.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {getUserLabel(user)}
+                        </option>
+                      ))}
+                    </SelectField>
                   </div>
                 </div>
 

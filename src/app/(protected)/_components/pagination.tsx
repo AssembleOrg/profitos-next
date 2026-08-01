@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useId } from "react";
+import { SelectField } from "@/components/ui/select-field";
 
 interface PaginationProps {
   page: number;
@@ -65,18 +66,19 @@ export function Pagination({
         <label htmlFor={limitSelectId} className="text-[12.5px] text-text-faint">
           Por página
         </label>
-        <select
+        <SelectField
           id={limitSelectId}
           value={limit}
           onChange={(event) => updateLimit(Number(event.target.value))}
-          className="h-9 appearance-none rounded-full border border-border bg-surface px-3 text-xs font-semibold text-text-muted focus:border-border-strong focus:outline-none"
+          className="h-9 rounded-full pl-3 pr-8 text-[12px]"
+          wrapperClassName="w-20"
         >
           {pageSizeOptions.map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
           ))}
-        </select>
+        </SelectField>
       </div>
       {/* Mobile: solo anterior / siguiente */}
       <div className="flex items-center gap-2 sm:hidden">

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Pagination } from "../../_components/pagination";
+import { SelectField } from "@/components/ui/select-field";
 import { FirmaCard } from "./firma-card";
 import { FirmaDetailModal } from "./firma-detail-modal";
 import { CreateFirmaModal, type PropertyOption } from "./create-firma-modal";
@@ -156,10 +157,9 @@ export function FirmasClient({
           <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
             Estado
           </span>
-          <select
+          <SelectField
             value={filters.status}
             onChange={(e) => updateFilters({ status: e.target.value })}
-            className="h-11 appearance-none rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
           >
             <option value="">Todos los estados</option>
             {SIGNATURE_STATUSES.map((s) => (
@@ -167,7 +167,7 @@ export function FirmasClient({
                 {SIGNATURE_STATUS_LABEL[s]}
               </option>
             ))}
-          </select>
+          </SelectField>
         </label>
 
         {(filters.q || filters.status || filters.propertyId) && (

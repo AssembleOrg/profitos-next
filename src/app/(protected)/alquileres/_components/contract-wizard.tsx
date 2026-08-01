@@ -16,6 +16,7 @@ import { WhatsAppLink } from "@/components/whatsapp-link";
 import { MediaUploader, type NoteAttachment } from "@/components/notes/media-uploader";
 import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
 import { CurrencyInput } from "./currency-input";
+import { SelectField } from "@/components/ui/select-field";
 import { DateField } from "../../_components/date-field";
 import type {
   RentalAdditionalCatalogItem,
@@ -540,14 +541,14 @@ export function ContractWizard({
                                 className="rounded-[12px] border border-border bg-surface px-3 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
                               />
                               <div className="grid grid-cols-3 gap-2">
-                                <select
+                                <SelectField
                                   value={newTenant.idType}
                                   onChange={(e) => setNewTenant((p) => ({ ...p, idType: e.target.value as "dni" | "cuit" }))}
-                                  className="h-10 rounded-[12px] border border-border bg-surface px-2 text-sm text-text focus:border-border-strong focus:outline-none"
+                                  className="h-10 rounded-[12px] pl-2.5 pr-8 text-[13px]"
                                 >
                                   <option value="dni">DNI</option>
                                   <option value="cuit">CUIT</option>
-                                </select>
+                                </SelectField>
                                 <input
                                   type="text"
                                   placeholder="Número"
@@ -671,17 +672,16 @@ export function ContractWizard({
                             <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                               Frecuencia
                             </label>
-                            <select
+                            <SelectField
                               value={frequency}
                               onChange={(e) => setFrequency(e.target.value as RentalFrequency)}
-                              className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
                             >
                               {RENTAL_FREQUENCIES.map((f) => (
                                 <option key={f} value={f}>
                                   {RENTAL_FREQUENCY_LABEL[f]}
                                 </option>
                               ))}
-                            </select>
+                            </SelectField>
                           </div>
                           <div>
                             <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">

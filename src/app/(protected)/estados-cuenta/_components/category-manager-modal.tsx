@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
 import type { EntryType } from "@/lib/account";
+import { SelectField } from "@/components/ui/select-field";
 import type { SerializedCategory } from "./estados-cuenta-client";
 
 interface Props {
@@ -128,10 +129,10 @@ export function CategoryManagerModal({ open, onOpenChange, categories, isAdmin }
                         className={inputClass}
                       />
                     </div>
-                    <select value={kind} onChange={(e) => setKind(e.target.value as EntryType)} className={inputClass + " w-auto"}>
+                    <SelectField value={kind} onChange={(e) => setKind(e.target.value as EntryType)} wrapperClassName="w-auto">
                       <option value="income">Ingreso</option>
                       <option value="expense">Egreso</option>
-                    </select>
+                    </SelectField>
                     <input
                       type="color"
                       value={color}

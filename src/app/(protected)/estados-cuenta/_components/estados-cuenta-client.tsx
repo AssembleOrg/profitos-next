@@ -14,6 +14,7 @@ import {
   type EntryType,
 } from "@/lib/account";
 import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
 import { MovementFormModal } from "./movement-form-modal";
 import { CategoryManagerModal } from "./category-manager-modal";
 import { MovementDetailModal } from "./movement-detail-modal";
@@ -183,32 +184,29 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
             <DatePicker value={filters.to} onChange={(iso) => apply({ to: iso })} className={selectClass} />
           </Field>
           <Field label="Tipo">
-            <select
+            <SelectField
               value={filters.type ?? ""}
               onChange={(e) => apply({ type: (e.target.value || undefined) as EntryType | undefined })}
-              className={selectClass}
             >
               <option value="">Todos</option>
               <option value="income">Ingresos</option>
               <option value="expense">Egresos</option>
-            </select>
+            </SelectField>
           </Field>
           <Field label="Moneda">
-            <select
+            <SelectField
               value={filters.currency ?? ""}
               onChange={(e) => apply({ currency: (e.target.value || undefined) as Currency | undefined })}
-              className={selectClass}
             >
               <option value="">ARS y USD</option>
               <option value="ARS">Solo ARS</option>
               <option value="USD">Solo USD</option>
-            </select>
+            </SelectField>
           </Field>
           <Field label="Categoría">
-            <select
+            <SelectField
               value={filters.categoryId ?? ""}
               onChange={(e) => apply({ categoryId: e.target.value || undefined })}
-              className={selectClass}
             >
               <option value="">Todas</option>
               <optgroup label="Ingresos">
@@ -221,32 +219,30 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </optgroup>
-            </select>
+            </SelectField>
           </Field>
           <Field label="Agente">
-            <select
+            <SelectField
               value={filters.agentUserId ?? ""}
               onChange={(e) => apply({ agentUserId: e.target.value || undefined })}
-              className={selectClass}
             >
               <option value="">Todos</option>
               {agents.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
-            </select>
+            </SelectField>
           </Field>
           <Field label="Compartido">
-            <select
+            <SelectField
               value={filters.isShared === undefined ? "" : filters.isShared ? "1" : "0"}
               onChange={(e) =>
                 apply({ isShared: e.target.value === "" ? undefined : e.target.value === "1" })
               }
-              className={selectClass}
             >
               <option value="">Todos</option>
               <option value="1">Solo compartidos</option>
               <option value="0">No compartidos</option>
-            </select>
+            </SelectField>
           </Field>
         </div>
       </section>
@@ -294,9 +290,18 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
 
       {/* Contenido */}
       {report.movements.length === 0 ? (
-        <p className="rounded-[20px] bg-bg px-6 py-8 text-center text-[12.5px] text-text-faint">
-          No hay movimientos en el periodo seleccionado.
-        </p>
+        <div className="flex flex-col items-center gap-2.5 rounded-[20px] bg-bg px-6 py-8 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-sand-chip text-accent">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+              <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />
+            </svg>
+          </span>
+          <p className="font-display text-[15px] font-semibold text-text">Sin movimientos</p>
+          <p className="text-[12.5px] text-text-faint">
+            No hay movimientos en el periodo seleccionado.
+          </p>
+        </div>
       ) : filters.view === "mensual" ? (
         <section className="flex flex-col gap-6">
           {report.byCurrency

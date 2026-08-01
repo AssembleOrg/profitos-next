@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
 import { now } from "@/lib/datetime";
 import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
 import { CurrencyInput } from "../../alquileres/_components/currency-input";
 import { MediaUploader } from "../../alquileres/_components/media-uploader";
 import type { RentalAttachment } from "../../alquileres/_components/voice-recorder";
@@ -496,12 +497,12 @@ export function MovementFormModal({
                     {!isCostear && (
                     <div>
                       <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Categoría</label>
-                      <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputClass}>
+                      <SelectField value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
                         <option value="">Elegí una categoría…</option>
                         {categories.map((c) => (
                           <option key={c.id} value={c.id}>{c.name}</option>
                         ))}
-                      </select>
+                      </SelectField>
                     </div>
                     )}
 
@@ -588,12 +589,12 @@ export function MovementFormModal({
                       <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Agente <span className="text-text-faint">(opcional)</span>
                       </label>
-                      <select value={agentUserId} onChange={(e) => setAgentUserId(e.target.value)} className={inputClass}>
+                      <SelectField value={agentUserId} onChange={(e) => setAgentUserId(e.target.value)}>
                         <option value="">Sin asignar</option>
                         {agents.map((a) => (
                           <option key={a.id} value={a.id}>{a.name}</option>
                         ))}
-                      </select>
+                      </SelectField>
                     </div>
                     )}
 

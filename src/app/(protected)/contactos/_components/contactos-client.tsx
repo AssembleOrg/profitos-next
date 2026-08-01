@@ -8,6 +8,7 @@ import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
 import { formatDate } from "@/lib/datetime";
 import { WhatsAppLink } from "@/components/whatsapp-link";
+import { SelectField } from "@/components/ui/select-field";
 import { MediaUploader, type NoteAttachment } from "@/components/notes/media-uploader";
 import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
 
@@ -69,25 +70,6 @@ function getLeadStatusColor(status: string | null) {
 
 /** Tints alternados para avatares con iniciales. */
 const AVATAR_TINTS = ["bg-sand-chip", "bg-sage-chip", "bg-clay-chip"];
-
-/** Chevron decorativo para selects estilizados (appearance-none). */
-function SelectChevron() {
-  return (
-    <svg
-      className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-text-faint"
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
 
 /** Empty state V4: círculo tintado + título display + texto faint. */
 function EmptyState({ title, description }: Readonly<{ title: string; description: string }>) {
@@ -373,21 +355,17 @@ export function ContactosClient({
             />
           </div>
           {leadStatusOptions.length > 0 && (
-            <div className="relative">
-              <select
-                value={leadStatusFilter}
-                onChange={(e) => setLeadStatusFilter(e.target.value)}
-                className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface pl-3.5 pr-9 text-[13px] text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-              >
-                <option value="">Todos los estados</option>
-                {leadStatusOptions.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.value} ({s.count})
-                  </option>
-                ))}
-              </select>
-              <SelectChevron />
-            </div>
+            <SelectField
+              value={leadStatusFilter}
+              onChange={(e) => setLeadStatusFilter(e.target.value)}
+            >
+              <option value="">Todos los estados</option>
+              {leadStatusOptions.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.value} ({s.count})
+                </option>
+              ))}
+            </SelectField>
           )}
           <label className="flex h-11 cursor-pointer items-center gap-2 rounded-full border border-border bg-surface px-3.5 text-[12.5px] font-semibold text-text-muted">
             <input

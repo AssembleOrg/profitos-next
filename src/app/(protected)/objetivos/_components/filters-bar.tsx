@@ -4,6 +4,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { defaultPeriod } from "@/lib/objectives";
 import { DateField } from "../../_components/date-field";
+import { SelectField } from "@/components/ui/select-field";
 import type { SerializedUser } from "./types";
 
 interface FiltersBarProps {
@@ -62,10 +63,9 @@ export function FiltersBar({
             <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
               Empleado
             </span>
-            <select
+            <SelectField
               value={selectedUserId}
               onChange={(e) => update({ assignedToUserId: e.target.value })}
-              className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
             >
               <option value="">Todos</option>
               {users.map((u) => (
@@ -73,7 +73,7 @@ export function FiltersBar({
                   {u.fullName?.trim() || u.email}
                 </option>
               ))}
-            </select>
+            </SelectField>
           </label>
         )}
 

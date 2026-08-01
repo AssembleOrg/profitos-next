@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
@@ -149,15 +150,15 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
             className="h-11 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
           />
         </div>
-        <select
+        <SelectField
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-11 min-w-0 appearance-none rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
+          wrapperClassName="min-w-0"
         >
           <option value="">Todos los estados</option>
           <option value="borrador">Borrador</option>
           <option value="completada">Completada</option>
-        </select>
+        </SelectField>
         <DatePicker
           value={fromDate}
           onChange={setFromDate}

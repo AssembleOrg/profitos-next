@@ -9,6 +9,7 @@ import { Sheet } from "../../_components/sheet";
 import { Spinner } from "../../_components/spinner";
 import { Pagination } from "../../_components/pagination";
 import { formatDate } from "@/lib/datetime";
+import { SelectField } from "@/components/ui/select-field";
 
 interface MemberItem {
   id: string;
@@ -217,21 +218,17 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
                     </Link>
                   )}
                   {item.role && (
-                    <span className="relative flex-1 lg:flex-none">
-                      <select
-                        value={item.role ?? "user"}
-                        onChange={(e) => handleChangeRole(item, e.target.value as "admin" | "user" | "viewer")}
-                        disabled={changingRoleId === item.id}
-                        className="w-full appearance-none rounded-full border border-border bg-bg py-1.5 pl-3 pr-7 text-[12px] font-semibold text-text-muted focus:border-border-strong focus:outline-none disabled:opacity-50 [color-scheme:light]"
-                      >
-                        <option value="admin">Admin</option>
-                        <option value="user">Usuario</option>
-                        <option value="viewer">Viewer</option>
-                      </select>
-                      <svg className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-text-faint" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 4.5 6 7.5 9 4.5" />
-                      </svg>
-                    </span>
+                    <SelectField
+                      value={item.role ?? "user"}
+                      onChange={(e) => handleChangeRole(item, e.target.value as "admin" | "user" | "viewer")}
+                      disabled={changingRoleId === item.id}
+                      className="h-8 rounded-full pl-3 pr-8 text-[11.5px]"
+                      wrapperClassName="flex-1 lg:flex-none"
+                    >
+                      <option value="admin">Admin</option>
+                      <option value="user">Usuario</option>
+                      <option value="viewer">Viewer</option>
+                    </SelectField>
                   )}
                 </div>
 
@@ -337,20 +334,14 @@ export function MiembrosClient({ items, page, totalPages, total, limit }: Props)
           </div>
           <div>
             <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Rol</label>
-            <span className="relative block">
-              <select
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value as "admin" | "user" | "viewer")}
-                className="h-11 w-full appearance-none rounded-[14px] border border-border bg-surface px-3.5 pr-9 text-sm text-text focus:border-border-strong focus:outline-none [color-scheme:light]"
-              >
-                <option value="user">Usuario</option>
-                <option value="admin">Admin</option>
-                <option value="viewer">Viewer</option>
-              </select>
-              <svg className="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-faint" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 4.5 6 7.5 9 4.5" />
-              </svg>
-            </span>
+            <SelectField
+              value={newRole}
+              onChange={(e) => setNewRole(e.target.value as "admin" | "user" | "viewer")}
+            >
+              <option value="user">Usuario</option>
+              <option value="admin">Admin</option>
+              <option value="viewer">Viewer</option>
+            </SelectField>
             <p className="mt-1 text-xs text-text-faint">
               El rol se aplicará cuando el miembro inicie sesión por primera vez.
             </p>
