@@ -7,11 +7,6 @@ export async function updateSession(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", request.nextUrl.pathname);
 
-  // TEMP_VISUAL_QA: bypass local de sesión para revisión visual del rediseño.
-  if (process.env.VISUAL_QA_USER_ID) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
-  }
-
   if (request.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }

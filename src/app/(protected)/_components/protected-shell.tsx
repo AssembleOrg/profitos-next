@@ -33,9 +33,10 @@ function Shell({ avatarUrl, greeting, children }: Readonly<Omit<ProtectedShellPr
       <main className="flex-1 overflow-auto">
         <RolePreviewBanner />
 
-        {/* Mobile: header con saludo + buscador ⌘K */}
+        {/* Mobile: el saludo solo encabeza el dashboard; el resto de las páginas
+            trae su propio título, así que ahí queda únicamente el buscador. */}
         <header className="sticky top-0 z-30 flex flex-col gap-3 border-b border-border/70 bg-bg/80 px-5 py-4 backdrop-blur-xl md:hidden">
-          {greeting}
+          {isDashboard && greeting}
           <CommandPalette role={effectiveRole} />
         </header>
 
