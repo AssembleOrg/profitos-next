@@ -398,7 +398,7 @@ function Timeline({
         const dotStyle =
           action.toStatus && SIGNATURE_STATUS_STYLE[action.toStatus]
             ? SIGNATURE_STATUS_STYLE[action.toStatus].dot
-            : "bg-olive-bright/70";
+            : "bg-border-strong";
         const canDeleteThis =
           action.type === "nota" &&
           (isAdmin || action.createdByUser.id === currentUserId);
