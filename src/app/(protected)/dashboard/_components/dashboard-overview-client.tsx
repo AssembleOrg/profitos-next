@@ -140,30 +140,74 @@ function KpiStrip({
     return () => clearInterval(interval);
   }, [paused, stats.length]);
 
-  function cardClasses(variant: "default" | "red" | "green", isActive: boolean, mobile: boolean) {
-    const base = "flex flex-col rounded-2xl border p-3 transition-opacity";
+  // V4: card 0 = hero dark, cards 1-3 = tintadas (sand / sage / clay)
+  function cardClasses(variant: "default" | "red" | "green", isActive: boolean, mobile: boolean, index: number) {
     const opacity = mobile ? (isActive ? "opacity-100" : "opacity-60") : "";
-    if (variant === "red") return `${base} border-danger/30 bg-danger-chip ${opacity}`;
-    if (variant === "green") return `${base} border-secondary/30 bg-secondary/8 ${opacity}`;
-    return `${base} border-border bg-surface/40 ${opacity}`;
+    if (index === 0) return `flex flex-col rounded-3xl bg-dark p-4 text-dark-fg transition-opacity md:p-5 ${opacity}`;
+    const tint =
+      index === 1
+        ? "bg-sand-chip"
+        : index === 2
+          ? "bg-sage-chip"
+          : variant === "red"
+            ? "bg-clay-chip"
+            : "bg-sage-chip";
+    return `flex flex-col rounded-[18px] ${tint} p-4 transition-opacity ${opacity}`;
   }
 
-  function labelClasses(variant: "default" | "red" | "green") {
-    if (variant === "red") return "text-[10px] font-medium uppercase tracking-widest text-danger";
-    if (variant === "green") return "text-[10px] font-medium uppercase tracking-widest text-secondary";
-    return "text-[10px] font-medium uppercase tracking-widest text-text-muted";
+  function labelClasses(variant: "default" | "red" | "green", index: number) {
+    if (index === 0) return "text-[10px] font-bold uppercase tracking-[0.12em] text-dark-muted";
+    return "text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint";
   }
 
-  function valueClasses(variant: "default" | "red" | "green") {
-    if (variant === "red") return "mt-1 text-3xl font-light tabular-nums text-danger";
-    if (variant === "green") return "mt-1 text-3xl font-light tabular-nums text-secondary";
-    return "mt-1 text-3xl font-light tabular-nums text-text";
+  function valueClasses(variant: "default" | "red" | "green", index: number) {
+    if (index === 0) return "mt-2 font-display text-3xl font-bold tabular-nums text-dark-fg md:text-4xl";
+    const tone = variant === "red" ? "text-terra" : variant === "green" ? "text-olive-light" : "text-text";
+    return `mt-1.5 font-display text-2xl font-bold tabular-nums ${tone}`;
   }
 
-  function subClasses(variant: "default" | "red" | "green") {
-    if (variant === "red") return "mt-0.5 text-[10px] text-danger";
-    if (variant === "green") return "mt-0.5 text-[10px] text-secondary/60";
-    return "mt-0.5 text-[10px] text-text-muted/60";
+  function subClasses(variant: "default" | "red" | "green", index: number) {
+    if (index === 0) return "mt-2 inline-flex w-fit items-center rounded-full bg-white/10 px-2 py-0.5 text-[10.5px] font-semibold text-accent";
+    const tone = variant === "red" ? "text-terra" : variant === "green" ? "text-olive-light" : "text-text-muted";
+    return `mt-1 text-[10.5px] ${tone}`;
+  }
+
+  function kpiIcon(variant: "default" | "red" | "green", index: number) {
+    if (index === 0) return null;
+    const tone = index === 1 ? "text-warning" : index === 3 && variant === "red" ? "text-terra" : "text-olive-light";
+    const common = {
+      width: 14,
+      height: 14,
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: 2,
+      strokeLinecap: "round" as const,
+      strokeLinejoin: "round" as const,
+    };
+    return (
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface ${tone}`}>
+        {index === 1 && (
+          <svg {...common}>
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+          </svg>
+        )}
+        {index === 2 && (
+          <svg {...common}>
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+        )}
+        {index === 3 && (
+          <svg {...common}>
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        )}
+      </span>
+    );
   }
 
   return (
@@ -177,10 +221,17 @@ function KpiStrip({
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...SPRING, delay: i * 0.04 }}
           >
-            <Link href={s.href} className={`${cardClasses(s.variant, true, false)} block active:scale-[0.98]`}>
-              <span className={labelClasses(s.variant)}>{s.label}</span>
-              <span className={valueClasses(s.variant)}>{s.value}</span>
-              <span className={subClasses(s.variant)}>{s.sub}</span>
+            <Link href={s.href} className={`${cardClasses(s.variant, true, false, i)} block active:scale-[0.98]`}>
+              {i === 0 ? (
+                <span className={labelClasses(s.variant, i)}>{s.label}</span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  {kpiIcon(s.variant, i)}
+                  <span className={labelClasses(s.variant, i)}>{s.label}</span>
+                </span>
+              )}
+              <span className={valueClasses(s.variant, i)}>{s.value}</span>
+              <span className={subClasses(s.variant, i)}>{s.sub}</span>
             </Link>
           </motion.div>
         ))}
@@ -207,10 +258,17 @@ function KpiStrip({
               transition={{ ...SPRING, delay: i * 0.04 }}
               className="w-[calc(50vw-28px)] min-w-[110px] max-w-[160px] shrink-0 snap-center"
             >
-              <Link href={s.href} className={`${cardClasses(s.variant, active === i, true)} block`}>
-                <span className={labelClasses(s.variant)}>{s.label}</span>
-                <span className={valueClasses(s.variant)}>{s.value}</span>
-                <span className={subClasses(s.variant)}>{s.sub}</span>
+              <Link href={s.href} className={`${cardClasses(s.variant, active === i, true, i)} block`}>
+                {i === 0 ? (
+                  <span className={labelClasses(s.variant, i)}>{s.label}</span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    {kpiIcon(s.variant, i)}
+                    <span className={labelClasses(s.variant, i)}>{s.label}</span>
+                  </span>
+                )}
+                <span className={valueClasses(s.variant, i)}>{s.value}</span>
+                <span className={subClasses(s.variant, i)}>{s.sub}</span>
               </Link>
             </motion.div>
           ))}
@@ -230,7 +288,7 @@ function KpiStrip({
                 setTimeout(() => setPaused(false), 5000);
               }}
               className={`h-1 rounded-full transition-all duration-300 ${
-                active === i ? "w-4 bg-secondary" : "w-1 bg-border"
+                active === i ? "w-4 bg-dark" : "w-1 bg-border"
               }`}
             />
           ))}
@@ -296,26 +354,26 @@ function TabbedFeed({ data }: { data: DashboardOverview }) {
   const items = rows[active];
 
   return (
-    <div className="rounded-2xl border border-border bg-surface/40 overflow-hidden">
-      {/* Tab bar */}
-      <div className="relative flex border-b border-border overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="rounded-[20px] border border-border bg-surface overflow-hidden">
+      {/* Tab bar — sub-tabs suaves V4 */}
+      <div className="relative mx-3 mt-3 flex gap-0.5 rounded-full bg-bg p-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((tab) => (
           <motion.button
             key={tab.key}
             onClick={() => setActive(tab.key)}
             whileTap={{ scale: 0.95 }}
-            className={`relative flex-1 min-w-fit px-4 py-3 text-xs font-medium whitespace-nowrap transition-colors ${
-              active === tab.key ? "text-secondary" : "text-text-muted"
+            className={`relative flex-1 min-w-fit rounded-full px-4 py-2 text-[12.5px] whitespace-nowrap transition-colors ${
+              active === tab.key ? "font-bold text-text" : "font-medium text-text-faint hover:text-text"
             }`}
           >
-            {tab.label}
             {active === tab.key && (
               <motion.div
                 layoutId="tab-indicator"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-secondary"
+                className="absolute inset-0 rounded-full bg-surface shadow-sm"
                 transition={SPRING}
               />
             )}
+            <span className="relative">{tab.label}</span>
           </motion.button>
         ))}
       </div>
@@ -330,7 +388,7 @@ function TabbedFeed({ data }: { data: DashboardOverview }) {
           transition={{ duration: 0.18, ease: EASE }}
         >
           {items.length === 0 ? (
-            <p className="px-5 py-8 text-center text-sm text-text-muted">Sin datos</p>
+            <p className="px-5 py-8 text-center text-[12.5px] text-text-faint">Sin datos</p>
           ) : (
             <div className="divide-y divide-border/50">
               {items}
@@ -339,7 +397,7 @@ function TabbedFeed({ data }: { data: DashboardOverview }) {
           <div className="flex justify-end border-t border-border/50 px-4 py-2.5">
             <Link
               href={activeTab.href}
-              className="group flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-widest text-text-muted transition-colors active:text-secondary"
+              className="group flex items-center gap-1.5 text-[12.5px] font-bold text-terra transition-opacity active:opacity-80"
             >
               <span>Ver todo</span>
               <span className="transition-transform duration-300 group-hover:translate-x-0.5">→</span>
@@ -366,22 +424,22 @@ function FeedRow({
 }) {
   const badgeClass =
     badgeColor === "red"
-      ? "bg-danger-chip text-danger"
+      ? "bg-clay-chip text-terra"
       : badgeColor === "olive"
-      ? "bg-secondary/10 text-secondary"
-      : "bg-surface text-text-muted";
+      ? "bg-sage-chip text-olive-light"
+      : "bg-bg text-text-faint";
 
   return (
     <div className="flex items-center gap-3 px-4 py-3">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm text-text">{primary}</p>
-        <p className="truncate text-xs text-text-muted">{secondary}</p>
+        <p className="truncate text-[13.5px] font-bold text-text">{primary}</p>
+        <p className="truncate text-[11.5px] text-text-faint">{secondary}</p>
         {tertiary && (
-          <p className="truncate text-xs text-text-muted/60">{tertiary}</p>
+          <p className="truncate text-[11.5px] text-text-faint/70">{tertiary}</p>
         )}
       </div>
       {badge && (
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${badgeClass}`}>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${badgeClass}`}>
           {badge}
         </span>
       )}
@@ -425,18 +483,18 @@ export function DashboardOverviewClient() {
         {/* KPI strip skeleton */}
         <div className="flex gap-3 overflow-hidden">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-20 w-[100px] shrink-0 animate-pulse rounded-2xl border border-border bg-surface/30" />
+            <div key={i} className="h-20 w-[100px] shrink-0 animate-pulse rounded-[18px] border border-border bg-surface" />
           ))}
         </div>
         {/* Feed skeleton */}
-        <div className="h-64 animate-pulse rounded-2xl border border-border bg-surface/30" />
+        <div className="h-64 animate-pulse rounded-[20px] border border-border bg-surface" />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="rounded-2xl border border-border bg-surface/40 p-6">
+      <div className="rounded-[20px] border border-border bg-surface p-6">
         <p className="text-sm text-danger">{error ?? "No se pudo cargar dashboard"}</p>
       </div>
     );
@@ -446,23 +504,23 @@ export function DashboardOverviewClient() {
     <div className="flex flex-col gap-4">
       {/* Header compacto */}
       <div className="flex items-center justify-between">
-        <p className="text-xs text-text-muted">
+        <p className="text-[11.5px] text-text-faint">
           {scopeLabel} · {formatDateTime(data.generatedAt)}
         </p>
-        <div className="inline-flex items-center rounded-xl border border-border bg-bg/50 p-0.5">
+        <div className="inline-flex items-center gap-0.5 rounded-full border border-border bg-surface p-1">
           {([1, 7, 30] as const).map((days) => (
             <motion.button
               key={days}
               onClick={() => setSelectedDays(days)}
               whileTap={{ scale: 0.92 }}
-              className={`relative rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                selectedDays === days ? "text-secondary" : "text-text-muted"
+              className={`relative rounded-full px-3 py-1.5 text-[12.5px] transition-colors ${
+                selectedDays === days ? "font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
               }`}
             >
               {selectedDays === days && (
                 <motion.div
                   layoutId="days-pill"
-                  className="absolute inset-0 rounded-lg bg-secondary/15"
+                  className="absolute inset-0 rounded-full bg-dark"
                   transition={SPRING}
                 />
               )}

@@ -57,19 +57,19 @@ export function Pagination({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <span className="text-xs font-medium text-text-muted">
+    <div className="flex flex-col gap-3 rounded-[20px] border border-border bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <span className="text-[12.5px] text-text-faint">
         {total} resultado{total !== 1 ? "s" : ""} · Página {page} de {totalPages}
       </span>
       <div className="flex items-center gap-2 sm:order-last">
-        <label htmlFor={limitSelectId} className="text-xs text-text-muted">
+        <label htmlFor={limitSelectId} className="text-[12.5px] text-text-faint">
           Por página
         </label>
         <select
           id={limitSelectId}
           value={limit}
           onChange={(event) => updateLimit(Number(event.target.value))}
-          className="h-9 rounded-xl border border-border bg-bg px-2.5 text-xs text-text focus:border-secondary focus:outline-none scheme-dark"
+          className="h-9 appearance-none rounded-full border border-border bg-surface px-3 text-xs font-semibold text-text-muted focus:border-border-strong focus:outline-none"
         >
           {pageSizeOptions.map((option) => (
             <option key={option} value={option}>
@@ -83,20 +83,20 @@ export function Pagination({
         <button
           onClick={() => goTo(page - 1)}
           disabled={page <= 1}
-          className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border bg-bg px-3 text-xs font-medium text-text-muted transition-all hover:border-secondary/40 hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-9 items-center justify-center gap-1.5 rounded-full border border-border bg-surface px-3 text-xs font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
           Ant.
         </button>
-        <span className="flex-1 text-center text-xs text-text-muted">
+        <span className="flex-1 text-center text-[12.5px] text-text-faint">
           Pág {page} de {totalPages}
         </span>
         <button
           onClick={() => goTo(page + 1)}
           disabled={page >= totalPages}
-          className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border bg-bg px-3 text-xs font-medium text-text-muted transition-all hover:border-secondary/40 hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-9 items-center justify-center gap-1.5 rounded-full border border-border bg-surface px-3 text-xs font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
         >
           Sig.
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -110,7 +110,7 @@ export function Pagination({
         <button
           onClick={() => goTo(page - 1)}
           disabled={page <= 1}
-          className="flex h-9 min-w-9 items-center justify-center rounded-xl border border-border bg-bg px-2 text-text-muted transition-all hover:border-secondary/40 hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-text-muted transition-colors hover:bg-bg hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
@@ -118,15 +118,15 @@ export function Pagination({
         </button>
         {pages.map((item) =>
           item === "..." ? (
-            <span key={`dots-${++dotsCount}`} className="px-1 text-xs text-text-muted">…</span>
+            <span key={`dots-${++dotsCount}`} className="px-1 text-xs text-text-faint">…</span>
           ) : (
             <button
               key={item}
               onClick={() => goTo(item)}
-              className={`h-9 min-w-9 rounded-xl border px-2 text-xs font-semibold transition-all ${
+              className={`h-9 w-9 rounded-full text-xs transition-colors ${
                 item === page
-                  ? "border-secondary/50 bg-secondary/20 text-secondary shadow-[0_0_0_1px_rgba(76,191,123,0.15)]"
-                  : "border-border bg-bg text-text-muted hover:border-secondary/40 hover:text-text"
+                  ? "bg-dark font-bold text-dark-fg"
+                  : "font-semibold text-text-muted hover:bg-bg hover:text-text"
               }`}
             >
               {item}
@@ -136,7 +136,7 @@ export function Pagination({
         <button
           onClick={() => goTo(page + 1)}
           disabled={page >= totalPages}
-          className="flex h-9 min-w-9 items-center justify-center rounded-xl border border-border bg-bg px-2 text-text-muted transition-all hover:border-secondary/40 hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-text-muted transition-colors hover:bg-bg hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="9 18 15 12 9 6" />

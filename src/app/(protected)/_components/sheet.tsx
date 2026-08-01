@@ -86,9 +86,9 @@ export function Sheet({
           {/* Panel */}
           <motion.div
             className={`fixed z-50 flex flex-col border border-border bg-surface shadow-2xl
-              bottom-0 left-0 right-0 max-h-[92dvh] rounded-t-2xl
+              bottom-0 left-0 right-0 max-h-[92dvh] rounded-t-[28px]
               sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[calc(100%-2rem)] ${maxWidth}
-              sm:-translate-x-1/2 sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl`}
+              sm:-translate-x-1/2 sm:max-h-[calc(100dvh-3rem)] sm:rounded-3xl`}
             initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96, y: "-48%" }}
             animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: "-50%" }}
             exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96, y: "-48%" }}
@@ -99,7 +99,7 @@ export function Sheet({
             <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-border sm:hidden" />
 
             {/* Header */}
-            <div className="flex flex-shrink-0 items-center justify-between border-b border-border-olive/40 px-5 py-4">
+            <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
               <div className="flex items-center gap-3">
                 {avatarInitial && (
                   <motion.div
@@ -112,16 +112,16 @@ export function Sheet({
                       damping: 30,
                       delay: 0.05,
                     }}
-                    className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary/15 text-sm font-semibold text-secondary"
+                    className="flex h-12 w-12 items-center justify-center rounded-full bg-sand-chip font-display text-sm font-bold text-text-muted"
                   >
                     {avatarInitial}
                   </motion.div>
                 )}
-                <h2 className="text-base font-medium text-text">{title}</h2>
+                <h2 className="font-display text-[17px] font-semibold text-text">{title}</h2>
               </div>
               <button
                 onClick={onClose}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted active:bg-bg"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted active:bg-bg"
                 aria-label="Cerrar"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

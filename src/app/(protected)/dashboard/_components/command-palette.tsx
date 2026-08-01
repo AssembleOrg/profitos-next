@@ -6,8 +6,8 @@ import { Command } from "cmdk";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useAccess } from "../../_components/access-context";
 
-const ico = "shrink-0 text-text/60";
-const icoAccent = "shrink-0 text-secondary";
+const ico = "shrink-0 text-text-faint";
+const icoAccent = "shrink-0 text-terra";
 
 interface PaletteNavItem {
   label: string;
@@ -268,14 +268,14 @@ export function CommandPalette({ role }: CommandPaletteProps = {}) {
       {/* Trigger button */}
       <button
         onClick={() => setOpen(true)}
-        className="flex w-fit shrink-0 items-center gap-2 rounded-lg border border-border bg-surface/50 px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface hover:text-text"
+        className="flex h-11 w-full shrink-0 items-center gap-2 rounded-full border border-border bg-surface px-3.5 text-[13px] text-text-muted transition-colors hover:text-text md:h-10 md:w-fit md:border-0 md:bg-bg"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-text-faint">
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
-        <span>Buscar...</span>
-        <kbd className="ml-4 hidden rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] font-medium text-text-muted sm:inline">
+        <span>Buscar</span>
+        <kbd className="ml-4 hidden rounded-md border border-border bg-surface px-1.5 text-[10.5px] font-semibold text-text-faint sm:inline">
           Ctrl+K
         </kbd>
       </button>
@@ -298,22 +298,22 @@ export function CommandPalette({ role }: CommandPaletteProps = {}) {
         />
 
         {/* Panel */}
-        <div className="fixed left-1/2 top-[20%] w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-2xl border border-border-olive/40 bg-gradient-to-b from-surface to-surface/90 shadow-2xl">
+        <div className="fixed left-1/2 top-[20%] w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl">
           {/* Search input */}
-          <div className="flex items-center gap-3 border-b border-border-olive/40 px-4 py-3">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-text-muted">
+          <div className="mx-3 mt-3 flex items-center gap-3 rounded-2xl bg-bg px-4 py-3">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-text-faint">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
             <Command.Input
               placeholder="Buscar páginas, acciones..."
-              className="w-full bg-transparent text-sm text-text placeholder:text-text-muted/50 focus:outline-none"
+              className="w-full bg-transparent text-sm text-text placeholder:text-text-faint focus:outline-none"
             />
             <button
               type="button"
               aria-label="Cerrar búsqueda"
               onClick={() => setOpen(false)}
-              className="hidden shrink-0 cursor-pointer rounded border border-border bg-bg px-1.5 py-0.5 text-[10px] text-text-muted sm:inline"
+              className="hidden shrink-0 cursor-pointer rounded-md border border-border bg-surface px-1.5 py-0.5 text-[10.5px] font-semibold text-text-faint sm:inline"
             >
               ESC
             </button>
@@ -321,13 +321,13 @@ export function CommandPalette({ role }: CommandPaletteProps = {}) {
 
           {/* Results */}
           <Command.List className="max-h-72 overflow-y-auto p-2">
-            <Command.Empty className="px-4 py-8 text-center text-sm text-text-muted">
+            <Command.Empty className="px-4 py-8 text-center text-[12.5px] text-text-faint">
               Sin resultados
             </Command.Empty>
 
             <Command.Group
               heading="Navegación"
-              className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-widest [&_[cmdk-group-heading]]:text-text-muted"
+              className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.14em] [&_[cmdk-group-heading]]:text-text-faint"
             >
               {navItems.filter((item) => {
                 if (item.adminOnly && !isAdmin) return false;
@@ -338,7 +338,7 @@ export function CommandPalette({ role }: CommandPaletteProps = {}) {
                   key={item.href}
                   value={item.label}
                   onSelect={() => navigate(item.href)}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-text transition-colors data-[selected=true]:bg-olive-deep/60 data-[selected=true]:text-accent"
+                  className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-text transition-colors hover:bg-bg data-[selected=true]:bg-sand-chip"
                 >
                   {item.icon}
                   {item.label}
@@ -350,14 +350,14 @@ export function CommandPalette({ role }: CommandPaletteProps = {}) {
 
             <Command.Group
               heading="Acciones rápidas"
-              className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-widest [&_[cmdk-group-heading]]:text-text-muted"
+              className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.14em] [&_[cmdk-group-heading]]:text-text-faint"
             >
               {quickActions.map((item) => (
                 <Command.Item
                   key={item.label}
                   value={item.label}
                   onSelect={() => navigate(item.href)}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-text transition-colors data-[selected=true]:bg-olive-deep/60 data-[selected=true]:text-accent"
+                  className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-text transition-colors hover:bg-bg data-[selected=true]:bg-sand-chip"
                 >
                   {item.icon}
                   {item.label}

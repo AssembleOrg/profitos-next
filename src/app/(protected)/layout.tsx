@@ -30,12 +30,11 @@ export default async function ProtectedLayout({
   }
 
   const greeting = (
-    <div className="flex items-center gap-3">
-      <h2 className="whitespace-nowrap text-base font-medium text-text">
+    <div className="flex flex-col">
+      <h2 className="whitespace-nowrap font-display text-[22px] font-semibold text-text md:text-[26px]">
         Hola, {user.fullName?.split(" ")[0] ?? user.email.split("@")[0]}
       </h2>
-      <span className="text-sm text-text-muted">/</span>
-      <span className="whitespace-nowrap text-sm text-text-muted">
+      <span className="whitespace-nowrap text-[11.5px] text-text-faint">
         {now().toFormat("dd/MM/yyyy")}
       </span>
     </div>
