@@ -629,3 +629,44 @@ model AccountEntry {
   @@index([isShared])
   @@map("jp_account_entries")
 }
+
+// ============================================================================
+// Scraper de leads de portales (ZonaProp / ArgenProp).
+// Trae las consultas de cada portal por su API interna cada determinado tiempo (por ahora una hora).
+// ============================================================================
+
+model ScrapedLead {
+  id              String    @id @default(cuid())
+  portal          String    // "zonaprop" | "argenprop"
+  section         String    // "mensajes" | "telefono" | "whatsapp" | "contactados"
+  externalId      String    @map("external_id") // ID único de la consulta en el portal
+  contactName     String?   @map("contact_name")
+  contactEmail    String?   @map("contact_email")
+  contactPhone    String?   @map("contact_phone")
+  messageText     String?   @map("message_text")
+  messageAt       DateTime? @map("message_at")
+  propertyRef     String?   @map("property_ref")     // código/ID del aviso
+  propertyTitle   String?   @map("property_title")
+  propertyAddress String?   @map("property_address")
+  propertyUrl     String?   @map("property_url")
+  price           String?
+  mapPolygon      Json?     @map("map_polygon")       // zona buscada (extra ZonaProp)
+  raw             Json?                                // payload crudo por si falta algo
+  scrapedAt       DateTime  @default(now()) @map("scraped_at")
+
+  @@unique([portal, section, externalId]) // dedup a nivel DB
+  @@index([portal, section, scrapedAt])
+  @@map("jp_scraped_leads")
+}
+
+model ScraperSession {
+  id           String    @id @default(cuid())
+  portal       String    @unique // "zonaprop" | "argenprop"
+  storageState Json      @map("storage_state") // cookies/localStorage de Playwright
+  valid        Boolean   @default(true)
+  lastOkAt     DateTime? @map("last_ok_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("jp_scraper_sessions")
+}
