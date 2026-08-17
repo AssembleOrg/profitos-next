@@ -1,8 +1,14 @@
-import { chromium, type BrowserContext, type Page } from "playwright";
+import { chromium as chromiumExtra } from "playwright-extra";
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
+import type { BrowserContext, Page } from "playwright";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { prisma } from "@/lib/prisma/client";
+
+// playwright-extra + stealth: agrega evasiones anti-bot por encima de las
+// manuales (oculta más señales de automatización que delatan al navegador).
+chromiumExtra.use(StealthPlugin());
 
 export type Portal = "zonaprop" | "argenprop";
 
@@ -61,9 +67,9 @@ async function launchPersistent(userDataDir: string): Promise<BrowserContext> {
     timezoneId: "America/Argentina/Buenos_Aires",
   };
   try {
-    return await chromium.launchPersistentContext(userDataDir, { ...opts, channel: "chrome" });
+    return await chromiumExtra.launchPersistentContext(userDataDir, { ...opts, channel: "chrome" });
   } catch {
-    return await chromium.launchPersistentContext(userDataDir, opts);
+    return await chromiumExtra.launchPersistentContext(userDataDir, opts);
   }
 }
 
