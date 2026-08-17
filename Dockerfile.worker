@@ -1,5 +1,7 @@
 # ============================================================================
-# Imagen para Railway: Next.js + Playwright (Chrome headed bajo pantalla virtual)
+# Imagen del WORKER del scraper para Railway (cron service).
+# Corre el scraper (Chrome headed bajo pantalla virtual Xvfb) y termina.
+# NO es la web: la web va aparte, con Nixpacks.
 # ============================================================================
 
 # Partimos de la imagen OFICIAL de Playwright: ya trae Chromium, TODAS las
@@ -20,18 +22,14 @@ RUN pnpm install --frozen-lockfile
 # El scraper usa Chrome de Google (pasa Cloudflare mejor que el Chromium pelado).
 RUN pnpm exec playwright install chrome
 
-# --- 3) Código + build (prisma generate + next build) ---
+# --- 3) Código + cliente Prisma (el worker NO necesita compilar la web) ---
 COPY . .
-RUN pnpm run build
+RUN pnpm run db:generate
 
 # El navegador corre HEADED bajo Xvfb (Railway no tiene monitor).
-# Dejamos esto fijo acá para no depender de configurarlo a mano en Railway.
 ENV SCRAPER_HEADLESS=false
 ENV NODE_ENV=production
 
-# Railway inyecta la variable PORT; `next start` la respeta automáticamente.
-EXPOSE 3000
-
-# xvfb-run levanta la pantalla virtual, exporta DISPLAY, y recién ahí arranca el
-# server. Todo proceso hijo (incluido Chrome) hereda esa pantalla.
-CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1280x1024x24", "pnpm", "start"]
+# xvfb-run levanta la pantalla virtual, exporta DISPLAY, y corre el worker.
+# El worker hace su trabajo y termina (Railway lo dispara por cron).
+CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1280x1024x24", "pnpm", "exec", "tsx", "scripts/scraper/run-worker.ts"]
