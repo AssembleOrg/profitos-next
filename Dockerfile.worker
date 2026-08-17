@@ -30,6 +30,7 @@ RUN pnpm run db:generate
 ENV SCRAPER_HEADLESS=false
 ENV NODE_ENV=production
 
-# xvfb-run levanta la pantalla virtual, exporta DISPLAY, y corre el worker.
-# El worker hace su trabajo y termina (Railway lo dispara por cron).
-CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1280x1024x24", "pnpm", "exec", "tsx", "scripts/scraper/run-worker.ts"]
+# Arrancamos Xvfb a mano (más confiable que xvfb-run, que se cuelga acá),
+# exportamos DISPLAY, y corremos el worker como proceso principal (exec) para
+# que sus logs salgan al contenedor y el exit se propague bien.
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp & export DISPLAY=:99; sleep 2; echo '[entry] Xvfb listo, arrancando worker'; exec pnpm exec tsx scripts/scraper/run-worker.ts"]

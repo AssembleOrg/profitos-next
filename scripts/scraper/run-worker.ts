@@ -12,6 +12,8 @@ import "dotenv/config";
 import { prisma } from "@/lib/prisma/client";
 import { runScraperLeads } from "@/lib/scraper/run";
 
+console.log("[worker] proceso iniciado", new Date().toISOString());
+
 // Corte de seguridad: si algo se cuelga, matamos el proceso para no gastar
 // recursos (ni plata) de más. Configurable por env; default 5 min.
 const MAX_RUNTIME_MS = Number(process.env.SCRAPER_MAX_RUNTIME_MS ?? 300_000);

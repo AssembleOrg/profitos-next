@@ -9,8 +9,11 @@ const SYNC_KEY = "scraper:leads";
 export type PortalResult = { portal: string; ok: boolean; result?: unknown; error?: string };
 
 async function runPortal(name: string, fn: () => Promise<unknown>): Promise<PortalResult> {
+  console.log(`[run] iniciando ${name}...`);
   try {
-    return { portal: name, ok: true, result: await fn() };
+    const result = await fn();
+    console.log(`[run] ${name} terminó ok`);
+    return { portal: name, ok: true, result };
   } catch (err) {
     if (err instanceof SessionExpiredError) {
       return { portal: name, ok: false, error: "session_expired" };
