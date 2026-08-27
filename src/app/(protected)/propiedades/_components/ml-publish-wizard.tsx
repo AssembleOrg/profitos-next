@@ -428,10 +428,46 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
      
   }, [states]);
 
+  // Atributos requeridos que aún no tienen valor.
+  const missingAttrIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const a of attributes) {
+      const v = attrValues[a.id];
+      const filled = Boolean(v && (v.value_id || v.number?.trim() || v.value_name?.trim()));
+      if (!filled) ids.add(a.id);
+    }
+    return ids;
+  }, [attributes, attrValues]);
+
+  const locationOk = Boolean(loc.stateId && loc.cityId);
+
   const canPublish = useMemo(
-    () => Boolean(leafCategory && title.trim() && listingTypeId && Number(price) > 0 && pictures.length),
-    [leafCategory, title, listingTypeId, price, pictures]
+    () =>
+      Boolean(
+        leafCategory &&
+          title.trim() &&
+          listingTypeId &&
+          Number(price) > 0 &&
+          pictures.length &&
+          locationOk &&
+          missingAttrIds.size === 0
+      ),
+    [leafCategory, title, listingTypeId, price, pictures, locationOk, missingAttrIds]
   );
+
+  // Lista legible de lo que falta, para el footer.
+  const missingLabels = useMemo(() => {
+    const out: string[] = [];
+    if (!leafCategory) out.push("categoría");
+    if (!title.trim()) out.push("título");
+    if (!listingTypeId) out.push("tipo");
+    if (!(Number(price) > 0)) out.push("precio");
+    if (!pictures.length) out.push("fotos");
+    if (!loc.stateId) out.push("provincia");
+    else if (!loc.cityId) out.push("ciudad");
+    if (missingAttrIds.size) out.push(`${missingAttrIds.size} característica${missingAttrIds.size > 1 ? "s" : ""}`);
+    return out;
+  }, [leafCategory, title, listingTypeId, price, pictures, loc.stateId, loc.cityId, missingAttrIds]);
 
   function buildAttributesPayload() {
     return attributes.map((a) => {
@@ -739,7 +775,11 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                     />
                   </Field>
                   <Field label="Provincia">
-                    <select className={select} value={loc.stateId} onChange={(e) => goToState(e.target.value)}>
+                    <select
+                      className={select + (!loc.stateId ? " border-danger" : "")}
+                      value={loc.stateId}
+                      onChange={(e) => goToState(e.target.value)}
+                    >
                       <option value="">Seleccionar…</option>
                       {states.map((s) => (
                         <option key={s.id} value={s.id}>
@@ -750,7 +790,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                   </Field>
                   <Field label="Ciudad">
                     <select
-                      className={select}
+                      className={select + (loc.stateId && !loc.cityId ? " border-danger" : "")}
                       value={loc.cityId}
                       onChange={(e) => {
                         const c = cities.find((x) => x.id === e.target.value);
@@ -786,7 +826,12 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                 <Section title="Características">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {attributes.map((a) => (
-                      <Field key={a.id} label={a.name} hint={a.hint}>
+                      <Field
+                        key={a.id}
+                        label={a.name}
+                        hint={a.hint}
+                        className={missingAttrIds.has(a.id) ? "rounded-lg border-l-2 border-danger pl-2" : ""}
+                      >
                         {a.value_type === "list" && a.values?.length ? (
                           <select
                             className={select}
@@ -960,7 +1005,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                     {currency} {price} · {listingName} · {pictures.length} fotos
                   </span>
                 ) : (
-                  <span className="text-warning">Faltan: categoría, título, tipo, precio &gt; 0 y ≥1 foto.</span>
+                  <span className="text-warning">Faltan: {missingLabels.join(", ")}.</span>
                 )}
               </div>
               <div className="flex items-center gap-2">
