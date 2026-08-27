@@ -69,11 +69,17 @@ export interface MlListingPrice {
   currency_id?: string;
   listing_fee_amount?: number;
 }
-export function getListingPrices(categoryId: string) {
-  return mlFetch<MlListingPrice[]>(`/sites/${ML.siteId}/listing_prices`, {
-    auth: false,
-    query: { category_id: categoryId },
-  });
+// Requiere token (el endpoint responde 403 sin auth). price es opcional pero
+// algunos casos lo necesitan para calcular la comisión.
+export async function getListingPrices(categoryId: string, price?: number): Promise<MlListingPrice[]> {
+  const prices = await mlFetch<MlListingPrice[]>(`/sites/${ML.siteId}/listing_prices`, {
+    auth: true,
+    query: { category_id: categoryId, price: price && price > 0 ? price : undefined },
+  }).catch(() => [] as MlListingPrice[]);
+  if (prices.length) return prices;
+  // Fallback: tipos de publicación del sitio (por si la categoría no devuelve precios).
+  const types = await getListingTypes().catch(() => [] as MlListingType[]);
+  return types.map((t) => ({ listing_type_id: t.id, listing_type_name: t.name }));
 }
 
 // --- Lugares (para location) ---

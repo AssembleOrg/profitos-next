@@ -322,7 +322,9 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
             `/api/integrations/mercadolibre/catalog?resource=attributes&id=${leaf.id}`
           ),
           api<MlListingPrice[]>(
-            `/api/integrations/mercadolibre/catalog?resource=listing_prices&id=${leaf.id}`
+            `/api/integrations/mercadolibre/catalog?resource=listing_prices&id=${leaf.id}${
+              Number(price) > 0 ? `&price=${Number(price)}` : ""
+            }`
           ),
         ]);
         const req = attrs.filter((a) => a.tags?.required);
@@ -339,7 +341,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
         setCatBusy(false);
       }
     },
-    [property, prefillAttributes]
+    [property, prefillAttributes, price]
   );
 
   // Navega a una subcategoría (o la selecciona si es hoja).

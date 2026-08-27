@@ -32,7 +32,9 @@ export const GET = withHandler(async (request: NextRequest) => {
     }
     case "listing_prices": {
       if (!id) throw new AppError(400, "Falta 'id' (categoría)");
-      const data = await getListingPrices(id);
+      const priceRaw = sp.get("price");
+      const price = priceRaw ? Number(priceRaw) : undefined;
+      const data = await getListingPrices(id, Number.isFinite(price) ? price : undefined);
       return ok(data, "Tipos de publicación", path);
     }
     case "states": {
