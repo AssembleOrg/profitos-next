@@ -489,6 +489,9 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
 
   async function handlePublish() {
     if (!canPublish || !leafCategory) return;
+    // Reservamos la pestaña dentro del gesto del click para que el navegador no
+    // bloquee el window.open que ocurre después del await (post-fetch).
+    const previewTab = window.open("", "_blank");
     setPublishing(true);
     try {
       const payload = {
@@ -532,10 +535,12 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
         }
       );
       toast.success(publication?.externalId ? "Publicación actualizada" : "Publicado en MercadoLibre");
-      if (pub.permalink) window.open(pub.permalink, "_blank");
+      if (pub.permalink && previewTab) previewTab.location.href = pub.permalink;
+      else previewTab?.close();
       onPublished?.();
       onClose();
     } catch (err) {
+      previewTab?.close();
       toast.error(err instanceof Error ? err.message : "Error al publicar");
     } finally {
       setPublishing(false);

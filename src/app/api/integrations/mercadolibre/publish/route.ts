@@ -5,7 +5,7 @@ import { getAuthContext } from "@/lib/api/auth";
 import { prisma } from "@/lib/prisma/client";
 import { ML_PORTAL } from "@/lib/mercadolibre/config";
 import { MlApiError } from "@/lib/mercadolibre/client";
-import { publishItem, updateItem, type MlPublishInput } from "@/lib/mercadolibre/items";
+import { publishItem, updateItem, setItemStatus, type MlPublishInput } from "@/lib/mercadolibre/items";
 
 // Publica (o re-publica/edita) una propiedad en MercadoLibre.
 // Body: { propertyId, input: MlPublishInput }
@@ -49,10 +49,19 @@ export const POST = withHandler(async (request: NextRequest) => {
   });
 
   try {
-    const item =
+    let item =
       existing?.externalId
         ? await updateItem(existing.externalId, input)
         : await publishItem(input);
+
+    // ML suele crear el item classified en "paused"; lo activamos.
+    if (item.status !== "active" && item.status !== "closed") {
+      try {
+        item = await setItemStatus(item.id, "active");
+      } catch {
+        // si no se puede activar (p. ej. cupo de gratuitas), queda como está
+      }
+    }
 
     const publication = await prisma.propertyPublication.update({
       where: { propertyId_portal: { propertyId, portal: ML_PORTAL } },
