@@ -114,10 +114,50 @@ model Property {
   signatureProposals SignatureProposal[]
   rentalContracts   RentalContract[]
   accountEntries    AccountEntry[]
+  publications      PropertyPublication[]
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   @@map("jp_propiedades")
+}
+
+// OAuth por portal (cuenta única de la inmobiliaria).
+model PortalToken {
+  id           String    @id @default(cuid())
+  portal       String    @unique // mercadolibre | zonaprop | adinco
+  accessToken  String?   @map("access_token")
+  refreshToken String?   @map("refresh_token")
+  expiresAt    DateTime? @map("expires_at")
+  externalUser String?   @map("external_user")
+  nickname     String?
+  scope        String?
+  connectedAt  DateTime? @map("connected_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("jp_portal_tokens")
+}
+
+// Estado de publicación de una propiedad en un portal.
+model PropertyPublication {
+  id            String    @id @default(cuid())
+  propertyId    String    @map("property_id")
+  property      Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  portal        String    // mercadolibre | zonaprop | adinco
+  externalId    String?   @map("external_id")
+  status        String    @default("draft") // draft|publishing|active|paused|closed|error
+  permalink     String?
+  categoryId    String?   @map("category_id")
+  listingTypeId String?   @map("listing_type_id")
+  lastPayload   Json?     @map("last_payload")
+  lastError     String?   @map("last_error")
+  publishedAt   DateTime? @map("published_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@unique([propertyId, portal])
+  @@index([portal, status])
+  @@map("jp_property_publications")
 }
 
 model Client {

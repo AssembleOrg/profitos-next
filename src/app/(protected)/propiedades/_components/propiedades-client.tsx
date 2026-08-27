@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
 import { buildPropertyWhatsAppLink } from "@/lib/whatsapp";
+import { MlPublishWizard } from "./ml-publish-wizard";
 
 const PropertiesMap = dynamic(
   () => import("./properties-map").then((mod) => mod.PropertiesMap),
@@ -39,6 +40,7 @@ interface Property {
   ownerReportData: Record<string, unknown> | null;
   createdAt: string;
   _count?: { visitas: number };
+  mlPublication?: { status: string; permalink: string | null; published: boolean } | null;
 }
 
 interface PropiedadesClientProps {
@@ -104,6 +106,42 @@ function ManualChip() {
   );
 }
 
+/**
+ * Chip de estado de la publicación en MercadoLibre.
+ * Solo se muestra si la propiedad tiene item publicado (o en error).
+ */
+const ML_CHIP: Record<string, { label: string; cls: string }> = {
+  active: { label: "ML activa", cls: "border-success/30 bg-success/10 text-success" },
+  paused: { label: "ML pausada", cls: "border-warning/30 bg-warning-chip text-warning" },
+  closed: { label: "ML cerrada", cls: "border-border bg-bg text-text-muted" },
+  publishing: { label: "ML publicando…", cls: "border-info/30 bg-info/10 text-info" },
+  error: { label: "ML error", cls: "border-danger/30 bg-danger-chip text-danger" },
+};
+function MlChip({ status, permalink }: { status: string; permalink: string | null }) {
+  const c = ML_CHIP[status];
+  if (!c) return null;
+  const chip = (
+    <span
+      title={`MercadoLibre: ${c.label}`}
+      className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${c.cls}`}
+    >
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 7h-9M14 17H5" />
+        <circle cx="17" cy="17" r="3" />
+        <circle cx="7" cy="7" r="3" />
+      </svg>
+      {c.label}
+    </span>
+  );
+  return permalink ? (
+    <a href={permalink} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+      {chip}
+    </a>
+  ) : (
+    chip
+  );
+}
+
 function getStatusColor(status: string) {
   return PROPERTY_STATUSES.find((s) => s.value === status)?.color ?? "bg-text-muted";
 }
@@ -154,12 +192,28 @@ export function PropiedadesClient({
   // PDF popup & owner modal
   const [pdfPopup, setPdfPopup] = useState<PdfPopupState | null>(null);
   const [ownerModalProperty, setOwnerModalProperty] = useState<Property | null>(null);
+  const [wizardProperty, setWizardProperty] = useState<Property | null>(null);
   const [ownerForm, setOwnerForm] = useState({ visitasTotales: "", visitasMes: "", quejas: "", mejoras: "" });
   const [ownerSaving, setOwnerSaving] = useState(false);
 
   // Detecta mobile una sola vez al montar
   useEffect(() => {
     setIsMobile(window.innerWidth < 640);
+  }, []);
+
+  // Resultado del OAuth de MercadoLibre (?ml_connected / ?ml_error)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("ml_connected");
+    const err = params.get("ml_error");
+    if (connected) toast.success("MercadoLibre conectado");
+    if (err) toast.error(err);
+    if (connected || err) {
+      params.delete("ml_connected");
+      params.delete("ml_error");
+      const qs = params.toString();
+      window.history.replaceState(null, "", window.location.pathname + (qs ? `?${qs}` : ""));
+    }
   }, []);
 
   // Cerrar popup PDF al hacer click fuera
@@ -788,6 +842,9 @@ export function PropiedadesClient({
                   <div className="flex min-w-0 items-center gap-1.5">
                     <p className="truncate font-medium text-text">{p.address}</p>
                     {p.source === "manual" && <ManualChip />}
+                    {p.mlPublication?.published && (
+                      <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
+                    )}
                   </div>
                   <p className="mt-0.5 truncate text-xs text-text-muted">
                     {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
@@ -846,6 +903,9 @@ export function PropiedadesClient({
                     <div className="flex min-w-0 items-center gap-1.5">
                       <p className="truncate font-medium text-text">{p.address}</p>
                       {p.source === "manual" && <ManualChip />}
+                      {p.mlPublication?.published && (
+                        <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
+                      )}
                     </div>
                     <p className="mt-0.5 truncate text-xs text-text-muted">
                       {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
@@ -930,6 +990,9 @@ export function PropiedadesClient({
                       <div className="flex items-center gap-1.5">
                         <p className="font-medium text-text">{p.address}</p>
                         {p.source === "manual" && <ManualChip />}
+                        {p.mlPublication?.published && (
+                          <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
+                        )}
                       </div>
                       <p className="text-xs text-text-muted">{p.publicationTitle ?? p.realAddress ?? "Sin título"}</p>
                     </td>
@@ -1278,18 +1341,38 @@ export function PropiedadesClient({
                 style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
               >
                 {isEdit ? (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmAction("delete")}
-                    disabled={deleting}
-                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-danger transition-colors active:bg-danger-chip disabled:opacity-50"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                    </svg>
-                    {deleting ? "Eliminando..." : "Eliminar"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmAction("delete")}
+                      disabled={deleting}
+                      className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-danger transition-colors active:bg-danger-chip disabled:opacity-50"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                      </svg>
+                      {deleting ? "Eliminando..." : "Eliminar"}
+                    </button>
+                    {editProperty && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const p = editProperty;
+                          handleClose();
+                          setWizardProperty(p);
+                        }}
+                        className="flex items-center gap-1.5 rounded-lg border border-warning/40 bg-warning-chip px-3 py-2 text-sm font-medium text-warning transition-colors active:bg-warning/20"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+                          <polyline points="16 6 12 2 8 6" />
+                          <line x1="12" y1="2" x2="12" y2="15" />
+                        </svg>
+                        Publicar en ML
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div />
                 )}
@@ -1597,6 +1680,15 @@ export function PropiedadesClient({
           </div>
         </div>
       </Sheet>
+
+      {wizardProperty && (
+        <MlPublishWizard
+          propertyId={wizardProperty.id}
+          propertyLabel={wizardProperty.publicationTitle ?? wizardProperty.address}
+          onClose={() => setWizardProperty(null)}
+          onPublished={() => router.refresh()}
+        />
+      )}
     </div>
   );
 }
