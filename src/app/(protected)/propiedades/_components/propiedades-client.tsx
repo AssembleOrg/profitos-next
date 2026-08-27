@@ -191,6 +191,25 @@ export function PropiedadesClient({
   const [assigning, setAssigning] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [isMobile, setIsMobile] = useState(false);
+  const [syncingMl, setSyncingMl] = useState(false);
+
+  async function handleSyncMl() {
+    setSyncingMl(true);
+    try {
+      const res = await fetch("/api/integrations/mercadolibre/publications/sync", { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) {
+        toast.error(body.message ?? "No se pudo sincronizar");
+        return;
+      }
+      toast.success(body.message ?? "Estados sincronizados");
+      router.refresh();
+    } catch {
+      toast.error("Error de conexión al sincronizar");
+    } finally {
+      setSyncingMl(false);
+    }
+  }
 
   // PDF popup & owner modal
   const [pdfPopup, setPdfPopup] = useState<PdfPopupState | null>(null);
@@ -529,6 +548,18 @@ export function PropiedadesClient({
               <span className="sm:hidden">Asignar</span>
             </button>
           )}
+          <button
+            onClick={handleSyncMl}
+            disabled={syncingMl}
+            title="Sincronizar el estado de las publicaciones de MercadoLibre"
+            className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text-muted active:bg-surface disabled:opacity-50"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
+              <polyline points="21 3 21 8 16 8" />
+            </svg>
+            <span className="hidden sm:inline">{syncingMl ? "Sincronizando..." : "Sincronizar ML"}</span>
+          </button>
           <button
             onClick={() => setViewMode((v) => (v === "list" ? "map" : "list"))}
             className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text-muted active:bg-surface"
