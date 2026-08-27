@@ -94,7 +94,7 @@ export default async function ContactosPage({ searchParams }: Props) {
   const andFilters: Prisma.RecentContactWhereInput[] = [];
 
   if (hideDeleted) {
-    andFilters.push({ tokkoDeletedAt: null });
+    andFilters.push({ externalDeletedAt: null });
   }
 
   if (q) {
@@ -117,12 +117,12 @@ export default async function ContactosPage({ searchParams }: Props) {
   const [contacts, total, totalAll] = await Promise.all([
     prisma.recentContact.findMany({
       where,
-      orderBy: [{ tokkoCreatedAt: "desc" }, { createdAt: "desc" }],
+      orderBy: [{ externalCreatedAt: "desc" }, { createdAt: "desc" }],
       skip: (page - 1) * limit,
       take: limit,
       select: {
         id: true,
-        tokkoContactId: true,
+        externalId: true,
         name: true,
         email: true,
         phone: true,
@@ -133,8 +133,8 @@ export default async function ContactosPage({ searchParams }: Props) {
         agentName: true,
         agentEmail: true,
         tags: true,
-        tokkoCreatedAt: true,
-        tokkoDeletedAt: true,
+        externalCreatedAt: true,
+        externalDeletedAt: true,
         createdAt: true,
       },
     }),
@@ -144,7 +144,7 @@ export default async function ContactosPage({ searchParams }: Props) {
 
   const serializedTokko = contacts.map((c) => ({
     id: c.id,
-    tokkoContactId: c.tokkoContactId,
+    externalId: c.externalId,
     name: c.name,
     email: c.email,
     phone: c.phone,
@@ -155,8 +155,8 @@ export default async function ContactosPage({ searchParams }: Props) {
     agentName: c.agentName,
     agentEmail: c.agentEmail,
     tags: c.tags as string[],
-    tokkoCreatedAt: c.tokkoCreatedAt?.toISOString() ?? null,
-    tokkoDeletedAt: c.tokkoDeletedAt?.toISOString() ?? null,
+    externalCreatedAt: c.externalCreatedAt?.toISOString() ?? null,
+    externalDeletedAt: c.externalDeletedAt?.toISOString() ?? null,
     createdAt: c.createdAt.toISOString(),
   }));
 

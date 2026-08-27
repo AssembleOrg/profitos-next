@@ -40,12 +40,16 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
     referenceCode,
     publicUrl,
     city,
+    province,
     zone,
     type,
     status,
     roomAmount,
+    bedrooms,
     bathroomAmount,
+    parkingLotAmount,
     totalSurface,
+    roofedSurface,
     operationType,
     operationPrice,
     operationCurrency,
@@ -61,12 +65,16 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
   if (referenceCode !== undefined) data.referenceCode = referenceCode || null;
   if (publicUrl !== undefined) data.publicUrl = publicUrl || null;
   if (city !== undefined) data.city = city;
+  if (province !== undefined) data.province = province || null;
   if (zone !== undefined) data.zone = zone;
   if (type !== undefined) data.type = type;
   if (status !== undefined) data.status = status;
   if (roomAmount !== undefined) data.roomAmount = numberOrNull(roomAmount);
+  if (bedrooms !== undefined) data.bedrooms = numberOrNull(bedrooms);
   if (bathroomAmount !== undefined) data.bathroomAmount = numberOrNull(bathroomAmount);
+  if (parkingLotAmount !== undefined) data.parkingLotAmount = numberOrNull(parkingLotAmount);
   if (totalSurface !== undefined) data.totalSurface = numberOrNull(totalSurface);
+  if (roofedSurface !== undefined) data.roofedSurface = numberOrNull(roofedSurface);
   if (operationType !== undefined) data.operationType = operationType || null;
   if (operationPrice !== undefined) data.operationPrice = numberOrNull(operationPrice);
   if (operationCurrency !== undefined) data.operationCurrency = operationCurrency || null;

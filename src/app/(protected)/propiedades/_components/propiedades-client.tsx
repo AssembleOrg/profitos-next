@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
 import { buildPropertyWhatsAppLink } from "@/lib/whatsapp";
+import { MlPublishWizard } from "./ml-publish-wizard";
 
 const PropertiesMap = dynamic(
   () => import("./properties-map").then((mod) => mod.PropertiesMap),
@@ -18,7 +19,7 @@ const PropertiesMap = dynamic(
 
 interface Property {
   id: string;
-  tokkoId: number | null;
+  externalId: number | null;
   source: string;
   address: string;
   realAddress: string | null;
@@ -26,12 +27,16 @@ interface Property {
   referenceCode: string | null;
   publicUrl: string | null;
   city: string | null;
+  province: string | null;
   zone: string | null;
   type: string | null;
   status: string;
   roomAmount: number | null;
+  bedrooms: number | null;
   bathroomAmount: number | null;
+  parkingLotAmount: number | null;
   totalSurface: number | null;
+  roofedSurface: number | null;
   operationType: string | null;
   operationPrice: number | null;
   operationCurrency: string | null;
@@ -40,6 +45,7 @@ interface Property {
   ownerReportData: Record<string, unknown> | null;
   createdAt: string;
   _count?: { visitas: number };
+  mlPublication?: { status: string; permalink: string | null; published: boolean } | null;
 }
 
 interface PropiedadesClientProps {
@@ -87,7 +93,7 @@ const PROPERTY_STATUSES = [
 ];
 
 /**
- * Distintivo para propiedades cargadas a mano (no sincronizadas de Tokko).
+ * Distintivo para propiedades cargadas a mano (no importadas de un portal).
  * Chip con lápiz + "Manual" para que se entienda el origen de un vistazo.
  */
 function ManualChip() {
@@ -102,6 +108,42 @@ function ManualChip() {
       </svg>
       Manual
     </span>
+  );
+}
+
+/**
+ * Chip de estado de la publicación en MercadoLibre.
+ * Solo se muestra si la propiedad tiene item publicado (o en error).
+ */
+const ML_CHIP: Record<string, { label: string; cls: string }> = {
+  active: { label: "ML activa", cls: "border-success/30 bg-success/10 text-success" },
+  paused: { label: "ML pausada", cls: "border-warning/30 bg-warning-chip text-warning" },
+  closed: { label: "ML cerrada", cls: "border-border bg-bg text-text-muted" },
+  publishing: { label: "ML publicando…", cls: "border-info/30 bg-info/10 text-info" },
+  error: { label: "ML error", cls: "border-danger/30 bg-danger-chip text-danger" },
+};
+function MlChip({ status, permalink }: { status: string; permalink: string | null }) {
+  const c = ML_CHIP[status];
+  if (!c) return null;
+  const chip = (
+    <span
+      title={`MercadoLibre: ${c.label}`}
+      className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${c.cls}`}
+    >
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 7h-9M14 17H5" />
+        <circle cx="17" cy="17" r="3" />
+        <circle cx="7" cy="7" r="3" />
+      </svg>
+      {c.label}
+    </span>
+  );
+  return permalink ? (
+    <a href={permalink} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+      {chip}
+    </a>
+  ) : (
+    chip
   );
 }
 
@@ -148,19 +190,53 @@ export function PropiedadesClient({
   const [confirmAction, setConfirmAction] = useState<"save" | "delete" | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assigning, setAssigning] = useState(false);
-  const [syncingTokko, setSyncingTokko] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [isMobile, setIsMobile] = useState(false);
+  const [syncingMl, setSyncingMl] = useState(false);
+
+  async function handleSyncMl() {
+    setSyncingMl(true);
+    try {
+      const res = await fetch("/api/integrations/mercadolibre/publications/sync", { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) {
+        toast.error(body.message ?? "No se pudo sincronizar");
+        return;
+      }
+      toast.success(body.message ?? "Estados sincronizados");
+      router.refresh();
+    } catch {
+      toast.error("Error de conexión al sincronizar");
+    } finally {
+      setSyncingMl(false);
+    }
+  }
 
   // PDF popup & owner modal
   const [pdfPopup, setPdfPopup] = useState<PdfPopupState | null>(null);
   const [ownerModalProperty, setOwnerModalProperty] = useState<Property | null>(null);
+  const [wizardProperty, setWizardProperty] = useState<Property | null>(null);
   const [ownerForm, setOwnerForm] = useState({ visitasTotales: "", visitasMes: "", quejas: "", mejoras: "" });
   const [ownerSaving, setOwnerSaving] = useState(false);
 
   // Detecta mobile una sola vez al montar
   useEffect(() => {
     setIsMobile(window.innerWidth < 640);
+  }, []);
+
+  // Resultado del OAuth de MercadoLibre (?ml_connected / ?ml_error)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("ml_connected");
+    const err = params.get("ml_error");
+    if (connected) toast.success("MercadoLibre conectado");
+    if (err) toast.error(err);
+    if (connected || err) {
+      params.delete("ml_connected");
+      params.delete("ml_error");
+      const qs = params.toString();
+      window.history.replaceState(null, "", window.location.pathname + (qs ? `?${qs}` : ""));
+    }
   }, []);
 
   // Cerrar popup PDF al hacer click fuera
@@ -259,12 +335,16 @@ export function PropiedadesClient({
       referenceCode: (form.get("referenceCode") as string) || null,
       publicUrl: (form.get("publicUrl") as string) || null,
       city: (form.get("city") as string) || null,
+      province: (form.get("province") as string) || null,
       zone: (form.get("zone") as string) || null,
       type: (form.get("type") as string) || null,
       status: form.get("status") as string,
       roomAmount: (form.get("roomAmount") as string) || null,
+      bedrooms: (form.get("bedrooms") as string) || null,
       bathroomAmount: (form.get("bathroomAmount") as string) || null,
+      parkingLotAmount: (form.get("parkingLotAmount") as string) || null,
       totalSurface: (form.get("totalSurface") as string) || null,
+      roofedSurface: (form.get("roofedSurface") as string) || null,
       operationType: (form.get("operationType") as string) || null,
       operationPrice: (form.get("operationPrice") as string) || null,
       operationCurrency: (form.get("operationCurrency") as string) || null,
@@ -360,43 +440,6 @@ export function PropiedadesClient({
       toast.error("Error de conexión");
     } finally {
       setAssigning(false);
-    }
-  }
-
-  async function handleSyncTokko(mode: "auto" | "api") {
-    setSyncingTokko(true);
-    try {
-      const res = await fetch("/api/integrations/tokko/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.message ?? "No se pudo sincronizar con Tokko");
-        return;
-      }
-      if (data.data?.skipped) {
-        if (data.data.reason === "sync_in_progress") {
-          toast.info("Sincronización ya en curso, esperá un momento");
-        } else if (data.data.reason === "cooldown") {
-          toast.info(`Tokko actualizado recientemente. Disponible en ${data.data.minutesLeft} min`);
-        }
-        return;
-      }
-      if (data.data?.noChanges) {
-        toast.success("Tokko al día. No se detectaron nuevas propiedades.");
-        router.refresh();
-        return;
-      }
-      toast.success(
-        `Tokko sincronizado · nuevos: ${data.data?.created ?? 0}, actualizados: ${data.data?.updated ?? 0}`
-      );
-      router.refresh();
-    } catch {
-      toast.error("Error de conexión al sincronizar Tokko");
-    } finally {
-      setSyncingTokko(false);
     }
   }
 
@@ -506,20 +549,19 @@ export function PropiedadesClient({
               <span className="sm:hidden">Asignar</span>
             </button>
           )}
-          {isAdmin && (
-            <button
-              onClick={() => handleSyncTokko("auto")}
-              disabled={syncingTokko}
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg disabled:opacity-50"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
-                <polyline points="21 3 21 8 16 8" />
-              </svg>
-              <span className="hidden sm:inline">{syncingTokko ? "Sincronizando..." : "Actualizar Tokko"}</span>
-              <span className="sm:hidden">{syncingTokko ? "..." : "Tokko"}</span>
-            </button>
-          )}
+          <button
+            onClick={handleSyncMl}
+            disabled={syncingMl}
+            title="Sincronizar el estado de las publicaciones de MercadoLibre"
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg disabled:opacity-50"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
+              <polyline points="21 3 21 8 16 8" />
+            </svg>
+            <span className="hidden sm:inline">{syncingMl ? "Sincronizando..." : "Sincronizar ML"}</span>
+            <span className="sm:hidden">ML</span>
+          </button>
           <div className="inline-flex h-11 items-center gap-0.5 rounded-full border border-border bg-surface p-1">
             <button
               onClick={() => setViewMode("list")}
@@ -648,7 +690,7 @@ export function PropiedadesClient({
               <option value="price_asc">Precio menor</option>
               <option value="price_desc">Precio mayor</option>
               <option value="surface_desc">Mayor superficie</option>
-              <option value="tokko_newest">Más nuevas Tokko</option>
+              <option value="external_newest">Más nuevas</option>
             </SelectField>
           </div>
         )}
@@ -715,7 +757,7 @@ export function PropiedadesClient({
             <option value="price_asc">Precio menor</option>
             <option value="price_desc">Precio mayor</option>
             <option value="surface_desc">Mayor superficie</option>
-            <option value="tokko_newest">Más nuevas Tokko</option>
+            <option value="external_newest">Más nuevas</option>
           </SelectField>
         </div>
 
@@ -785,6 +827,9 @@ export function PropiedadesClient({
                   <div className="flex min-w-0 items-center gap-1.5">
                     <p className="truncate text-[13.5px] font-bold text-text">{p.address}</p>
                     {p.source === "manual" && <ManualChip />}
+                    {p.mlPublication?.published && (
+                      <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
+                    )}
                   </div>
                   <p className="mt-0.5 truncate text-[11.5px] text-text-faint">
                     {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
@@ -842,6 +887,9 @@ export function PropiedadesClient({
                     <div className="flex min-w-0 items-center gap-1.5">
                       <p className="truncate text-[13.5px] font-bold text-text">{p.address}</p>
                       {p.source === "manual" && <ManualChip />}
+                      {p.mlPublication?.published && (
+                        <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
+                      )}
                     </div>
                     <p className="mt-0.5 truncate text-[11.5px] text-text-faint">
                       {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
@@ -925,10 +973,13 @@ export function PropiedadesClient({
                       <div className="flex items-center gap-1.5">
                         <p className="text-[13.5px] font-bold text-text">{p.address}</p>
                         {p.source === "manual" && <ManualChip />}
+                        {p.mlPublication?.published && (
+                          <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
+                        )}
                       </div>
                       <p className="text-[11.5px] text-text-faint">{p.publicationTitle ?? p.realAddress ?? "Sin título"}</p>
                     </td>
-                    <td className="px-4 py-3.5 text-[13px] text-text-muted">{p.referenceCode ?? (p.tokkoId ? `#${p.tokkoId}` : "—")}</td>
+                    <td className="px-4 py-3.5 text-[13px] text-text-muted">{p.referenceCode ?? (p.externalId ? `#${p.externalId}` : "—")}</td>
                     <td className="px-4 py-3.5 font-display text-[13.5px] font-bold text-text">
                       {p.operationPrice ? `${p.operationCurrency ?? "USD"} ${p.operationPrice.toLocaleString("es-AR")}` : "—"}
                     </td>
@@ -973,7 +1024,7 @@ export function PropiedadesClient({
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(event) => event.stopPropagation()}
-                            title="Ver en Tokko"
+                            title="Ver publicación"
                             className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-bg text-text-muted transition-colors hover:text-text"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1041,9 +1092,9 @@ export function PropiedadesClient({
               className={`fixed z-50 flex flex-col border border-border bg-surface shadow-2xl
                 /* mobile: bottom sheet */
                 bottom-0 left-0 right-0 max-h-[90dvh] rounded-t-[28px]
-                /* desktop: centered dialog */
-                sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-md
-                sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-h-[85vh] sm:rounded-3xl`}
+                /* desktop: centered dialog — ancho amplio para respirar */
+                sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-2xl lg:max-w-4xl
+                sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-h-[88vh] sm:rounded-3xl`}
             >
               {/* Drag handle — solo mobile */}
               <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-border sm:hidden" />
@@ -1066,7 +1117,7 @@ export function PropiedadesClient({
               </div>
 
               {/* Body scrolleable */}
-              <form id="property-form" onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 py-4">
+              <form id="property-form" onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 py-4 sm:gap-5 sm:px-8 sm:py-6">
                 <div>
                   <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Dirección *</label>
                   <input
@@ -1109,22 +1160,31 @@ export function PropiedadesClient({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Zona</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Provincia</label>
                     <input
-                      name="zone"
-                      defaultValue={editProperty?.zone ?? ""}
-                      placeholder="Palermo"
+                      name="province"
+                      defaultValue={editProperty?.province ?? ""}
+                      placeholder="Buenos Aires"
                       className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Ciudad</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Ciudad / Partido</label>
                     <input
                       name="city"
                       defaultValue={editProperty?.city ?? ""}
-                      placeholder="Buenos Aires"
+                      placeholder="Quilmes"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Barrio / Zona</label>
+                    <input
+                      name="zone"
+                      defaultValue={editProperty?.zone ?? ""}
+                      placeholder="Ezpeleta"
                       className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
@@ -1155,7 +1215,7 @@ export function PropiedadesClient({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3 lg:grid-cols-6">
                   <div>
                     <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Ambientes</label>
                     <input
@@ -1164,6 +1224,16 @@ export function PropiedadesClient({
                       min={0}
                       defaultValue={editProperty?.roomAmount ?? ""}
                       className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Dormitorios</label>
+                    <input
+                      name="bedrooms"
+                      type="number"
+                      min={0}
+                      defaultValue={editProperty?.bedrooms ?? ""}
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
                   <div>
@@ -1177,7 +1247,17 @@ export function PropiedadesClient({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Sup. total</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Cocheras</label>
+                    <input
+                      name="parkingLotAmount"
+                      type="number"
+                      min={0}
+                      defaultValue={editProperty?.parkingLotAmount ?? ""}
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Sup. total (m²)</label>
                     <input
                       name="totalSurface"
                       type="number"
@@ -1185,6 +1265,17 @@ export function PropiedadesClient({
                       step="0.01"
                       defaultValue={editProperty?.totalSurface ?? ""}
                       className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-text-muted">Sup. cubierta (m²)</label>
+                    <input
+                      name="roofedSurface"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      defaultValue={editProperty?.roofedSurface ?? ""}
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
                 </div>
@@ -1263,24 +1354,88 @@ export function PropiedadesClient({
                 )}
               </form>
 
+              {/* Estado de publicación en MercadoLibre */}
+              {isEdit && editProperty?.mlPublication?.published && (
+                <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border bg-sand-chip/40 px-5 py-3">
+                  <div className="flex items-center gap-2">
+                    <MlChip status={editProperty.mlPublication.status} permalink={null} />
+                    <span className="text-xs text-text-muted">Publicado en MercadoLibre</span>
+                  </div>
+                  {editProperty.mlPublication.permalink && (
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={editProperty.mlPublication.permalink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-9 items-center gap-1 rounded-full border border-border bg-surface px-3.5 text-[12.5px] font-semibold text-text-muted transition-colors hover:bg-bg"
+                      >
+                        Ver aviso
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M7 17L17 7" />
+                          <path d="M7 7h10v10" />
+                        </svg>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(editProperty.mlPublication!.permalink!);
+                            toast.success("Link copiado");
+                          } catch {
+                            toast.error("No se pudo copiar");
+                          }
+                        }}
+                        className="inline-flex h-9 items-center gap-1 rounded-full border border-border bg-surface px-3.5 text-[12.5px] font-semibold text-text-muted transition-colors hover:bg-bg"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                        </svg>
+                        Copiar link
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Footer fijo con acciones */}
               <div
                 className="flex flex-shrink-0 items-center justify-between border-t border-border px-5 py-4"
                 style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
               >
                 {isEdit ? (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmAction("delete")}
-                    disabled={deleting}
-                    className="flex h-10 items-center gap-1.5 rounded-full bg-clay-chip px-4 text-[13px] font-bold text-terra transition-opacity active:opacity-80 disabled:opacity-50"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                    </svg>
-                    {deleting ? "Eliminando..." : "Eliminar"}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmAction("delete")}
+                      disabled={deleting}
+                      className="flex h-10 items-center gap-1.5 rounded-full bg-clay-chip px-4 text-[13px] font-bold text-terra transition-opacity active:opacity-80 disabled:opacity-50"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                      </svg>
+                      {deleting ? "Eliminando..." : "Eliminar"}
+                    </button>
+                    {editProperty && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const p = editProperty;
+                          handleClose();
+                          setWizardProperty(p);
+                        }}
+                        className="flex h-10 items-center gap-1.5 rounded-full bg-sand-chip px-4 text-[13px] font-bold text-warning transition-opacity active:opacity-80"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+                          <polyline points="16 6 12 2 8 6" />
+                          <line x1="12" y1="2" x2="12" y2="15" />
+                        </svg>
+                        {editProperty.mlPublication?.published ? "Gestionar en ML" : "Publicar en ML"}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div />
                 )}
@@ -1580,6 +1735,15 @@ export function PropiedadesClient({
           </div>
         </div>
       </Sheet>
+
+      {wizardProperty && (
+        <MlPublishWizard
+          propertyId={wizardProperty.id}
+          propertyLabel={wizardProperty.publicationTitle ?? wizardProperty.address}
+          onClose={() => setWizardProperty(null)}
+          onPublished={() => router.refresh()}
+        />
+      )}
     </div>
   );
 }

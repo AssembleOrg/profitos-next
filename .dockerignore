@@ -1,0 +1,25 @@
+# Lo que NO va dentro de la imagen Docker.
+
+# Dependencias y builds: se regeneran adentro.
+node_modules
+.next
+out
+build
+
+# Secretos: NUNCA en la imagen. Railway inyecta las envs en runtime.
+.env
+.env.*
+
+# Cliente Prisma generado: lo regenera `pnpm run build`.
+src/generated
+
+# Cosas de desarrollo / control de versiones.
+.git
+.gitignore
+.vscode
+.claude
+*.log
+
+# Artefactos pesados que no hacen falta en runtime.
+V5*.png
+*.tsbuildinfo

@@ -21,7 +21,7 @@ interface UserOption {
 
 interface RecentContactItem {
   id: string;
-  tokkoContactId: number;
+  externalId: number;
   name: string;
   email: string | null;
   phone: string | null;
@@ -29,7 +29,7 @@ interface RecentContactItem {
   leadStatus: string | null;
   agentName: string | null;
   agentEmail: string | null;
-  tokkoCreatedAt: string | null;
+  externalCreatedAt: string | null;
 }
 
 interface FollowUpItem {
@@ -449,7 +449,7 @@ export function ConsultantsFollowUpsClient({
                 <tr key={item.id} className="border-b border-border last:border-b-0 hover:bg-bg">
                   <td className="px-4 py-3.5">
                     <p className="text-[13.5px] font-bold text-text">{item.recentContact.name}</p>
-                    <p className="text-[11.5px] text-text-faint">#{item.recentContact.tokkoContactId}</p>
+                    <p className="text-[11.5px] text-text-faint">#{item.recentContact.externalId}</p>
                     {item.recentContact.email && (
                       <button
                         onClick={() => { navigator.clipboard.writeText(item.recentContact.email!); toast.success("Mail copiado"); }}

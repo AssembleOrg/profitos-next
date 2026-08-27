@@ -25,7 +25,7 @@ interface Client {
 
 interface TokkoContact {
   id: string;
-  tokkoContactId: number;
+  externalId: number;
   name: string;
   email: string | null;
   phone: string | null;
@@ -36,8 +36,8 @@ interface TokkoContact {
   agentName: string | null;
   agentEmail: string | null;
   tags: string[];
-  tokkoCreatedAt: string | null;
-  tokkoDeletedAt: string | null;
+  externalCreatedAt: string | null;
+  externalDeletedAt: string | null;
   createdAt: string;
 }
 
@@ -97,7 +97,6 @@ export function ContactosClient({
   total,
   limit,
   totalAll,
-  isAdmin,
   filters,
   leadStatusOptions = [],
 }: ContactosClientProps) {
@@ -122,8 +121,6 @@ export function ContactosClient({
   const [tokkoLoading, setTokkoLoading] = useState(false);
 
   // Sync state
-  const [syncing, setSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState<{ offset: number; total: number } | null>(null);
 
   function applyFilters(nextPage = 1) {
     const params = new URLSearchParams(searchParams.toString());
@@ -149,41 +146,6 @@ export function ContactosClient({
     router.push(params.toString() ? `${pathname}?${params}` : pathname);
   }
 
-  async function handleFullSync(reset = false) {
-    setSyncing(true);
-    setSyncProgress(null);
-    let totalCreated = 0;
-    let totalUpdated = 0;
-
-    try {
-      let done = false;
-      while (!done) {
-        const res = await fetch("/api/integrations/tokko/contacts-full-sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reset: reset && totalCreated === 0 && totalUpdated === 0 }),
-        });
-        const body = await res.json();
-        if (!res.ok) {
-          toast.error(body.message ?? "Error en sincronización");
-          break;
-        }
-        const data = body.data;
-        totalCreated += data.created ?? 0;
-        totalUpdated += data.updated ?? 0;
-        setSyncProgress({ offset: data.offset, total: data.totalCount });
-        done = data.done;
-      }
-      toast.success(`Sincronización completa: ${totalCreated} nuevos, ${totalUpdated} actualizados`);
-      router.refresh();
-    } catch {
-      toast.error("Error de conexión durante sincronización");
-    } finally {
-      setSyncing(false);
-      setSyncProgress(null);
-    }
-  }
-
   // Tokko contact handlers
   function handleEditTokko(c: TokkoContact) { setEditTokkoContact(c); setTokkoModalOpen(true); }
   function handleCloseTokko() { setTokkoModalOpen(false); setEditTokkoContact(null); }
@@ -201,7 +163,7 @@ export function ContactosClient({
       leadStatus: (form.get("leadStatus") as string) || null,
     };
     try {
-      const res = await fetch(`/api/contactos-tokko/${editTokkoContact.id}`, {
+      const res = await fetch(`/api/contactos/${editTokkoContact.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -276,23 +238,6 @@ export function ContactosClient({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {isAdmin && tab === "tokko" && (
-            <button
-              onClick={() => handleFullSync(false)}
-              disabled={syncing}
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg disabled:opacity-50"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
-                <polyline points="21 3 21 8 16 8" />
-              </svg>
-              {syncing ? (
-                syncProgress
-                  ? `${syncProgress.offset} / ${syncProgress.total}`
-                  : "Sincronizando..."
-              ) : "Sincronizar Tokko"}
-            </button>
-          )}
           {tab === "manual" && (
             <button
               onClick={handleNew}
@@ -424,7 +369,7 @@ export function ContactosClient({
                 description={
                   filters.q || filters.leadStatus
                     ? "Probá ajustando la búsqueda o los filtros."
-                    : "Sincronizá con Tokko para traer tus contactos."
+                    : "Aún no hay contactos importados."
                 }
               />
             ) : (
@@ -463,8 +408,8 @@ export function ContactosClient({
                       </span>
                     )}
                   </div>
-                  {c.tokkoCreatedAt && (
-                    <p className="mt-2 text-[11.5px] text-text-faint">{formatDate(c.tokkoCreatedAt)}</p>
+                  {c.externalCreatedAt && (
+                    <p className="mt-2 text-[11.5px] text-text-faint">{formatDate(c.externalCreatedAt)}</p>
                   )}
                 </div>
               ))
@@ -480,7 +425,7 @@ export function ContactosClient({
                   <th className="hidden px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint md:table-cell">Email</th>
                   <th className="hidden px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint lg:table-cell">Teléfono</th>
                   <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Estado</th>
-                  <th className="hidden px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint lg:table-cell">Fecha Tokko</th>
+                  <th className="hidden px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint lg:table-cell">Fecha</th>
                 </tr>
               </thead>
               <tbody>
@@ -492,7 +437,7 @@ export function ContactosClient({
                         description={
                           filters.q || filters.leadStatus
                             ? "Probá ajustando la búsqueda o los filtros."
-                            : "Sincronizá con Tokko para traer tus contactos."
+                            : "Aún no hay contactos importados."
                         }
                       />
                     </td>
@@ -502,8 +447,8 @@ export function ContactosClient({
                     <tr key={c.id} onClick={() => handleEditTokko(c)} className="cursor-pointer border-t border-border transition-colors hover:bg-bg">
                       <td className="px-4 py-3.5">
                         <p className="text-[13.5px] font-bold text-text">{c.name}</p>
-                        {c.tokkoDeletedAt && (
-                          <p className="text-[10.5px] font-bold text-terra">Eliminado en Tokko</p>
+                        {c.externalDeletedAt && (
+                          <p className="text-[10.5px] font-bold text-terra">Eliminado</p>
                         )}
                         <p className="mt-0.5 text-[11.5px] text-text-faint md:hidden">
                           {c.email ?? ((c.cellphone || c.phone) ? (
@@ -534,7 +479,7 @@ export function ContactosClient({
                         ) : "—"}
                       </td>
                       <td className="hidden px-4 py-3.5 text-[13px] text-text-muted lg:table-cell">
-                        {c.tokkoCreatedAt ? formatDate(c.tokkoCreatedAt) : "—"}
+                        {c.externalCreatedAt ? formatDate(c.externalCreatedAt) : "—"}
                       </td>
                     </tr>
                   ))
@@ -726,8 +671,8 @@ export function ContactosClient({
               className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
           </div>
           */}
-          {editTokkoContact?.tokkoCreatedAt && (
-            <p className="text-[11.5px] text-text-faint">Creado en Tokko: {formatDate(editTokkoContact.tokkoCreatedAt)}</p>
+          {editTokkoContact?.externalCreatedAt && (
+            <p className="text-[11.5px] text-text-faint">Creado: {formatDate(editTokkoContact.externalCreatedAt)}</p>
           )}
         </form>
       </Sheet>

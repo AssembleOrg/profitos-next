@@ -74,14 +74,20 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     if (sort === "price_asc") return [{ operationPrice: "asc" }, { createdAt: "desc" }];
     if (sort === "price_desc") return [{ operationPrice: "desc" }, { createdAt: "desc" }];
     if (sort === "surface_desc") return [{ totalSurface: "desc" }, { createdAt: "desc" }];
-    if (sort === "tokko_newest") return [{ tokkoCreatedAt: "desc" }, { createdAt: "desc" }];
+    if (sort === "external_newest") return [{ externalCreatedAt: "desc" }, { createdAt: "desc" }];
     return [{ createdAt: "desc" }];
   })();
 
   const [properties, total, totalAll, usersForAssignments, propertiesForAssignments] = await Promise.all([
     prisma.property.findMany({
       where,
-      include: { _count: { select: { visitas: true } } },
+      include: {
+        _count: { select: { visitas: true } },
+        publications: {
+          where: { portal: "mercadolibre" },
+          select: { status: true, permalink: true, externalId: true },
+        },
+      },
       orderBy,
       skip: (page - 1) * limit,
       take: limit,
@@ -105,7 +111,7 @@ export default async function PropiedadesPage({ searchParams }: Props) {
 
   const serialized = properties.map((p: {
     id: string;
-    tokkoId: number | null;
+    externalId: number | null;
     source: string;
     address: string;
     realAddress: string | null;
@@ -113,12 +119,16 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     referenceCode: string | null;
     publicUrl: string | null;
     city: string | null;
+    province: string | null;
     zone: string | null;
     type: string | null;
     status: string;
     roomAmount: number | null;
+    bedrooms: number | null;
     bathroomAmount: number | null;
+    parkingLotAmount: number | null;
     totalSurface: number | null;
+    roofedSurface: number | null;
     operationType: string | null;
     operationPrice: number | null;
     operationCurrency: string | null;
@@ -127,9 +137,10 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     ownerReportData: unknown;
     createdAt: Date;
     _count: { visitas: number };
+    publications: { status: string; permalink: string | null; externalId: string | null }[];
   }) => ({
     id: p.id,
-    tokkoId: p.tokkoId,
+    externalId: p.externalId,
     source: p.source,
     address: p.address,
     realAddress: p.realAddress,
@@ -137,12 +148,16 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     referenceCode: p.referenceCode,
     publicUrl: p.publicUrl,
     city: p.city,
+    province: p.province,
     zone: p.zone,
     type: p.type,
     status: p.status,
     roomAmount: p.roomAmount,
+    bedrooms: p.bedrooms,
     bathroomAmount: p.bathroomAmount,
+    parkingLotAmount: p.parkingLotAmount,
     totalSurface: p.totalSurface,
+    roofedSurface: p.roofedSurface,
     operationType: p.operationType,
     operationPrice: p.operationPrice,
     operationCurrency: p.operationCurrency,
@@ -151,6 +166,13 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     ownerReportData: (p.ownerReportData as Record<string, unknown>) ?? null,
     createdAt: p.createdAt.toISOString(),
     _count: p._count,
+    mlPublication: p.publications[0]
+      ? {
+          status: p.publications[0].status,
+          permalink: p.publications[0].permalink,
+          published: Boolean(p.publications[0].externalId),
+        }
+      : null,
   }));
 
   return (

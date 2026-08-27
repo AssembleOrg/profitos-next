@@ -58,12 +58,13 @@ model User {
 
 model Property {
   id                String    @id @default(cuid())
-  tokkoId           Int?      @unique @map("tokko_id")
+  externalId        Int?      @unique @map("external_id")
   source            String    @default("manual")
   address           String
   realAddress       String?   @map("real_address")
   addressComplement String?   @map("address_complement")
   city              String?
+  province          String?
   zone              String?
   type              String?   // departamento, casa, local, terreno, oficina, etc
   status            String    @default("activa") // activa, vendida, alquilada, suspendida
@@ -74,6 +75,7 @@ model Property {
   richDescription   String?   @map("rich_description")
   age               Int?
   roomAmount        Int?      @map("room_amount")
+  bedrooms          Int?
   bathroomAmount    Int?      @map("bathroom_amount")
   suiteAmount       Int?      @map("suite_amount")
   parkingLotAmount  Int?      @map("parking_lot_amount")
@@ -101,8 +103,8 @@ model Property {
   tags              Json?
   extraAttributes   Json?     @map("extra_attributes")
   deletedAt         DateTime? @map("deleted_at")
-  tokkoCreatedAt    DateTime? @map("tokko_created_at")
-  tokkoUpdatedAt    DateTime? @map("tokko_updated_at")
+  externalCreatedAt DateTime? @map("external_created_at")
+  externalUpdatedAt DateTime? @map("external_updated_at")
   rawPayload        Json?     @map("raw_payload")
   ownerReportData   Json?     @map("owner_report_data")
   syncAt            DateTime? @map("sync_at")
@@ -114,10 +116,73 @@ model Property {
   signatureProposals SignatureProposal[]
   rentalContracts   RentalContract[]
   accountEntries    AccountEntry[]
+  publications      PropertyPublication[]
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   @@map("jp_propiedades")
+}
+
+// OAuth por portal (cuenta única de la inmobiliaria).
+model PortalToken {
+  id           String    @id @default(cuid())
+  portal       String    @unique // mercadolibre | zonaprop | adinco
+  accessToken  String?   @map("access_token")
+  refreshToken String?   @map("refresh_token")
+  expiresAt    DateTime? @map("expires_at")
+  externalUser String?   @map("external_user")
+  nickname     String?
+  scope        String?
+  connectedAt  DateTime? @map("connected_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("jp_portal_tokens")
+}
+
+// Estado de publicación de una propiedad en un portal.
+model PropertyPublication {
+  id            String    @id @default(cuid())
+  propertyId    String    @map("property_id")
+  property      Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  portal        String    // mercadolibre | zonaprop | adinco
+  externalId    String?   @map("external_id")
+  status        String    @default("draft") // draft|publishing|active|paused|closed|error
+  permalink     String?
+  categoryId    String?   @map("category_id")
+  listingTypeId String?   @map("listing_type_id")
+  lastPayload   Json?     @map("last_payload")
+  lastError     String?   @map("last_error")
+  publishedAt   DateTime? @map("published_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@unique([propertyId, portal])
+  @@index([portal, status])
+  @@map("jp_property_publications")
+}
+
+// Preguntas recibidas en publicaciones de portales (leads). Poblado por webhook.
+model PortalQuestion {
+  id         String    @id @default(cuid())
+  portal     String    @default("mercadolibre")
+  externalId String    @map("external_id") // id de la pregunta en el portal
+  itemId     String    @map("item_id") // MLA... del aviso
+  propertyId String?   @map("property_id") // resuelto vía publicación (sin FK)
+  text       String
+  status     String    @default("UNANSWERED")
+  answerText String?   @map("answer_text")
+  fromUserId String?   @map("from_user_id")
+  askedAt    DateTime? @map("asked_at")
+  answeredAt DateTime? @map("answered_at")
+  rawPayload Json?     @map("raw_payload")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@unique([portal, externalId])
+  @@index([propertyId])
+  @@index([itemId])
+  @@map("jp_portal_questions")
 }
 
 model Client {
@@ -198,8 +263,8 @@ model FollowUpAction {
 
 model RecentContact {
   id               String    @id @default(cuid())
-  tokkoContactId   Int       @unique @map("tokko_contact_id")
-  source           String    @default("tokko")
+  externalId       Int       @unique @map("external_id")
+  source           String    @default("legacy")
   name             String
   email            String?
   phone            String?
@@ -212,8 +277,8 @@ model RecentContact {
   agentEmail       String?   @map("agent_email")
   agentPhone       String?   @map("agent_phone")
   tags             Json?
-  tokkoCreatedAt   DateTime? @map("tokko_created_at")
-  tokkoDeletedAt   DateTime? @map("tokko_deleted_at")
+  externalCreatedAt DateTime? @map("external_created_at")
+  externalDeletedAt DateTime? @map("external_deleted_at")
   rawPayload       Json?     @map("raw_payload")
   syncAt           DateTime? @map("sync_at")
   createdAt        DateTime  @default(now()) @map("created_at")
@@ -628,4 +693,45 @@ model AccountEntry {
   @@index([agentUserId])
   @@index([isShared])
   @@map("jp_account_entries")
+}
+
+// ============================================================================
+// Scraper de leads de portales (ZonaProp / ArgenProp).
+// Trae las consultas de cada portal por su API interna cada determinado tiempo (por ahora una hora).
+// ============================================================================
+
+model ScrapedLead {
+  id              String    @id @default(cuid())
+  portal          String    // "zonaprop" | "argenprop"
+  section         String    // "mensajes" | "telefono" | "whatsapp" | "contactados"
+  externalId      String    @map("external_id") // ID único de la consulta en el portal
+  contactName     String?   @map("contact_name")
+  contactEmail    String?   @map("contact_email")
+  contactPhone    String?   @map("contact_phone")
+  messageText     String?   @map("message_text")
+  messageAt       DateTime? @map("message_at")
+  propertyRef     String?   @map("property_ref")     // código/ID del aviso
+  propertyTitle   String?   @map("property_title")
+  propertyAddress String?   @map("property_address")
+  propertyUrl     String?   @map("property_url")
+  price           String?
+  mapPolygon      Json?     @map("map_polygon")       // zona buscada (extra ZonaProp)
+  raw             Json?                                // payload crudo por si falta algo
+  scrapedAt       DateTime  @default(now()) @map("scraped_at")
+
+  @@unique([portal, section, externalId]) // dedup a nivel DB
+  @@index([portal, section, scrapedAt])
+  @@map("jp_scraped_leads")
+}
+
+model ScraperSession {
+  id           String    @id @default(cuid())
+  portal       String    @unique // "zonaprop" | "argenprop"
+  storageState Json      @map("storage_state") // cookies/localStorage de Playwright
+  valid        Boolean   @default(true)
+  lastOkAt     DateTime? @map("last_ok_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("jp_scraper_sessions")
 }

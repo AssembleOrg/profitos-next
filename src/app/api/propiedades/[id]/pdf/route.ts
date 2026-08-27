@@ -516,7 +516,7 @@ export async function GET(
       color: rgb(0.35, 0.37, 0.4),
     });
     if (property.publicUrl) {
-      page.drawText(`Publicación en Tokko: ${property.publicUrl}`, {
+      page.drawText(`Publicación web: ${property.publicUrl}`, {
         x: 30,
         y: 26,
         size: 9,

@@ -1,0 +1,36 @@
+# ============================================================================
+# Imagen del WORKER del scraper para Railway (cron service).
+# Corre el scraper (Chrome headed bajo pantalla virtual Xvfb) y termina.
+# NO es la web: la web va aparte, con Nixpacks.
+# ============================================================================
+
+# Partimos de la imagen OFICIAL de Playwright: ya trae Chromium, TODAS las
+# librerías del sistema que el navegador necesita, y Xvfb (la pantalla virtual).
+# El tag DEBE coincidir con la versión de "playwright" en package.json (1.62.0).
+FROM mcr.microsoft.com/playwright:v1.62.0-noble
+
+WORKDIR /app
+
+# pnpm en la versión exacta del proyecto (corepack viene incluido con Node).
+RUN corepack enable && corepack prepare pnpm@10.18.1 --activate
+
+# --- 1) Dependencias (capa cacheable: solo se rehace si cambian los lockfiles) ---
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# --- 2) Google Chrome REAL ---
+# El scraper usa Chrome de Google (pasa Cloudflare mejor que el Chromium pelado).
+RUN pnpm exec playwright install chrome
+
+# --- 3) Código + cliente Prisma (el worker NO necesita compilar la web) ---
+COPY . .
+RUN pnpm run db:generate
+
+# El navegador corre HEADED bajo Xvfb (Railway no tiene monitor).
+ENV SCRAPER_HEADLESS=false
+ENV NODE_ENV=production
+
+# Arrancamos Xvfb a mano (más confiable que xvfb-run, que se cuelga acá),
+# exportamos DISPLAY, y corremos el worker como proceso principal (exec) para
+# que sus logs salgan al contenedor y el exit se propague bien.
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp & export DISPLAY=:99; sleep 2; echo '[entry] Xvfb listo, arrancando worker'; exec pnpm exec tsx scripts/scraper/run-worker.ts"]

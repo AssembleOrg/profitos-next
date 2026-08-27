@@ -5,7 +5,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/ui/date-picker";
 import { SelectField } from "@/components/ui/select-field";
-import { Spinner } from "../../_components/spinner";
 import { Pagination } from "../../_components/pagination";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import { formatDateTime } from "@/lib/datetime";
@@ -13,7 +12,7 @@ import { WhatsAppLink } from "@/components/whatsapp-link";
 
 interface ConsultantItem {
   id: string;
-  tokkoContactId: number;
+  externalId: number;
   name: string;
   email: string | null;
   phone: string | null;
@@ -21,7 +20,7 @@ interface ConsultantItem {
   leadStatus: string | null;
   agentName: string | null;
   agentEmail: string | null;
-  tokkoCreatedAt: string | null;
+  externalCreatedAt: string | null;
   syncAt: string | null;
 }
 
@@ -79,7 +78,6 @@ export function ConsultantsClient({
   const [fromFilter, setFromFilter] = useState(filters.from);
   const [toFilter, setToFilter] = useState(filters.to);
   const [sortFilter, setSortFilter] = useState(filters.sort || "created_desc");
-  const [syncing, setSyncing] = useState(false);
   const [pendingRealtimeCount, setPendingRealtimeCount] = useState(0);
   const toastShownRef = useRef(false);
   const userEmailNormalized = useMemo(() => currentUserEmail.trim().toLowerCase(), [currentUserEmail]);
@@ -120,35 +118,6 @@ export function ConsultantsClient({
     fromFilter && `Desde: ${fromFilter}`,
     toFilter && `Hasta: ${toFilter}`,
   ].filter(Boolean);
-
-  async function handleSync(mode: "auto" | "api") {
-    setSyncing(true);
-    try {
-      const res = await fetch("/api/integrations/tokko/contacts-sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.message ?? "No se pudo sincronizar últimos contactos");
-        return;
-      }
-      if (data.data?.noChanges) {
-        toast.success("Últimos contactos al día. No hay nuevos registros.");
-        router.refresh();
-        return;
-      }
-      toast.success(
-        `Últimos contactos sincronizados · nuevos: ${data.data?.created ?? 0}, actualizados: ${data.data?.updated ?? 0}`
-      );
-      router.refresh();
-    } catch {
-      toast.error("Error de conexión al sincronizar últimos contactos");
-    } finally {
-      setSyncing(false);
-    }
-  }
 
   useEffect(() => {
     const supabase = createSupabaseClient();
@@ -221,21 +190,6 @@ export function ConsultantsClient({
             Última ejecución cron: {lastSyncRunAt ? formatDateTime(lastSyncRunAt) : "sin registros"}
           </p>
         </div>
-        {isAdmin && (
-          <button
-            onClick={() => handleSync("auto")}
-            disabled={syncing}
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4.5 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg disabled:opacity-50"
-          >
-            {syncing ? <Spinner size={14} /> : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
-                <polyline points="21 3 21 8 16 8" />
-              </svg>
-            )}
-            {syncing ? "Actualizando..." : "Actualizar últimos contactos"}
-          </button>
-        )}
       </div>
 
       {pendingRealtimeCount > 0 && (
@@ -369,7 +323,7 @@ export function ConsultantsClient({
               </div>
               <div className="mt-2 flex items-center justify-between text-[11.5px] text-text-faint">
                 <span>{item.agentName ?? "—"}</span>
-                <span>{formatDateTime24(item.tokkoCreatedAt)}</span>
+                <span>{formatDateTime24(item.externalCreatedAt)}</span>
               </div>
             </div>
           ))
@@ -398,7 +352,7 @@ export function ConsultantsClient({
                 <tr key={item.id} className="border-b border-border last:border-b-0 hover:bg-bg">
                   <td className="px-4 py-3.5">
                     <p className="text-[13.5px] font-bold text-text">{item.name}</p>
-                    <p className="text-[11.5px] text-text-faint">#{item.tokkoContactId}</p>
+                    <p className="text-[11.5px] text-text-faint">#{item.externalId}</p>
                     {item.email && (
                       <button
                         onClick={() => { navigator.clipboard.writeText(item.email!); toast.success("Mail copiado"); }}
@@ -428,7 +382,7 @@ export function ConsultantsClient({
                     )}
                   </td>
                   <td className="hidden px-4 py-3.5 text-[13px] text-text-muted lg:table-cell">
-                    {formatDateTime24(item.tokkoCreatedAt)}
+                    {formatDateTime24(item.externalCreatedAt)}
                   </td>
                 </tr>
               ))
