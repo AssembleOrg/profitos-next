@@ -191,14 +191,14 @@ export function CreateObjetivoModal({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 16, scale: 0.98 }}
                 transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(640px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+                className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(640px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
               >
-                <header className="flex items-center justify-between gap-3 border-b border-border-olive/40 px-5 py-4">
+                <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
                   <div>
-                    <Dialog.Title className="text-base font-semibold text-text">
+                    <Dialog.Title className="font-display text-[17px] font-semibold text-text">
                       {isEdit ? "Editar objetivo" : "Nuevo objetivo"}
                     </Dialog.Title>
-                    <Dialog.Description className="mt-0.5 text-xs text-text-muted">
+                    <Dialog.Description className="mt-0.5 text-xs text-text-faint">
                       {isEdit
                         ? "Actualizá título, descripción o período."
                         : "Creá una card con ítems y asignala a uno o varios empleados."}
@@ -207,7 +207,7 @@ export function CreateObjetivoModal({
                   <Dialog.Close asChild>
                     <button
                       type="button"
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-bg hover:text-text"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text"
                       aria-label="Cerrar"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -222,9 +222,9 @@ export function CreateObjetivoModal({
                   <div className="flex flex-col gap-5">
                     {!isEdit && (
                       <div>
-                        <label htmlFor="users" className="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-text-muted">
+                        <label htmlFor="users" className="mb-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
                           <span>Empleados</span>
-                          <span className="font-mono normal-case tracking-normal text-text-faint">
+                          <span className="normal-case tracking-normal font-semibold text-text-faint">
                             {selectedUserIds.length} seleccionado{selectedUserIds.length === 1 ? "" : "s"}
                           </span>
                         </label>
@@ -234,11 +234,11 @@ export function CreateObjetivoModal({
                           placeholder="Buscar por nombre o email…"
                           value={userQuery}
                           onChange={(e) => setUserQuery(e.target.value)}
-                          className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+                          className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                         />
-                        <div className="mt-2 flex max-h-44 flex-col gap-1 overflow-y-auto rounded-xl border border-border bg-bg/40 p-1.5">
+                        <div className="mt-2 flex max-h-44 flex-wrap content-start gap-1.5 overflow-y-auto rounded-[14px] border border-border bg-bg p-2">
                           {filteredUsers.length === 0 ? (
-                            <p className="px-3 py-3 text-center text-xs text-text-muted">
+                            <p className="w-full px-3 py-3 text-center text-xs text-text-faint">
                               Sin coincidencias
                             </p>
                           ) : (
@@ -248,22 +248,25 @@ export function CreateObjetivoModal({
                               return (
                                 <label
                                   key={u.id}
-                                  className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-2.5 py-1.5 transition-colors ${
+                                  title={u.email}
+                                  className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
                                     checked
-                                      ? "border-olive-bright/40 bg-olive-subtle"
-                                      : "border-transparent hover:bg-bg"
+                                      ? "bg-dark text-dark-fg"
+                                      : "border border-border bg-surface text-text-muted hover:bg-bg"
                                   }`}
                                 >
                                   <input
                                     type="checkbox"
                                     checked={checked}
                                     onChange={() => toggleUser(u.id)}
-                                    className="h-3.5 w-3.5 accent-olive-bright"
+                                    className="sr-only"
                                   />
-                                  <span className="flex min-w-0 flex-1 flex-col">
-                                    <span className="truncate text-sm text-text">{display}</span>
-                                    <span className="truncate text-[11px] text-text-faint">{u.email}</span>
-                                  </span>
+                                  {checked && (
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  )}
+                                  <span className="truncate">{display}</span>
                                 </label>
                               );
                             })
@@ -273,7 +276,7 @@ export function CreateObjetivoModal({
                     )}
 
                     <div>
-                      <label htmlFor="title" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label htmlFor="title" className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
                         Título
                       </label>
                       <input
@@ -282,13 +285,13 @@ export function CreateObjetivoModal({
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="Ej. Atender bien a los clientes"
-                        className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+                        className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                       />
                     </div>
 
                     <div>
-                      <label htmlFor="description" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
-                        Descripción <span className="text-text-faint">(opcional)</span>
+                      <label htmlFor="description" className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
+                        Descripción <span className="normal-case tracking-normal">(opcional)</span>
                       </label>
                       <textarea
                         id="description"
@@ -296,25 +299,25 @@ export function CreateObjetivoModal({
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Contexto u objetivo general…"
-                        className="w-full resize-none rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+                        className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                       />
                     </div>
 
                     <div>
-                      <div className="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
                         <span>Período</span>
                         <span className="flex gap-1.5">
                           <button
                             type="button"
                             onClick={() => setQuickPeriod("this-month")}
-                            className="rounded-md border border-border px-2 py-0.5 text-[10px] font-medium normal-case text-text-faint transition-colors hover:border-olive-bright/40 hover:text-text"
+                            className="rounded-full bg-sand-chip px-2.5 py-1 text-[10.5px] font-semibold normal-case tracking-normal text-text-muted transition-opacity hover:opacity-80"
                           >
                             Este mes
                           </button>
                           <button
                             type="button"
                             onClick={() => setQuickPeriod("next-month")}
-                            className="rounded-md border border-border px-2 py-0.5 text-[10px] font-medium normal-case text-text-faint transition-colors hover:border-olive-bright/40 hover:text-text"
+                            className="rounded-full bg-sand-chip px-2.5 py-1 text-[10.5px] font-semibold normal-case tracking-normal text-text-muted transition-opacity hover:opacity-80"
                           >
                             Mes siguiente
                           </button>
@@ -328,13 +331,13 @@ export function CreateObjetivoModal({
 
                     {!isEdit && (
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
                           Ítems del objetivo
                         </label>
                         <div className="flex flex-col gap-1.5">
                           {items.map((item, idx) => (
                             <div key={item.id} className="flex items-center gap-2">
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-bg/40 text-[11px] font-mono text-text-faint">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bg font-display text-[11px] font-bold text-text-muted">
                                 {idx + 1}
                               </span>
                               <input
@@ -348,13 +351,13 @@ export function CreateObjetivoModal({
                                   )
                                 }
                                 placeholder="Ej. Llamar a 5 clientes nuevos"
-                                className="flex-1 rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+                                className="h-10 flex-1 rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                               />
                               <button
                                 type="button"
                                 onClick={() => setItems((prev) => prev.filter((i) => i.id !== item.id))}
                                 disabled={items.length === 1}
-                                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-text-faint transition-colors hover:border-danger/30 hover:text-danger disabled:opacity-40"
+                                className="flex h-9 w-9 items-center justify-center rounded-full bg-clay-chip text-terra transition-opacity hover:opacity-80 disabled:opacity-40"
                                 aria-label="Quitar ítem"
                               >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -367,7 +370,7 @@ export function CreateObjetivoModal({
                           <button
                             type="button"
                             onClick={() => setItems((prev) => [...prev, makeDraftItem()])}
-                            className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-xl border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:border-olive-bright/40 hover:text-text"
+                            className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 py-1.5 text-xs font-semibold text-text-muted transition-colors hover:bg-bg"
                           >
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                               <line x1="12" y1="5" x2="12" y2="19" />
@@ -380,18 +383,18 @@ export function CreateObjetivoModal({
                     )}
 
                     {isEdit && (
-                      <p className="rounded-xl border border-border bg-bg/40 px-3 py-2.5 text-[11px] text-text-muted">
+                      <p className="rounded-[14px] bg-bg px-3.5 py-2.5 text-[11px] text-text-faint">
                         Los ítems se editan directamente en la card (agregar / borrar / marcar).
                       </p>
                     )}
                   </div>
                 </div>
 
-                <footer className="flex items-center justify-end gap-2 border-t border-border bg-bg/30 px-5 py-3">
+                <footer className="flex items-center justify-end gap-4 border-t border-border px-5 py-3">
                   <Dialog.Close asChild>
                     <button
                       type="button"
-                      className="rounded-xl border border-border bg-bg px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:border-border-strong hover:text-text"
+                      className="text-[13px] font-semibold text-text-faint transition-colors hover:text-text"
                     >
                       Cancelar
                     </button>
@@ -400,7 +403,7 @@ export function CreateObjetivoModal({
                     type="button"
                     onClick={handleSubmit}
                     disabled={submitting}
-                    className="flex items-center justify-center rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2 text-sm font-semibold text-bg shadow-[0_0_0_1px_rgba(143,168,112,0.15),0_8px_24px_-8px_rgba(143,168,112,0.5)] transition-all hover:bg-olive-vivid disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex h-11 items-center justify-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {submitting ? <Spinner /> : ctaLabel}
                   </button>

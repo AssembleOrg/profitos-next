@@ -12,6 +12,7 @@ import { Sheet } from "../../_components/sheet";
 import { formatDate as formatDateLib, formatDateTime as formatDateTimeLib } from "@/lib/datetime";
 import { MediaUploader, AttachmentPreview, type NoteAttachment } from "@/components/notes/media-uploader";
 import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
+import { SelectField } from "@/components/ui/select-field";
 
 interface UserOption {
   id: string;
@@ -69,10 +70,10 @@ interface Props {
 }
 
 const STATUS_OPTIONS = [
-  { value: "pendiente", label: "Pendiente", color: "bg-warning" },
-  { value: "en_progreso", label: "En progreso", color: "bg-info" },
-  { value: "hecho", label: "Hecho", color: "bg-success" },
-  { value: "cancelado", label: "Cancelado", color: "bg-danger" },
+  { value: "pendiente", label: "Pendiente", pill: "bg-sand-chip text-warning" },
+  { value: "en_progreso", label: "En progreso", pill: "bg-info-chip text-info" },
+  { value: "hecho", label: "Hecho", pill: "bg-sage-chip text-olive-light" },
+  { value: "cancelado", label: "Cancelado", pill: "bg-clay-chip text-terra" },
 ];
 
 const ACTION_TYPES = [
@@ -101,7 +102,7 @@ function getStatusMeta(status: string) {
   return STATUS_OPTIONS.find((item) => item.value === status) ?? {
     value: status,
     label: status,
-    color: "bg-text-muted",
+    pill: "bg-bg text-text-faint",
   };
 }
 
@@ -302,17 +303,17 @@ export function SeguimientosClient({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-medium text-text">Seguimientos</h1>
-          <p className="text-sm text-text-muted">
+          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Seguimientos</h1>
+          <p className="text-[12.5px] text-text-faint">
             {total} seguimiento{total !== 1 ? "s" : ""} cargado{total !== 1 ? "s" : ""}
           </p>
         </div>
         {isAdmin && (
           <button
             onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30"
+            className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
@@ -321,9 +322,9 @@ export function SeguimientosClient({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px]">
+      <div className="flex flex-col gap-3">
         <div className="relative">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
@@ -331,21 +332,27 @@ export function SeguimientosClient({
             placeholder="Buscar por propiedad, responsable, título..."
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="w-full rounded-xl border border-border bg-surface/40 py-2.5 pl-10 pr-4 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+            className="h-11 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
-          className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
-        >
-          <option value="">Todos los estados</option>
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <div className="overflow-x-auto">
+          <div className="inline-flex items-center gap-0.5 rounded-full border border-border bg-surface p-1">
+            {[{ value: "", label: "Todos" }, ...STATUS_OPTIONS].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setStatusFilter(option.value)}
+                className={
+                  statusFilter === option.value
+                    ? "whitespace-nowrap rounded-full bg-dark px-4 py-1.5 text-[12.5px] font-bold text-dark-fg"
+                    : "whitespace-nowrap rounded-full px-4 py-1.5 text-[12.5px] font-medium text-text-faint transition-colors hover:text-text"
+                }
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Cards — solo mobile */}
@@ -357,15 +364,14 @@ export function SeguimientosClient({
             const status = getStatusMeta(item.status);
             return (
               <div key={item.id} onClick={() => loadDetail(item.id)}
-                className="cursor-pointer rounded-xl border border-border bg-surface/30 p-4 active:bg-surface/60">
+                className="cursor-pointer rounded-[18px] border border-border bg-surface p-3.5 transition-colors active:bg-bg">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-medium text-text">{item.property.address}</p>
-                  <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium border border-border">
-                    <span className={`h-1.5 w-1.5 rounded-full ${status.color}`} />
+                  <p className="text-[13.5px] font-bold text-text">{item.property.address}</p>
+                  <span className={`inline-flex flex-shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${status.pill}`}>
                     {status.label}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-text-muted">{item.title?.trim() || "Sin título"}</p>
+                <p className="mt-1 text-[11.5px] text-text-faint">{item.title?.trim() || "Sin título"}</p>
                 <div className="mt-2 flex items-center justify-between text-xs text-text-muted">
                   <span>{userLabel(item.assignedToUser)}</span>
                   <span>Vence: {formatDate(item.dueDate)}</span>
@@ -377,22 +383,22 @@ export function SeguimientosClient({
       </div>
 
       {/* Tabla — solo desktop */}
-      <div className="hidden sm:block overflow-hidden rounded-2xl border border-border bg-surface/30">
+      <div className="hidden sm:block overflow-hidden rounded-[20px] border border-border bg-surface">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs font-semibold uppercase tracking-widest text-text-muted">
-                <th className="px-5 py-3">Propiedad</th>
-                <th className="px-5 py-3">Responsable</th>
-                <th className="px-5 py-3">Estado</th>
-                <th className="px-5 py-3">Vence</th>
-                <th className="px-5 py-3 text-right">Acciones</th>
+              <tr className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
+                <th className="px-4 py-3">Propiedad</th>
+                <th className="px-4 py-3">Responsable</th>
+                <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3">Vence</th>
+                <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-text-muted">
+                  <td colSpan={5} className="px-4 py-12 text-center text-[12.5px] text-text-faint">
                     {search || statusFilter ? "Sin resultados para los filtros seleccionados" : "No hay seguimientos cargados"}
                   </td>
                 </tr>
@@ -403,23 +409,26 @@ export function SeguimientosClient({
                     <tr
                       key={item.id}
                       onClick={() => loadDetail(item.id)}
-                      className="cursor-pointer border-b border-border/50 transition-colors last:border-b-0 hover:bg-surface/50"
+                      className="cursor-pointer border-t border-border transition-colors hover:bg-bg"
                     >
-                      <td className="px-5 py-3.5">
-                        <p className="font-medium text-text">{item.property.address}</p>
-                        <p className="text-xs text-text-muted">
+                      <td className="px-4 py-3.5">
+                        <p className="text-[13.5px] font-bold text-text">{item.property.address}</p>
+                        <p className="text-[11.5px] text-text-faint">
                           {item.title?.trim() || "Sin título"}
                         </p>
                       </td>
-                      <td className="px-5 py-3.5 text-text-muted">{userLabel(item.assignedToUser)}</td>
-                      <td className="px-5 py-3.5">
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className={`h-1.5 w-1.5 rounded-full ${status.color}`} />
-                          <span className="text-text-muted">{status.label}</span>
+                      <td className="px-4 py-3.5 text-[13px] text-text-muted">{userLabel(item.assignedToUser)}</td>
+                      <td className="px-4 py-3.5">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${status.pill}`}>
+                          {status.label}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-text-muted">{formatDate(item.dueDate)}</td>
-                      <td className="px-5 py-3.5 text-right text-text-muted">{item._count.actions}</td>
+                      <td className="px-4 py-3.5 text-[13px] text-text-muted">{formatDate(item.dueDate)}</td>
+                      <td className="px-4 py-3.5 text-right">
+                        <span className="inline-flex items-center rounded-full bg-bg px-2.5 py-1 text-[11px] font-bold text-text-muted">
+                          {item._count.actions}
+                        </span>
+                      </td>
                     </tr>
                   );
                 })
@@ -443,9 +452,9 @@ export function SeguimientosClient({
           title="Nuevo seguimiento"
           maxWidth="sm:max-w-xl"
           footer={
-            <div className="ml-auto flex gap-3">
-              <button type="button" onClick={() => setCreateOpen(false)} className="rounded-lg px-4 py-2 text-sm text-text-muted active:text-text">Cancelar</button>
-              <button type="submit" form="create-seguimiento-form" disabled={savingFollowUp} className="rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary active:bg-secondary/30 disabled:opacity-50">
+            <div className="ml-auto flex items-center gap-3">
+              <button type="button" onClick={() => setCreateOpen(false)} className="px-2 text-[13px] font-semibold text-text-faint active:text-text">Cancelar</button>
+              <button type="submit" form="create-seguimiento-form" disabled={savingFollowUp} className="inline-flex h-11 items-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50">
                 {savingFollowUp ? "Guardando..." : "Crear seguimiento"}
               </button>
             </div>
@@ -454,39 +463,39 @@ export function SeguimientosClient({
           <form id="create-seguimiento-form" className="flex flex-col gap-4" onSubmit={handleCreateFollowUp}>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-medium text-text-muted">Propiedad *</label>
-                <select name="propertyId" required className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:light]">
+                <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Propiedad *</label>
+                <SelectField name="propertyId" required wrapperClassName="w-full">
                   <option value="">Seleccionar...</option>
                   {assignableProperties.map((p) => <option key={p.id} value={p.id}>{p.address}</option>)}
-                </select>
+                </SelectField>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-text-muted">Asignado a *</label>
-                <select name="assignedToUserId" required className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:light]">
+                <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Asignado a *</label>
+                <SelectField name="assignedToUserId" required wrapperClassName="w-full">
                   <option value="">Seleccionar...</option>
                   {assignableUsers.map((u) => <option key={u.id} value={u.id}>{userLabel(u)}</option>)}
-                </select>
+                </SelectField>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-medium text-text-muted">Título</label>
-                <input name="title" placeholder="Ej: Seguimiento comercial" className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+                <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Título</label>
+                <input name="title" placeholder="Ej: Seguimiento comercial" className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-text-muted">Vencimiento</label>
-                <DatePicker name="dueDate" className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none" />
+                <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Vencimiento</label>
+                <DatePicker name="dueDate" className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none" />
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-text-muted">Estado</label>
-              <select name="status" defaultValue="pendiente" className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:light]">
+              <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Estado</label>
+              <SelectField name="status" defaultValue="pendiente" wrapperClassName="w-full">
                 {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              </SelectField>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-text-muted">Notas</label>
-              <textarea name="notes" rows={3} className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+              <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Notas</label>
+              <textarea name="notes" rows={3} className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
             </div>
           </form>
         </Sheet>
@@ -506,79 +515,76 @@ export function SeguimientosClient({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               onClick={(event) => event.stopPropagation()}
-              className="fixed bottom-0 left-0 right-0 max-h-[90dvh] overflow-y-auto overscroll-contain rounded-t-2xl border border-border bg-surface p-5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[85vh] sm:w-full sm:max-w-4xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:p-6"
+              className="fixed bottom-0 left-0 right-0 max-h-[90dvh] overflow-y-auto overscroll-contain rounded-t-[28px] border border-border bg-surface p-5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[85vh] sm:w-full sm:max-w-4xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:p-6"
             >
               {!detail || loadingDetail ? (
-                <div className="flex min-h-[260px] items-center justify-center text-sm text-text-muted">
+                <div className="flex min-h-[260px] items-center justify-center text-[12.5px] text-text-faint">
                   Cargando detalle...
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr]">
                   <div className="flex flex-col gap-4">
                     <div>
-                      <h2 className="text-lg font-medium text-text">{detail.property.address}</h2>
-                      <p className="text-xs text-text-muted">
+                      <h2 className="font-display text-[17px] font-semibold text-text">{detail.property.address}</h2>
+                      <p className="text-[11.5px] text-text-faint">
                         Actualizado: {formatDateTime(detail.updatedAt)}
                       </p>
                     </div>
-                    <form className="flex flex-col gap-3 rounded-xl border border-border bg-bg/30 p-4" onSubmit={handleUpdateFollowUp}>
+                    <form className="flex flex-col gap-3 rounded-[18px] bg-bg p-4" onSubmit={handleUpdateFollowUp}>
                       {isAdmin && (
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-text-muted">Título</label>
-                          <input name="title" defaultValue={detail.title ?? ""} className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none" />
+                          <label className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Título</label>
+                          <input name="title" defaultValue={detail.title ?? ""} className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text focus:border-border-strong focus:outline-none" />
                         </div>
                       )}
 
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-text-muted">Estado</label>
-                          <select name="status" defaultValue={detail.status} className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]">
+                          <label className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Estado</label>
+                          <SelectField name="status" defaultValue={detail.status} className="h-10" wrapperClassName="w-full">
                             {STATUS_OPTIONS.map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
                               </option>
                             ))}
-                          </select>
+                          </SelectField>
                         </div>
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-text-muted">Vencimiento</label>
+                          <label className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Vencimiento</label>
                           <DatePicker
                             name="dueDate"
                             defaultValue={detail.dueDate ? detail.dueDate.slice(0, 10) : ""}
-                            className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                            className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
                           />
                         </div>
                       </div>
 
                       {isAdmin && (
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-text-muted">Responsable</label>
-                          <select
-                            name="assignedToUserId"
-                            defaultValue={detail.assignedToUser.id}
-                            className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
-                          >
+                          <label className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Responsable</label>
+                          <SelectField name="assignedToUserId"
+                            defaultValue={detail.assignedToUser.id} className="h-10" wrapperClassName="w-full">
                             {assignableUsers.map((option) => (
                               <option key={option.id} value={option.id}>
                                 {userLabel(option)}
                               </option>
                             ))}
-                          </select>
+                          </SelectField>
                         </div>
                       )}
 
                       <div>
-                        <label className="mb-1 block text-xs font-medium text-text-muted">Notas</label>
+                        <label className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Notas</label>
                         <textarea
                           name="notes"
                           defaultValue={detail.notes ?? ""}
                           rows={3}
-                          className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                          className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
                         />
                       </div>
 
                       <div className="mt-1 flex justify-end">
-                        <button type="submit" disabled={savingFollowUp} className="rounded-xl bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30 disabled:opacity-50">
+                        <button type="submit" disabled={savingFollowUp} className="inline-flex h-10 items-center rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg disabled:opacity-50">
                           {savingFollowUp ? "Guardando..." : "Guardar cambios"}
                         </button>
                       </div>
@@ -586,24 +592,24 @@ export function SeguimientosClient({
                   </div>
 
                   <div className="flex flex-col gap-4">
-                    <div className="rounded-xl border border-border bg-bg/30 p-4">
-                      <h3 className="mb-2 text-sm font-medium text-text">Nueva acción</h3>
+                    <div className="rounded-[18px] bg-bg p-4">
+                      <h3 className="mb-2 font-display text-base font-semibold text-text">Nueva acción</h3>
                       <form className="flex flex-col gap-3" onSubmit={handleCreateAction}>
                         <div className="grid grid-cols-2 gap-3">
-                          <select name="type" defaultValue="nota" className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]">
+                          <SelectField name="type" defaultValue="nota" className="h-10">
                             {ACTION_TYPES.map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
                               </option>
                             ))}
-                          </select>
-                          <input name="shownToName" placeholder="Mostrado a..." className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+                          </SelectField>
+                          <input name="shownToName" placeholder="Mostrado a..." className="rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
                         </div>
 
-                        <textarea ref={actionDescriptionRef} name="description" rows={3} placeholder="Detalle de la acción realizada..." className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+                        <textarea ref={actionDescriptionRef} name="description" rows={3} placeholder="Detalle de la acción realizada..." className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
 
-                        <div className="rounded-lg border border-border bg-bg px-3 py-2.5">
-                          <p className="mb-2 text-xs text-text-muted">Audio / adjuntos (el audio se transcribe al texto)</p>
+                        <div className="rounded-[14px] border border-border bg-surface px-3.5 py-2.5">
+                          <p className="mb-2 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Audio / adjuntos (el audio se transcribe al texto)</p>
                           <MediaUploader
                             attachments={actionAttachments}
                             onChange={setActionAttachments}
@@ -615,40 +621,40 @@ export function SeguimientosClient({
 
                         <div className="flex flex-col gap-3">
                           <div>
-                            <label className="mb-1 block text-xs font-medium text-text-muted">Fecha y hora de la acción</label>
+                            <label className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Fecha y hora de la acción</label>
                             <DateTimePicker name="actionAt" />
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="mb-1 block text-xs font-medium text-text-muted">Próximo seguimiento</label>
-                              <DatePicker name="scheduledDate" className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none" />
+                              <label className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Próximo seguimiento</label>
+                              <DatePicker name="scheduledDate" className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text focus:border-border-strong focus:outline-none" />
                             </div>
                             <div>
-                              <label className="mb-1 block text-xs font-medium text-text-muted">Hora</label>
+                              <label className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Hora</label>
                               <TimePicker name="scheduledTime" defaultValue="09:00" />
                             </div>
                           </div>
                         </div>
 
-                        <button type="submit" disabled={savingAction} className="mt-1 rounded-xl bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30 disabled:opacity-50">
+                        <button type="submit" disabled={savingAction} className="mt-1 inline-flex h-11 items-center justify-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50">
                           {savingAction ? "Guardando acción..." : "Agregar acción"}
                         </button>
                       </form>
                     </div>
 
-                    <div className="rounded-xl border border-border bg-bg/20 p-4">
-                      <h3 className="mb-3 text-sm font-medium text-text">Auditoría</h3>
+                    <div className="rounded-[18px] border border-border bg-surface p-4">
+                      <h3 className="mb-3 font-display text-base font-semibold text-text">Auditoría</h3>
                       {detail.actions.length === 0 ? (
-                        <p className="text-sm text-text-muted">Todavía no hay acciones registradas.</p>
+                        <p className="text-[12.5px] text-text-faint">Todavía no hay acciones registradas.</p>
                       ) : (
                         <div className="flex flex-col gap-3">
                           {detail.actions.map((action) => (
-                            <div key={action.id} className="rounded-lg border border-border/60 bg-bg/40 p-3">
+                            <div key={action.id} className="rounded-[14px] bg-bg p-3">
                               <div className="mb-1 flex items-center justify-between gap-3">
-                                <span className="rounded-full bg-secondary/15 px-2 py-0.5 text-[11px] font-medium text-secondary uppercase">
+                                <span className="inline-flex items-center rounded-full bg-sand-chip px-2.5 py-1 text-[11px] font-bold uppercase text-warning">
                                   {action.type}
                                 </span>
-                                <span className="text-xs text-text-muted">
+                                <span className="text-[11.5px] text-text-faint">
                                   {formatDateTime(action.actionAt)}
                                 </span>
                               </div>
@@ -660,14 +666,14 @@ export function SeguimientosClient({
                                   ))}
                                 </div>
                               )}
-                              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-text-muted">
-                                {action.shownToName && <span>Mostrado a: {action.shownToName}</span>}
+                              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                {action.shownToName && <span className="inline-flex items-center rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-text-muted">Mostrado a: {action.shownToName}</span>}
                                 {action.scheduledDate && (
-                                  <span>
+                                  <span className="inline-flex items-center rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-text-muted">
                                     Próxima fecha: {formatDate(action.scheduledDate)} {action.scheduledTime ?? ""}
                                   </span>
                                 )}
-                                <span>Registró: {userLabel(action.createdByUser)}</span>
+                                <span className="inline-flex items-center rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-text-faint">Registró: {userLabel(action.createdByUser)}</span>
                               </div>
                             </div>
                           ))}

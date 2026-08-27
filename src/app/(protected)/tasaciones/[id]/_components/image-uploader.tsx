@@ -67,23 +67,23 @@ export function ImageUploader({ value, onChange, label, className }: Readonly<Pr
 
   return (
     <div className={className}>
-      {label && <label className="mb-1.5 block text-xs font-medium text-text-muted">{label}</label>}
+      {label && <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">{label}</label>}
 
       {previewUrl ? (
-        <div className="relative overflow-hidden rounded-lg border border-border">
+        <div className="relative overflow-hidden rounded-[14px] border border-border">
           <img src={previewUrl} alt="" className="max-h-48 w-full object-contain bg-bg" />
           <div className="absolute right-2 top-2 flex gap-1">
             <button type="button" onClick={() => inputRef.current?.click()}
-              className="rounded-md bg-bg/80 px-2 py-1 text-xs text-text-muted backdrop-blur hover:text-text">Cambiar</button>
+              className="rounded-full bg-bg/80 px-2.5 py-1 text-[11px] font-semibold text-text-muted backdrop-blur hover:text-text">Cambiar</button>
             <button type="button" onClick={() => { onChange(""); setPreviewUrl(null); }}
-              className="rounded-md bg-bg/80 px-2 py-1 text-xs text-danger backdrop-blur hover:text-danger">Quitar</button>
+              className="rounded-full bg-clay-chip/90 px-2.5 py-1 text-[11px] font-bold text-terra backdrop-blur hover:opacity-80">Quitar</button>
           </div>
         </div>
       ) : (
         <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border py-8 text-sm text-text-muted transition-colors hover:border-secondary hover:text-secondary disabled:opacity-50">
+          className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-dashed border-border bg-bg py-8 text-[13px] font-semibold text-text-muted transition-colors hover:border-border-strong hover:text-text disabled:opacity-50">
           {uploading ? (
-            <><span className="h-4 w-4 animate-spin rounded-full border-2 border-secondary/30 border-t-secondary" />Subiendo...</>
+            <><span className="h-4 w-4 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />Subiendo...</>
           ) : (
             <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
@@ -183,9 +183,9 @@ export function MultiImageUploader({ images, onChange }: MultiImageUploaderProps
                 onDragOver={(e) => { e.preventDefault(); setDragOverIndex(i); }}
                 onDrop={() => handleDrop(i)}
                 onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
-                className={`group relative cursor-grab overflow-hidden rounded-lg border transition-all active:cursor-grabbing ${
+                className={`group relative cursor-grab overflow-hidden rounded-[14px] border transition-all active:cursor-grabbing ${
                   dragOverIndex === i && dragIndex !== i
-                    ? "border-secondary ring-2 ring-secondary/30"
+                    ? "border-border-strong ring-2 ring-accent/40"
                     : dragIndex === i ? "border-border opacity-50" : "border-border"
                 }`}
               >
@@ -200,8 +200,8 @@ export function MultiImageUploader({ images, onChange }: MultiImageUploaderProps
                     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
                 </button>
-                <span className="absolute bottom-1 left-1 rounded bg-bg/70 px-1.5 py-0.5 text-[10px] text-text-muted">{i + 1}</span>
-                <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded bg-bg/60 text-text-faint opacity-0 transition-opacity group-hover:opacity-100">
+                <span className="absolute bottom-1 left-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-dark/85 px-1.5 font-display text-[10px] font-bold text-dark-fg">{i + 1}</span>
+                <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-bg/60 text-text-faint opacity-0 transition-opacity group-hover:opacity-100">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                     <line x1="4" y1="8" x2="20" y2="8" /><line x1="4" y1="16" x2="20" y2="16" />
                   </svg>
@@ -213,9 +213,9 @@ export function MultiImageUploader({ images, onChange }: MultiImageUploaderProps
       )}
 
       <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border py-4 text-sm text-text-muted transition-colors hover:border-secondary hover:text-secondary disabled:opacity-50">
+        className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-dashed border-border bg-bg py-4 text-[13px] font-semibold text-text-muted transition-colors hover:border-border-strong hover:text-text disabled:opacity-50">
         {uploading ? (
-          <><span className="h-4 w-4 animate-spin rounded-full border-2 border-secondary/30 border-t-secondary" />Subiendo...</>
+          <><span className="h-4 w-4 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />Subiendo...</>
         ) : (
           <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />

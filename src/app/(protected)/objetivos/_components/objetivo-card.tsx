@@ -29,36 +29,36 @@ interface ObjetivoCardProps {
 const STATUS_STYLE: Record<CardStatus, { dot: string; chip: string; ring: string }> = {
   pending: {
     dot: "bg-text-faint",
-    chip: "border-border-strong bg-surface text-text-muted",
-    ring: "ring-border",
+    chip: "bg-bg text-text-faint",
+    ring: "",
   },
   in_progress: {
-    dot: "bg-olive-bright shadow-[0_0_10px_var(--color-olive-bright)]",
-    chip: "border-olive-bright/40 bg-olive-subtle text-olive-light",
-    ring: "ring-olive-bright/30",
+    dot: "bg-olive-light",
+    chip: "bg-sage-chip text-olive-light",
+    ring: "",
   },
   completed: {
-    dot: "bg-success",
-    chip: "border-success/30 bg-success-chip text-success",
-    ring: "ring-success/30",
+    dot: "bg-olive-light",
+    chip: "bg-sage-chip text-olive-light",
+    ring: "",
   },
 };
 
 const ITEM_STATUS_STYLE: Record<ItemStatus, { box: string; label: string; line: string }> = {
   pending: {
-    box: "border-border-strong bg-transparent",
+    box: "border-border-strong bg-surface",
     label: "text-text",
     line: "",
   },
   done: {
-    box: "border-success/30 bg-success-chip text-success",
+    box: "border-olive-light bg-olive-light text-white",
     label: "text-text-muted",
-    line: "line-through decoration-emerald-400/40 decoration-1",
+    line: "line-through decoration-1",
   },
   failed: {
-    box: "border-danger/30 bg-danger-chip text-danger",
+    box: "border-terra bg-terra text-white",
     label: "text-text-muted",
-    line: "line-through decoration-red-400/40 decoration-1",
+    line: "line-through decoration-1",
   },
 };
 
@@ -164,11 +164,11 @@ export function ObjetivoCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-      className={`group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface/60 ring-1 ring-inset ${statusStyle.ring} backdrop-blur-sm transition-shadow hover:shadow-[0_0_0_1px_var(--color-border-olive),0_18px_40px_-12px_rgba(0,0,0,0.6)]`}
+      className={`group flex h-full flex-col overflow-hidden rounded-[20px] border border-border bg-surface ${statusStyle.ring} transition-shadow hover:shadow-sm`}
     >
-      <header className="flex items-start justify-between gap-3 border-b border-border/60 px-5 py-4">
+      <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-bg text-[11px] font-semibold uppercase text-text-muted">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sand-chip font-display text-[12px] font-bold uppercase text-text-muted">
             {card.assignedToUser.avatarUrl ? (
               <img
                 src={card.assignedToUser.avatarUrl}
@@ -181,13 +181,13 @@ export function ObjetivoCard({
             )}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-text">{assigneeName}</p>
+            <p className="truncate text-[13.5px] font-bold text-text">{assigneeName}</p>
             <p className="truncate text-[11px] text-text-faint">{card.assignedToUser.email}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${statusStyle.chip}`}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${statusStyle.chip}`}
           >
             <span className={`h-1.5 w-1.5 rounded-full ${statusStyle.dot}`} />
             {CARD_STATUS_LABEL[status]}
@@ -198,7 +198,7 @@ export function ObjetivoCard({
                 type="button"
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-label="Menú"
-                className="flex h-7 w-7 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-bg hover:text-text"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="5" r="1" />
@@ -220,7 +220,7 @@ export function ObjetivoCard({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -4, scale: 0.96 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-9 z-50 w-52 overflow-hidden rounded-xl border border-border bg-surface-elevated p-1 shadow-2xl"
+                      className="absolute right-0 top-9 z-50 w-52 overflow-hidden rounded-2xl border border-border bg-surface-elevated p-1.5 shadow-2xl"
                     >
                       <button
                         type="button"
@@ -228,12 +228,12 @@ export function ObjetivoCard({
                           setMenuOpen(false);
                           onEdit(card);
                         }}
-                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:bg-bg hover:text-text"
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text"
                       >
                         Editar objetivo
                       </button>
-                      <div className="my-1 border-t border-border/60" />
-                      <p className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-widest text-text-faint">
+                      <div className="my-1 border-t border-border" />
+                      <p className="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
                         Forzar estado
                       </p>
                       {(["pending", "in_progress", "completed"] as CardStatus[]).map((value) => (
@@ -241,9 +241,9 @@ export function ObjetivoCard({
                           key={value}
                           type="button"
                           onClick={() => changeOverride(value)}
-                          className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-xs transition-colors ${
+                          className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs transition-colors ${
                             card.statusOverride === value
-                              ? "bg-olive-subtle text-accent"
+                              ? "bg-sage-chip font-bold text-olive-light"
                               : "text-text-muted hover:bg-bg hover:text-text"
                           }`}
                         >
@@ -257,17 +257,17 @@ export function ObjetivoCard({
                         <button
                           type="button"
                           onClick={() => changeOverride(null)}
-                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-text-muted transition-colors hover:bg-bg hover:text-text"
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-text-muted transition-colors hover:bg-bg hover:text-text"
                         >
                           Quitar override (auto)
                         </button>
                       )}
-                      <div className="my-1 border-t border-border/60" />
+                      <div className="my-1 border-t border-border" />
                       <button
                         type="button"
                         disabled={pending}
                         onClick={handleDelete}
-                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-danger transition-colors hover:bg-danger-chip disabled:opacity-50"
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-terra transition-colors hover:bg-clay-chip disabled:opacity-50"
                       >
                         {pending ? <Spinner variant="red" size={12} /> : "Eliminar"}
                       </button>
@@ -282,7 +282,7 @@ export function ObjetivoCard({
 
       <div className="flex flex-1 flex-col gap-3 px-5 pt-4 pb-3">
         <div>
-          <h3 className="text-[15px] font-semibold leading-tight text-text">{card.title}</h3>
+          <h3 className="font-display text-[15px] font-semibold leading-tight text-text">{card.title}</h3>
           {card.description && (
             <p className="mt-1 text-xs leading-relaxed text-text-muted">{card.description}</p>
           )}
@@ -302,14 +302,14 @@ export function ObjetivoCard({
             <span className="text-text-muted">{remaining}d restantes</span>
           )}
           {card.statusOverride && (
-            <span className="rounded-full bg-bg px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-text-muted">
+            <span className="rounded-full bg-sand-chip px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-warning">
               manual
             </span>
           )}
         </div>
 
         {card.items.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border bg-bg/30 px-3 py-3 text-xs text-text-muted">
+          <p className="rounded-[10px] bg-bg px-3 py-3 text-xs text-text-faint">
             Sin ítems aún.
           </p>
         ) : (
@@ -337,8 +337,8 @@ export function ObjetivoCard({
                           ? "Click para marcar"
                           : undefined
                     }
-                    className={`flex w-full items-start gap-2.5 rounded-lg border border-transparent px-2 py-1.5 text-left text-sm transition-colors ${
-                      canTickItems ? "hover:border-border-olive hover:bg-bg/40" : "cursor-default"
+                    className={`flex w-full items-start gap-2.5 rounded-[10px] bg-bg px-2.5 py-2 text-left text-sm transition-colors ${
+                      canTickItems ? "hover:bg-sand-chip/60" : "cursor-default"
                     }`}
                   >
                     <span
@@ -367,22 +367,22 @@ export function ObjetivoCard({
         )}
       </div>
 
-      <footer className="border-t border-border/60 bg-bg/20 px-5 py-3">
+      <footer className="border-t border-border px-5 py-3">
         <div className="mb-1.5 flex items-center justify-between text-[11px]">
           <span className="font-semibold text-text-muted">
             {progress.done}/{progress.total} cumplidos
             {progress.failed > 0 && (
-              <span className="ml-1 text-danger">· {progress.failed} no</span>
+              <span className="ml-1 text-terra">· {progress.failed} no</span>
             )}
           </span>
-          <span className="font-mono text-accent">{progress.percent}%</span>
+          <span className="font-display font-bold text-accent">{progress.percent}%</span>
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg">
           <motion.div
             initial={false}
             animate={{ width: `${progress.percent}%` }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="h-full rounded-full bg-gradient-to-r from-olive-mid to-olive-bright"
+            className={`h-full rounded-full ${progress.percent === 100 ? "bg-olive-light" : "bg-accent"}`}
           />
         </div>
       </footer>

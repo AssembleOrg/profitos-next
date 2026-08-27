@@ -39,16 +39,16 @@ export function AgendaClient({ events }: AgendaClientProps) {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-medium text-text">Agenda</h1>
-          <p className="text-sm text-text-muted">
+          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Agenda</h1>
+          <p className="text-[12.5px] text-text-faint">
             Visitas, firmas y tasaciones programadas
           </p>
         </div>
         <button
           onClick={handleNew}
-          className="flex items-center gap-2 rounded-xl bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30"
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>

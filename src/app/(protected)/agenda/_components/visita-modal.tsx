@@ -14,6 +14,7 @@ import { formatDate, parseVisualDate } from "@/lib/datetime";
 import type { CalendarEvent } from "./calendar";
 import { MediaUploader, type NoteAttachment } from "@/components/notes/media-uploader";
 import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
+import { SelectField } from "@/components/ui/select-field";
 
 interface VisitaModalProps {
   open: boolean;
@@ -224,14 +225,14 @@ export function VisitaModal({
         <div className="flex w-full items-center justify-between">
           {isEdit ? (
             <button type="button" onClick={handleDelete} disabled={deleting}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-danger active:bg-danger-chip disabled:opacity-50">
+              className="flex h-10 items-center gap-1.5 rounded-full bg-clay-chip px-4 text-[13px] font-bold text-terra transition-opacity active:opacity-80 disabled:opacity-50">
               {deleting ? <Spinner variant="red" size={14} /> : "Eliminar"}
             </button>
           ) : <div />}
           <div className="flex gap-3">
-            <button type="button" onClick={resetAndClose} className="rounded-lg px-4 py-2 text-sm text-text-muted active:text-text">Cancelar</button>
+            <button type="button" onClick={resetAndClose} className="px-2 text-[13px] font-semibold text-text-faint active:text-text">Cancelar</button>
             <button type="submit" form="visita-form" disabled={loading}
-              className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary active:bg-secondary/30 disabled:opacity-50">
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50">
               {loading ? <Spinner /> : isEdit ? "Guardar cambios" : "Guardar visita"}
             </button>
           </div>
@@ -242,7 +243,7 @@ export function VisitaModal({
             <form id="visita-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
               {/* Title */}
               <div>
-                <label className="mb-1 block text-xs font-medium text-text-muted">
+                <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
                   Título *
                 </label>
                 <input
@@ -250,21 +251,21 @@ export function VisitaModal({
                   required
                   defaultValue={editEvent?.title ?? ""}
                   placeholder="Ej: Visita depto 3amb - Palermo"
-                  className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                  className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                 />
               </div>
 
               {/* Date + Times (fecha en formato visual DD/MM/AAAA) */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-muted">
+                  <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
                     Fecha *
                   </label>
                   <DatePicker
                     name="date"
                     required
                     defaultValue={parseVisualDate(formatDate(editEvent?.date ?? new Date()))}
-                    className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                    className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
                   />
                 </div>
                 <TimePicker
@@ -283,20 +284,17 @@ export function VisitaModal({
 
               {/* Type */}
               <div>
-                <label className="mb-1 block text-xs font-medium text-text-muted">
+                <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
                   Tipo
                 </label>
-                <select
-                  name="type"
-                  defaultValue={editEvent?.type ?? "visita"}
-                  className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
-                >
+                <SelectField name="type"
+                  defaultValue={editEvent?.type ?? "visita"} wrapperClassName="w-full">
                   {VISIT_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>
                       {t.label}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
 
               {/* Property selector */}
@@ -325,7 +323,7 @@ export function VisitaModal({
 
               {/* Description */}
               <div>
-                <label className="mb-1 block text-xs font-medium text-text-muted">
+                <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
                   Notas
                 </label>
                 <textarea
@@ -333,7 +331,7 @@ export function VisitaModal({
                   rows={2}
                   defaultValue={editEvent?.description ?? ""}
                   placeholder="Notas adicionales..."
-                  className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                  className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                 />
                 <div className="mt-2">
                   <MediaUploader attachments={attachments} onChange={setAttachments} signedUrls={signedUrls} />
@@ -342,7 +340,7 @@ export function VisitaModal({
 
               {/* Error */}
               {error && (
-                <p className="rounded-lg bg-danger-chip px-3 py-2 text-sm text-danger">
+                <p className="rounded-[14px] bg-clay-chip px-3.5 py-2 text-sm font-semibold text-terra">
                   {error}
                 </p>
               )}

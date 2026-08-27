@@ -123,7 +123,7 @@ export function DateField({
 
   return (
     <div ref={containerRef} className={`relative ${className ?? ""}`}>
-      <div className="flex items-center rounded-xl border border-border bg-bg focus-within:border-secondary">
+      <div className="flex h-11 items-center rounded-[14px] border border-border bg-surface focus-within:border-border-strong">
         <input
           id={id}
           type="text"
@@ -133,7 +133,7 @@ export function DateField({
           onBlur={handleBlur}
           placeholder={placeholder}
           disabled={disabled}
-          className="h-10 flex-1 rounded-l-xl bg-transparent px-3 text-sm tabular-nums text-text placeholder:text-text-faint focus:outline-none disabled:opacity-50"
+          className="h-full flex-1 rounded-l-[14px] bg-transparent px-3.5 text-sm tabular-nums text-text placeholder:text-text-faint focus:outline-none disabled:opacity-50"
         />
         {clearable && text && !disabled && (
           <button
@@ -153,7 +153,7 @@ export function DateField({
           onClick={() => !disabled && setOpen((v) => !v)}
           disabled={disabled}
           aria-label="Abrir calendario"
-          className={`flex h-9 w-9 items-center justify-center rounded-r-xl text-text-muted transition-colors hover:text-text disabled:opacity-50 ${open ? "text-accent" : ""}`}
+          className={`flex h-9 w-9 items-center justify-center rounded-r-[14px] text-accent transition-colors hover:text-text disabled:opacity-50 ${open ? "text-accent" : ""}`}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -171,7 +171,7 @@ export function DateField({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute right-0 z-50 mt-2 w-[280px] origin-top-right overflow-hidden rounded-2xl border border-border bg-surface-elevated shadow-2xl"
+            className="absolute right-0 z-50 mt-2 w-[280px] origin-top-right overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
           >
             <CalendarPopover value={value} onSelect={handleSelectDay} />
           </motion.div>
@@ -233,7 +233,7 @@ function CalendarPopover({ value, onSelect }: Readonly<CalendarPopoverProps>) {
           type="button"
           onClick={() => setCursor((c) => c.minus({ months: 1 }))}
           aria-label="Mes anterior"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-bg hover:text-text"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-bg hover:text-text"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
@@ -244,7 +244,7 @@ function CalendarPopover({ value, onSelect }: Readonly<CalendarPopoverProps>) {
           type="button"
           onClick={() => setCursor((c) => c.plus({ months: 1 }))}
           aria-label="Mes siguiente"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-bg hover:text-text"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-bg hover:text-text"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="9 18 15 12 9 6" />
@@ -271,11 +271,11 @@ function CalendarPopover({ value, onSelect }: Readonly<CalendarPopoverProps>) {
               key={cell.iso}
               type="button"
               onClick={() => onSelect(cell.iso)}
-              className={`flex h-8 items-center justify-center rounded-md text-xs tabular-nums transition-colors ${
+              className={`flex h-8 items-center justify-center rounded-full text-xs tabular-nums transition-colors ${
                 isSelected
-                  ? "bg-olive-mid font-semibold text-bg"
+                  ? "bg-dark font-bold text-dark-fg"
                   : isToday
-                    ? "border border-olive-bright/40 text-accent hover:bg-olive-subtle"
+                    ? "font-semibold text-accent hover:bg-bg"
                     : cell.thisMonth
                       ? "text-text hover:bg-bg"
                       : "text-text-faint hover:bg-bg/50"
@@ -292,7 +292,7 @@ function CalendarPopover({ value, onSelect }: Readonly<CalendarPopoverProps>) {
         <button
           type="button"
           onClick={() => onSelect(today.toISODate() ?? "")}
-          className="rounded-md px-3 py-1 text-[11px] font-medium text-text-muted transition-colors hover:bg-bg hover:text-text"
+          className="rounded-full px-3 py-1 text-[11px] font-bold text-terra transition-colors hover:bg-bg"
         >
           Hoy
         </button>

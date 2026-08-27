@@ -60,10 +60,10 @@ export function LoginV4({ step, urlError }: Props) {
       >
         {/* Small docked logo */}
         <div>
-          <p className="text-[11px] font-semibold tracking-[0.5em] text-text lg:text-[13px]">
+          <p className="text-[11px] font-semibold tracking-[0.5em] text-[#FAF7F2] lg:text-[13px]">
             JULIANA PROFITOS
           </p>
-          <p className="mt-0.5 text-[7px] font-normal uppercase tracking-[0.4em] text-white/40 lg:text-[8px]">
+          <p className="mt-0.5 text-[7px] font-normal uppercase tracking-[0.4em] text-white/50 lg:text-[8px]">
             PROPIEDADES
           </p>
         </div>
@@ -88,12 +88,12 @@ export function LoginV4({ step, urlError }: Props) {
             delay: step === 2 ? 0.2 : 0,
           }}
         >
-          <h2 className="text-[36px] font-light leading-[1.15] tracking-wide text-text">
+          <h2 className="font-display text-[36px] font-semibold leading-[1.15] text-[#FAF7F2] [text-shadow:0_2px_18px_rgba(0,0,0,0.45)]">
             Tu patrimonio,
             <br />
             nuestra prioridad.
           </h2>
-          <p className="mt-5 text-[13px] font-light leading-relaxed text-white/45">
+          <p className="mt-5 text-[13.5px] leading-relaxed text-white/80 [text-shadow:0_1px_12px_rgba(0,0,0,0.5)]">
             Intermediaci&oacute;n profesional en compra,
             <br />
             venta y alquiler de inmuebles.
@@ -102,7 +102,7 @@ export function LoginV4({ step, urlError }: Props) {
 
         {/* Login card — full width on mobile, fixed 400px on desktop */}
         <motion.div
-          className="v4-login-card w-full p-8 lg:w-[380px] lg:shrink-0 lg:rounded-t-[20px] lg:rounded-b-[4px] lg:border lg:border-white/[0.05] lg:p-9"
+          className="w-full rounded-[28px] bg-[#FAF7F2] p-8 shadow-2xl lg:w-[380px] lg:shrink-0 lg:p-9"
           initial={{ opacity: 0, y: 50 }}
           animate={{
             opacity: step === 2 ? 1 : 0,

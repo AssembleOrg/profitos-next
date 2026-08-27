@@ -43,27 +43,27 @@ export async function ProximasFirmasCard({
   const upcoming = buildUpcomingActions(proposals, { daysAhead, daysPast, limit });
 
   return (
-    <section className="flex flex-col rounded-2xl border border-border bg-surface/40 p-5">
+    <section className="flex flex-col rounded-[20px] border border-border bg-surface p-4 md:p-5">
       <header className="flex items-center justify-between">
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-text">
+          <h3 className="font-display text-base font-semibold text-text">
             Próximas firmas
           </h3>
-          <p className="mt-0.5 text-[11px] text-text-muted">
+          <p className="mt-0.5 text-[11.5px] text-text-faint">
             Eventos pendientes en los próximos {daysAhead} días
           </p>
         </div>
         <Link
           href="/firmas"
-          className="rounded-lg border border-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:bg-surface hover:text-text"
+          className="shrink-0 text-[12.5px] font-bold text-terra transition-opacity hover:opacity-80"
         >
-          Ver todas
+          Ver todas →
         </Link>
       </header>
 
       <div className="mt-4 flex flex-col gap-2">
         {upcoming.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border bg-bg/30 px-3 py-6 text-center text-xs text-text-muted">
+          <p className="rounded-[14px] bg-bg px-3 py-6 text-center text-[12.5px] text-text-faint">
             Sin acciones próximas en este rango.
           </p>
         ) : (
@@ -90,22 +90,22 @@ export async function ProximasFirmasCard({
               <Link
                 key={`${item.proposalId}-${item.dateField}`}
                 href={`/firmas?q=${encodeURIComponent(item.propertyAddress)}`}
-                className={`flex items-center gap-3 rounded-xl border bg-bg/40 px-3 py-2.5 transition-colors hover:border-olive-bright/40 hover:bg-bg/70 ${overdue ? "border-danger/30" : "border-border"}`}
+                className={`flex items-center gap-3 rounded-[14px] border bg-bg px-3 py-2.5 transition-colors hover:bg-sand-chip/50 ${overdue ? "border-danger/30" : "border-transparent hover:border-border"}`}
               >
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${statusStyle.chip}`}>
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${statusStyle.chip}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${statusStyle.dot}`} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-text">
+                  <p className="truncate text-[13.5px] font-bold text-text">
                     {item.propertyAddress}
                   </p>
-                  <p className="truncate text-[11px] text-text-muted">
+                  <p className="truncate text-[11.5px] text-text-faint">
                     <span className="text-text-faint">{meta.shortLabel}: </span>
                     {formatDate(item.date)} · {SIGNATURE_STATUS_LABEL[status]}
                   </p>
                 </div>
                 <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${overdue ? "bg-danger-chip text-danger" : item.daysAway <= 1 ? "bg-warning-chip text-warning" : "bg-surface text-text-muted"}`}
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${overdue ? "bg-clay-chip text-terra" : item.daysAway <= 1 ? "bg-sand-chip text-warning" : "bg-surface text-text-faint"}`}
                 >
                   {distance}
                 </span>

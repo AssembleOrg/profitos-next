@@ -49,10 +49,10 @@ export function LoginForm({ step, urlError }: Props) {
     >
       {/* Title */}
       <motion.div variants={staggerChild}>
-        <h2 className="text-[30px] font-light tracking-[0.1em] text-text drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
+        <h2 className="font-display text-[30px] font-bold tracking-[0.04em] text-text">
           INGRES&Aacute;
         </h2>
-        <p className="mt-2 text-[13px] font-light leading-relaxed text-white/55 drop-shadow-[0_1px_4px_rgba(0,0,0,0.5)]">
+        <p className="mt-2 text-[13px] leading-relaxed text-text-muted">
           Acced&eacute; a tu plataforma de gesti&oacute;n inmobiliaria
         </p>
       </motion.div>
@@ -62,8 +62,13 @@ export function LoginForm({ step, urlError }: Props) {
         <motion.p
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-[13px] font-light text-danger"
+          className="flex items-start gap-2 rounded-[14px] bg-clay-chip px-3 py-2.5 text-[13px] font-medium text-terra"
         >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
           {error}
         </motion.p>
       )}
@@ -78,9 +83,11 @@ export function LoginForm({ step, urlError }: Props) {
             await signInWithGoogle();
           })
         }
-        className="flex w-full items-center justify-center gap-3.5 rounded-2xl bg-white py-4 text-[14px] font-medium tracking-[0.02em] text-[#1f1f1f] shadow-[0_18px_60px_rgba(0,0,0,0.35)] transition-all hover:shadow-[0_22px_70px_rgba(0,0,0,0.45)] active:scale-[0.99] disabled:opacity-60"
+        className="flex h-[50px] w-full items-center justify-center gap-3 rounded-full bg-dark text-[14px] font-bold tracking-[0.02em] text-dark-fg transition-opacity hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
       >
-        <GoogleIcon />
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white">
+          <GoogleIcon />
+        </span>
         {googlePending ? "Redirigiendo…" : "Continuar con Google"}
       </motion.button>
     </motion.div>

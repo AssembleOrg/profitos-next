@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { SelectField } from "@/components/ui/select-field";
 
 // ---------------------------------------------------------------------------
 // Publicación en MercadoLibre — pantalla ÚNICA de revisión.
@@ -59,10 +60,10 @@ const STATUS_LABEL: Record<string, string> = {
   error: "Con error",
 };
 const STATUS_TONE: Record<string, string> = {
-  active: "border-success/40 bg-success/10 text-success",
-  paused: "border-warning/40 bg-warning-chip text-warning",
+  active: "border-transparent bg-sage-chip text-olive-light",
+  paused: "border-transparent bg-sand-chip text-warning",
   closed: "border-border bg-bg text-text-muted",
-  error: "border-danger/40 bg-danger-chip text-danger",
+  error: "border-transparent bg-clay-chip text-terra",
 };
 
 interface FullProperty {
@@ -105,13 +106,12 @@ interface Props {
 }
 
 const input =
-  "w-full rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none";
-const select = input + " [color-scheme:light]";
-const labelCls = "text-xs font-medium text-text-muted";
+  "w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-accent focus:outline-none";
+const labelCls = "text-[12.5px] font-semibold text-text-muted";
 const primaryBtn =
-  "flex items-center justify-center gap-2 rounded-xl bg-secondary/20 px-5 py-2.5 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30 disabled:opacity-50";
+  "inline-flex h-11 items-center justify-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 active:opacity-90 disabled:opacity-50";
 const ghostBtn =
-  "rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-text-muted transition-colors hover:bg-surface disabled:opacity-50";
+  "inline-flex h-11 items-center justify-center rounded-full border border-border bg-surface px-5 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg disabled:opacity-50";
 
 async function api<T>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, opts);
@@ -600,12 +600,12 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
     listingPrices.find((p) => p.listing_type_id === listingTypeId)?.listing_type_name ?? listingTypeId;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
-      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-scrim p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[28px] border border-border bg-surface shadow-2xl sm:max-w-2xl sm:rounded-3xl lg:max-w-3xl">
         {/* header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold text-text">Publicar en MercadoLibre</h2>
+            <h2 className="truncate font-display text-[17px] font-semibold text-text">Publicar en MercadoLibre</h2>
             <p className="truncate text-xs text-text-muted">{propertyLabel}</p>
           </div>
           <button onClick={onClose} className="rounded-lg p-1.5 text-text-muted hover:bg-bg" aria-label="Cerrar">
@@ -634,7 +634,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
         {connected && showManage && publication && (
           <div className="flex flex-col gap-4 p-6">
             <div
-              className={`flex items-center justify-between rounded-xl border px-4 py-3 ${
+              className={`flex items-center justify-between rounded-[16px] border px-4 py-3 ${
                 STATUS_TONE[publication.status] ?? "border-border bg-bg text-text-muted"
               }`}
             >
@@ -648,7 +648,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
               )}
             </div>
             {publication.lastError && (
-              <p className="rounded-lg bg-danger-chip px-3 py-2 text-xs text-danger">{publication.lastError}</p>
+              <p className="rounded-lg bg-clay-chip px-3 py-2 text-xs text-terra">{publication.lastError}</p>
             )}
             <div className="grid grid-cols-2 gap-2">
               {publication.status === "active" && (
@@ -663,7 +663,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
               )}
               {publication.status !== "closed" && (
                 <button
-                  className={ghostBtn + " border-danger/40 text-danger hover:bg-danger-chip"}
+                  className={ghostBtn + " text-terra"}
                   disabled={statusBusy}
                   onClick={() => changeStatus("close")}
                 >
@@ -690,15 +690,15 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
               {/* Categoría */}
               <Section title="Categoría">
                 {!editingCategory && leafCategory && (
-                  <div className="flex items-center justify-between rounded-xl border border-secondary/40 bg-secondary/10 px-3 py-2.5">
-                    <span className="text-sm font-medium text-secondary">✓ {leafCategory.name}</span>
+                  <div className="flex items-center justify-between rounded-[14px] border border-transparent bg-sage-chip px-3 py-2.5">
+                    <span className="text-sm font-medium text-olive-light">✓ {leafCategory.name}</span>
                     <button className="text-xs text-text-muted underline" onClick={startEditCategory}>
                       Cambiar
                     </button>
                   </div>
                 )}
                 {!editingCategory && !leafCategory && (
-                  <div className="flex items-center justify-between rounded-xl border border-warning/40 bg-warning-chip px-3 py-2.5">
+                  <div className="flex items-center justify-between rounded-[14px] border border-transparent bg-sand-chip px-3 py-2.5">
                     <span className="text-sm text-warning">
                       {inferring ? "Detectando categoría…" : "No se pudo inferir la categoría."}
                     </span>
@@ -728,7 +728,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                         <button
                           key={c.id}
                           onClick={() => openCategory(c.id)}
-                          className="flex items-center justify-between rounded-xl border border-border bg-bg px-3 py-2.5 text-left text-sm text-text transition-colors hover:border-secondary/40 hover:bg-secondary/5"
+                          className="flex items-center justify-between rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-left text-[13.5px] text-text transition-colors hover:border-border-strong hover:bg-bg"
                         >
                           <span>{c.name}</span>
                           <span className="text-text-muted">›</span>
@@ -756,13 +756,13 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                     />
                   </Field>
                   <Field label="Moneda">
-                    <select className={select} value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                    <SelectField value={currency} onChange={(e) => setCurrency(e.target.value)}>
                       <option value="ARS">Pesos (ARS)</option>
                       <option value="USD">Dólares (USD)</option>
-                    </select>
+                    </SelectField>
                   </Field>
                   <Field label="Tipo de publicación" className="sm:col-span-2">
-                    <select className={select} value={listingTypeId} onChange={(e) => setListingTypeId(e.target.value)}>
+                    <SelectField value={listingTypeId} onChange={(e) => setListingTypeId(e.target.value)}>
                       {listingPrices.length === 0 && <option value="">—</option>}
                       {listingPrices.map((p) => (
                         <option key={p.listing_type_id} value={p.listing_type_id}>
@@ -770,7 +770,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                           {p.listing_fee_amount ? ` — $${p.listing_fee_amount}` : " — gratis"}
                         </option>
                       ))}
-                    </select>
+                    </SelectField>
                   </Field>
                 </div>
               </Section>
@@ -787,8 +787,8 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                     />
                   </Field>
                   <Field label="Provincia">
-                    <select
-                      className={select + (!loc.stateId ? " border-danger" : "")}
+                    <SelectField
+                      className={!loc.stateId ? "border-terra" : ""}
                       value={loc.stateId}
                       onChange={(e) => goToState(e.target.value)}
                     >
@@ -798,11 +798,11 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                           {s.name}
                         </option>
                       ))}
-                    </select>
+                    </SelectField>
                   </Field>
                   <Field label="Ciudad">
-                    <select
-                      className={select + (loc.stateId && !loc.cityId ? " border-danger" : "")}
+                    <SelectField
+                      className={loc.stateId && !loc.cityId ? "border-terra" : ""}
                       value={loc.cityId}
                       onChange={(e) => {
                         const c = cities.find((x) => x.id === e.target.value);
@@ -816,7 +816,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                           {c.name}
                         </option>
                       ))}
-                    </select>
+                    </SelectField>
                   </Field>
                   <Field label="Barrio">
                     <input className={input} value={loc.neighborhood} onChange={(e) => setLoc({ ...loc, neighborhood: e.target.value })} />
@@ -842,11 +842,10 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                         key={a.id}
                         label={a.name}
                         hint={a.hint}
-                        className={missingAttrIds.has(a.id) ? "rounded-lg border-l-2 border-danger pl-2" : ""}
+                        className={missingAttrIds.has(a.id) ? "rounded-lg border-l-2 border-terra pl-2" : ""}
                       >
                         {a.value_type === "list" && a.values?.length ? (
-                          <select
-                            className={select}
+                          <SelectField
                             value={attrValues[a.id]?.value_id ?? ""}
                             onChange={(e) => setAttrValues({ ...attrValues, [a.id]: { value_id: e.target.value } })}
                           >
@@ -856,10 +855,9 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                                 {v.name}
                               </option>
                             ))}
-                          </select>
+                          </SelectField>
                         ) : a.value_type === "boolean" ? (
-                          <select
-                            className={select}
+                          <SelectField
                             value={attrValues[a.id]?.value_id ?? ""}
                             onChange={(e) => setAttrValues({ ...attrValues, [a.id]: { value_id: e.target.value } })}
                           >
@@ -872,7 +870,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                                 {v.name}
                               </option>
                             ))}
-                          </select>
+                          </SelectField>
                         ) : a.value_type === "number_unit" ? (
                           <div className="flex gap-2">
                             <input
@@ -881,8 +879,8 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                               value={attrValues[a.id]?.number ?? ""}
                               onChange={(e) => setAttrValues({ ...attrValues, [a.id]: { ...attrValues[a.id], number: e.target.value } })}
                             />
-                            <select
-                              className={select + " max-w-[120px]"}
+                            <SelectField
+                              className="max-w-[120px]"
                               value={attrValues[a.id]?.unit ?? a.default_unit ?? a.allowed_units?.[0]?.id ?? ""}
                               onChange={(e) => setAttrValues({ ...attrValues, [a.id]: { ...attrValues[a.id], unit: e.target.value } })}
                             >
@@ -891,7 +889,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                                   {u.name}
                                 </option>
                               ))}
-                            </select>
+                            </SelectField>
                           </div>
                         ) : a.value_type === "number" ? (
                           <input
@@ -944,13 +942,13 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                                 setPictures(selected ? pictures.filter((u) => u !== url) : [...pictures, url])
                               }
                               className={`relative aspect-square overflow-hidden rounded-lg border-2 transition-colors ${
-                                selected ? "border-secondary" : "border-transparent opacity-50 hover:opacity-80"
+                                selected ? "border-accent" : "border-transparent opacity-50 hover:opacity-80"
                               }`}
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={url} alt="" className="h-full w-full object-cover" />
                               {selected && (
-                                <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-[11px] font-bold text-white">
+                                <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-dark text-[11px] font-bold text-dark-fg">
                                   {idx + 1}
                                 </span>
                               )}
@@ -978,7 +976,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                               setNewPic("");
                             }
                           }}
-                          className="rounded-xl bg-secondary/20 px-4 text-sm font-medium text-secondary"
+                          className="rounded-full bg-dark px-4 text-[13px] font-bold text-dark-fg"
                         >
                           Agregar
                         </button>

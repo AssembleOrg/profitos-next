@@ -168,10 +168,10 @@ export function VoiceRecorder({ onUploaded, disabled }: Readonly<VoiceRecorderPr
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-bg px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:border-danger/30 hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-clay-chip px-4 text-[13px] font-bold text-terra transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             title="Grabar nota de voz"
           >
-            <span className="flex h-2 w-2 rounded-full bg-danger" />
+            <span className="flex h-2 w-2 rounded-full bg-terra" />
             Grabar
           </motion.button>
         )}
@@ -187,19 +187,19 @@ export function VoiceRecorder({ onUploaded, disabled }: Readonly<VoiceRecorderPr
             <button
               type="button"
               onClick={stopRecording}
-              className="inline-flex items-center gap-2 rounded-xl border border-danger/30 bg-danger-chip px-3 py-2 text-xs font-medium text-danger transition-colors hover:bg-danger-chip"
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-terra px-4 text-[13px] font-bold text-white transition-opacity hover:opacity-90"
             >
               <span className="relative flex h-2 w-2">
                 <motion.span
-                  className="absolute inline-flex h-full w-full rounded-full bg-danger-chip"
+                  className="absolute inline-flex h-full w-full rounded-full bg-white"
                   animate={{ scale: [1, 1.8, 1], opacity: [0.6, 0, 0.6] }}
                   transition={{ duration: 1.4, repeat: Infinity }}
                 />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-danger" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
               </span>
               Detener
             </button>
-            <span className="font-mono text-xs text-text-muted">{formatDuration(duration)}</span>
+            <span className="text-[12.5px] tabular-nums text-text-muted">{formatDuration(duration)}</span>
           </motion.div>
         )}
 
@@ -215,14 +215,14 @@ export function VoiceRecorder({ onUploaded, disabled }: Readonly<VoiceRecorderPr
             <button
               type="button"
               onClick={uploadRecording}
-              className="rounded-xl border border-olive-bright/30 bg-olive-mid px-3 py-2 text-xs font-semibold text-bg transition-colors hover:bg-olive-vivid"
+              className="inline-flex h-10 shrink-0 items-center rounded-full bg-dark px-4 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90"
             >
               Adjuntar
             </button>
             <button
               type="button"
               onClick={discard}
-              className="rounded-xl border border-border px-2.5 py-2 text-xs text-text-muted transition-colors hover:border-danger/30 hover:text-danger"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-[13px] text-text-muted transition-colors hover:bg-clay-chip hover:text-terra"
               title="Descartar"
             >
               ✕
@@ -236,9 +236,9 @@ export function VoiceRecorder({ onUploaded, disabled }: Readonly<VoiceRecorderPr
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-bg px-3 py-2 text-xs text-text-muted"
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text-muted"
           >
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-olive-bright border-t-transparent" />
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-text-faint border-t-transparent" />
             Subiendo…
           </motion.div>
         )}

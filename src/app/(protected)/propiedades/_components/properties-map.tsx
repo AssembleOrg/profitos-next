@@ -47,7 +47,7 @@ export function PropertiesMap({ properties }: PropertiesMapProps) {
   const zoom = properties.length > 0 ? DEFAULT_ZOOM : DEFAULT_ZOOM;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border">
+    <div className="overflow-hidden rounded-3xl border border-border">
       <MapContainer
         center={center}
         zoom={zoom}
@@ -79,7 +79,7 @@ export function PropertiesMap({ properties }: PropertiesMapProps) {
         ))}
       </MapContainer>
       {properties.length === 0 && (
-        <div className="flex h-20 items-center justify-center bg-surface text-sm text-text-muted">
+        <div className="flex h-20 items-center justify-center bg-surface text-[12.5px] text-text-faint">
           No hay propiedades con ubicación para mostrar en el mapa
         </div>
       )}

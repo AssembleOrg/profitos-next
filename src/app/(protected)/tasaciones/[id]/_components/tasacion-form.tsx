@@ -10,7 +10,7 @@ import { ImageUploader, MultiImageUploader } from "./image-uploader";
 
 const RichTextEditor = dynamic(
   () => import("./rich-text-editor").then((m) => m.RichTextEditor),
-  { ssr: false, loading: () => <div className="flex h-[200px] items-center justify-center rounded-lg border border-border bg-bg text-sm text-text-muted">Cargando editor...</div> }
+  { ssr: false, loading: () => <div className="flex h-[200px] items-center justify-center rounded-[14px] border border-border bg-bg text-[12.5px] text-text-faint">Cargando editor...</div> }
 );
 
 interface TablaData {
@@ -43,10 +43,10 @@ interface Props {
 function SectionHeader({ title, number }: { title: string; number: string }) {
   return (
     <div className="flex items-center gap-3 border-b border-border pb-3">
-      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary/15 text-xs font-bold text-secondary">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-dark font-display text-xs font-bold text-accent">
         {number}
       </span>
-      <h2 className="text-sm font-semibold uppercase tracking-widest text-text-muted">{title}</h2>
+      <h2 className="font-display text-base font-semibold text-text">{title}</h2>
     </div>
   );
 }
@@ -114,31 +114,31 @@ export function TasacionForm({ tasacion }: Props) {
         <div className="flex items-center gap-4">
           <Link
             href="/tasaciones"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border text-text-muted transition-colors hover:bg-surface hover:text-text"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-text-muted transition-colors hover:bg-bg hover:text-text"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </Link>
           <div>
-            <h1 className="text-lg font-semibold text-text">{direccion || "Nueva tasación"}</h1>
-            <p className="text-xs text-text-muted">Editando tasación</p>
+            <h1 className="font-display text-lg font-semibold text-text">{direccion || "Nueva tasación"}</h1>
+            <p className="text-[11.5px] text-text-faint">Editando tasación</p>
           </div>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <button
             onClick={() => handleSave(false)}
             disabled={saving}
-            className="flex w-full items-center justify-center rounded-xl border border-border px-4 py-3 text-sm font-medium text-text-muted transition-colors active:bg-surface/60 hover:bg-surface hover:text-text disabled:opacity-50 sm:w-auto sm:rounded-lg sm:py-2"
+            className="flex h-11 w-full items-center justify-center rounded-full border border-border bg-surface px-4 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg disabled:opacity-50 sm:w-auto"
           >
             {saving ? "Guardando..." : "Guardar"}
           </button>
           <button
             onClick={() => handleSave(true)}
             disabled={saving}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-secondary/20 px-5 py-3 text-sm font-semibold text-secondary transition-colors active:bg-secondary/40 hover:bg-secondary/30 disabled:opacity-50 sm:w-auto sm:rounded-lg sm:py-2 sm:font-medium"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50 sm:w-auto"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
@@ -149,68 +149,68 @@ export function TasacionForm({ tasacion }: Props) {
       </div>
 
       {/* Section 1: Portada */}
-      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-4 sm:p-6">
+      <div className="space-y-4 rounded-[20px] border border-border bg-surface p-4 sm:p-6">
         <SectionHeader title="Portada" number="1" />
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-text-muted">Dirección (aparece en la portada) *</label>
+          <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Dirección (aparece en la portada) *</label>
           <input
             value={direccion}
             onChange={(e) => setDireccion(e.target.value)}
             placeholder="San Martin 870 - Quilmes"
-            className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+            className="h-11 w-full rounded-[14px] border border-border bg-bg px-3.5 text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
           />
         </div>
       </div>
 
       {/* Section 2: Tasación Actualizada */}
-      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-4 sm:p-6">
+      <div className="space-y-4 rounded-[20px] border border-border bg-surface p-4 sm:p-6">
         <SectionHeader title="Tasación Actualizada" number="2" />
         <p className="text-xs text-text-faint">
           Estos datos aparecen en el punteo de la segunda página del PDF.
         </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-text-muted">
+            <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
               <strong className="text-text">Ubicación de la unidad:</strong>
             </label>
             <input
               value={ubicacionUnidad}
               onChange={(e) => setUbicacionUnidad(e.target.value)}
               placeholder="San Martin 870 entre 25 de Mayo y Brandsen"
-              className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+              className="h-11 w-full rounded-[14px] border border-border bg-bg px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-text-muted">
+            <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
               <strong className="text-text">Superficie total dos ambientes:</strong>
             </label>
             <input
               value={superficieTotal}
               onChange={(e) => setSuperficieTotal(e.target.value)}
               placeholder="64m2"
-              className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+              className="h-11 w-full rounded-[14px] border border-border bg-bg px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-text-muted">
+            <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
               <strong className="text-text">Superficie total monoambiente:</strong>
             </label>
             <input
               value={superficieMono}
               onChange={(e) => setSuperficieMono(e.target.value)}
               placeholder="44m2"
-              className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+              className="h-11 w-full rounded-[14px] border border-border bg-bg px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-text-muted">
+            <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
               <strong className="text-text">Condición de venta:</strong>
             </label>
             <input
               value={condicionVenta}
               onChange={(e) => setCondicionVenta(e.target.value)}
               placeholder="Vacío"
-              className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+              className="h-11 w-full rounded-[14px] border border-border bg-bg px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
           </div>
         </div>
@@ -224,7 +224,7 @@ export function TasacionForm({ tasacion }: Props) {
       </div>
 
       {/* Section 3: Fotos */}
-      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-4 sm:p-6">
+      <div className="space-y-4 rounded-[20px] border border-border bg-surface p-4 sm:p-6">
         <SectionHeader title="Fotos de la propiedad" number="3" />
         <p className="text-xs text-text-faint">
           Se mostrarán 2 fotos por página en el PDF. Las imágenes se convierten a AVIF automáticamente.
@@ -233,7 +233,7 @@ export function TasacionForm({ tasacion }: Props) {
       </div>
 
       {/* Section 4: Informe */}
-      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-4 sm:p-6">
+      <div className="space-y-4 rounded-[20px] border border-border bg-surface p-4 sm:p-6">
         <SectionHeader title="Informe" number="4" />
         <p className="text-xs text-text-faint">
           Descripción detallada del inmueble. Aparece como una página de texto en el PDF.
@@ -246,7 +246,7 @@ export function TasacionForm({ tasacion }: Props) {
       </div>
 
       {/* Section 5: Resultado */}
-      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-4 sm:p-6">
+      <div className="space-y-4 rounded-[20px] border border-border bg-surface p-4 sm:p-6">
         <SectionHeader title="Resultado" number="5" />
         <p className="text-xs text-text-faint">
           Conclusión y estimación de la tasación. Aparece como página de texto en el PDF.
@@ -259,11 +259,11 @@ export function TasacionForm({ tasacion }: Props) {
       </div>
 
       {/* Section 6: Lista de Precios */}
-      <div className="space-y-4 rounded-2xl border border-border bg-surface/30 p-4 sm:p-6">
+      <div className="space-y-4 rounded-[20px] border border-border bg-surface p-4 sm:p-6">
         <SectionHeader title="Lista de Precios" number="6" />
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-text-muted">Título de la lista</label>
-          <div className="flex items-center gap-0 rounded-lg border border-border bg-bg">
+          <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Título de la lista</label>
+          <div className="flex items-center gap-0 rounded-[14px] border border-border bg-bg">
             <span className="shrink-0 px-3 py-2.5 text-sm text-text-faint">Lista de Precios -</span>
             <input
               value={listaPreciosTitulo?.replace(/^Lista de Precios\s*-\s*/i, "") ?? ""}
@@ -277,12 +277,12 @@ export function TasacionForm({ tasacion }: Props) {
       </div>
 
       {/* Bottom actions */}
-      <div className="rounded-2xl border border-border bg-surface/30 p-4">
+      <div className="rounded-[20px] border border-border bg-surface p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           {/* Desktop: link izquierda */}
           <Link
             href="/tasaciones"
-            className="hidden items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-text-muted transition-colors hover:bg-surface hover:text-text sm:flex"
+            className="hidden h-10 items-center gap-2 rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg sm:flex"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
@@ -295,16 +295,16 @@ export function TasacionForm({ tasacion }: Props) {
             <button
               onClick={() => handleSave(false)}
               disabled={saving}
-              className="flex w-full items-center justify-center rounded-xl border border-border px-4 py-3 text-sm font-medium text-text-muted transition-colors active:bg-surface/60 hover:bg-surface hover:text-text disabled:opacity-50 sm:w-auto sm:rounded-lg sm:py-2"
+              className="flex h-11 w-full items-center justify-center rounded-full border border-border bg-surface px-4 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg disabled:opacity-50 sm:w-auto"
             >
               {saving ? "Guardando..." : "Guardar"}
             </button>
             <button
               onClick={() => handleSave(true)}
               disabled={saving}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-secondary/20 px-5 py-3 text-sm font-semibold text-secondary transition-colors active:bg-secondary/40 hover:bg-secondary/30 disabled:opacity-50 sm:w-auto sm:rounded-lg sm:py-2 sm:font-medium"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50 sm:w-auto"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
@@ -316,7 +316,7 @@ export function TasacionForm({ tasacion }: Props) {
           {/* Mobile: link al fondo, full-width con ícono */}
           <Link
             href="/tasaciones"
-            className="flex items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm text-text-muted transition-colors active:bg-surface/60 hover:bg-surface hover:text-text sm:hidden"
+            className="flex h-11 items-center justify-center gap-2 rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text-muted transition-colors active:bg-bg hover:bg-bg sm:hidden"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />

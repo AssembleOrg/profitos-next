@@ -113,14 +113,14 @@ export function CreateFirmaModal({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 16, scale: 0.98 }}
                 transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(640px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+                className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(640px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
               >
-                <header className="flex items-center justify-between gap-3 border-b border-border-olive/40 px-5 py-4">
+                <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
                   <div>
-                    <Dialog.Title className="text-base font-semibold text-text">
+                    <Dialog.Title className="font-display text-[17px] font-semibold text-text">
                       Nueva propuesta
                     </Dialog.Title>
-                    <Dialog.Description className="mt-0.5 text-xs text-text-muted">
+                    <Dialog.Description className="mt-0.5 text-[12.5px] text-text-faint">
                       Iniciá un proceso de firma adjuntando lo necesario.
                     </Dialog.Description>
                   </div>
@@ -128,7 +128,7 @@ export function CreateFirmaModal({
                     <button
                       type="button"
                       aria-label="Cerrar"
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-bg hover:text-text"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18" />
@@ -141,23 +141,23 @@ export function CreateFirmaModal({
                 <div className="flex-1 overflow-y-auto px-5 py-5">
                   <div className="flex flex-col gap-5">
                     <div>
-                      <label className="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label className="mb-1.5 flex items-center justify-between text-[12.5px] font-semibold text-text-muted">
                         <span>Propiedad</span>
                         {selectedProperty && (
                           <button
                             type="button"
                             onClick={() => setPropertyId("")}
-                            className="text-[10px] font-medium normal-case tracking-normal text-text-faint hover:text-text"
+                            className="text-[12.5px] font-bold text-terra transition-opacity hover:opacity-80"
                           >
                             Cambiar
                           </button>
                         )}
                       </label>
                       {selectedProperty ? (
-                        <div className="flex items-center justify-between rounded-xl border border-olive-bright/30 bg-olive-subtle px-3 py-2">
+                        <div className="flex items-center justify-between rounded-[14px] bg-sand-chip px-3.5 py-2.5">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-text">{selectedProperty.address}</p>
-                            <p className="truncate text-[11px] text-text-muted">
+                            <p className="truncate text-[13.5px] font-bold text-text">{selectedProperty.address}</p>
+                            <p className="truncate text-[11.5px] text-text-muted">
                               {[selectedProperty.zone, selectedProperty.city, selectedProperty.operationType]
                                 .filter(Boolean)
                                 .join(" · ")}
@@ -166,16 +166,22 @@ export function CreateFirmaModal({
                         </div>
                       ) : (
                         <>
-                          <input
-                            type="text"
-                            value={propertyQuery}
-                            onChange={(e) => setPropertyQuery(e.target.value)}
-                            placeholder="Buscar dirección, zona o ciudad…"
-                            className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
-                          />
-                          <div className="mt-2 flex max-h-44 flex-col gap-1 overflow-y-auto rounded-xl border border-border bg-bg/40 p-1.5">
+                          <div className="flex h-11 items-center gap-2 rounded-[14px] border border-border bg-surface px-3.5 focus-within:border-border-strong">
+                            <svg className="shrink-0 text-text-faint" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="11" cy="11" r="8" />
+                              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <input
+                              type="text"
+                              value={propertyQuery}
+                              onChange={(e) => setPropertyQuery(e.target.value)}
+                              placeholder="Buscar dirección, zona o ciudad…"
+                              className="h-full w-full bg-transparent text-sm text-text placeholder:text-text-faint focus:outline-none"
+                            />
+                          </div>
+                          <div className="mt-2 flex max-h-44 flex-col overflow-y-auto rounded-2xl border border-border bg-surface p-1.5 shadow-2xl">
                             {filteredProperties.length === 0 ? (
-                              <p className="px-3 py-3 text-center text-xs text-text-muted">
+                              <p className="px-3 py-4 text-center text-[12.5px] text-text-faint">
                                 Sin coincidencias
                               </p>
                             ) : (
@@ -184,10 +190,10 @@ export function CreateFirmaModal({
                                   key={p.id}
                                   type="button"
                                   onClick={() => setPropertyId(p.id)}
-                                  className="flex w-full flex-col items-start rounded-lg border border-transparent px-2.5 py-1.5 text-left transition-colors hover:border-olive-bright/40 hover:bg-bg"
+                                  className="flex w-full flex-col items-start rounded-xl px-3 py-2 text-left transition-colors hover:bg-bg"
                                 >
-                                  <span className="line-clamp-1 text-sm text-text">{p.address}</span>
-                                  <span className="line-clamp-1 text-[11px] text-text-faint">
+                                  <span className="line-clamp-1 text-[13.5px] font-bold text-text">{p.address}</span>
+                                  <span className="line-clamp-1 text-[11.5px] text-text-faint">
                                     {[p.zone, p.city, p.operationType].filter(Boolean).join(" · ")}
                                   </span>
                                 </button>
@@ -199,7 +205,7 @@ export function CreateFirmaModal({
                     </div>
 
                     <div>
-                      <label htmlFor="firma-title" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label htmlFor="firma-title" className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Título <span className="text-text-faint">(opcional)</span>
                       </label>
                       <input
@@ -208,12 +214,12 @@ export function CreateFirmaModal({
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="Ej. Propuesta de Juan Pérez"
-                        className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+                        className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                       />
                     </div>
 
                     <div>
-                      <label htmlFor="firma-description" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label htmlFor="firma-description" className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Descripción <span className="text-text-faint">(opcional)</span>
                       </label>
                       <textarea
@@ -222,12 +228,12 @@ export function CreateFirmaModal({
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Detalles de la propuesta, monto, condiciones…"
-                        className="w-full resize-none rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+                        className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm leading-relaxed text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label className="mb-2 block text-[12.5px] font-semibold text-text-muted">
                         Adjuntos <span className="text-text-faint">(imágenes, audios, videos, archivos)</span>
                       </label>
                       <MediaUploader
@@ -239,11 +245,11 @@ export function CreateFirmaModal({
                   </div>
                 </div>
 
-                <footer className="flex items-center justify-end gap-2 border-t border-border bg-bg/30 px-5 py-3">
+                <footer className="flex items-center justify-end gap-3 border-t border-border bg-surface px-5 py-3">
                   <Dialog.Close asChild>
                     <button
                       type="button"
-                      className="rounded-xl border border-border bg-bg px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:border-border-strong hover:text-text"
+                      className="text-[13px] font-semibold text-text-faint transition-colors hover:text-text"
                     >
                       Cancelar
                     </button>
@@ -252,7 +258,7 @@ export function CreateFirmaModal({
                     type="button"
                     onClick={submit}
                     disabled={submitting}
-                    className="rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2 text-sm font-semibold text-bg shadow-[0_0_0_1px_rgba(143,168,112,0.15),0_8px_24px_-8px_rgba(143,168,112,0.5)] transition-colors hover:bg-olive-vivid disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex h-11 items-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {submitting ? "Creando…" : "Crear propuesta"}
                   </button>

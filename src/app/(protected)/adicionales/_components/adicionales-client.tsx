@@ -45,8 +45,8 @@ export function AdicionalesClient({ initialItems }: Readonly<AdicionalesClientPr
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl text-text md:text-3xl">Adicionales</h1>
-          <p className="mt-1 text-sm text-text-muted">
+          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Adicionales</h1>
+          <p className="mt-1 text-[12.5px] text-text-faint">
             Catálogo de conceptos que se suman a las cuotas (expensas, ABL, wifi, services, etc.).
           </p>
         </div>
@@ -56,9 +56,9 @@ export function AdicionalesClient({ initialItems }: Readonly<AdicionalesClientPr
             setEditing(null);
             setOpen(true);
           }}
-          className="inline-flex items-center gap-2 self-start rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2.5 text-sm font-semibold text-bg shadow-[0_0_0_1px_rgba(143,168,112,0.15),0_8px_24px_-8px_rgba(143,168,112,0.5)] transition-colors hover:bg-olive-vivid sm:self-auto"
+          className="inline-flex h-11 items-center gap-2 self-start rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 sm:self-auto"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
@@ -67,7 +67,7 @@ export function AdicionalesClient({ initialItems }: Readonly<AdicionalesClientPr
       </header>
 
       {items.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border bg-surface/30 px-6 py-12 text-center text-sm text-text-muted">
+        <p className="rounded-[20px] bg-bg px-6 py-8 text-center text-[12.5px] text-text-faint">
           Todavía no hay adicionales cargados.
         </p>
       ) : (
@@ -80,17 +80,17 @@ export function AdicionalesClient({ initialItems }: Readonly<AdicionalesClientPr
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
-                className="flex flex-col gap-2 rounded-2xl border border-border bg-surface/40 p-4"
+                className="flex flex-col gap-2 rounded-[20px] border border-border bg-surface p-4 md:p-5"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-text">{it.name}</h3>
-                  <span className="rounded-full bg-bg px-2 py-0.5 text-[10px] font-medium text-text-muted">
+                  <h3 className="font-display text-base font-semibold text-text">{it.name}</h3>
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${it.contractsCount > 0 ? "bg-sage-chip text-olive-light" : "bg-bg text-text-faint"}`}>
                     {it.contractsCount} en uso
                   </span>
                 </div>
                 {it.defaultAmount !== null && (
                   <p className="text-xs text-text-muted">
-                    Default: <span className="font-mono text-text">{formatARS(it.defaultAmount)}</span>
+                    Default: <span className="font-display font-bold text-text">{formatARS(it.defaultAmount)}</span>
                   </p>
                 )}
                 {it.notes && (
@@ -103,7 +103,7 @@ export function AdicionalesClient({ initialItems }: Readonly<AdicionalesClientPr
                       setEditing(it);
                       setOpen(true);
                     }}
-                    className="rounded-md border border-border px-3 py-2 text-[11px] text-text-muted transition-colors hover:bg-surface hover:text-text"
+                    className="rounded-full bg-bg px-4 py-2 text-[12px] font-semibold text-text-muted transition-colors hover:text-text"
                   >
                     Editar
                   </button>
@@ -111,7 +111,7 @@ export function AdicionalesClient({ initialItems }: Readonly<AdicionalesClientPr
                     <button
                       type="button"
                       onClick={() => handleDelete(it)}
-                      className="rounded-md border border-danger/30 bg-danger-chip px-3 py-2 text-[11px] text-danger transition-colors hover:bg-danger-chip"
+                      className="rounded-full bg-clay-chip px-4 py-2 text-[12px] font-bold text-terra transition-opacity hover:opacity-80"
                     >
                       Eliminar
                     </button>
@@ -222,17 +222,17 @@ function AdditionalFormDialog({ open, onOpenChange, editing, onSaved }: Readonly
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 16, scale: 0.98 }}
                 transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(480px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+                className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(480px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
               >
-                <header className="flex items-center justify-between gap-3 border-b border-border-olive/40 px-5 py-4">
-                  <Dialog.Title className="text-base font-semibold text-text">
+                <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+                  <Dialog.Title className="font-display text-[17px] font-semibold text-text">
                     {editing ? "Editar adicional" : "Nuevo adicional"}
                   </Dialog.Title>
                   <Dialog.Close asChild>
                     <button
                       type="button"
                       aria-label="Cerrar"
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-bg hover:text-text"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18" />
@@ -245,7 +245,7 @@ function AdditionalFormDialog({ open, onOpenChange, editing, onSaved }: Readonly
                 <div className="flex-1 overflow-y-auto px-5 py-5">
                   <div className="flex flex-col gap-4">
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Nombre
                       </label>
                       <input
@@ -253,11 +253,11 @@ function AdditionalFormDialog({ open, onOpenChange, editing, onSaved }: Readonly
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Ej. Expensas, ABL, Wifi…"
-                        className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                        className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Importe sugerido <span className="text-text-faint">(opcional)</span>
                       </label>
                       <CurrencyInput
@@ -267,24 +267,24 @@ function AdditionalFormDialog({ open, onOpenChange, editing, onSaved }: Readonly
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Notas <span className="text-text-faint">(opcional)</span>
                       </label>
                       <textarea
                         rows={2}
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        className="w-full resize-none rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                        className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm text-text focus:border-border-strong focus:outline-none"
                       />
                     </div>
                   </div>
                 </div>
 
-                <footer className="flex items-center justify-end gap-2 border-t border-border bg-bg/30 px-5 py-3">
+                <footer className="flex items-center justify-end gap-3 border-t border-border px-5 py-3 pt-3">
                   <Dialog.Close asChild>
                     <button
                       type="button"
-                      className="rounded-xl border border-border bg-bg px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:border-border-strong hover:text-text"
+                      className="px-2 text-[13px] font-semibold text-text-faint transition-colors hover:text-text"
                     >
                       Cancelar
                     </button>
@@ -293,7 +293,7 @@ function AdditionalFormDialog({ open, onOpenChange, editing, onSaved }: Readonly
                     type="button"
                     onClick={submit}
                     disabled={submitting}
-                    className="rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2 text-sm font-semibold text-bg transition-colors hover:bg-olive-vivid disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex h-11 items-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {submitting ? "Guardando…" : editing ? "Guardar cambios" : "Crear"}
                   </button>

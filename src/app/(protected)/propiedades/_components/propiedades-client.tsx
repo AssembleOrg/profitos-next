@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
@@ -13,7 +14,7 @@ import { MlPublishWizard } from "./ml-publish-wizard";
 
 const PropertiesMap = dynamic(
   () => import("./properties-map").then((mod) => mod.PropertiesMap),
-  { ssr: false, loading: () => <div className="flex h-[500px] items-center justify-center rounded-2xl border border-border bg-surface/30 text-sm text-text-muted">Cargando mapa...</div> }
+  { ssr: false, loading: () => <div className="flex h-[500px] items-center justify-center rounded-3xl border border-border bg-surface text-[13px] text-text-faint">Cargando mapa...</div> }
 );
 
 interface Property {
@@ -85,10 +86,10 @@ const PROPERTY_TYPES = [
 ];
 
 const PROPERTY_STATUSES = [
-  { value: "activa", label: "Activa", color: "bg-success" },
-  { value: "vendida", label: "Vendida", color: "bg-info" },
-  { value: "alquilada", label: "Alquilada", color: "bg-warning" },
-  { value: "suspendida", label: "Suspendida", color: "bg-danger" },
+  { value: "activa", label: "Activa", color: "bg-sage-chip text-olive-light" },
+  { value: "vendida", label: "Vendida", color: "bg-info-chip text-info" },
+  { value: "alquilada", label: "Alquilada", color: "bg-sand-chip text-warning" },
+  { value: "suspendida", label: "Suspendida", color: "bg-clay-chip text-terra" },
 ];
 
 /**
@@ -99,7 +100,7 @@ function ManualChip() {
   return (
     <span
       title="Propiedad cargada manualmente"
-      className="inline-flex flex-shrink-0 items-center gap-1 rounded-full border border-warning/30 bg-warning-chip px-1.5 py-0.5 text-[10px] font-medium text-warning"
+      className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-sand-chip px-2 py-0.5 text-[10px] font-bold text-warning"
     >
       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 20h9" />
@@ -147,7 +148,7 @@ function MlChip({ status, permalink }: { status: string; permalink: string | nul
 }
 
 function getStatusColor(status: string) {
-  return PROPERTY_STATUSES.find((s) => s.value === status)?.color ?? "bg-text-muted";
+  return PROPERTY_STATUSES.find((s) => s.value === status)?.color ?? "bg-bg text-text-faint";
 }
 
 function getStatusLabel(status: string) {
@@ -529,8 +530,8 @@ export function PropiedadesClient({
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-medium text-text">Propiedades</h1>
-          <p className="text-sm text-text-muted">
+          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Propiedades</h1>
+          <p className="text-[12.5px] text-text-faint">
             Mostrando {properties.length} de {total} resultado{total !== 1 ? "s" : ""} · Total global: {totalAll}
           </p>
         </div>
@@ -538,7 +539,7 @@ export function PropiedadesClient({
           {isAdmin && (
             <button
               onClick={() => setAssignModalOpen(true)}
-              className="flex items-center gap-2 rounded-xl border border-secondary/30 px-3 py-2 text-sm font-medium text-secondary active:bg-secondary/10"
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 11l3 3L22 4" />
@@ -552,46 +553,51 @@ export function PropiedadesClient({
             onClick={handleSyncMl}
             disabled={syncingMl}
             title="Sincronizar el estado de las publicaciones de MercadoLibre"
-            className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text-muted active:bg-surface disabled:opacity-50"
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg disabled:opacity-50"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
               <polyline points="21 3 21 8 16 8" />
             </svg>
             <span className="hidden sm:inline">{syncingMl ? "Sincronizando..." : "Sincronizar ML"}</span>
+            <span className="sm:hidden">ML</span>
           </button>
-          <button
-            onClick={() => setViewMode((v) => (v === "list" ? "map" : "list"))}
-            className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text-muted active:bg-surface"
-          >
-            {viewMode === "list" ? (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
-                  <line x1="8" y1="2" x2="8" y2="18" />
-                  <line x1="16" y1="6" x2="16" y2="22" />
-                </svg>
-                <span className="hidden sm:inline">Mapa</span>
-              </>
-            ) : (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="8" y1="6" x2="21" y2="6" />
-                  <line x1="8" y1="12" x2="21" y2="12" />
-                  <line x1="8" y1="18" x2="21" y2="18" />
-                  <line x1="3" y1="6" x2="3.01" y2="6" />
-                  <line x1="3" y1="12" x2="3.01" y2="12" />
-                  <line x1="3" y1="18" x2="3.01" y2="18" />
-                </svg>
-                <span className="hidden sm:inline">Lista</span>
-              </>
-            )}
-          </button>
+          <div className="inline-flex h-11 items-center gap-0.5 rounded-full border border-border bg-surface p-1">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] transition-colors ${
+                viewMode === "list" ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
+              }`}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+              <span className="hidden sm:inline">Lista</span>
+            </button>
+            <button
+              onClick={() => setViewMode("map")}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] transition-colors ${
+                viewMode === "map" ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
+              }`}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+                <line x1="8" y1="2" x2="8" y2="18" />
+                <line x1="16" y1="6" x2="16" y2="22" />
+              </svg>
+              <span className="hidden sm:inline">Mapa</span>
+            </button>
+          </div>
           <button
             onClick={handleNew}
-            className="flex items-center gap-2 rounded-xl bg-secondary/20 px-3 py-2 text-sm font-medium text-secondary active:bg-secondary/30"
+            className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 active:opacity-90"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
@@ -602,12 +608,12 @@ export function PropiedadesClient({
       </div>
 
       {/* Filters */}
-      <div className="rounded-2xl border border-border bg-surface/30 p-4">
+      <div className="rounded-[20px] border border-border bg-surface p-4">
 
         {/* Mobile: búsqueda + botón filtros siempre visibles */}
         <div className="flex gap-2 sm:hidden">
           <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
@@ -616,12 +622,12 @@ export function PropiedadesClient({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters(1)}
-              className="w-full rounded-xl border border-border bg-bg py-2.5 pl-10 pr-4 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+              className="h-11 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
           </div>
           <button
             onClick={() => setFiltersOpen((f) => !f)}
-            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${filtersOpen || extraActiveCount > 0 ? "border-secondary/40 bg-secondary/10 text-secondary" : "border-border text-text-muted"}`}
+            className={`inline-flex h-11 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${filtersOpen || extraActiveCount > 0 ? "border-transparent bg-sand-chip text-warning" : "border-border bg-surface text-text-muted"}`}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
@@ -631,74 +637,68 @@ export function PropiedadesClient({
         </div>
 
         {/* Mobile: estado siempre visible */}
-        <div className="mt-2 sm:hidden">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
-          >
-            <option value="">Todos los estados</option>
-            {PROPERTY_STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
-        </div>
+        <SelectField
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          wrapperClassName="mt-2 sm:hidden"
+        >
+          <option value="">Todos los estados</option>
+          {PROPERTY_STATUSES.map((s) => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </SelectField>
 
         {/* Mobile: panel colapsable */}
         {filtersOpen && (
           <div className="mt-2 grid grid-cols-1 gap-2 sm:hidden">
-            <select
+            <SelectField
               value={operationFilter}
               onChange={(e) => setOperationFilter(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
             >
               <option value="">Todas las operaciones</option>
               <option value="venta">Venta</option>
               <option value="alquiler">Alquiler</option>
-            </select>
-            <select
+            </SelectField>
+            <SelectField
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
             >
               <option value="">Todos los tipos</option>
               {PROPERTY_TYPES.filter((t) => t.value).map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
-            </select>
+            </SelectField>
             <input
               value={cityFilter}
               onChange={(e) => setCityFilter(e.target.value)}
               placeholder="Ciudad"
-              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+              className="h-11 rounded-[14px] border border-border bg-surface px-3.5 text-[13px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
-            <select
+            <SelectField
               value={currencyFilter}
               onChange={(e) => setCurrencyFilter(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
             >
               <option value="">Moneda</option>
               <option value="USD">USD</option>
               <option value="ARS">ARS</option>
-            </select>
-            <select
+            </SelectField>
+            <SelectField
               value={sortFilter}
               onChange={(e) => setSortFilter(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
             >
               <option value="created_desc">Más recientes</option>
               <option value="price_asc">Precio menor</option>
               <option value="price_desc">Precio mayor</option>
               <option value="surface_desc">Mayor superficie</option>
               <option value="external_newest">Más nuevas</option>
-            </select>
+            </SelectField>
           </div>
         )}
 
         {/* Desktop: todos los filtros en grid */}
         <div className="hidden sm:grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="relative xl:col-span-2">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
@@ -706,76 +706,71 @@ export function PropiedadesClient({
               placeholder="Buscar por dirección, código, título..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full rounded-xl border border-border bg-bg py-2.5 pl-10 pr-4 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+              className="h-11 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
           </div>
-          <select
+          <SelectField
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
           >
             <option value="">Todos los estados</option>
             {PROPERTY_STATUSES.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
-          </select>
-          <select
+          </SelectField>
+          <SelectField
             value={operationFilter}
             onChange={(e) => setOperationFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
           >
             <option value="">Todas las operaciones</option>
             <option value="venta">Venta</option>
             <option value="alquiler">Alquiler</option>
-          </select>
-          <select
+          </SelectField>
+          <SelectField
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
           >
             <option value="">Todos los tipos</option>
             {PROPERTY_TYPES.filter((t) => t.value).map((t) => (
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
-          </select>
+          </SelectField>
           <input
             value={cityFilter}
             onChange={(e) => setCityFilter(e.target.value)}
             placeholder="Ciudad"
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+            className="h-11 rounded-[14px] border border-border bg-surface px-3.5 text-[13px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
           />
-          <select
+          <SelectField
             value={currencyFilter}
             onChange={(e) => setCurrencyFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
           >
             <option value="">Moneda</option>
             <option value="USD">USD</option>
             <option value="ARS">ARS</option>
-          </select>
-          <select
+          </SelectField>
+          <SelectField
             value={sortFilter}
             onChange={(e) => setSortFilter(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
           >
             <option value="created_desc">Más recientes</option>
             <option value="price_asc">Precio menor</option>
             <option value="price_desc">Precio mayor</option>
             <option value="surface_desc">Mayor superficie</option>
             <option value="external_newest">Más nuevas</option>
-          </select>
+          </SelectField>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             onClick={() => applyFilters(1)}
-            className="rounded-xl bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30"
+            className="inline-flex h-10 items-center rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90"
           >
             Aplicar filtros
           </button>
           <button
             onClick={resetFilters}
-            className="rounded-xl border border-border px-4 py-2 text-sm text-text-muted transition-colors hover:bg-bg hover:text-text"
+            className="px-2 text-[13px] font-bold text-text-faint transition-colors hover:text-text"
           >
             Limpiar filtros
           </button>
@@ -784,9 +779,10 @@ export function PropiedadesClient({
               {activeFilters.map((chip) => (
                 <span
                   key={chip}
-                  className="rounded-full border border-border bg-bg px-3 py-1 text-xs text-text-muted"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-sand-chip px-3 py-1.5 text-[12px] font-semibold text-text-muted"
                 >
                   {chip}
+                  <span aria-hidden="true" className="text-text-faint">✕</span>
                 </span>
               ))}
             </div>
@@ -816,31 +812,32 @@ export function PropiedadesClient({
       {/* Cards — solo mobile */}
       {viewMode === "list" && <div className="sm:hidden space-y-2">
         {properties.length === 0 ? (
-          <p className="px-2 py-8 text-center text-sm text-text-muted">No hay propiedades para los filtros seleccionados</p>
+          <div className="rounded-[20px] bg-bg px-6 py-8 text-center">
+            <p className="text-[12.5px] text-text-faint">No hay propiedades para los filtros seleccionados</p>
+          </div>
         ) : (
           properties.map((p) => (
             <div
               key={p.id}
               onClick={() => handleEdit(p)}
-              className="flex cursor-pointer flex-col rounded-xl border border-border bg-surface/30 p-4 active:bg-surface/60"
+              className="flex cursor-pointer flex-col rounded-[18px] border border-border bg-surface p-3.5 active:bg-bg"
             >
               <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-center gap-1.5">
-                    <p className="truncate font-medium text-text">{p.address}</p>
+                    <p className="truncate text-[13.5px] font-bold text-text">{p.address}</p>
                     {p.source === "manual" && <ManualChip />}
                     {p.mlPublication?.published && (
                       <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
                     )}
                   </div>
-                  <p className="mt-0.5 truncate text-xs text-text-muted">
+                  <p className="mt-0.5 truncate text-[11.5px] text-text-faint">
                     {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
                   </p>
-                  <p className="mt-0.5 text-xs text-text-muted">{p.city ?? ""}{p.type ? ` · ${p.type}` : ""}</p>
+                  <p className="mt-0.5 text-[11.5px] text-text-faint">{p.city ?? ""}{p.type ? ` · ${p.type}` : ""}</p>
                 </div>
-                <span className="ml-3 mt-0.5 inline-flex flex-shrink-0 items-center gap-1.5">
-                  <span className={`h-1.5 w-1.5 rounded-full ${getStatusColor(p.status)}`} />
-                  <span className="text-xs text-text-muted">{getStatusLabel(p.status)}</span>
+                <span className={`ml-3 mt-0.5 inline-flex flex-shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${getStatusColor(p.status)}`}>
+                  {getStatusLabel(p.status)}
                 </span>
               </div>
               <div className="mt-2 flex gap-2">
@@ -849,7 +846,7 @@ export function PropiedadesClient({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-success/30 bg-success-chip px-2.5 text-[11px] font-medium text-success"
+                  className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full bg-sage-chip px-3 text-[11px] font-bold text-olive-light"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
@@ -860,7 +857,7 @@ export function PropiedadesClient({
                 <div className="relative">
                   <button
                     onClick={(e) => handlePdfClick(e, p, "left")}
-                    className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-border px-2.5 text-[11px] font-medium text-text-muted"
+                    className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full bg-sand-chip px-3 text-[11px] font-bold text-warning"
                   >
                     PDF
                   </button>
@@ -875,33 +872,32 @@ export function PropiedadesClient({
       {viewMode === "list" && (
         <div className="hidden sm:grid xl:hidden grid-cols-2 lg:grid-cols-3 gap-2">
           {properties.length === 0 ? (
-            <p className="col-span-3 px-2 py-8 text-center text-sm text-text-muted">
+            <div className="col-span-3 rounded-[20px] bg-bg px-6 py-8 text-center text-[12.5px] text-text-faint">
               No hay propiedades para los filtros seleccionados
-            </p>
+            </div>
           ) : (
             properties.map((p) => (
               <div
                 key={p.id}
                 onClick={() => handleEdit(p)}
-                className="flex cursor-pointer flex-col rounded-xl border border-border bg-surface/30 p-4 active:bg-surface/60"
+                className="flex cursor-pointer flex-col rounded-[18px] border border-border bg-surface p-4 active:bg-bg"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-1.5">
-                      <p className="truncate font-medium text-text">{p.address}</p>
+                      <p className="truncate text-[13.5px] font-bold text-text">{p.address}</p>
                       {p.source === "manual" && <ManualChip />}
                       {p.mlPublication?.published && (
                         <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
                       )}
                     </div>
-                    <p className="mt-0.5 truncate text-xs text-text-muted">
+                    <p className="mt-0.5 truncate text-[11.5px] text-text-faint">
                       {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
                     </p>
-                    <p className="mt-0.5 text-xs text-text-muted">{p.city ?? ""}{p.type ? ` · ${p.type}` : ""}</p>
+                    <p className="mt-0.5 text-[11.5px] text-text-faint">{p.city ?? ""}{p.type ? ` · ${p.type}` : ""}</p>
                   </div>
-                  <span className="ml-1 mt-0.5 inline-flex flex-shrink-0 items-center gap-1.5">
-                    <span className={`h-1.5 w-1.5 rounded-full ${getStatusColor(p.status)}`} />
-                    <span className="text-xs text-text-muted">{getStatusLabel(p.status)}</span>
+                  <span className={`ml-1 mt-0.5 inline-flex flex-shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${getStatusColor(p.status)}`}>
+                    {getStatusLabel(p.status)}
                   </span>
                 </div>
                 <div className="mt-3 flex gap-2">
@@ -910,7 +906,7 @@ export function PropiedadesClient({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-success/30 bg-success-chip px-2.5 text-[11px] font-medium text-success"
+                    className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full bg-sage-chip px-3 text-[11px] font-bold text-olive-light"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
@@ -932,7 +928,7 @@ export function PropiedadesClient({
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-secondary/40 bg-secondary/15 px-2.5 text-[11px] font-medium text-secondary"
+                      className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full bg-bg px-3 text-[11px] font-bold text-text-muted"
                     >
                       Tokko
                     </a>
@@ -945,24 +941,24 @@ export function PropiedadesClient({
       )}
 
       {/* Table — solo desktop xl+ */}
-      {viewMode === "list" && <div className="hidden overflow-hidden rounded-2xl border border-border bg-surface/30 xl:block">
+      {viewMode === "list" && <div className="hidden overflow-hidden rounded-[20px] border border-border bg-surface xl:block">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs font-semibold uppercase tracking-widest text-text-muted">
-                <th className="px-5 py-3">Dirección</th>
-                <th className="px-5 py-3">Código</th>
-                <th className="px-5 py-3">Precio</th>
-                <th className="px-5 py-3">Ciudad</th>
-                <th className="px-5 py-3">Tipo</th>
-                <th className="px-5 py-3">Estado</th>
-                <th className="px-5 py-3 text-right">Ficha</th>
+              <tr className="border-b border-border">
+                <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Dirección</th>
+                <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Código</th>
+                <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Precio</th>
+                <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Ciudad</th>
+                <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Tipo</th>
+                <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Estado</th>
+                <th className="px-4 py-3 text-right text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Ficha</th>
               </tr>
             </thead>
             <tbody>
               {properties.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-text-muted">
+                  <td colSpan={7} className="px-4 py-12 text-center text-[12.5px] text-text-faint">
                     No hay propiedades para los filtros seleccionados
                   </td>
                 </tr>
@@ -971,42 +967,40 @@ export function PropiedadesClient({
                   <tr
                     key={p.id}
                     onClick={() => handleEdit(p)}
-                    className="cursor-pointer border-b border-border/50 transition-colors last:border-b-0 hover:bg-surface/50"
+                    className="cursor-pointer border-t border-border transition-colors hover:bg-bg"
                   >
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1.5">
-                        <p className="font-medium text-text">{p.address}</p>
+                        <p className="text-[13.5px] font-bold text-text">{p.address}</p>
                         {p.source === "manual" && <ManualChip />}
                         {p.mlPublication?.published && (
                           <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
                         )}
                       </div>
-                      <p className="text-xs text-text-muted">{p.publicationTitle ?? p.realAddress ?? "Sin título"}</p>
+                      <p className="text-[11.5px] text-text-faint">{p.publicationTitle ?? p.realAddress ?? "Sin título"}</p>
                     </td>
-                    <td className="px-5 py-3.5 text-text-muted">{p.referenceCode ?? (p.externalId ? `#${p.externalId}` : "—")}</td>
-                    <td className="px-5 py-3.5 text-text-muted">
+                    <td className="px-4 py-3.5 text-[13px] text-text-muted">{p.referenceCode ?? (p.externalId ? `#${p.externalId}` : "—")}</td>
+                    <td className="px-4 py-3.5 font-display text-[13.5px] font-bold text-text">
                       {p.operationPrice ? `${p.operationCurrency ?? "USD"} ${p.operationPrice.toLocaleString("es-AR")}` : "—"}
                     </td>
-                    <td className="px-5 py-3.5 text-text-muted">{p.city ?? "—"}</td>
-                    <td className="px-5 py-3.5 capitalize text-text-muted">{p.type ?? "—"}</td>
-                    <td className="px-5 py-3.5">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className={`h-1.5 w-1.5 rounded-full ${getStatusColor(p.status)}`} />
-                        <span className="text-text-muted">{getStatusLabel(p.status)}</span>
+                    <td className="px-4 py-3.5 text-[13px] text-text-muted">{p.city ?? "—"}</td>
+                    <td className="px-4 py-3.5 text-[13px] capitalize text-text-muted">{p.type ?? "—"}</td>
+                    <td className="px-4 py-3.5">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${getStatusColor(p.status)}`}>
+                        {getStatusLabel(p.status)}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-right">
+                    <td className="px-4 py-3.5 text-right">
                       <div className="inline-flex items-center gap-2">
                         <a
                           href={buildPropertyWhatsAppLink(p)}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(event) => event.stopPropagation()}
-                          className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-success/30 bg-success-chip px-3 text-xs font-medium text-success transition-colors hover:bg-success-chip"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-sage-chip text-olive-light transition-opacity hover:opacity-80"
                           title="Compartir por WhatsApp"
                         >
-                          WhatsApp
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
                             <path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.611.611l4.458-1.495A11.948 11.948 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.37 0-4.567-.696-6.42-1.888l-.447-.293-2.91.975.975-2.91-.293-.447A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
                           </svg>
@@ -1014,10 +1008,10 @@ export function PropiedadesClient({
                         <div className="relative">
                           <button
                             onClick={(e) => handlePdfClick(e, p)}
-                            className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-border px-3 text-xs font-medium text-text-muted transition-colors hover:bg-bg hover:text-text"
+                            title="Descargar PDF"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-sand-chip text-warning transition-opacity hover:opacity-80"
                           >
-                            PDF
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                               <polyline points="7 10 12 15 17 10" />
                               <line x1="12" y1="15" x2="12" y2="3" />
@@ -1030,16 +1024,16 @@ export function PropiedadesClient({
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(event) => event.stopPropagation()}
-                          className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-secondary/40 bg-secondary/15 px-3 text-xs font-medium text-secondary transition-colors hover:bg-secondary/25"
-                        >
-                          Ver publicación
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M7 17L17 7" />
-                            <path d="M7 7h10v10" />
+                            title="Ver publicación"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-bg text-text-muted transition-colors hover:text-text"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M7 17L17 7" />
+                              <path d="M7 7h10v10" />
                             </svg>
                           </a>
                         ) : (
-                          <span className="text-xs text-text-muted">—</span>
+                          <span className="inline-flex h-8 w-8 items-center justify-center text-xs text-text-faint">—</span>
                         )}
                       </div>
                     </td>
@@ -1056,18 +1050,18 @@ export function PropiedadesClient({
 
       {pdfPopup && (
         <div
-          className="fixed z-80 overflow-hidden rounded-lg border border-border bg-surface shadow-xl"
+          className="fixed z-80 overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
           style={{ top: `${pdfPopup.top}px`, left: `${pdfPopup.left}px`, width: "132px" }}
         >
           <button
             onClick={() => handlePdfNoDueno(pdfPopup.property.id)}
-            className="block w-full whitespace-nowrap px-4 py-2.5 text-left text-xs text-text-muted hover:bg-bg hover:text-text"
+            className="block w-full whitespace-nowrap px-4 py-2.5 text-left text-[12px] font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text"
           >
             No Dueño
           </button>
           <button
             onClick={() => handlePdfDueno(pdfPopup.property)}
-            className="block w-full whitespace-nowrap border-t border-border px-4 py-2.5 text-left text-xs text-text-muted hover:bg-bg hover:text-text"
+            className="block w-full whitespace-nowrap border-t border-border bg-sand-chip px-4 py-2.5 text-left text-[12px] font-bold text-warning transition-opacity hover:opacity-90"
           >
             Dueño
           </button>
@@ -1097,23 +1091,23 @@ export function PropiedadesClient({
               onClick={(e) => e.stopPropagation()}
               className={`fixed z-50 flex flex-col border border-border bg-surface shadow-2xl
                 /* mobile: bottom sheet */
-                bottom-0 left-0 right-0 max-h-[90dvh] rounded-t-2xl
-                /* desktop: centered dialog */
-                sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-md
-                sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-h-[85vh] sm:rounded-2xl`}
+                bottom-0 left-0 right-0 max-h-[90dvh] rounded-t-[28px]
+                /* desktop: centered dialog — ancho amplio para respirar */
+                sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-2xl lg:max-w-4xl
+                sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-h-[88vh] sm:rounded-3xl`}
             >
               {/* Drag handle — solo mobile */}
               <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-border sm:hidden" />
 
               {/* Header fijo */}
-              <div className="flex flex-shrink-0 items-center justify-between border-b border-border-olive/40 px-5 py-4">
-                <h2 className="flex items-center gap-2 text-base font-medium text-text">
+              <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
+                <h2 className="flex items-center gap-2 font-display text-[17px] font-semibold text-text">
                   {isEdit ? "Editar propiedad" : "Nueva propiedad"}
                   {isEdit && editProperty?.source === "manual" && <ManualChip />}
                 </h2>
                 <button
                   onClick={handleClose}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors active:bg-bg"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted transition-colors active:bg-bg"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" />
@@ -1123,156 +1117,154 @@ export function PropiedadesClient({
               </div>
 
               {/* Body scrolleable */}
-              <form id="property-form" onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 py-4">
+              <form id="property-form" onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 py-4 sm:gap-5 sm:px-8 sm:py-6">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-muted">Dirección *</label>
+                  <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Dirección *</label>
                   <input
                     name="address"
                     required
                     defaultValue={editProperty?.address ?? ""}
                     placeholder="Av. Corrientes 1234, 5to A"
-                    className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                    className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Título publicación</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Título publicación</label>
                     <input
                       name="publicationTitle"
                       defaultValue={editProperty?.publicationTitle ?? ""}
                       placeholder="Título de aviso"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Código referencia</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Código referencia</label>
                     <input
                       name="referenceCode"
                       defaultValue={editProperty?.referenceCode ?? ""}
                       placeholder="Ej: ZP-M-51545814"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-muted">Dirección real</label>
+                  <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Dirección real</label>
                   <input
                     name="realAddress"
                     defaultValue={editProperty?.realAddress ?? ""}
                     placeholder="Brown 1082 - 2B"
-                    className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                    className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                   />
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Provincia</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Provincia</label>
                     <input
                       name="province"
                       defaultValue={editProperty?.province ?? ""}
                       placeholder="Buenos Aires"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Ciudad / Partido</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Ciudad / Partido</label>
                     <input
                       name="city"
                       defaultValue={editProperty?.city ?? ""}
                       placeholder="Quilmes"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Barrio / Zona</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Barrio / Zona</label>
                     <input
                       name="zone"
                       defaultValue={editProperty?.zone ?? ""}
                       placeholder="Ezpeleta"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Tipo</label>
-                    <select
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Tipo</label>
+                    <SelectField
                       name="type"
                       defaultValue={editProperty?.type ?? ""}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:light]"
                     >
                       {PROPERTY_TYPES.map((t) => (
                         <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
-                    </select>
+                    </SelectField>
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Estado</label>
-                    <select
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Estado</label>
+                    <SelectField
                       name="status"
                       defaultValue={editProperty?.status ?? "activa"}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
                     >
                       {PROPERTY_STATUSES.map((s) => (
                         <option key={s.value} value={s.value}>{s.label}</option>
                       ))}
-                    </select>
+                    </SelectField>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3 lg:grid-cols-6">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Ambientes</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Ambientes</label>
                     <input
                       name="roomAmount"
                       type="number"
                       min={0}
                       defaultValue={editProperty?.roomAmount ?? ""}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Dormitorios</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Dormitorios</label>
                     <input
                       name="bedrooms"
                       type="number"
                       min={0}
                       defaultValue={editProperty?.bedrooms ?? ""}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Baños</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Baños</label>
                     <input
                       name="bathroomAmount"
                       type="number"
                       min={0}
                       defaultValue={editProperty?.bathroomAmount ?? ""}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Cocheras</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Cocheras</label>
                     <input
                       name="parkingLotAmount"
                       type="number"
                       min={0}
                       defaultValue={editProperty?.parkingLotAmount ?? ""}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Sup. total (m²)</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Sup. total (m²)</label>
                     <input
                       name="totalSurface"
                       type="number"
                       min={0}
                       step="0.01"
                       defaultValue={editProperty?.totalSurface ?? ""}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
                     />
                   </div>
                   <div>
@@ -1283,7 +1275,7 @@ export function PropiedadesClient({
                       min={0}
                       step="0.01"
                       defaultValue={editProperty?.roofedSurface ?? ""}
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
                 </div>
@@ -1291,80 +1283,80 @@ export function PropiedadesClient({
                 {/* Operación y Moneda ocultas del modal — visibles solo en tabla y filtros
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Operación</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Operación</label>
                     <input
                       name="operationType"
                       defaultValue={editProperty?.operationType ?? ""}
                       placeholder="Venta / Alquiler"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Moneda</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Moneda</label>
                     <input
                       name="operationCurrency"
                       defaultValue={editProperty?.operationCurrency ?? ""}
                       placeholder="USD"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
                     />
                   </div>
                 */}
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-muted">Precio</label>
+                  <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Precio</label>
                   <input
                     name="operationPrice"
                     type="number"
                     min={0}
                     step="0.01"
                     defaultValue={editProperty?.operationPrice ?? ""}
-                    className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
+                    className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
                   />
                 </div>
                 {/* fin campos ocultos */}
 
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-muted">URL pública</label>
+                  <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">URL pública</label>
                   <input
                     name="publicUrl"
                     defaultValue={editProperty?.publicUrl ?? ""}
                     placeholder="https://..."
-                    className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                    className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Latitud</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Latitud</label>
                     <input
                       name="geoLat"
                       type="number"
                       step="any"
                       defaultValue={editProperty?.geoLat ?? ""}
                       placeholder="-34.6037"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Longitud</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Longitud</label>
                     <input
                       name="geoLong"
                       type="number"
                       step="any"
                       defaultValue={editProperty?.geoLong ?? ""}
                       placeholder="-58.3816"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
                 </div>
 
                 {error && (
-                  <p className="rounded-lg bg-danger-chip px-3 py-2 text-sm text-danger">{error}</p>
+                  <p className="rounded-[14px] bg-clay-chip px-3.5 py-2 text-[13px] font-semibold text-terra">{error}</p>
                 )}
               </form>
 
               {/* Estado de publicación en MercadoLibre */}
               {isEdit && editProperty?.mlPublication?.published && (
-                <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border bg-surface/40 px-5 py-3">
+                <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border bg-sand-chip/40 px-5 py-3">
                   <div className="flex items-center gap-2">
                     <MlChip status={editProperty.mlPublication.status} permalink={null} />
                     <span className="text-xs text-text-muted">Publicado en MercadoLibre</span>
@@ -1375,7 +1367,7 @@ export function PropiedadesClient({
                         href={editProperty.mlPublication.permalink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-text-muted transition-colors active:bg-surface"
+                        className="inline-flex h-9 items-center gap-1 rounded-full border border-border bg-surface px-3.5 text-[12.5px] font-semibold text-text-muted transition-colors hover:bg-bg"
                       >
                         Ver aviso
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1393,7 +1385,7 @@ export function PropiedadesClient({
                             toast.error("No se pudo copiar");
                           }
                         }}
-                        className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-text-muted transition-colors active:bg-surface"
+                        className="inline-flex h-9 items-center gap-1 rounded-full border border-border bg-surface px-3.5 text-[12.5px] font-semibold text-text-muted transition-colors hover:bg-bg"
                       >
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
@@ -1412,12 +1404,12 @@ export function PropiedadesClient({
                 style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
               >
                 {isEdit ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setConfirmAction("delete")}
                       disabled={deleting}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-danger transition-colors active:bg-danger-chip disabled:opacity-50"
+                      className="flex h-10 items-center gap-1.5 rounded-full bg-clay-chip px-4 text-[13px] font-bold text-terra transition-opacity active:opacity-80 disabled:opacity-50"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6" />
@@ -1433,7 +1425,7 @@ export function PropiedadesClient({
                           handleClose();
                           setWizardProperty(p);
                         }}
-                        className="flex items-center gap-1.5 rounded-lg border border-warning/40 bg-warning-chip px-3 py-2 text-sm font-medium text-warning transition-colors active:bg-warning/20"
+                        className="flex h-10 items-center gap-1.5 rounded-full bg-sand-chip px-4 text-[13px] font-bold text-warning transition-opacity active:opacity-80"
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
@@ -1451,7 +1443,7 @@ export function PropiedadesClient({
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="rounded-lg px-4 py-2 text-sm text-text-muted transition-colors active:text-text"
+                    className="px-4 py-2 text-[13px] font-semibold text-text-faint transition-colors active:text-text"
                   >
                     Cancelar
                   </button>
@@ -1460,11 +1452,11 @@ export function PropiedadesClient({
                       type="button"
                       onClick={() => setConfirmAction("save")}
                       disabled={loading}
-                      className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary transition-colors active:bg-secondary/30 disabled:opacity-50"
+                      className="flex items-center gap-2 h-11 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity active:opacity-90 disabled:opacity-50"
                     >
                       {loading ? (
                         <>
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-secondary/30 border-t-secondary" />
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-dark-fg/30 border-t-dark-fg" />
                           Guardando...
                         </>
                       ) : (
@@ -1476,11 +1468,11 @@ export function PropiedadesClient({
                       type="submit"
                       form="property-form"
                       disabled={loading}
-                      className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary transition-colors active:bg-secondary/30 disabled:opacity-50"
+                      className="flex items-center gap-2 h-11 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity active:opacity-90 disabled:opacity-50"
                     >
                       {loading ? (
                         <>
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-secondary/30 border-t-secondary" />
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-dark-fg/30 border-t-dark-fg" />
                           Guardando...
                         </>
                       ) : (
@@ -1513,12 +1505,12 @@ export function PropiedadesClient({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="fixed left-1/2 top-1/2 z-[71] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-surface p-6 shadow-2xl"
+              className="fixed left-1/2 top-1/2 z-[71] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border bg-surface p-6 shadow-2xl"
             >
-              <p className="text-base font-medium text-text">
+              <p className="font-display text-[17px] font-semibold text-text">
                 {confirmAction === "delete" ? "¿Eliminar propiedad?" : "¿Guardar cambios?"}
               </p>
-              <p className="mt-1 text-sm text-text-muted">
+              <p className="mt-1 text-[13px] text-text-muted">
                 {confirmAction === "delete"
                   ? "Esta acción no se puede deshacer."
                   : "Se guardarán los cambios realizados en la propiedad."}
@@ -1527,7 +1519,7 @@ export function PropiedadesClient({
                 <button
                   type="button"
                   onClick={() => setConfirmAction(null)}
-                  className="rounded-lg px-4 py-2 text-sm text-text-muted transition-colors active:text-text"
+                  className="px-4 py-2 text-[13px] font-semibold text-text-faint transition-colors active:text-text"
                 >
                   Cancelar
                 </button>
@@ -1535,7 +1527,7 @@ export function PropiedadesClient({
                   <button
                     type="button"
                     onClick={() => { setConfirmAction(null); handleDelete(); }}
-                    className="rounded-xl bg-danger-chip px-5 py-2 text-sm font-medium text-danger transition-colors active:bg-danger-chip"
+                    className="h-10 rounded-full bg-terra px-5 text-[13px] font-bold text-white transition-opacity active:opacity-90"
                   >
                     Eliminar
                   </button>
@@ -1544,7 +1536,7 @@ export function PropiedadesClient({
                     type="submit"
                     form="property-form"
                     onClick={() => setConfirmAction(null)}
-                    className="rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary transition-colors active:bg-secondary/30"
+                    className="h-10 rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity active:opacity-90"
                   >
                     Confirmar
                   </button>
@@ -1573,17 +1565,17 @@ export function PropiedadesClient({
               transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
               onClick={(e) => e.stopPropagation()}
               className={`fixed z-50 flex flex-col border border-border bg-surface shadow-2xl
-                bottom-0 left-0 right-0 max-h-[90dvh] rounded-t-2xl
+                bottom-0 left-0 right-0 max-h-[90dvh] rounded-t-[28px]
                 sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-lg
-                sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-h-[85vh] sm:rounded-2xl`}
+                sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-h-[85vh] sm:rounded-3xl`}
             >
               <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-border sm:hidden" />
 
-              <div className="flex flex-shrink-0 items-center justify-between border-b border-border-olive/40 px-5 py-4">
-                <h2 className="text-base font-medium text-text">Asignar seguimiento</h2>
+              <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
+                <h2 className="font-display text-[17px] font-semibold text-text">Asignar seguimiento</h2>
                 <button
                   onClick={() => setAssignModalOpen(false)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted active:bg-bg"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted active:bg-bg"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" />
@@ -1595,62 +1587,54 @@ export function PropiedadesClient({
               <form id="assign-form" onSubmit={handleAssignFollowUp} className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 py-4">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Propiedad *</label>
-                    <select
-                      name="propertyId"
-                      required
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:light]"
-                    >
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Propiedad *</label>
+                    <SelectField name="propertyId" required>
                       <option value="">Seleccionar...</option>
                       {propertiesForAssignments.map((property) => (
                         <option key={property.id} value={property.id}>
                           {property.address}
                         </option>
                       ))}
-                    </select>
+                    </SelectField>
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Asignado a *</label>
-                    <select
-                      name="assignedToUserId"
-                      required
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none [color-scheme:light]"
-                    >
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Asignado a *</label>
+                    <SelectField name="assignedToUserId" required>
                       <option value="">Seleccionar...</option>
                       {usersForAssignments.map((user) => (
                         <option key={user.id} value={user.id}>
                           {getUserLabel(user)}
                         </option>
                       ))}
-                    </select>
+                    </SelectField>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Título</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Título</label>
                     <input
                       name="title"
                       placeholder="Ej: Seguimiento comercial"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Vencimiento</label>
+                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Vencimiento</label>
                     <DatePicker
                       name="dueDate"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
+                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-muted">Notas</label>
+                  <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Notas</label>
                   <textarea
                     name="notes"
                     rows={3}
                     placeholder="Indicaciones para el seguimiento..."
-                    className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                    className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                   />
                 </div>
               </form>
@@ -1662,7 +1646,7 @@ export function PropiedadesClient({
                 <button
                   type="button"
                   onClick={() => setAssignModalOpen(false)}
-                  className="rounded-lg px-4 py-2 text-sm text-text-muted transition-colors active:text-text"
+                  className="px-4 py-2 text-[13px] font-semibold text-text-faint transition-colors active:text-text"
                 >
                   Cancelar
                 </button>
@@ -1670,7 +1654,7 @@ export function PropiedadesClient({
                   type="submit"
                   form="assign-form"
                   disabled={assigning}
-                  className="rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary transition-colors active:bg-secondary/30 disabled:opacity-50"
+                  className="h-11 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity active:opacity-90 disabled:opacity-50"
                 >
                   {assigning ? "Asignando..." : "Asignar seguimiento"}
                 </button>
@@ -1688,13 +1672,13 @@ export function PropiedadesClient({
         maxWidth="sm:max-w-lg"
         footer={
           <>
-            <button type="button" onClick={() => setOwnerModalProperty(null)} className="rounded-lg px-4 py-2 text-sm text-text-muted active:text-text">
+            <button type="button" onClick={() => setOwnerModalProperty(null)} className="px-4 py-2 text-[13px] font-semibold text-text-faint active:text-text">
               Cancelar
             </button>
             <button
               onClick={handleOwnerSubmit}
               disabled={ownerSaving}
-              className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary active:bg-secondary/30 disabled:opacity-50"
+              className="flex items-center gap-2 h-11 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity active:opacity-90 disabled:opacity-50"
             >
               {ownerSaving ? "Generando..." : "Guardar y generar PDF"}
             </button>
@@ -1707,46 +1691,46 @@ export function PropiedadesClient({
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-text-muted">Visitas totales</label>
+              <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Visitas totales</label>
               <input
                 type="number"
                 min={0}
                 value={ownerForm.visitasTotales}
                 onChange={(e) => setOwnerForm((f) => ({ ...f, visitasTotales: e.target.value }))}
                 placeholder="0"
-                className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+                className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-text-muted">Visitas este mes</label>
+              <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Visitas este mes</label>
               <input
                 type="number"
                 min={0}
                 value={ownerForm.visitasMes}
                 onChange={(e) => setOwnerForm((f) => ({ ...f, visitasMes: e.target.value }))}
                 placeholder="0"
-                className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+                className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
               />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-muted">Quejas / Observaciones</label>
+            <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Quejas / Observaciones</label>
             <textarea
               rows={4}
               value={ownerForm.quejas}
               onChange={(e) => setOwnerForm((f) => ({ ...f, quejas: e.target.value }))}
               placeholder="Quejas o comentarios del propietario..."
-              className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+              className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-muted">Mejoras / Sugerencias</label>
+            <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Mejoras / Sugerencias</label>
             <textarea
               rows={4}
               value={ownerForm.mejoras}
               onChange={(e) => setOwnerForm((f) => ({ ...f, mejoras: e.target.value }))}
               placeholder="Sugerencias de mejora para la propiedad..."
-              className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+              className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
           </div>
         </div>

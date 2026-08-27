@@ -78,7 +78,7 @@ export function CurrencyInput({
           onChange={(e) => handleChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
-          className={`w-full rounded-xl border border-border bg-bg py-2 pl-7 pr-3 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none disabled:opacity-60 ${className ?? ""}`}
+          className={`w-full rounded-[14px] border border-border bg-surface py-2 pl-7 pr-3 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none disabled:opacity-60 ${className ?? ""}`}
         />
       </div>
       {hint && <p className="text-[10px] text-text-faint">{hint}</p>}

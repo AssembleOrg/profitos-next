@@ -16,6 +16,7 @@ import { WhatsAppLink } from "@/components/whatsapp-link";
 import { MediaUploader, type NoteAttachment } from "@/components/notes/media-uploader";
 import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
 import { CurrencyInput } from "./currency-input";
+import { SelectField } from "@/components/ui/select-field";
 import { DateField } from "../../_components/date-field";
 import type {
   RentalAdditionalCatalogItem,
@@ -335,11 +336,11 @@ export function ContractWizard({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 16, scale: 0.98 }}
                 transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed left-1/2 top-1/2 z-50 flex max-h-[94dvh] w-[min(720px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+                className="fixed left-1/2 top-1/2 z-50 flex max-h-[94dvh] w-[min(720px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
               >
-                <header className="flex items-center justify-between gap-3 border-b border-border-olive/40 px-5 py-4">
+                <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
                   <div>
-                    <Dialog.Title className="text-base font-semibold text-text">Nuevo contrato</Dialog.Title>
+                    <Dialog.Title className="font-display text-[17px] font-semibold text-text">Nuevo contrato</Dialog.Title>
                     <Dialog.Description className="mt-0.5 text-xs text-text-muted">
                       Paso {stepIndex + 1} de {STEPS.length} · {STEPS[stepIndex].label}
                     </Dialog.Description>
@@ -348,7 +349,7 @@ export function ContractWizard({
                     <button
                       type="button"
                       aria-label="Cerrar"
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-bg hover:text-text"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18" />
@@ -364,19 +365,19 @@ export function ContractWizard({
                     {STEPS.map((s, idx) => (
                       <div key={s.key} className="flex flex-1 items-center gap-2">
                         <span
-                          className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold transition-colors ${
+                          className={`flex h-7 w-7 items-center justify-center rounded-full font-display text-[11px] font-bold transition-colors ${
                             idx < stepIndex
-                              ? "bg-olive-mid text-bg"
+                              ? "bg-dark text-accent"
                               : idx === stepIndex
-                                ? "bg-olive-bright text-bg"
-                                : "border border-border bg-surface text-text-faint"
+                                ? "bg-dark text-accent"
+                                : "bg-bg text-text-faint"
                           }`}
                         >
                           {idx < stepIndex ? "✓" : idx + 1}
                         </span>
                         {idx < STEPS.length - 1 && (
                           <span
-                            className={`h-px flex-1 transition-colors ${idx < stepIndex ? "bg-olive-mid" : "bg-border"}`}
+                            className={`h-px flex-1 transition-colors ${idx < stepIndex ? "bg-dark" : "bg-border"}`}
                           />
                         )}
                       </div>
@@ -397,33 +398,33 @@ export function ContractWizard({
                       >
                         {/* Property */}
                         <div>
-                          <label className="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-text-muted">
+                          <label className="mb-1.5 flex items-center justify-between text-[12.5px] font-semibold text-text-muted">
                             <span>Propiedad</span>
                             {selectedProperty && (
                               <button
                                 type="button"
                                 onClick={() => setPropertyId("")}
-                                className="text-[10px] font-medium normal-case tracking-normal text-text-faint hover:text-text"
+                                className="text-[11px] font-bold text-terra transition-opacity hover:opacity-80"
                               >
                                 Cambiar
                               </button>
                             )}
                           </label>
                           {selectedProperty ? (
-                            <div className="rounded-xl border border-olive-bright/30 bg-olive-subtle px-3 py-2">
-                              <p className="text-sm font-medium text-text">{selectedProperty.address}</p>
+                            <div className="rounded-[14px] bg-sand-chip px-3.5 py-2.5">
+                              <p className="text-sm font-semibold text-text">{selectedProperty.address}</p>
                               <p className="text-[11px] text-text-muted">
                                 {[selectedProperty.zone, selectedProperty.city].filter(Boolean).join(" · ") || "—"}
                               </p>
                             </div>
                           ) : creatingProperty ? (
-                            <div className="flex flex-col gap-2 rounded-xl border border-olive-bright/30 bg-olive-subtle/60 p-3">
+                            <div className="flex flex-col gap-2 rounded-[14px] border border-border bg-bg p-3">
                               <input
                                 type="text"
                                 placeholder="Dirección"
                                 value={newProperty.address}
                                 onChange={(e) => setNewProperty((p) => ({ ...p, address: e.target.value }))}
-                                className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                                className="rounded-[12px] border border-border bg-surface px-3 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
                               />
                               <div className="grid grid-cols-2 gap-2">
                                 <input
@@ -431,28 +432,28 @@ export function ContractWizard({
                                   placeholder="Zona (opcional)"
                                   value={newProperty.zone}
                                   onChange={(e) => setNewProperty((p) => ({ ...p, zone: e.target.value }))}
-                                  className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                                  className="rounded-[12px] border border-border bg-surface px-3 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
                                 />
                                 <input
                                   type="text"
                                   placeholder="Ciudad (opcional)"
                                   value={newProperty.city}
                                   onChange={(e) => setNewProperty((p) => ({ ...p, city: e.target.value }))}
-                                  className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                                  className="rounded-[12px] border border-border bg-surface px-3 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
                                 />
                               </div>
                               <div className="flex gap-2">
                                 <button
                                   type="button"
                                   onClick={createPropertyInline}
-                                  className="rounded-xl border border-olive-bright/30 bg-olive-mid px-3 py-1.5 text-xs font-semibold text-bg hover:bg-olive-vivid"
+                                  className="rounded-full bg-dark px-3.5 py-1.5 text-xs font-bold text-dark-fg transition-opacity hover:opacity-90"
                                 >
                                   Crear propiedad
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setCreatingProperty(false)}
-                                  className="rounded-xl border border-border bg-bg px-3 py-1.5 text-xs text-text-muted hover:text-text"
+                                  className="rounded-full px-3 py-1.5 text-xs font-semibold text-text-faint hover:text-text"
                                 >
                                   Cancelar
                                 </button>
@@ -465,13 +466,13 @@ export function ContractWizard({
                                 value={propertyQuery}
                                 onChange={(e) => setPropertyQuery(e.target.value)}
                                 placeholder="Buscar dirección, zona o ciudad…"
-                                className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                                className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
                               />
-                              <div className="mt-2 flex max-h-44 flex-col gap-1 overflow-y-auto rounded-xl border border-border bg-bg/40 p-1.5">
+                              <div className="mt-2 flex max-h-44 flex-col gap-1 overflow-y-auto rounded-[14px] border border-border bg-bg p-1.5">
                                 <button
                                   type="button"
                                   onClick={() => setCreatingProperty(true)}
-                                  className="flex items-center gap-2 rounded-lg border border-dashed border-olive-bright/40 bg-olive-subtle/40 px-2.5 py-1.5 text-left text-sm text-accent hover:bg-olive-subtle"
+                                  className="flex items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-left text-[12.5px] font-bold text-terra transition-colors hover:bg-surface"
                                 >
                                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                     <line x1="12" y1="5" x2="12" y2="19" />
@@ -484,7 +485,7 @@ export function ContractWizard({
                                     key={p.id}
                                     type="button"
                                     onClick={() => setPropertyId(p.id)}
-                                    className="flex w-full flex-col items-start rounded-lg border border-transparent px-2.5 py-1.5 text-left transition-colors hover:border-olive-bright/40 hover:bg-bg"
+                                    className="flex w-full flex-col items-start rounded-[10px] px-2.5 py-1.5 text-left transition-colors hover:bg-surface"
                                   >
                                     <span className="line-clamp-1 text-sm text-text">{p.address}</span>
                                     <span className="line-clamp-1 text-[11px] text-text-faint">
@@ -499,21 +500,21 @@ export function ContractWizard({
 
                         {/* Tenant */}
                         <div>
-                          <label className="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-text-muted">
+                          <label className="mb-1.5 flex items-center justify-between text-[12.5px] font-semibold text-text-muted">
                             <span>Inquilino</span>
                             {selectedTenant && (
                               <button
                                 type="button"
                                 onClick={() => setTenantId("")}
-                                className="text-[10px] font-medium normal-case tracking-normal text-text-faint hover:text-text"
+                                className="text-[11px] font-bold text-terra transition-opacity hover:opacity-80"
                               >
                                 Cambiar
                               </button>
                             )}
                           </label>
                           {selectedTenant ? (
-                            <div className="rounded-xl border border-olive-bright/30 bg-olive-subtle px-3 py-2">
-                              <p className="text-sm font-medium text-text">{selectedTenant.fullName}</p>
+                            <div className="rounded-[14px] bg-sage-chip px-3.5 py-2.5">
+                              <p className="text-sm font-semibold text-text">{selectedTenant.fullName}</p>
                               <p className="text-[11px] text-text-muted">
                                 {selectedTenant.idType.toUpperCase()}: {selectedTenant.idNumber}
                                 {selectedTenant.phone && (
@@ -531,29 +532,29 @@ export function ContractWizard({
                               </p>
                             </div>
                           ) : creatingTenant ? (
-                            <div className="flex flex-col gap-2 rounded-xl border border-olive-bright/30 bg-olive-subtle/60 p-3">
+                            <div className="flex flex-col gap-2 rounded-[14px] border border-border bg-bg p-3">
                               <input
                                 type="text"
                                 placeholder="Nombre completo"
                                 value={newTenant.fullName}
                                 onChange={(e) => setNewTenant((p) => ({ ...p, fullName: e.target.value }))}
-                                className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                                className="rounded-[12px] border border-border bg-surface px-3 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
                               />
                               <div className="grid grid-cols-3 gap-2">
-                                <select
+                                <SelectField
                                   value={newTenant.idType}
                                   onChange={(e) => setNewTenant((p) => ({ ...p, idType: e.target.value as "dni" | "cuit" }))}
-                                  className="h-10 rounded-lg border border-border bg-bg px-2 text-sm text-text focus:border-secondary focus:outline-none scheme-dark"
+                                  className="h-10 rounded-[12px] pl-2.5 pr-8 text-[13px]"
                                 >
                                   <option value="dni">DNI</option>
                                   <option value="cuit">CUIT</option>
-                                </select>
+                                </SelectField>
                                 <input
                                   type="text"
                                   placeholder="Número"
                                   value={newTenant.idNumber}
                                   onChange={(e) => setNewTenant((p) => ({ ...p, idNumber: e.target.value }))}
-                                  className="col-span-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                                  className="col-span-2 rounded-[12px] border border-border bg-surface px-3 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
                                 />
                               </div>
                               <input
@@ -561,27 +562,27 @@ export function ContractWizard({
                                 placeholder="Teléfono"
                                 value={newTenant.phone}
                                 onChange={(e) => setNewTenant((p) => ({ ...p, phone: e.target.value }))}
-                                className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                                className="rounded-[12px] border border-border bg-surface px-3 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
                               />
                               <input
                                 type="email"
                                 placeholder="Email (opcional)"
                                 value={newTenant.email}
                                 onChange={(e) => setNewTenant((p) => ({ ...p, email: e.target.value }))}
-                                className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                                className="rounded-[12px] border border-border bg-surface px-3 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
                               />
                               <div className="flex gap-2">
                                 <button
                                   type="button"
                                   onClick={createTenantInline}
-                                  className="rounded-xl border border-olive-bright/30 bg-olive-mid px-3 py-1.5 text-xs font-semibold text-bg hover:bg-olive-vivid"
+                                  className="rounded-full bg-dark px-3.5 py-1.5 text-xs font-bold text-dark-fg transition-opacity hover:opacity-90"
                                 >
                                   Crear inquilino
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setCreatingTenant(false)}
-                                  className="rounded-xl border border-border bg-bg px-3 py-1.5 text-xs text-text-muted hover:text-text"
+                                  className="rounded-full px-3 py-1.5 text-xs font-semibold text-text-faint hover:text-text"
                                 >
                                   Cancelar
                                 </button>
@@ -594,13 +595,13 @@ export function ContractWizard({
                                 value={tenantQuery}
                                 onChange={(e) => setTenantQuery(e.target.value)}
                                 placeholder="Buscar por nombre, DNI/CUIT o teléfono…"
-                                className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                                className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
                               />
-                              <div className="mt-2 flex max-h-44 flex-col gap-1 overflow-y-auto rounded-xl border border-border bg-bg/40 p-1.5">
+                              <div className="mt-2 flex max-h-44 flex-col gap-1 overflow-y-auto rounded-[14px] border border-border bg-bg p-1.5">
                                 <button
                                   type="button"
                                   onClick={() => setCreatingTenant(true)}
-                                  className="flex items-center gap-2 rounded-lg border border-dashed border-olive-bright/40 bg-olive-subtle/40 px-2.5 py-1.5 text-left text-sm text-accent hover:bg-olive-subtle"
+                                  className="flex items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-left text-[12.5px] font-bold text-terra transition-colors hover:bg-surface"
                                 >
                                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                     <line x1="12" y1="5" x2="12" y2="19" />
@@ -613,7 +614,7 @@ export function ContractWizard({
                                     key={t.id}
                                     type="button"
                                     onClick={() => setTenantId(t.id)}
-                                    className="flex w-full flex-col items-start rounded-lg border border-transparent px-2.5 py-1.5 text-left transition-colors hover:border-olive-bright/40 hover:bg-bg"
+                                    className="flex w-full flex-col items-start rounded-[10px] px-2.5 py-1.5 text-left transition-colors hover:bg-surface"
                                   >
                                     <span className="line-clamp-1 text-sm text-text">{t.fullName}</span>
                                     <span className="line-clamp-1 text-[11px] text-text-faint">
@@ -639,7 +640,7 @@ export function ContractWizard({
                         className="flex flex-col gap-4"
                       >
                         <div>
-                          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                          <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                             Título <span className="text-text-faint">(opcional · ej. &ldquo;Hab. 3B&rdquo; o &ldquo;PB&rdquo;)</span>
                           </label>
                           <input
@@ -647,19 +648,19 @@ export function ContractWizard({
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             placeholder="Identificador interno del contrato"
-                            className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                            className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
                           />
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                            <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                               Fecha inicio
                             </label>
                             <DateField value={startDate} onChange={setStartDate} />
                           </div>
                           <div>
-                            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                            <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                               Fecha fin
                             </label>
                             <DateField value={endDate} onChange={setEndDate} />
@@ -668,23 +669,22 @@ export function ContractWizard({
 
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                            <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                               Frecuencia
                             </label>
-                            <select
+                            <SelectField
                               value={frequency}
                               onChange={(e) => setFrequency(e.target.value as RentalFrequency)}
-                              className="h-10 w-full rounded-xl border border-border bg-bg px-3 text-sm text-text focus:border-secondary focus:outline-none scheme-dark"
                             >
                               {RENTAL_FREQUENCIES.map((f) => (
                                 <option key={f} value={f}>
                                   {RENTAL_FREQUENCY_LABEL[f]}
                                 </option>
                               ))}
-                            </select>
+                            </SelectField>
                           </div>
                           <div>
-                            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                            <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                               Monto base
                             </label>
                             <CurrencyInput value={baseAmount} onChange={setBaseAmount} />
@@ -693,13 +693,13 @@ export function ContractWizard({
 
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                            <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                               Primer vencimiento
                             </label>
                             <DateField value={firstDueDate} onChange={setFirstDueDate} />
                           </div>
                           <div>
-                            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                            <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                               Días de gracia
                             </label>
                             <input
@@ -708,7 +708,7 @@ export function ContractWizard({
                               max={30}
                               value={gracePeriodDays}
                               onChange={(e) => setGracePeriodDays(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                              className="h-10 w-full rounded-xl border border-border bg-bg px-3 text-sm text-text focus:border-secondary focus:outline-none"
+                              className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
                             />
                             <p className="mt-1 text-[10px] text-text-faint">
                               Cantidad de días después del vencimiento antes de marcarlo como vencido.
@@ -717,19 +717,19 @@ export function ContractWizard({
                         </div>
 
                         <div>
-                          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                          <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                             Notas <span className="text-text-faint">(opcional)</span>
                           </label>
                           <textarea
                             rows={2}
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
-                            className="w-full resize-none rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                            className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
                           />
                         </div>
 
                         <div>
-                          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                          <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                             Audio / adjuntos <span className="text-text-faint">(opcional)</span>
                           </label>
                           <MediaUploader
@@ -751,7 +751,7 @@ export function ContractWizard({
                         className="flex flex-col gap-4"
                       >
                         <div>
-                          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                          <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                             Adicionales <span className="text-text-faint">(opcional)</span>
                           </label>
                           {selectedAdditionals.length > 0 && (
@@ -759,7 +759,7 @@ export function ContractWizard({
                               {selectedAdditionals.map((sa) => (
                                 <div
                                   key={sa.additionalId}
-                                  className="flex items-center gap-2 rounded-xl border border-olive-bright/30 bg-olive-subtle/60 px-3 py-2"
+                                  className="flex items-center gap-2 rounded-[14px] border border-border bg-bg px-3 py-2"
                                 >
                                   <span className="flex-1 text-sm text-text">{sa.name}</span>
                                   <div className="w-full sm:w-44">
@@ -783,7 +783,7 @@ export function ContractWizard({
                                         prev.filter((p) => p.additionalId !== sa.additionalId),
                                       )
                                     }
-                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition-colors hover:border-danger/30 hover:text-danger"
+                                    className="flex h-8 w-8 items-center justify-center rounded-full bg-clay-chip text-terra transition-opacity hover:opacity-80"
                                     aria-label="Quitar"
                                   >
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -796,18 +796,18 @@ export function ContractWizard({
                             </div>
                           )}
 
-                          <div className="rounded-xl border border-border bg-bg/40 p-3">
+                          <div className="rounded-[14px] border border-border bg-bg p-3">
                             <div className="mb-2 flex items-center gap-2">
                               <input
                                 type="text"
                                 value={additionalQuery}
                                 onChange={(e) => setAdditionalQuery(e.target.value)}
                                 placeholder="Buscar adicional…"
-                                className="h-9 flex-1 rounded-lg border border-border bg-bg px-3 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
+                                className="h-9 flex-1 rounded-full border border-border bg-surface px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                               />
                             </div>
                             {filteredAdditionals.length === 0 ? (
-                              <p className="rounded-lg border border-dashed border-border bg-bg/30 px-3 py-3 text-center text-xs text-text-muted">
+                              <p className="rounded-[10px] bg-surface px-3 py-3 text-center text-xs text-text-faint">
                                 {additionals.length === 0
                                   ? "Todavía no hay adicionales en el catálogo. Agregalos en /adicionales (admin)."
                                   : "Sin más adicionales para sumar."}
@@ -828,7 +828,7 @@ export function ContractWizard({
                                         },
                                       ])
                                     }
-                                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-bg px-2.5 py-1 text-xs text-text-muted transition-colors hover:border-olive-bright/40 hover:bg-olive-subtle hover:text-text"
+                                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-semibold text-text-muted transition-colors hover:bg-sand-chip hover:text-text"
                                   >
                                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                       <line x1="12" y1="5" x2="12" y2="19" />
@@ -846,25 +846,25 @@ export function ContractWizard({
                         </div>
 
                         {/* Preview */}
-                        <div className="rounded-xl border border-border bg-bg/30 p-4">
+                        <div className="rounded-[16px] bg-bg p-4">
                           <div className="mb-2 flex items-center justify-between">
-                            <h4 className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
                               Preview de cuotas
                             </h4>
-                            <span className="font-mono text-xs text-text">
+                            <span className="font-display text-xs font-bold text-text">
                               {previewDueDates.length} cuota{previewDueDates.length === 1 ? "" : "s"}
                             </span>
                           </div>
                           <p className="mb-3 text-xs text-text-muted">
                             Total esperado por cuota:{" "}
-                            <span className="font-mono text-text">{formatARS(expectedPerCuota)}</span>{" "}
+                            <span className="font-display font-bold text-text">{formatARS(expectedPerCuota)}</span>{" "}
                             <span className="text-text-faint">
                               (base {formatARS(baseAmount ?? 0)}
                               {additionalsTotal > 0 ? ` + adicionales ${formatARS(additionalsTotal)}` : ""})
                             </span>
                           </p>
                           {previewDueDates.length === 0 ? (
-                            <p className="rounded-lg border border-dashed border-border bg-bg/40 px-3 py-3 text-center text-xs text-text-muted">
+                            <p className="rounded-[10px] bg-surface px-3 py-3 text-center text-xs text-text-faint">
                               Configurá fechas, frecuencia y monto en el paso anterior.
                             </p>
                           ) : (
@@ -872,10 +872,10 @@ export function ContractWizard({
                               {previewDueDates.slice(0, 60).map((d) => (
                                 <li
                                   key={d.position}
-                                  className="flex items-center justify-between rounded-md bg-surface/40 px-2 py-1 text-[11px]"
+                                  className="flex items-center justify-between rounded-lg bg-surface px-2 py-1 text-[11px]"
                                 >
-                                  <span className="text-text-muted">#{d.position}</span>
-                                  <span className="font-mono text-text">{formatDate(d.dueDate)}</span>
+                                  <span className="text-text-faint">#{d.position}</span>
+                                  <span className="font-semibold text-text">{formatDate(d.dueDate)}</span>
                                 </li>
                               ))}
                             </ul>
@@ -891,12 +891,12 @@ export function ContractWizard({
                   </AnimatePresence>
                 </div>
 
-                <footer className="flex items-center justify-between gap-2 border-t border-border bg-bg/30 px-5 py-3">
+                <footer className="flex items-center justify-between gap-2 border-t border-border px-5 py-3">
                   <button
                     type="button"
                     onClick={back}
                     disabled={step === "scope"}
-                    className="rounded-xl border border-border bg-bg px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:border-border-strong hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-full border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Atrás
                   </button>
@@ -905,7 +905,7 @@ export function ContractWizard({
                       type="button"
                       onClick={next}
                       disabled={!canAdvance()}
-                      className="rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2 text-sm font-semibold text-bg transition-colors hover:bg-olive-vivid disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-full bg-dark px-5 py-2 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Siguiente
                     </button>
@@ -914,7 +914,7 @@ export function ContractWizard({
                       type="button"
                       onClick={submit}
                       disabled={submitting || previewDueDates.length === 0}
-                      className="rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2 text-sm font-semibold text-bg transition-colors hover:bg-olive-vivid disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-full bg-dark px-5 py-2 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {submitting ? "Creando…" : `Crear contrato y generar ${previewDueDates.length} cuotas`}
                     </button>

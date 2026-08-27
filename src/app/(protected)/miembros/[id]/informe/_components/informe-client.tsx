@@ -93,9 +93,9 @@ interface Props {
 }
 
 const ESTADO_CONFIG = {
-  alto: { label: "Alta actividad", color: "text-success", bg: "bg-success-chip border-success/30" },
-  moderado: { label: "Actividad moderada", color: "text-warning", bg: "bg-warning-chip border-warning/30" },
-  bajo: { label: "Baja actividad", color: "text-danger", bg: "bg-danger-chip border-danger/30" },
+  alto: { label: "Alta actividad", color: "text-olive-light", bg: "bg-sage-chip" },
+  moderado: { label: "Actividad moderada", color: "text-warning", bg: "bg-sand-chip" },
+  bajo: { label: "Baja actividad", color: "text-terra", bg: "bg-clay-chip" },
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -109,10 +109,10 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const TIMELINE_COLORS: Record<string, string> = {
-  accion_seguimiento: "border-warning/30 bg-warning-chip",
-  accion_contacto: "border-olive-bright/30 bg-olive-chip",
-  cambio_estado: "border-info/30 bg-info-chip",
-  visita: "border-success/30 bg-success-chip",
+  accion_seguimiento: "bg-sand-chip text-warning",
+  accion_contacto: "bg-sage-chip text-olive-light",
+  cambio_estado: "bg-info-chip text-info",
+  visita: "bg-sage-chip text-olive-light",
 };
 
 const TIMELINE_LABELS: Record<string, string> = {
@@ -166,10 +166,10 @@ export function InformeClient({ memberId, from, to }: Props) {
   if (error || !data) {
     return (
       <div className="space-y-4">
-        <Link href="/miembros" className="text-sm text-secondary hover:underline">
+        <Link href="/miembros" className="text-[12.5px] font-bold text-terra hover:underline">
           &larr; Volver a miembros
         </Link>
-        <div className="rounded-xl border border-danger/30 bg-danger-chip px-6 py-8 text-center text-sm text-danger">
+        <div className="rounded-[20px] bg-clay-chip px-6 py-8 text-center text-sm font-semibold text-terra">
           {error ?? "No se pudo cargar el informe"}
         </div>
       </div>
@@ -186,7 +186,7 @@ export function InformeClient({ memberId, from, to }: Props) {
         <div className="flex items-center gap-4">
           <Link
             href="/miembros"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border text-text-muted transition-colors hover:bg-surface hover:text-text"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-text-muted transition-colors hover:bg-bg hover:text-text"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
@@ -196,12 +196,12 @@ export function InformeClient({ memberId, from, to }: Props) {
             {member.avatarUrl ? (
               <img src={member.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" referrerPolicy="no-referrer" />
             ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary/15 text-sm font-semibold text-secondary">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sand-chip font-display text-[13px] font-bold text-text-muted">
                 {member.email[0].toUpperCase()}
               </div>
             )}
             <div className="min-w-0">
-              <h1 className="truncate text-lg font-semibold text-text">
+              <h1 className="truncate font-display text-lg font-semibold text-text">
                 {member.fullName ?? member.email}
               </h1>
               <div className="flex items-center gap-1.5">
@@ -227,26 +227,26 @@ export function InformeClient({ memberId, from, to }: Props) {
             value={fromDate}
             onChange={setFromDate}
             aria-label="Desde"
-            className="min-w-0 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+            className="min-w-0 rounded-[14px] border border-border bg-surface px-3 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
           />
-          <span className="text-xs text-text-muted">a</span>
+          <span className="text-xs text-text-faint">a</span>
           <DatePicker
             value={toDate}
             onChange={setToDate}
             aria-label="Hasta"
-            className="min-w-0 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+            className="min-w-0 rounded-[14px] border border-border bg-surface px-3 py-2 text-sm text-text focus:border-border-strong focus:outline-none"
           />
           <button
             onClick={applyDateRange}
-            className="rounded-lg bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30"
+            className="rounded-full border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg"
           >
             Aplicar
           </button>
           <a
             href={`/api/miembros/${memberId}/informe/pdf?from=${fromDate}&to=${toDate}`}
-            className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-surface hover:text-text"
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-dark px-4.5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
@@ -260,32 +260,32 @@ export function InformeClient({ memberId, from, to }: Props) {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`rounded-xl border p-5 ${estadoConfig.bg}`}
+        className={`rounded-[20px] p-5 ${estadoConfig.bg}`}
       >
         <div className="mb-3 flex items-center gap-2">
-          <span className={`text-sm font-semibold ${estadoConfig.color}`}>{estadoConfig.label}</span>
+          <span className={`text-sm font-bold ${estadoConfig.color}`}>{estadoConfig.label}</span>
           <span className="text-xs text-text-muted">· {formatDate(data.dateRange.from)} — {formatDate(data.dateRange.to)}</span>
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           <div>
-            <p className="text-2xl font-bold text-text">{resumen.tasaResolucion === null ? "—" : `${resumen.tasaResolucion}%`}</p>
-            <p className="text-xs text-text-muted">Tasa resolución</p>
+            <p className="font-display text-2xl font-bold text-text">{resumen.tasaResolucion === null ? "—" : `${resumen.tasaResolucion}%`}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Tasa resolución</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-text">{resumen.actividadPorDia}</p>
-            <p className="text-xs text-text-muted">Acciones/día</p>
+            <p className="font-display text-2xl font-bold text-text">{resumen.actividadPorDia}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Acciones/día</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-text">{resumen.contactosGestionados}</p>
-            <p className="text-xs text-text-muted">Contactos gestionados</p>
+            <p className="font-display text-2xl font-bold text-text">{resumen.contactosGestionados}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Contactos gestionados</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-text">{resumen.totalAcciones}</p>
-            <p className="text-xs text-text-muted">Acciones totales</p>
+            <p className="font-display text-2xl font-bold text-text">{resumen.totalAcciones}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Acciones totales</p>
           </div>
           <div>
-            <p className={`text-2xl font-bold ${resumen.segVencidos > 0 ? "text-danger" : "text-text"}`}>{resumen.segVencidos}</p>
-            <p className="text-xs text-text-muted">Seg. vencidos</p>
+            <p className={`font-display text-2xl font-bold ${resumen.segVencidos > 0 ? "text-danger" : "text-text"}`}>{resumen.segVencidos}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Seg. vencidos</p>
           </div>
         </div>
       </motion.div>
@@ -300,9 +300,9 @@ export function InformeClient({ memberId, from, to }: Props) {
           { label: "Clientes creados", value: kpis.clientesCreados },
           { label: "Cambios estado", value: kpis.cambiosEstado },
         ].map((kpi) => (
-          <div key={kpi.label} className="rounded-xl border border-border bg-surface px-4 py-3">
-            <p className="text-xl font-bold text-text">{kpi.value}</p>
-            <p className="text-xs text-text-muted">{kpi.label}</p>
+          <div key={kpi.label} className="rounded-[18px] bg-bg px-4 py-3.5">
+            <p className="font-display text-xl font-bold text-text">{kpi.value}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">{kpi.label}</p>
           </div>
         ))}
       </div>
@@ -310,8 +310,8 @@ export function InformeClient({ memberId, from, to }: Props) {
       {/* Breakdowns */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {/* Seg. propiedades por estado */}
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-text-muted">Seg. propiedades por estado</h3>
+        <div className="rounded-[20px] border border-border bg-surface p-4">
+          <h3 className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Seg. propiedades por estado</h3>
           {Object.keys(breakdowns.segPropPorEstado).length === 0 ? (
             <p className="text-sm text-text-faint">Sin datos</p>
           ) : (
@@ -330,8 +330,8 @@ export function InformeClient({ memberId, from, to }: Props) {
         </div>
 
         {/* Seg. contactos por estado */}
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-text-muted">Seg. contactos por estado</h3>
+        <div className="rounded-[20px] border border-border bg-surface p-4">
+          <h3 className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Seg. contactos por estado</h3>
           {Object.keys(breakdowns.segContactosPorEstado).length === 0 ? (
             <p className="text-sm text-text-faint">Sin datos</p>
           ) : (
@@ -350,8 +350,8 @@ export function InformeClient({ memberId, from, to }: Props) {
         </div>
 
         {/* Acciones por tipo */}
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-text-muted">Acciones por tipo</h3>
+        <div className="rounded-[20px] border border-border bg-surface p-4">
+          <h3 className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Acciones por tipo</h3>
           {Object.keys(breakdowns.accionesPorTipo).length === 0 ? (
             <p className="text-sm text-text-faint">Sin datos</p>
           ) : (
@@ -369,9 +369,9 @@ export function InformeClient({ memberId, from, to }: Props) {
 
       {/* Contactos gestionados */}
       {data.seguimientosContacto.length > 0 && (
-        <div className="rounded-xl border border-border bg-surface">
+        <div className="rounded-[20px] border border-border bg-surface">
           <div className="border-b border-border px-5 py-3">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-text-muted">
+            <h3 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
               Contactos gestionados ({data.seguimientosContacto.length})
             </h3>
           </div>
@@ -431,9 +431,9 @@ export function InformeClient({ memberId, from, to }: Props) {
 
       {/* Seguimientos de propiedades */}
       {data.seguimientosProp.length > 0 && (
-        <div className="rounded-xl border border-border bg-surface">
+        <div className="rounded-[20px] border border-border bg-surface">
           <div className="border-b border-border px-5 py-3">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-text-muted">
+            <h3 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
               Seguimientos de propiedades ({data.seguimientosProp.length})
             </h3>
           </div>
@@ -460,9 +460,9 @@ export function InformeClient({ memberId, from, to }: Props) {
 
       {/* Visitas */}
       {data.visitas.length > 0 && (
-        <div className="rounded-xl border border-border bg-surface">
+        <div className="rounded-[20px] border border-border bg-surface">
           <div className="border-b border-border px-5 py-3">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-text-muted">
+            <h3 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
               Visitas ({data.visitas.length})
             </h3>
           </div>
@@ -486,9 +486,9 @@ export function InformeClient({ memberId, from, to }: Props) {
 
       {/* Clientes creados */}
       {data.clientes.length > 0 && (
-        <div className="rounded-xl border border-border bg-surface">
+        <div className="rounded-[20px] border border-border bg-surface">
           <div className="border-b border-border px-5 py-3">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-text-muted">
+            <h3 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
               Clientes creados ({data.clientes.length})
             </h3>
           </div>
@@ -517,9 +517,9 @@ export function InformeClient({ memberId, from, to }: Props) {
       )}
 
       {/* Timeline */}
-      <div className="rounded-xl border border-border bg-surface">
+      <div className="rounded-[20px] border border-border bg-surface">
         <div className="border-b border-border px-5 py-3">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-text-muted">
+          <h3 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
             Actividad completa ({data.timeline.length})
           </h3>
         </div>
@@ -532,9 +532,9 @@ export function InformeClient({ memberId, from, to }: Props) {
             {data.timeline.map((item, i) => (
               <div
                 key={`${item.kind}-${i}`}
-                className={`flex items-start gap-3 px-5 py-3 ${TIMELINE_COLORS[item.kind] ?? ""}`}
+                className="flex items-start gap-3 px-5 py-3"
               >
-                <span className="mt-0.5 shrink-0 rounded-md bg-bg px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">
+                <span className={`mt-0.5 inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${TIMELINE_COLORS[item.kind] ?? "bg-bg text-text-muted"}`}>
                   {TIMELINE_LABELS[item.kind] ?? item.kind}
                 </span>
                 <div className="min-w-0 flex-1">

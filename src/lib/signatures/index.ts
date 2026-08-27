@@ -43,43 +43,44 @@ export const SIGNATURE_STATUS_STYLE: Record<
   SignatureStatus,
   { dot: string; chip: string; line: string }
 > = {
-  // Flujo de 7 pasos: los intermedios usan `info` (en curso) y `success` queda
-  // reservado para el cierre real. Ver docs/design.md § Mapa de estados.
+  // Flujo de 7 pasos: los intermedios usan `info` (en curso) y el sage queda
+  // reservado para aceptación/cierre. Ver docs/design.md § Mapa de estados.
+  // `chip` son pills V4 (sin borde): tinte + texto semántico.
   propuesta_enviada: {
     dot: "bg-info",
-    chip: "border-info/30 bg-info-chip text-info",
+    chip: "bg-info-chip text-info",
     line: "bg-info/40",
   },
   propuesta_aceptada: {
-    dot: "bg-success",
-    chip: "border-success/30 bg-success-chip text-success",
-    line: "bg-success/40",
+    dot: "bg-olive-light",
+    chip: "bg-sage-chip text-olive-light",
+    line: "bg-olive-light/40",
   },
   propuesta_rechazada: {
-    dot: "bg-danger",
-    chip: "border-danger/30 bg-danger-chip text-danger",
-    line: "bg-danger/40",
+    dot: "bg-terra",
+    chip: "bg-clay-chip text-terra",
+    line: "bg-terra/40",
   },
   espera_informes: {
     dot: "bg-info",
-    chip: "border-info/30 bg-info-chip text-info",
+    chip: "bg-info-chip text-info",
     line: "bg-info/40",
   },
   comunicacion_partes_finales: {
     dot: "bg-info",
-    chip: "border-info/30 bg-info-chip text-info",
+    chip: "bg-info-chip text-info",
     line: "bg-info/40",
   },
   fecha_acordada: {
     dot: "bg-warning",
-    chip: "border-warning/30 bg-warning-chip text-warning",
+    chip: "bg-sand-chip text-warning",
     line: "bg-warning/40",
   },
-  // Cierre del flujo: se marca con la identidad de marca, no con un semántico.
+  // Cierre del flujo: sage, igual que la aceptación.
   entrega_llaves: {
-    dot: "bg-olive-bright",
-    chip: "border-olive-bright/30 bg-olive-chip text-olive-light",
-    line: "bg-olive-bright/40",
+    dot: "bg-olive-light",
+    chip: "bg-sage-chip text-olive-light",
+    line: "bg-olive-light/40",
   },
 };
 

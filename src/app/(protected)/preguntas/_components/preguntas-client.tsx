@@ -110,7 +110,7 @@ export function PreguntasClient({ items, page, totalPages, total, unansweredCoun
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-medium text-text">Preguntas MercadoLibre</h1>
+          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Preguntas MercadoLibre</h1>
           <p className="text-sm text-text-muted">
             {total} resultado{total !== 1 ? "s" : ""}
             {unansweredCount > 0 && ` · ${unansweredCount} sin responder`}
@@ -119,7 +119,7 @@ export function PreguntasClient({ items, page, totalPages, total, unansweredCoun
         <button
           onClick={handleSync}
           disabled={syncing}
-          className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text-muted transition-colors active:bg-surface disabled:opacity-50"
+          className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg disabled:opacity-50"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
@@ -131,13 +131,13 @@ export function PreguntasClient({ items, page, totalPages, total, unansweredCoun
 
       {/* Filtros */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-1 rounded-xl border border-border bg-surface/30 p-1">
+        <div className="flex gap-1 rounded-full border border-border bg-surface p-1">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setStatus(t.key)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                activeStatus === t.key ? "bg-secondary/20 text-secondary" : "text-text-muted hover:text-text"
+              className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors ${
+                activeStatus === t.key ? "bg-dark font-bold text-dark-fg" : "text-text-muted hover:text-text"
               }`}
             >
               {t.label}
@@ -150,9 +150,9 @@ export function PreguntasClient({ items, page, totalPages, total, unansweredCoun
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && applySearch()}
             placeholder="Buscar en preguntas…"
-            className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none sm:w-64"
+            className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13px] text-text placeholder:text-text-faint focus:border-accent focus:outline-none sm:w-64"
           />
-          <button onClick={applySearch} className="rounded-xl bg-secondary/20 px-4 text-sm font-medium text-secondary">
+          <button onClick={applySearch} className="inline-flex h-11 items-center rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90">
             Buscar
           </button>
         </div>
@@ -160,13 +160,13 @@ export function PreguntasClient({ items, page, totalPages, total, unansweredCoun
 
       {/* Lista */}
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-text-muted">
+        <div className="rounded-[20px] border border-dashed border-border p-10 text-center text-sm text-text-muted">
           No hay preguntas. Tocá “Traer de ML” para sincronizar las recibidas.
         </div>
       ) : (
         <div className="flex flex-col gap-3">
           {items.map((q) => (
-            <div key={q.id} className="rounded-2xl border border-border bg-surface/30 p-4">
+            <div key={q.id} className="rounded-[20px] border border-border bg-surface p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm text-text">{q.text}</p>
@@ -188,8 +188,8 @@ export function PreguntasClient({ items, page, totalPages, total, unansweredCoun
                 <span
                   className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
                     q.status === "ANSWERED"
-                      ? "bg-success/10 text-success"
-                      : "bg-warning-chip text-warning"
+                      ? "bg-sage-chip text-olive-light"
+                      : "bg-sand-chip text-warning"
                   }`}
                 >
                   {q.status === "ANSWERED" ? "Respondida" : "Sin responder"}
@@ -197,7 +197,7 @@ export function PreguntasClient({ items, page, totalPages, total, unansweredCoun
               </div>
 
               {q.status === "ANSWERED" ? (
-                <div className="mt-3 rounded-xl border border-border bg-bg px-3 py-2">
+                <div className="mt-3 rounded-[14px] border border-border bg-bg px-3 py-2">
                   <p className="text-[11px] font-medium text-text-muted">Respuesta</p>
                   <p className="text-sm text-text">{q.answerText ?? "—"}</p>
                 </div>
@@ -207,13 +207,13 @@ export function PreguntasClient({ items, page, totalPages, total, unansweredCoun
                     value={drafts[q.id] ?? ""}
                     onChange={(e) => setDrafts((d) => ({ ...d, [q.id]: e.target.value }))}
                     placeholder="Escribí tu respuesta…"
-                    className="min-h-[64px] w-full resize-y rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                    className="min-h-[64px] w-full resize-y rounded-[14px] border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-accent focus:outline-none"
                   />
                   <div className="flex justify-end">
                     <button
                       onClick={() => handleAnswer(q.id)}
                       disabled={answering === q.id || !(drafts[q.id] ?? "").trim()}
-                      className="rounded-xl bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors active:bg-secondary/30 disabled:opacity-50"
+                      className="inline-flex h-10 items-center rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 active:opacity-90 disabled:opacity-50"
                     >
                       {answering === q.id ? "Enviando…" : "Responder"}
                     </button>

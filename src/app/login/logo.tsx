@@ -31,7 +31,7 @@ export function Logo({ step }: Props) {
           <div className="relative flex flex-col items-start">
             {/* "Juliana" — slides in from the left */}
             <motion.h1
-              className="font-display text-[72px] font-medium leading-none tracking-tight text-text"
+              className="font-display text-[72px] font-medium leading-none tracking-tight text-[#f0ede8]"
               initial={{ x: -150, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{
@@ -45,7 +45,7 @@ export function Logo({ step }: Props) {
 
             {/* "Profitos" — slides in from the right */}
             <motion.h1
-              className="font-display self-end text-[72px] font-medium leading-none tracking-tight text-text"
+              className="font-display self-end text-[72px] font-medium leading-none tracking-tight text-[#f0ede8]"
               initial={{ x: 150, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{
@@ -59,7 +59,7 @@ export function Logo({ step }: Props) {
 
             {/* "PROPIEDADES" — fades in below */}
             <motion.p
-              className="mt-3 self-end text-[11px] font-normal uppercase tracking-[0.5em] text-white/40"
+              className="mt-3 self-end text-[11px] font-normal uppercase tracking-[0.5em] text-accent"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{

@@ -4,9 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { type NotificationItem } from "./use-notifications";
 import { useNotificationsContext } from "./notifications-context";
-import { formatDateTime } from "@/lib/datetime";
+import { NotifPanelBody } from "./notif-card";
 import { useNavFavorites } from "./nav-favorites-context";
 import { useAccess } from "./access-context";
 import { PREFETCH_HREFS } from "@/lib/nav/views";
@@ -17,113 +16,8 @@ import {
   type NavMeta,
 } from "@/lib/nav/items";
 
-
 interface BottomNavProps {
   role?: "admin" | "user" | "viewer";
-}
-
-function formatNotifDate(value: string) {
-  try { return formatDateTime(value); } catch { return "—"; }
-}
-
-// Estilos y etiquetas por tipo de notificación (evita ternarios anidados).
-const NOTIF_CARD_CLASS: Record<NotificationItem["kind"], string> = {
-  contact: "border-info/30 bg-info-chip",
-  followup_assignment: "border-warning/30 bg-warning-chip",
-  contact_followup: "border-olive-bright/30 bg-olive-chip",
-  overdue_followup: "border-danger/30 bg-danger-chip",
-  property: "border-success/30 bg-success-chip",
-};
-
-const NOTIF_BADGE_CLASS: Record<NotificationItem["kind"], string> = {
-  contact: "bg-info-chip text-info",
-  followup_assignment: "bg-warning-chip text-warning",
-  contact_followup: "bg-olive-chip text-olive-light",
-  overdue_followup: "bg-danger-chip text-danger",
-  property: "bg-success-chip text-success",
-};
-
-const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
-  contact: "Nuevo contacto",
-  followup_assignment: "Seguimiento",
-  contact_followup: "Seg. consulta",
-  overdue_followup: "Vencido",
-  property: "Propiedad nueva",
-};
-
-function notifOrigin(item: NotificationItem): string {
-  const propUser = item.createdByUser?.fullName?.trim() || item.createdByUser?.email;
-  switch (item.kind) {
-    case "contact":
-      return `Agente: ${item.agentName?.trim() || item.agentEmail || "Sin agente"}`;
-    case "property":
-      return propUser
-        ? `Usuario: ${propUser}`
-        : `Origen: ${item.producerName?.trim() || item.branchName?.trim() || "Importación"}`;
-    default:
-      return `Responsable: ${item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable"}`;
-  }
-}
-
-function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
-  const responsable = item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable";
-  switch (item.kind) {
-    case "contact":
-      return (
-        <>
-          <p className="text-sm font-medium leading-tight text-text">{item.name ?? "Contacto sin nombre"}</p>
-          <p className="mt-0.5 text-xs text-text-muted">Estado: {item.leadStatus ?? "Sin estado"}</p>
-          <p className="text-xs text-text-muted">{notifOrigin(item)}</p>
-        </>
-      );
-    case "followup_assignment":
-      return (
-        <>
-          <p className="text-sm font-medium leading-tight text-text">{item.property?.address ?? "Propiedad sin dirección"}</p>
-          <p className="mt-0.5 text-xs text-text-muted">Responsable: {responsable}</p>
-          <p className="text-xs text-text-muted">Estado: {item.status ?? "pendiente"}</p>
-        </>
-      );
-    case "contact_followup":
-      return (
-        <>
-          <p className="text-sm font-medium leading-tight text-text">{item.recentContact?.name ?? "Consulta"}</p>
-          <p className="mt-0.5 text-xs text-text-muted">Responsable: {responsable}</p>
-          <p className="text-xs text-text-muted">Estado: {item.status ?? "pendiente"}</p>
-        </>
-      );
-    case "overdue_followup":
-      return (
-        <>
-          <p className="text-sm font-medium leading-tight text-text">{item.property?.address ?? "Propiedad sin dirección"}</p>
-          <p className="mt-0.5 text-xs text-danger">Vencido: {item.dueDate ? formatNotifDate(item.dueDate) : "sin fecha"}</p>
-          <p className="text-xs text-text-muted">Responsable: {responsable}</p>
-        </>
-      );
-    default:
-      return (
-        <>
-          <p className="text-sm font-medium leading-tight text-text">{item.address ?? item.publicationTitle ?? "Propiedad nueva"}</p>
-          <p className="mt-0.5 text-xs text-text-muted">{item.operationType ?? "Operación no informada"} · Estado: {item.status ?? "activa"}</p>
-          <p className="text-xs text-text-muted">{item.operationCurrency ?? ""} {item.operationPrice?.toLocaleString("es-AR") ?? "Precio no informado"}</p>
-          <p className="text-xs text-text-muted">{notifOrigin(item)}</p>
-        </>
-      );
-  }
-}
-
-function NotifCard({ item }: Readonly<{ item: NotificationItem }>) {
-  return (
-    <div className={`rounded-lg border px-3 py-2.5 ${NOTIF_CARD_CLASS[item.kind]}`}>
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${NOTIF_BADGE_CLASS[item.kind]}`}>
-          {NOTIF_LABEL[item.kind]}
-        </span>
-        <span className="text-[11px] text-text-muted/80">{formatNotifDate(item.eventAt)}</span>
-      </div>
-      <NotifBody item={item} />
-    </div>
-  );
 }
 
 export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
@@ -172,7 +66,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
         {showNotifications && (
           <>
             <motion.div
-              className="fixed inset-0 z-40 bg-scrim backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-40 bg-scrim md:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -180,66 +74,20 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
               onClick={() => setShowNotifications(false)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-border-olive/40 bg-surface/95 backdrop-blur-2xl md:hidden"
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[28px] bg-surface md:hidden"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              style={{ paddingBottom: "calc(var(--safe-bottom, 0px) + 88px)" }}
+              style={{ paddingBottom: "calc(var(--safe-bottom, 0px) + 96px)" }}
             >
               <div className="mx-auto my-3 h-1 w-10 rounded-full bg-border-strong" />
-
-              <div className="flex items-center justify-between gap-3 border-b border-border px-5 pb-3 pt-1">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Notificaciones</p>
-                  <p className="mt-0.5 text-xs text-text-muted/70">
-                    Últimos {notifications.length} evento{notifications.length === 1 ? "" : "s"}
-                  </p>
-                </div>
-                <button
-                  onClick={() => { markAsSeen(); }}
-                  className="rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-text-muted transition-colors active:bg-surface-elevated"
-                >
-                  Marcar leídas
-                </button>
-              </div>
-
-              <div className="max-h-[55dvh] space-y-2 overflow-y-auto p-3">
-                {notifications.length === 0 ? (
-                  <p className="rounded-lg border border-border bg-surface-elevated px-3 py-4 text-sm text-text-muted">
-                    Sin notificaciones.
-                  </p>
-                ) : (
-                  notifications.map((item) => (
-                    <NotifCard key={`${item.kind}-${item.id}`} item={item} />
-                  ))
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 border-t border-border">
-                <Link
-                  href="/consultants"
-                  onClick={() => setShowNotifications(false)}
-                  className="block border-r border-border px-4 py-3 text-xs font-medium text-secondary active:bg-surface-elevated"
-                >
-                  Ver últimos contactos
-                </Link>
-                <Link
-                  href="/seguimientos"
-                  onClick={() => setShowNotifications(false)}
-                  className="block px-4 py-3 text-xs font-medium text-secondary active:bg-surface-elevated"
-                >
-                  Ver seg. propiedades
-                </Link>
-              </div>
-              <div className="border-t border-border">
-                <Link
-                  href="/consultants-followups"
-                  onClick={() => setShowNotifications(false)}
-                  className="block px-4 py-3 text-xs font-medium text-secondary active:bg-surface-elevated"
-                >
-                  Ver seg. consultas
-                </Link>
+              <div className="max-h-[62dvh] overflow-y-auto">
+                <NotifPanelBody
+                  notifications={notifications}
+                  onMarkSeen={() => markAsSeen()}
+                  onNavigate={() => setShowNotifications(false)}
+                />
               </div>
             </motion.div>
           </>
@@ -251,7 +99,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
         {showMore && (
           <>
             <motion.div
-              className="fixed inset-0 z-40 bg-scrim backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-40 bg-scrim md:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -259,22 +107,22 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
               onClick={() => setShowMore(false)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-border-olive/40 bg-surface/95 backdrop-blur-2xl md:hidden"
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[28px] bg-surface md:hidden"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              style={{ paddingBottom: "calc(var(--safe-bottom, 0px) + 88px)" }}
+              style={{ paddingBottom: "calc(var(--safe-bottom, 0px) + 96px)" }}
             >
               {/* Handle */}
               <div className="mx-auto my-3 h-1 w-10 rounded-full bg-border-strong" />
 
-              <p className="px-5 pb-3 pt-1 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+              <p className="px-5 pb-3 pt-1 font-display text-base font-semibold text-text">
                 Más secciones
               </p>
 
               {/* Grid of items */}
-              <div className="grid grid-cols-3 gap-1 px-3 pb-2">
+              <div className="grid max-h-[58dvh] grid-cols-3 gap-2 overflow-y-auto px-4 pb-2">
                 {/* Notifications entry */}
                 <button
                   onClick={() => {
@@ -282,20 +130,20 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                     loadNotifications().catch(() => {});
                     setShowNotifications(true);
                   }}
-                  className="flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 transition-colors text-text-muted active:bg-surface-elevated relative"
+                  className="relative flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-bg px-2 py-4 text-text-muted transition-colors active:bg-surface-elevated"
                 >
-                  <span className="relative text-olive-vivid">
+                  <span className="relative">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
                       <path d="M13.73 21a2 2 0 01-3.46 0" />
                     </svg>
                     {unreadCount > 0 && (
-                      <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-olive-bright px-1 py-0.5 text-[9px] font-semibold text-bg">
+                      <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-terra px-1 py-0.5 text-[9px] font-bold text-white">
                         {unreadCount > 9 ? "9+" : unreadCount}
                       </span>
                     )}
                   </span>
-                  <span className="text-center text-[11px] font-medium leading-tight text-text-muted">
+                  <span className="text-center text-[11px] font-semibold leading-tight text-text-muted">
                     Notificaciones
                   </span>
                 </button>
@@ -311,16 +159,16 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                         href={item.href}
                         prefetch={PREFETCH_HREFS.has(item.href) ? undefined : false}
                         onClick={() => setShowMore(false)}
-                        className={`flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 transition-colors active:scale-95 ${
+                        className={`flex flex-col items-center justify-center gap-1.5 rounded-2xl px-2 py-4 transition-colors active:scale-95 ${
                           isActive
-                            ? "bg-accent/15 text-accent"
-                            : "text-text-muted active:bg-surface-elevated"
+                            ? "bg-olive-deep text-text"
+                            : "bg-bg text-text-muted active:bg-surface-elevated"
                         }`}
                       >
-                        <span className={isActive ? "text-accent" : "text-olive-vivid"}>
+                        <span className={isActive ? "text-text" : "text-text-muted"}>
                           {item.icon}
                         </span>
-                        <span className={`text-center text-[11px] font-medium leading-tight ${isActive ? "text-accent" : "text-text-muted"}`}>
+                        <span className={`text-center text-[11px] font-semibold leading-tight ${isActive ? "text-text" : "text-text-muted"}`}>
                           {item.label}
                         </span>
                       </Link>
@@ -343,7 +191,7 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                           strokeWidth="1.8"
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          className={fav ? "text-fav-gold" : "text-text-subtle"}
+                          className={fav ? "text-fav-gold" : "text-border-strong"}
                         >
                           <polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9 12 2" />
                         </svg>
@@ -352,20 +200,27 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                   );
                 })}
               </div>
+
+              <div className="mx-5 mt-2 flex items-center gap-1.5 rounded-xl bg-warning-chip px-3 py-2">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-fav-gold"><polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9 12 2" /></svg>
+                <p className="text-[11px] text-text-muted">
+                  Las secciones con estrella se fijan en la barra
+                </p>
+              </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
 
-      {/* Floating bottom bar */}
+      {/* Floating bottom bar — pill V4 */}
       <div
         className="fixed bottom-0 left-0 right-0 z-40 md:hidden"
-        style={{ paddingBottom: "calc(var(--safe-bottom, 0px) + 8px)" }}
+        style={{ paddingBottom: "calc(var(--safe-bottom, 0px) + 10px)" }}
       >
-        <nav className="mx-3 mb-2 flex items-stretch rounded-2xl border border-border-olive/40 bg-gradient-to-b from-surface/80 to-bg/70 p-1 shadow-2xl backdrop-blur-2xl">
+        <nav className="mx-4 flex items-stretch rounded-full border border-border bg-surface p-1.5 shadow-2xl">
           {/* Zona scrolleable de favoritos */}
           <div className="relative min-w-0 flex-1">
-            <div className="flex items-stretch gap-0.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex items-stretch gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {visiblePrimaryTabs.map((tab) => {
                 const isActive = pathname === tab.href;
                 return (
@@ -376,19 +231,19 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                     transition={{ duration: 0.1 }}
                   >
                     {isActive && (
-                      <span className="absolute inset-0 rounded-xl bg-gradient-to-b from-olive-mid/25 to-olive-deep/60 ring-1 ring-inset ring-olive-bright/25" />
+                      <span className="absolute inset-0 rounded-[18px] bg-dark" />
                     )}
                     <Link
                       href={tab.href}
                       prefetch={PREFETCH_HREFS.has(tab.href) ? undefined : false}
                       className="relative z-10 flex w-full flex-col items-center justify-center gap-0.5 py-2"
                     >
-                      <span className={`shrink-0 ${isActive ? "text-accent" : "text-text-muted"}`}>
+                      <span className={`shrink-0 [&_svg]:h-[18px] [&_svg]:w-[18px] ${isActive ? "text-accent" : "text-text-faint"}`}>
                         {tab.icon}
                       </span>
                       <span
-                        className={`w-full truncate text-center text-[9px] font-medium leading-none ${
-                          isActive ? "text-accent" : "text-text-muted"
+                        className={`w-full truncate text-center text-[9.5px] leading-none ${
+                          isActive ? "font-bold text-dark-fg" : "font-medium text-text-faint"
                         }`}
                       >
                         {tab.shortLabel ?? tab.label}
@@ -402,39 +257,39 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
             {visiblePrimaryTabs.length > 4 && (
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-bg/80 to-transparent"
+                className="pointer-events-none absolute inset-y-0 right-0 w-6 rounded-r-full bg-gradient-to-l from-surface to-transparent"
               />
             )}
           </div>
 
           {/* Más button — fijo, fuera del scroll */}
           <motion.div
-            className="relative w-[20vw] max-w-[76px] shrink-0"
+            className="relative w-[18vw] max-w-[64px] shrink-0"
             whileTap={{ scale: 0.9 }}
             transition={{ duration: 0.1 }}
           >
             {(isMoreActive || showMore) && (
-              <span className="absolute inset-0 rounded-xl bg-gradient-to-b from-olive-mid/25 to-olive-deep/60 ring-1 ring-inset ring-olive-bright/25" />
+              <span className="absolute inset-0 rounded-[18px] bg-olive-deep" />
             )}
             <button
               onClick={() => setShowMore((v) => !v)}
-              className="relative z-10 flex w-full flex-col items-center justify-center gap-0.5 py-2"
+              className="relative z-10 flex h-full w-full flex-col items-center justify-center gap-0.5 py-2"
             >
-              <span className={`relative shrink-0 ${isMoreActive || showMore ? "text-accent" : "text-text-muted"}`}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <span className={`relative shrink-0 ${isMoreActive || showMore ? "text-text" : "text-text-faint"}`}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="5" cy="12" r="1.5" />
                   <circle cx="12" cy="12" r="1.5" />
                   <circle cx="19" cy="12" r="1.5" />
                 </svg>
                 {unreadCount > 0 && (
-                  <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-olive-bright px-1 py-0.5 text-[9px] font-semibold text-bg">
+                  <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-terra px-1 py-0.5 text-[9px] font-bold text-white">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
               </span>
               <span
-                className={`w-full truncate text-center text-[9px] font-medium leading-none ${
-                  isMoreActive || showMore ? "text-accent" : "text-text-muted"
+                className={`w-full truncate text-center text-[9.5px] leading-none ${
+                  isMoreActive || showMore ? "font-bold text-text" : "font-medium text-text-faint"
                 }`}
               >
                 Más

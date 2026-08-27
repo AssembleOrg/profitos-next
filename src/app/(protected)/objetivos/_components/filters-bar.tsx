@@ -4,6 +4,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { defaultPeriod } from "@/lib/objectives";
 import { DateField } from "../../_components/date-field";
+import { SelectField } from "@/components/ui/select-field";
 import type { SerializedUser } from "./types";
 
 interface FiltersBarProps {
@@ -52,20 +53,19 @@ export function FiltersBar({
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-2xl border border-border bg-surface/40 p-3 transition-opacity ${
+      className={`flex flex-col gap-3 rounded-[20px] border border-border bg-surface p-4 transition-opacity ${
         pending ? "opacity-70" : ""
       }`}
     >
       <div className="flex flex-wrap items-end gap-3">
         {showUserFilter && (
           <label className="flex w-full flex-col gap-1.5 sm:w-[200px]">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+            <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
               Empleado
             </span>
-            <select
+            <SelectField
               value={selectedUserId}
               onChange={(e) => update({ assignedToUserId: e.target.value })}
-              className="h-10 w-full rounded-xl border border-border bg-bg px-3 text-sm text-text focus:border-secondary focus:outline-none scheme-dark"
             >
               <option value="">Todos</option>
               {users.map((u) => (
@@ -73,19 +73,19 @@ export function FiltersBar({
                   {u.fullName?.trim() || u.email}
                 </option>
               ))}
-            </select>
+            </SelectField>
           </label>
         )}
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
             Desde
           </span>
           <DateField value={from} onChange={(iso) => update({ from: iso })} />
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
             Hasta
           </span>
           <DateField value={to} onChange={(iso) => update({ to: iso })} />
@@ -95,7 +95,7 @@ export function FiltersBar({
           <button
             type="button"
             onClick={setThisMonth}
-            className="h-10 rounded-xl border border-border bg-bg px-3 text-xs font-medium text-text-muted transition-colors hover:border-olive-bright/40 hover:text-text"
+            className="h-10 rounded-full bg-sand-chip px-3.5 text-[12px] font-semibold text-text-muted transition-opacity hover:opacity-80"
           >
             Este mes
           </button>
@@ -103,7 +103,7 @@ export function FiltersBar({
             <button
               type="button"
               onClick={clearPeriod}
-              className="h-10 rounded-xl border border-border bg-bg px-3 text-xs font-medium text-text-muted transition-colors hover:border-olive-bright/40 hover:text-text"
+              className="h-10 rounded-full border border-border bg-surface px-3.5 text-[12px] font-semibold text-text-muted transition-colors hover:bg-bg"
             >
               Sin período
             </button>

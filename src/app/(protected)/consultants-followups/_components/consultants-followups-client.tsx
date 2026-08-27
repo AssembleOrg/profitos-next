@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { SelectField } from "@/components/ui/select-field";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
 import { Spinner } from "../../_components/spinner";
@@ -86,6 +87,13 @@ const STATUS_OPTIONS = [
   { value: "cerrada", label: "Cerrada" },
 ];
 
+const STATUS_STYLES: Record<string, string> = {
+  pendiente: "bg-sand-chip text-warning",
+  iniciada: "bg-info-chip text-info",
+  activa: "bg-sage-chip text-olive-light",
+  cerrada: "bg-clay-chip text-terra",
+};
+
 const ACTION_TYPES = [
   { value: "nota", label: "Nota" },
   { value: "whatsapp", label: "WhatsApp" },
@@ -95,6 +103,16 @@ const ACTION_TYPES = [
   { value: "sin_respuesta", label: "Sin respuesta" },
   { value: "otro", label: "Otro" },
 ];
+
+const ACTION_TYPE_STYLES: Record<string, string> = {
+  nota: "bg-bg text-text-faint",
+  whatsapp: "bg-sage-chip text-olive-light",
+  email: "bg-info-chip text-info",
+  llamada: "bg-sand-chip text-warning",
+  audio: "bg-clay-chip text-terra",
+  sin_respuesta: "bg-clay-chip text-terra",
+  otro: "bg-bg text-text-faint",
+};
 
 function formatDateTime(value: string | null) {
   if (!value) return "—";
@@ -300,24 +318,24 @@ export function ConsultantsFollowUpsClient({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-display text-2xl font-medium text-text">Seguimientos de consultas</h1>
-        <p className="text-sm text-text-muted">
+        <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Seguimientos de consultas</h1>
+        <p className="text-[12.5px] text-text-faint">
           {total} seguimiento{total !== 1 ? "s" : ""} · Estados: pendiente, iniciada, activa, cerrada
         </p>
       </div>
 
-      <div className="rounded-2xl border border-border bg-surface/30 p-4">
+      <div className="rounded-[20px] border border-border bg-surface p-4">
         <div className="flex flex-wrap gap-3">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar por nombre, email, teléfono..."
-            className="min-w-0 flex-1 basis-full rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none sm:basis-auto"
+            className="h-11 min-w-0 flex-1 basis-full rounded-full border border-border bg-surface px-4 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none sm:basis-auto"
           />
-          <select
+          <SelectField
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="flex-1 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
+            wrapperClassName="flex-1"
           >
             <option value="">Todos los estados</option>
             {STATUS_OPTIONS.map((option) => (
@@ -325,12 +343,12 @@ export function ConsultantsFollowUpsClient({
                 {option.label}
               </option>
             ))}
-          </select>
+          </SelectField>
           {isAdmin && (
-            <select
+            <SelectField
               value={assignedToUserId}
               onChange={(e) => setAssignedToUserId(e.target.value)}
-              className="flex-1 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
+              wrapperClassName="flex-1"
             >
               <option value="">Todos los responsables</option>
               {assignableUsers.map((user) => (
@@ -338,17 +356,17 @@ export function ConsultantsFollowUpsClient({
                   {userLabel(user)}
                 </option>
               ))}
-            </select>
+            </SelectField>
           )}
           <button
             onClick={() => applyFilters(1)}
-            className="rounded-xl bg-secondary/20 px-4 py-2.5 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30"
+            className="inline-flex h-11 items-center rounded-full bg-dark px-4.5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90"
           >
             Aplicar
           </button>
           <button
             onClick={resetFilters}
-            className="rounded-xl border border-border px-4 py-2.5 text-sm text-text-muted transition-colors hover:bg-bg hover:text-text"
+            className="inline-flex h-11 items-center rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg"
           >
             Limpiar
           </button>
@@ -356,7 +374,7 @@ export function ConsultantsFollowUpsClient({
         {activeFilters.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {activeFilters.map((chip) => (
-              <span key={chip} className="rounded-full border border-border bg-bg px-3 py-1 text-xs text-text-muted">
+              <span key={chip} className="rounded-full bg-sand-chip px-3 py-1.5 text-[12px] font-semibold text-text-muted">
                 {chip}
               </span>
             ))}
@@ -364,26 +382,26 @@ export function ConsultantsFollowUpsClient({
         )}
       </div>
 
-      <div className="rounded-2xl border border-border bg-surface/30">
+      <div className="rounded-[20px] border border-border bg-surface">
       {/* Cards — solo mobile */}
       <div className="sm:hidden space-y-2 p-3">
         {items.length === 0 ? (
-          <p className="py-8 text-center text-sm text-text-muted">Sin resultados</p>
+          <p className="py-8 text-center text-[12.5px] text-text-faint">Sin resultados</p>
         ) : (
           items.map((item) => (
             <div key={item.id}
-              className="cursor-pointer rounded-xl border border-border bg-surface/30 p-4 active:bg-surface/60"
+              className="cursor-pointer rounded-[18px] border border-border bg-surface p-3.5 active:bg-bg"
               onClick={() => loadDetail(item.id)}>
               <div className="flex items-start justify-between gap-2">
-                <p className="min-w-0 break-all font-medium text-text">{item.recentContact.name}</p>
-                <span className="rounded-full border border-border bg-bg px-2 py-0.5 text-[10px] text-text flex-shrink-0">{item.status}</span>
+                <p className="min-w-0 break-all text-[13.5px] font-bold text-text">{item.recentContact.name}</p>
+                <span className={`inline-flex flex-shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${STATUS_STYLES[item.status] ?? "bg-bg text-text-faint"}`}>{item.status}</span>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {item.recentContact.email && (
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.recentContact.email!); toast.success("Mail copiado"); }}
-                    className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                    className="flex min-h-[44px] items-center gap-1.5 rounded-full bg-bg px-3.5 text-[12px] font-semibold text-text-muted active:bg-border/50"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" /></svg>
                     <span className="max-w-[160px] truncate">{item.recentContact.email}</span>
@@ -392,16 +410,16 @@ export function ConsultantsFollowUpsClient({
                 {(item.recentContact.cellphone || item.recentContact.phone) && (
                   <WhatsAppLink
                     phone={item.recentContact.cellphone ?? item.recentContact.phone}
-                    className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted transition-colors hover:border-success/30 hover:text-success active:bg-surface/80"
+                    className="flex min-h-[44px] items-center gap-1.5 rounded-full bg-sage-chip px-3.5 text-[12px] font-semibold text-olive-light transition-opacity active:opacity-80"
                   >
                     {item.recentContact.cellphone ?? item.recentContact.phone}
                   </WhatsAppLink>
                 )}
                 {!item.recentContact.email && !item.recentContact.cellphone && !item.recentContact.phone && (
-                  <span className="text-xs text-text-muted/50">Sin contacto</span>
+                  <span className="text-[12px] text-text-faint">Sin contacto</span>
                 )}
               </div>
-              <p className="mt-2 text-xs text-text-muted">{userLabel(item.assignedToUser)} · {formatDateTime(item.updatedAt)}</p>
+              <p className="mt-2 text-[11.5px] text-text-faint">{userLabel(item.assignedToUser)} · {formatDateTime(item.updatedAt)}</p>
             </div>
           ))
         )}
@@ -411,59 +429,60 @@ export function ConsultantsFollowUpsClient({
       <div className="hidden overflow-hidden sm:block">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-border text-xs font-semibold uppercase tracking-widest text-text-muted">
-              <th className="px-5 py-3">Consulta</th>
-              <th className="px-5 py-3">Estado</th>
-              <th className="hidden px-5 py-3 md:table-cell">Responsable</th>
-              <th className="hidden px-5 py-3 lg:table-cell">Actualizado</th>
-              <th className="px-5 py-3 text-right">Detalle</th>
+            <tr className="border-b border-border text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
+              <th className="px-4 py-3">Consulta</th>
+              <th className="px-4 py-3">Estado</th>
+              <th className="hidden px-4 py-3 md:table-cell">Responsable</th>
+              <th className="hidden px-4 py-3 lg:table-cell">Actualizado</th>
+              <th className="px-4 py-3 text-right">Detalle</th>
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-5 py-12 text-center text-sm text-text-muted">
+                <td colSpan={5} className="px-4 py-12 text-center text-[12.5px] text-text-faint">
                   No hay seguimientos de consultas para los filtros seleccionados
                 </td>
               </tr>
             ) : (
               items.map((item) => (
-                <tr key={item.id} className="border-b border-border/50 last:border-b-0">
-                  <td className="px-5 py-3.5">
-                    <p className="font-medium text-text">{item.recentContact.name}</p>
-                    <p className="text-xs text-text-muted">#{item.recentContact.externalId}</p>
+                <tr key={item.id} className="border-b border-border last:border-b-0 hover:bg-bg">
+                  <td className="px-4 py-3.5">
+                    <p className="text-[13.5px] font-bold text-text">{item.recentContact.name}</p>
+                    <p className="text-[11.5px] text-text-faint">#{item.recentContact.externalId}</p>
                     {item.recentContact.email && (
                       <button
                         onClick={() => { navigator.clipboard.writeText(item.recentContact.email!); toast.success("Mail copiado"); }}
-                        className="block max-w-[200px] truncate text-xs text-text-muted/80 transition-colors hover:text-text active:opacity-60"
+                        className="mt-1 inline-flex max-w-[200px] items-center gap-1.5 rounded-full bg-bg px-2.5 py-1 text-[11px] font-semibold text-text-muted transition-colors hover:bg-border/50 active:opacity-60"
                       >
-                        {item.recentContact.email}
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" /></svg>
+                        <span className="truncate">{item.recentContact.email}</span>
                       </button>
                     )}
                     {(item.recentContact.cellphone || item.recentContact.phone) && (
                       <WhatsAppLink
                         phone={item.recentContact.cellphone ?? item.recentContact.phone}
-                        className="flex max-w-[200px] items-center gap-1.5 truncate text-xs text-text-muted/80 transition-colors hover:text-success active:opacity-60"
+                        className="mt-1 flex max-w-fit items-center gap-1.5 rounded-full bg-sage-chip px-2.5 py-1 text-[11px] font-semibold text-olive-light transition-opacity hover:opacity-80 active:opacity-60"
                       >
                         {item.recentContact.cellphone ?? item.recentContact.phone}
                       </WhatsAppLink>
                     )}
                     {!item.recentContact.email && !item.recentContact.cellphone && !item.recentContact.phone && (
-                      <p className="text-xs text-text-muted/50">Sin contacto</p>
+                      <p className="text-[11.5px] text-text-faint">Sin contacto</p>
                     )}
-                    <p className="mt-0.5 text-xs text-text-muted/70 md:hidden">{userLabel(item.assignedToUser)}</p>
+                    <p className="mt-0.5 text-[11.5px] text-text-faint md:hidden">{userLabel(item.assignedToUser)}</p>
                   </td>
-                  <td className="px-5 py-3.5">
-                    <span className="rounded-full border border-border bg-bg px-2.5 py-1 text-xs text-text">
+                  <td className="px-4 py-3.5">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${STATUS_STYLES[item.status] ?? "bg-bg text-text-faint"}`}>
                       {item.status}
                     </span>
                   </td>
-                  <td className="hidden px-5 py-3.5 text-text-muted md:table-cell">{userLabel(item.assignedToUser)}</td>
-                  <td className="hidden px-5 py-3.5 text-text-muted lg:table-cell">{formatDateTime(item.updatedAt)}</td>
-                  <td className="px-5 py-3.5 text-right">
+                  <td className="hidden px-4 py-3.5 text-[13px] text-text-muted md:table-cell">{userLabel(item.assignedToUser)}</td>
+                  <td className="hidden px-4 py-3.5 text-[13px] text-text-muted lg:table-cell">{formatDateTime(item.updatedAt)}</td>
+                  <td className="px-4 py-3.5 text-right">
                     <button
                       onClick={() => loadDetail(item.id)}
-                      className="rounded-lg border border-border px-3 py-1.5 text-xs text-secondary transition-colors hover:bg-bg"
+                      className="inline-flex items-center rounded-full bg-bg px-3.5 py-1.5 text-[12px] font-bold text-text-muted transition-colors hover:bg-border/50"
                     >
                       {loadingDetail ? "Cargando..." : "Abrir"}
                     </button>
@@ -486,11 +505,11 @@ export function ConsultantsFollowUpsClient({
       >
         {detail && (
           <div>
-              <p className="mb-4 text-sm text-text-muted">
+              <p className="mb-4 text-[12.5px] text-text-muted">
                 {detail.recentContact.email ?? ((detail.recentContact.cellphone || detail.recentContact.phone) ? (
                   <WhatsAppLink
                     phone={detail.recentContact.cellphone ?? detail.recentContact.phone}
-                    className="inline-flex items-center gap-1.5 align-middle transition-colors hover:text-success"
+                    className="inline-flex items-center gap-1.5 align-middle font-semibold text-olive-light transition-opacity hover:opacity-80"
                   >
                     {detail.recentContact.cellphone ?? detail.recentContact.phone}
                   </WhatsAppLink>
@@ -498,20 +517,19 @@ export function ConsultantsFollowUpsClient({
               </p>
 
               <div className="grid gap-5">
-                <form onSubmit={handleMetaUpdate} className="rounded-xl border border-border bg-surface/30 p-4">
-                  <p className="mb-3 text-sm font-medium text-text">Datos del seguimiento</p>
+                <form onSubmit={handleMetaUpdate} className="rounded-[14px] bg-bg p-4">
+                  <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Datos del seguimiento</p>
                   <div className="grid gap-3">
                     <textarea
                       name="notes"
                       defaultValue={detail.notes ?? ""}
                       placeholder="Notas generales del seguimiento..."
-                      className="min-h-20 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none"
+                      className="min-h-20 rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                     {isAdmin && (
-                      <select
+                      <SelectField
                         name="assignedToUserId"
                         defaultValue={detail.assignedToUser?.id ?? ""}
-                        className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
                       >
                         <option value="">Sin asignar</option>
                         {assignableUsers.map((user) => (
@@ -519,70 +537,65 @@ export function ConsultantsFollowUpsClient({
                             {user.fullName?.trim() || user.email}
                           </option>
                         ))}
-                      </select>
+                      </SelectField>
                     )}
                     <button
                       type="submit"
                       disabled={savingMeta}
-                      className="rounded-xl border border-border px-4 py-2 text-sm text-text-muted transition-colors hover:bg-bg hover:text-text disabled:opacity-50"
+                      className="inline-flex h-10 items-center justify-center rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg disabled:opacity-50"
                     >
                       {savingMeta ? <Spinner size={14} /> : "Guardar datos"}
                     </button>
                   </div>
                 </form>
 
-                <form onSubmit={handleStatusChange} className="rounded-xl border border-border bg-surface/30 p-4">
-                  <p className="mb-3 text-sm font-medium text-text">Cambio de estado (nota obligatoria)</p>
+                <form onSubmit={handleStatusChange} className="rounded-[14px] bg-bg p-4">
+                  <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Cambio de estado (nota obligatoria)</p>
                   <div className="grid gap-3">
-                    <select
-                      name="status"
-                      defaultValue={detail.status}
-                      className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
-                    >
+                    <SelectField name="status" defaultValue={detail.status}>
                       {STATUS_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
                           {option.label}
                         </option>
                       ))}
-                    </select>
+                    </SelectField>
                     <textarea
                       name="note"
                       required
                       placeholder="Explicá por qué cambia el estado..."
-                      className="min-h-20 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none"
+                      className="min-h-20 rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
                     <button
                       type="submit"
                       disabled={savingStatus}
-                      className="rounded-xl bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30 disabled:opacity-50"
+                      className="inline-flex h-10 items-center justify-center rounded-full bg-dark px-4.5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
                     >
                       {savingStatus ? "Actualizando..." : "Actualizar estado"}
                     </button>
                   </div>
                 </form>
 
-                <form onSubmit={handleAddAction} className="rounded-xl border border-border bg-surface/30 p-4">
-                  <p className="mb-3 text-sm font-medium text-text">Nueva acción</p>
+                <form onSubmit={handleAddAction} className="rounded-[14px] bg-bg p-4">
+                  <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Nueva acción</p>
                   <div className="grid gap-3">
-                    <select
-                      name="type"
-                      defaultValue="nota"
-                      className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
-                    >
+                    <SelectField name="type" defaultValue="nota">
                       {ACTION_TYPES.map((option) => (
                         <option key={option.value} value={option.value}>
                           {option.label}
                         </option>
                       ))}
-                    </select>
+                    </SelectField>
                     <textarea
                       ref={actionDescriptionRef}
                       name="description"
                       placeholder="Ej: Comunicación por WhatsApp, en espera de respuesta..."
-                      className="min-h-20 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none"
+                      className="min-h-20 rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                     />
-                    <div className="rounded-xl border border-border bg-bg px-3 py-2.5">
-                      <p className="mb-2 text-xs text-text-muted">Audio / adjuntos (el audio se transcribe al texto)</p>
+                    <div className="rounded-[14px] border border-border bg-surface px-3.5 py-2.5">
+                      <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-clay-chip px-2.5 py-1 text-[11px] font-bold text-terra">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z" /><path d="M19 10v2a7 7 0 01-14 0v-2" /><line x1="12" y1="19" x2="12" y2="22" /></svg>
+                        Audio / adjuntos (el audio se transcribe al texto)
+                      </p>
                       <MediaUploader
                         attachments={actionAttachments}
                         onChange={setActionAttachments}
@@ -595,26 +608,26 @@ export function ConsultantsFollowUpsClient({
                     <button
                       type="submit"
                       disabled={savingAction}
-                      className="rounded-xl bg-secondary/20 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30 disabled:opacity-50"
+                      className="inline-flex h-10 items-center justify-center rounded-full bg-dark px-4.5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
                     >
                       {savingAction ? "Guardando..." : "Registrar acción"}
                     </button>
                   </div>
                 </form>
 
-                <div className="rounded-xl border border-border bg-surface/30 p-4">
-                  <p className="mb-3 text-sm font-medium text-text">Historial de estados</p>
+                <div className="rounded-[14px] bg-bg p-4">
+                  <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Historial de estados</p>
                   <div className="space-y-2">
                     {detail.statusChanges.length === 0 ? (
-                      <p className="text-sm text-text-muted">Sin cambios de estado</p>
+                      <p className="text-[12.5px] text-text-faint">Sin cambios de estado</p>
                     ) : (
                       detail.statusChanges.map((change) => (
-                        <div key={change.id} className="rounded-lg border border-border bg-bg/40 px-3 py-2">
-                          <p className="text-sm text-text">
+                        <div key={change.id} className="rounded-[10px] border border-border bg-surface px-3 py-2">
+                          <p className="text-[13px] font-semibold text-text">
                             {change.fromStatus ?? "—"} → {change.toStatus}
                           </p>
-                          <p className="text-xs text-text-muted">{change.note}</p>
-                          <p className="text-xs text-text-muted/80">
+                          <p className="text-[12px] text-text-muted">{change.note}</p>
+                          <p className="text-[11.5px] text-text-faint">
                             {formatDateTime(change.createdAt)} · {userLabel(change.changedByUser)}
                           </p>
                         </div>
@@ -623,22 +636,27 @@ export function ConsultantsFollowUpsClient({
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border bg-surface/30 p-4">
-                  <p className="mb-3 text-sm font-medium text-text">Acciones registradas</p>
+                <div className="rounded-[14px] bg-bg p-4">
+                  <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Acciones registradas</p>
                   <div className="space-y-2">
                     {detail.actions.length === 0 ? (
-                      <p className="text-sm text-text-muted">Sin acciones registradas</p>
+                      <p className="text-[12.5px] text-text-faint">Sin acciones registradas</p>
                     ) : (
                       detail.actions.map((action) => (
-                        <div key={action.id} className="rounded-lg border border-border bg-bg/40 px-3 py-2">
-                          <p className="text-sm text-text">{action.type}</p>
-                          {action.description && <p className="text-xs text-text-muted">{action.description}</p>}
+                        <div key={action.id} className="rounded-[10px] border border-border bg-surface px-3 py-2">
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${ACTION_TYPE_STYLES[action.type] ?? "bg-bg text-text-faint"}`}>
+                            {action.type === "audio" && (
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z" /><path d="M19 10v2a7 7 0 01-14 0v-2" /><line x1="12" y1="19" x2="12" y2="22" /></svg>
+                            )}
+                            {action.type}
+                          </span>
+                          {action.description && <p className="mt-1 text-[12px] text-text-muted">{action.description}</p>}
                           {action.audioUrl && (
                             <a
                               href={action.audioUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-xs text-secondary hover:underline"
+                              className="text-[12px] font-bold text-olive-light hover:underline"
                             >
                               Escuchar audio
                             </a>
@@ -650,7 +668,7 @@ export function ConsultantsFollowUpsClient({
                               ))}
                             </div>
                           )}
-                          <p className="text-xs text-text-muted/80">
+                          <p className="mt-1 text-[11.5px] text-text-faint">
                             {formatDateTime(action.actionAt)} · {userLabel(action.createdByUser)}
                           </p>
                         </div>

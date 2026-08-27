@@ -14,6 +14,7 @@ import {
   type EntryType,
 } from "@/lib/account";
 import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
 import { MovementFormModal } from "./movement-form-modal";
 import { CategoryManagerModal } from "./category-manager-modal";
 import { MovementDetailModal } from "./movement-detail-modal";
@@ -53,7 +54,7 @@ interface Props {
 }
 
 const selectClass =
-  "w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none";
+  "h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none";
 
 export function EstadosCuentaClient({ report, categories, agents, filters, isAdmin, isCostearOwner }: Readonly<Props>) {
   const router = useRouter();
@@ -128,8 +129,8 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
       {/* Header */}
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl text-text md:text-3xl">Estados de cuenta</h1>
-          <p className="mt-1 text-sm text-text-muted">
+          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Estados de cuenta</h1>
+          <p className="mt-1 text-[12.5px] text-text-faint">
             Caja de la inmobiliaria: ingresos (incluidas comisiones de alquiler) y egresos, por periodo y moneda.
           </p>
         </div>
@@ -137,7 +138,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
           <button
             type="button"
             onClick={() => setCategoriesOpen(true)}
-            className="rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm font-medium text-text-muted transition-colors hover:border-border-strong hover:text-text"
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4.5 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg"
           >
             Categorías
           </button>
@@ -147,9 +148,9 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
               setEditing(null);
               setFormOpen(true);
             }}
-            className="inline-flex items-center gap-2 rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2.5 text-sm font-semibold text-bg transition-colors hover:bg-olive-vivid"
+            className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
@@ -159,13 +160,13 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
       </header>
 
       {/* Filtros */}
-      <section className="flex flex-col gap-3 rounded-2xl border border-border bg-surface/40 p-4">
+      <section className="flex flex-col gap-3 rounded-[20px] border border-border bg-surface p-4">
         <div className="flex flex-wrap items-center gap-2">
           <PresetButton onClick={() => applyPreset("mes")}>Este mes</PresetButton>
           <PresetButton onClick={() => applyPreset("mesPasado")}>Mes pasado</PresetButton>
           <PresetButton onClick={() => applyPreset("anio")}>Este año</PresetButton>
           <PresetButton onClick={() => applyPreset("todo")}>Todo</PresetButton>
-          <div className="ml-auto flex items-center gap-1 rounded-xl border border-border bg-bg p-1">
+          <div className="ml-auto inline-flex items-center gap-0.5 rounded-full border border-border bg-surface p-1">
             <ViewTab active={filters.view === "rango"} onClick={() => apply({ view: "rango" })}>
               Rango
             </ViewTab>
@@ -183,32 +184,29 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
             <DatePicker value={filters.to} onChange={(iso) => apply({ to: iso })} className={selectClass} />
           </Field>
           <Field label="Tipo">
-            <select
+            <SelectField
               value={filters.type ?? ""}
               onChange={(e) => apply({ type: (e.target.value || undefined) as EntryType | undefined })}
-              className={selectClass}
             >
               <option value="">Todos</option>
               <option value="income">Ingresos</option>
               <option value="expense">Egresos</option>
-            </select>
+            </SelectField>
           </Field>
           <Field label="Moneda">
-            <select
+            <SelectField
               value={filters.currency ?? ""}
               onChange={(e) => apply({ currency: (e.target.value || undefined) as Currency | undefined })}
-              className={selectClass}
             >
               <option value="">ARS y USD</option>
               <option value="ARS">Solo ARS</option>
               <option value="USD">Solo USD</option>
-            </select>
+            </SelectField>
           </Field>
           <Field label="Categoría">
-            <select
+            <SelectField
               value={filters.categoryId ?? ""}
               onChange={(e) => apply({ categoryId: e.target.value || undefined })}
-              className={selectClass}
             >
               <option value="">Todas</option>
               <optgroup label="Ingresos">
@@ -221,32 +219,30 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </optgroup>
-            </select>
+            </SelectField>
           </Field>
           <Field label="Agente">
-            <select
+            <SelectField
               value={filters.agentUserId ?? ""}
               onChange={(e) => apply({ agentUserId: e.target.value || undefined })}
-              className={selectClass}
             >
               <option value="">Todos</option>
               {agents.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
-            </select>
+            </SelectField>
           </Field>
           <Field label="Compartido">
-            <select
+            <SelectField
               value={filters.isShared === undefined ? "" : filters.isShared ? "1" : "0"}
               onChange={(e) =>
                 apply({ isShared: e.target.value === "" ? undefined : e.target.value === "1" })
               }
-              className={selectClass}
             >
               <option value="">Todos</option>
               <option value="1">Solo compartidos</option>
               <option value="0">No compartidos</option>
-            </select>
+            </SelectField>
           </Field>
         </div>
       </section>
@@ -254,10 +250,10 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
       {/* Resumen por moneda */}
       <section className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {report.byCurrency.map((cr) => (
-          <div key={cr.currency} className="rounded-2xl border border-border bg-surface/40 p-4">
+          <div key={cr.currency} className="rounded-[20px] border border-border bg-surface p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-text">Total en {cr.currency}</h2>
-              <span className="rounded-full bg-bg px-2.5 py-0.5 text-[11px] font-medium text-text-muted">{cr.currency}</span>
+              <h2 className="font-display text-base font-semibold text-text">Total en {cr.currency}</h2>
+              <span className="rounded-lg bg-dark px-2 py-0.5 text-[10.5px] font-bold text-accent">{cr.currency}</span>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <Stat label="Ingresos" value={formatMoney(cr.totalIncome, cr.currency)} tone="income" />
@@ -266,11 +262,11 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
             </div>
             {isCostearOwner && cr.personalExpense > 0 && (
               <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
-                <span className="flex items-center gap-1.5 text-text-muted">
+                <span className="flex items-center gap-1.5 text-text-faint">
                   <CostearBadge />
                   Gastos personales (Costear) · no entran al neto
                 </span>
-                <span className="font-mono font-semibold text-olive-light">
+                <span className="font-display font-bold text-text-faint">
                   −{formatMoney(cr.personalExpense, cr.currency)}
                 </span>
               </div>
@@ -278,11 +274,11 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
             {filters.view === "mensual" && (
               <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
                 <span className="text-text-muted">
-                  Saldo inicial: <span className="font-mono text-text">{formatMoney(cr.opening, cr.currency)}</span>
+                  Saldo inicial: <span className="font-display font-semibold text-text">{formatMoney(cr.opening, cr.currency)}</span>
                 </span>
                 <span className="text-text-muted">
                   Saldo final:{" "}
-                  <span className={`font-mono font-semibold ${cr.closing >= 0 ? "text-success" : "text-danger"}`}>
+                  <span className={`font-display font-bold ${cr.closing >= 0 ? "text-olive-light" : "text-terra"}`}>
                     {formatMoney(cr.closing, cr.currency)}
                   </span>
                 </span>
@@ -294,16 +290,25 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
 
       {/* Contenido */}
       {report.movements.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border bg-surface/30 px-6 py-12 text-center text-sm text-text-muted">
-          No hay movimientos en el periodo seleccionado.
-        </p>
+        <div className="flex flex-col items-center gap-2.5 rounded-[20px] bg-bg px-6 py-8 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-sand-chip text-accent">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+              <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />
+            </svg>
+          </span>
+          <p className="font-display text-[15px] font-semibold text-text">Sin movimientos</p>
+          <p className="text-[12.5px] text-text-faint">
+            No hay movimientos en el periodo seleccionado.
+          </p>
+        </div>
       ) : filters.view === "mensual" ? (
         <section className="flex flex-col gap-6">
           {report.byCurrency
             .filter((cr) => cr.months.length > 0)
             .map((cr) => (
-              <div key={cr.currency} className="overflow-hidden rounded-2xl border border-border">
-                <div className="border-b border-border bg-bg/40 px-4 py-2.5 text-sm font-semibold text-text">
+              <div key={cr.currency} className="overflow-hidden rounded-[20px] border border-border bg-surface">
+                <div className="border-b border-border bg-bg px-4 py-2.5 font-display text-sm font-semibold text-text">
                   Cierre mensual · {cr.currency}
                 </div>
                 <div className="divide-y divide-border">
@@ -317,7 +322,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
       ) : (
         <section className="flex flex-col gap-5">
           {monthGroups.map(([key, items]) => (
-            <div key={key} className="overflow-hidden rounded-2xl border border-border">
+            <div key={key} className="overflow-hidden rounded-[20px] border border-border bg-surface">
               <MonthGroupHeader monthKeyStr={key} items={items} />
               <div className="divide-y divide-border">
                 {items.map((m) => (
@@ -365,7 +370,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
 function Field({ label, children }: Readonly<{ label: string; children: React.ReactNode }>) {
   return (
     <label className="flex w-full min-w-0 flex-col gap-1">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">{label}</span>
+      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">{label}</span>
       {children}
     </label>
   );
@@ -376,7 +381,7 @@ function PresetButton({ onClick, children }: Readonly<{ onClick: () => void; chi
     <button
       type="button"
       onClick={onClick}
-      className="rounded-lg border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:border-border-strong hover:text-text"
+      className="rounded-full border border-border bg-surface px-3.5 py-1.5 text-[12px] font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text"
     >
       {children}
     </button>
@@ -388,8 +393,8 @@ function ViewTab({ active, onClick, children }: Readonly<{ active: boolean; onCl
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-        active ? "bg-accent/20 text-accent" : "text-text-muted hover:text-text"
+      className={`rounded-full px-4 py-1.5 text-[12.5px] transition-colors ${
+        active ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
       }`}
     >
       {children}
@@ -400,8 +405,8 @@ function ViewTab({ active, onClick, children }: Readonly<{ active: boolean; onCl
 function Stat({ label, value, tone }: Readonly<{ label: string; value: string; tone: "income" | "expense" }>) {
   return (
     <div className="min-w-0">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">{label}</p>
-      <p className={`mt-0.5 break-words font-mono text-xs font-semibold tabular-nums sm:text-sm ${tone === "income" ? "text-success" : "text-danger"}`}>
+      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">{label}</p>
+      <p className={`mt-0.5 break-words font-display text-xs font-bold tabular-nums sm:text-sm ${tone === "income" ? "text-olive-light" : "text-terra"}`}>
         {value}
       </p>
     </div>
@@ -423,13 +428,13 @@ function MonthGroupHeader({ monthKeyStr, items }: Readonly<{ monthKeyStr: string
   const label = monthLabel(monthKeyStr);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-bg/40 px-4 py-2.5">
-      <span className="text-sm font-semibold text-text">{label}</span>
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-bg px-4 py-2.5">
+      <span className="font-display text-sm font-semibold text-text">{label}</span>
       <div className="flex flex-wrap items-center gap-2 text-[11px]">
         {byCurrency.map(([cur, v]) => (
-          <span key={cur} className="rounded-full bg-bg px-2.5 py-0.5 font-mono text-text-muted">
-            {cur}: <span className="text-success">+{formatMoney(v.income, cur)}</span>{" "}
-            <span className="text-danger">−{formatMoney(v.expense, cur)}</span>
+          <span key={cur} className="rounded-full bg-surface px-2.5 py-0.5 font-display font-semibold text-text-muted">
+            {cur}: <span className="text-olive-light">+{formatMoney(v.income, cur)}</span>{" "}
+            <span className="text-terra">−{formatMoney(v.expense, cur)}</span>
           </span>
         ))}
       </div>
@@ -449,7 +454,7 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
   ].filter(Boolean).join(" · ");
 
   const rowClass = `flex w-full items-center gap-3 px-4 py-3 text-left ${
-    isCostear ? "" : "transition-colors hover:bg-bg/30"
+    isCostear ? "" : "transition-colors hover:bg-bg"
   }`;
 
   const content = (
@@ -457,10 +462,10 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
       <span
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
           isCostear
-            ? "bg-olive-chip text-olive-light"
+            ? "bg-sand-chip text-warning"
             : m.type === "income"
-              ? "bg-success-chip text-success"
-              : "bg-danger-chip text-danger"
+              ? "bg-sage-chip text-olive-light"
+              : "bg-clay-chip text-terra"
         }`}
       >
         {m.type === "income" ? (
@@ -472,15 +477,15 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-medium text-text">{m.categoryName ?? "Sin categoría"}</span>
+          <span className="truncate text-[13.5px] font-bold text-text">{m.categoryName ?? "Sin categoría"}</span>
           {isCostear && <CostearBadge />}
           {isRental && (
-            <span className="shrink-0 rounded-full bg-olive-deep px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-accent">
+            <span className="shrink-0 rounded-md bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint">
               Auto · alquiler
             </span>
           )}
           {m.isShared && (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-accent">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint">
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>
               Compartido
             </span>
@@ -492,12 +497,12 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
             </span>
           )}
         </div>
-        <p className="truncate text-xs text-text-muted">{meta}</p>
+        <p className="truncate text-[11.5px] text-text-faint">{meta}</p>
       </div>
 
       <div className="shrink-0 text-right">
-        <p className={`font-mono text-sm font-semibold ${
-          isCostear ? "text-olive-light" : m.type === "income" ? "text-success" : "text-danger"
+        <p className={`font-display text-sm font-bold ${
+          isCostear ? "text-text-faint" : m.type === "income" ? "text-olive-light" : "text-terra"
         }`}>
           {m.type === "income" ? "+" : "−"}
           {formatMoney(m.amount, m.currency)}
@@ -519,7 +524,7 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
 
 function CostearBadge() {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-olive-chip px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-olive-light">
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-sand-chip px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-warning">
       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
       Costear
     </span>
@@ -541,7 +546,7 @@ function MonthRow({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-bg/30"
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-bg"
       >
         <svg
           width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -549,18 +554,18 @@ function MonthRow({
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-        <span className="w-32 shrink-0 text-sm font-medium text-text">{bucket.label}</span>
-        <span className="hidden flex-1 items-center justify-end gap-4 font-mono text-xs sm:flex">
+        <span className="w-32 shrink-0 text-[13.5px] font-bold text-text">{bucket.label}</span>
+        <span className="hidden flex-1 items-center justify-end gap-4 font-display text-xs font-semibold sm:flex">
           <span className="text-text-muted">Inicial {formatMoney(bucket.opening, currency)}</span>
-          <span className="text-success">+{formatMoney(bucket.income, currency)}</span>
-          <span className="text-danger">−{formatMoney(bucket.expense, currency)}</span>
+          <span className="text-olive-light">+{formatMoney(bucket.income, currency)}</span>
+          <span className="text-terra">−{formatMoney(bucket.expense, currency)}</span>
         </span>
-        <span className={`ml-auto shrink-0 font-mono text-sm font-semibold sm:ml-4 ${bucket.closing >= 0 ? "text-success" : "text-danger"}`}>
+        <span className={`ml-auto shrink-0 font-display text-sm font-bold sm:ml-4 ${bucket.closing >= 0 ? "text-olive-light" : "text-terra"}`}>
           {formatMoney(bucket.closing, currency)}
         </span>
       </button>
       {open && (
-        <div className="divide-y divide-border border-t border-border bg-bg/20">
+        <div className="divide-y divide-border border-t border-border bg-bg/40">
           {bucket.movements.map((m) => (
             <MovementRow key={m.id} m={m} onOpen={onOpen} />
           ))}

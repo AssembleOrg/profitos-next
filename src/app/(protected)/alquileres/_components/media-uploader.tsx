@@ -53,10 +53,10 @@ export function MediaUploader({
       <div className="flex flex-wrap items-center gap-2">
         <label
           htmlFor={inputId}
-          className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-bg px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:border-olive-bright/40 hover:text-text ${uploading ? "pointer-events-none opacity-60" : ""}`}
+          className={`inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-2 text-xs font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text ${uploading ? "pointer-events-none opacity-60" : ""}`}
         >
           {uploading ? (
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-olive-bright border-t-transparent" />
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
           ) : (
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
@@ -101,7 +101,7 @@ interface AttachmentPreviewProps {
 export function AttachmentPreview({ attachment, url, onRemove }: Readonly<AttachmentPreviewProps>) {
   const { kind, name } = attachment;
   return (
-    <div className="group relative flex flex-col gap-1 overflow-hidden rounded-xl border border-border bg-bg/60 p-1.5">
+    <div className="group relative flex flex-col gap-1 overflow-hidden rounded-[14px] border border-border bg-bg p-1.5">
       {kind === "image" && url && (
         <a href={url} target="_blank" rel="noreferrer" className="relative block aspect-square overflow-hidden rounded-lg bg-bg">
           <img src={url} alt={name} className="h-full w-full object-cover" />
@@ -139,7 +139,7 @@ export function AttachmentPreview({ attachment, url, onRemove }: Readonly<Attach
           type="button"
           onClick={onRemove}
           aria-label={`Quitar ${name}`}
-          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-bg/80 text-text-muted opacity-0 transition-all hover:bg-danger-chip hover:text-danger group-hover:opacity-100"
+          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-surface/90 text-text-muted opacity-0 transition-all hover:bg-clay-chip hover:text-terra group-hover:opacity-100"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" />

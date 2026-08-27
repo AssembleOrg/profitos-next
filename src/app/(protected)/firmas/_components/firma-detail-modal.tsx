@@ -14,6 +14,7 @@ import {
   type SignatureDateField,
   type SignatureStatus,
 } from "@/lib/signatures";
+import { SelectField } from "@/components/ui/select-field";
 import { AttachmentPreview, MediaUploader } from "./media-uploader";
 import { useSignedUrls } from "./use-signed-urls";
 import { DateField } from "../../_components/date-field";
@@ -59,7 +60,7 @@ export function FirmaDetailModal({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 20, scale: 0.98 }}
                 transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed left-1/2 top-1/2 z-50 flex max-h-[94dvh] w-[min(820px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+                className="fixed left-1/2 top-1/2 z-50 flex max-h-[94dvh] w-[min(820px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
               >
                 <DetailContent
                   firma={firma}
@@ -127,33 +128,32 @@ function DetailContent({
   return (
     <>
       {/* Header */}
-      <header className="flex items-start justify-between gap-3 border-b border-border-olive/40 px-5 py-4">
+      <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div className="min-w-0">
-          <Dialog.Title className="line-clamp-1 text-base font-semibold text-text">
+          <Dialog.Title className="line-clamp-1 font-display text-[18px] font-semibold text-text">
             {firma.property.address}
           </Dialog.Title>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-text-muted">
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-text-faint">
             {firma.property.zone && <span>{firma.property.zone}</span>}
             {firma.property.city && <span>· {firma.property.city}</span>}
             {firma.property.operationType && (
-              <span className="rounded-full border border-border bg-bg px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-text-muted">
+              <span className="rounded-full bg-bg px-2 py-0.5 text-[10px] font-semibold text-text-muted">
                 {firma.property.operationType}
               </span>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${statusStyle.chip}`}
+            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${statusStyle.chip}`}
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${statusStyle.dot}`} />
             {SIGNATURE_STATUS_LABEL[firma.status]}
           </span>
           <Dialog.Close asChild>
             <button
               type="button"
               aria-label="Cerrar"
-              className="flex h-8 w-8 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-bg hover:text-text"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -172,22 +172,22 @@ function DetailContent({
 
           {/* Original proposal data */}
           {(firma.title || firma.description || firma.attachments.length > 0) && (
-            <section className="rounded-xl border border-border bg-bg/30 p-4">
-              <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+            <section className="rounded-[16px] border border-border bg-surface p-4">
+              <h4 className="mb-2 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
                 Propuesta original
               </h4>
               {firma.title && (
-                <p className="text-sm font-medium text-text">{firma.title}</p>
+                <p className="text-[14px] font-bold text-text">{firma.title}</p>
               )}
               {firma.description && (
-                <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-text-muted">
+                <p className="mt-1.5 whitespace-pre-wrap text-[13.5px] leading-relaxed text-text-muted">
                   {firma.description}
                 </p>
               )}
               {firma.attachments.length > 0 && (
-                <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {firma.attachments.map((att) => (
-                    <AttachmentPreview key={att.path} attachment={att} url={signedUrls[att.path]} />
+                    <AttachmentChip key={att.path} attachment={att} url={signedUrls[att.path]} />
                   ))}
                 </div>
               )}
@@ -196,7 +196,7 @@ function DetailContent({
 
           {/* Timeline */}
           <section>
-            <h4 className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+            <h4 className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
               Línea de tiempo
             </h4>
             <Timeline
@@ -230,8 +230,8 @@ function DetailContent({
       </div>
 
       {/* Footer */}
-      <footer className="flex items-center justify-between gap-2 border-t border-border bg-bg/30 px-5 py-3">
-        <span className="text-[11px] text-text-faint">
+      <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-surface px-5 py-3">
+        <span className="text-[11.5px] text-text-faint">
           Creada por{" "}
           {firma.createdByUser.fullName?.trim() || firma.createdByUser.email.split("@")[0]} ·{" "}
           {formatRelative(firma.createdAt)}
@@ -241,7 +241,7 @@ function DetailContent({
             <button
               type="button"
               onClick={handleDelete}
-              className="rounded-xl border border-danger/30 bg-danger-chip px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger-chip"
+              className="inline-flex h-10 items-center rounded-full bg-clay-chip px-4 text-[13px] font-bold text-terra transition-opacity hover:opacity-90"
             >
               Eliminar propuesta
             </button>
@@ -249,7 +249,7 @@ function DetailContent({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:border-border-strong hover:text-text"
+            className="inline-flex h-10 items-center rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text"
           >
             Cerrar
           </button>
@@ -296,23 +296,23 @@ function ControlPanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
   }
 
   return (
-    <section className="rounded-xl border border-border bg-bg/30 p-4">
+    <section className="rounded-[16px] bg-bg p-4">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h4 className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+        <h4 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
           Estado y fechas
         </h4>
-        <select
+        <SelectField
           value={firma.status}
           disabled={busy}
           onChange={(e) => patch({ status: e.target.value })}
-          className="h-9 rounded-xl border border-border bg-bg px-3 text-xs font-medium text-text focus:border-secondary focus:outline-none scheme-dark"
+          className="h-10 rounded-full pl-4 text-[13px]"
         >
           {SIGNATURE_STATUSES.map((s) => (
             <option key={s} value={s}>
               {SIGNATURE_STATUS_LABEL[s]}
             </option>
           ))}
-        </select>
+        </SelectField>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {(["dateProcessStarted", "dateAgreed", "dateKeysHandover"] as SignatureDateField[]).map(
@@ -321,7 +321,7 @@ function ControlPanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
             const value = dateValue(field);
             return (
               <label key={field} className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+                <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
                   {meta.label}
                 </span>
                 <DateField
@@ -334,7 +334,13 @@ function ControlPanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
           },
         )}
       </div>
-      <p className="mt-3 text-[11px] text-text-faint">
+      <p className="mt-3 flex items-center gap-1.5 text-[10.5px] text-text-faint">
+        <svg className="shrink-0 text-olive-light" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
         Cada fecha aparece automáticamente en la agenda de todo el equipo.
       </p>
     </section>
@@ -364,7 +370,7 @@ function Timeline({
 }: Readonly<TimelineProps>) {
   if (actions.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-border bg-bg/20 px-3 py-4 text-center text-xs text-text-muted">
+      <p className="rounded-[16px] bg-bg px-3 py-6 text-center text-[12.5px] text-text-faint">
         Sin movimientos todavía.
       </p>
     );
@@ -393,7 +399,7 @@ function Timeline({
         const dotStyle =
           action.toStatus && SIGNATURE_STATUS_STYLE[action.toStatus]
             ? SIGNATURE_STATUS_STYLE[action.toStatus].dot
-            : "bg-olive-bright/70";
+            : "bg-border-strong";
         const canDeleteThis =
           action.type === "nota" &&
           (isAdmin || action.createdByUser.id === currentUserId);
@@ -405,33 +411,33 @@ function Timeline({
               <span className="absolute left-[7px] top-3 h-full w-px bg-border" />
             )}
             <span className={`relative z-10 mt-1 h-3.5 w-3.5 shrink-0 rounded-full ${dotStyle} ring-4 ring-surface`} />
-            <div className="flex-1 rounded-lg border border-border bg-bg/30 p-3">
+            <div className="flex-1 rounded-[14px] bg-bg p-3">
               <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   {action.createdByUser.avatarUrl ? (
                     <img
                       src={action.createdByUser.avatarUrl}
                       alt=""
-                      className="h-5 w-5 rounded-full object-cover"
+                      className="h-6 w-6 rounded-full object-cover"
                       referrerPolicy="no-referrer"
                     />
                   ) : (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-surface-elevated text-[10px] font-semibold uppercase text-text-muted">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sand-chip font-display text-[10px] font-bold uppercase text-text-muted">
                       {author[0]}
                     </span>
                   )}
-                  <span className="text-xs font-medium text-text">{author}</span>
+                  <span className="text-[12.5px] font-bold text-text">{author}</span>
                   <ActionBadge action={action} />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-text-faint">
+                  <span className="text-[10.5px] text-text-faint">
                     {formatRelative(action.createdAt)}
                   </span>
                   {canDeleteThis && (
                     <button
                       type="button"
                       onClick={() => deleteNote(action.id)}
-                      className="flex h-8 w-8 items-center justify-center rounded text-text-faint transition-colors hover:bg-danger-chip hover:text-danger"
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-clay-chip hover:text-terra"
                       aria-label="Eliminar nota"
                       title="Eliminar nota"
                     >
@@ -444,7 +450,7 @@ function Timeline({
                 </div>
               </div>
               {action.description && (
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-text-muted">
+                <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-text-muted">
                   {action.description}
                 </p>
               )}
@@ -470,14 +476,14 @@ function Timeline({
 function ActionBadge({ action }: { action: FirmaAction }) {
   if (action.type === "creation") {
     return (
-      <span className="rounded-full bg-olive-subtle px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-accent">
+      <span className="rounded-full bg-sand-chip px-2 py-0.5 text-[10px] font-bold text-warning">
         Creación
       </span>
     );
   }
   if (action.type === "status_change" && action.fromStatus && action.toStatus) {
     return (
-      <span className="rounded-full border border-border bg-bg/40 px-1.5 py-0.5 text-[9px] font-medium text-text-muted">
+      <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-text-muted">
         {SIGNATURE_STATUS_LABEL[action.fromStatus]} → {SIGNATURE_STATUS_LABEL[action.toStatus]}
       </span>
     );
@@ -485,15 +491,61 @@ function ActionBadge({ action }: { action: FirmaAction }) {
   if (action.type === "date_set" && action.dateField) {
     const meta = SIGNATURE_DATE_META[action.dateField as SignatureDateField];
     return (
-      <span className="rounded-full border border-border bg-bg/40 px-1.5 py-0.5 text-[9px] font-medium text-text-muted">
+      <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-text-muted">
         {meta?.shortLabel ?? "Fecha"}
       </span>
     );
   }
   return (
-    <span className="rounded-full bg-bg/40 px-1.5 py-0.5 text-[9px] font-medium text-text-muted">
+    <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-text-faint">
       Nota
     </span>
+  );
+}
+
+/* Adjunto como chip pill (V4) — abre el archivo en una pestaña nueva. */
+function AttachmentChip({
+  attachment,
+  url,
+}: Readonly<{ attachment: Attachment; url?: string }>) {
+  const icon =
+    attachment.kind === "image" ? (
+      <>
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="8.5" cy="8.5" r="1.5" />
+        <polyline points="21 15 16 10 5 21" />
+      </>
+    ) : attachment.kind === "audio" ? (
+      <>
+        <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+        <path d="M19 10v2a7 7 0 01-14 0v-2" />
+        <line x1="12" y1="19" x2="12" y2="23" />
+      </>
+    ) : attachment.kind === "video" ? (
+      <>
+        <polygon points="23 7 16 12 23 17 23 7" />
+        <rect x="1" y="5" width="15" height="14" rx="2" />
+      </>
+    ) : (
+      <>
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+      </>
+    );
+
+  return (
+    <a
+      href={url ?? "#"}
+      target="_blank"
+      rel="noreferrer"
+      title={attachment.name}
+      className="inline-flex h-[30px] max-w-[220px] items-center gap-1.5 rounded-full bg-bg px-3 text-[11.5px] font-semibold text-text-muted transition-colors hover:text-text"
+    >
+      <svg className="shrink-0 text-text-faint" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        {icon}
+      </svg>
+      <span className="truncate">{attachment.name}</span>
+    </a>
   );
 }
 
@@ -542,34 +594,34 @@ function AddNoteSection({ firmaId, onAdded }: Readonly<AddNoteSectionProps>) {
   }
 
   return (
-    <section className="rounded-xl border border-border bg-bg/40 p-4">
-      <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+    <section className="rounded-[16px] bg-bg p-4">
+      <h4 className="mb-2.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
         Agregar nota
       </h4>
-      <textarea
-        rows={3}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Comentario, novedad, contexto…"
-        className="w-full resize-none rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none"
-      />
-      <div className="mt-2">
+      <div className="flex items-center gap-2">
+        <textarea
+          rows={1}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Agregar nota…"
+          className="h-[38px] min-h-[38px] flex-1 resize-none rounded-full border border-border bg-surface px-4 py-[9px] text-[13px] leading-5 text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={submit}
+          disabled={submitting}
+          className="inline-flex h-[38px] shrink-0 items-center rounded-full bg-dark px-4 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {submitting ? "Enviando…" : "Agregar"}
+        </button>
+      </div>
+      <div className="mt-2.5">
         <MediaUploader
           attachments={attachments}
           onChange={setAttachments}
           signedUrls={signedUrls}
           compact
         />
-      </div>
-      <div className="mt-3 flex items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={submit}
-          disabled={submitting}
-          className="rounded-xl border border-olive-bright/30 bg-olive-mid px-4 py-2 text-sm font-semibold text-bg shadow-[0_0_0_1px_rgba(143,168,112,0.15),0_8px_24px_-8px_rgba(143,168,112,0.5)] transition-colors hover:bg-olive-vivid disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {submitting ? "Enviando…" : "Agregar nota"}
-        </button>
       </div>
     </section>
   );

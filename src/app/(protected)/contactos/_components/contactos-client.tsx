@@ -8,6 +8,7 @@ import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
 import { formatDate } from "@/lib/datetime";
 import { WhatsAppLink } from "@/components/whatsapp-link";
+import { SelectField } from "@/components/ui/select-field";
 import { MediaUploader, type NoteAttachment } from "@/components/notes/media-uploader";
 import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
 
@@ -55,16 +56,36 @@ interface ContactosClientProps {
 }
 
 const LEAD_STATUS_COLORS: Record<string, string> = {
-  "Activo": "bg-success",
-  "Cerrado": "bg-danger",
-  "En espera": "bg-warning",
-  "Esperando respuesta": "bg-info",
-  "Nuevo": "bg-olive-bright",
+  "Activo": "bg-sage-chip text-olive-light",
+  "Cerrado": "bg-clay-chip text-terra",
+  "En espera": "bg-sand-chip text-warning",
+  "Esperando respuesta": "bg-info-chip text-info",
+  "Nuevo": "bg-sage-chip text-olive-light",
 };
 
 function getLeadStatusColor(status: string | null) {
-  if (!status) return "bg-text-muted";
-  return LEAD_STATUS_COLORS[status] ?? "bg-text-muted";
+  if (!status) return "bg-bg text-text-faint";
+  return LEAD_STATUS_COLORS[status] ?? "bg-bg text-text-faint";
+}
+
+/** Tints alternados para avatares con iniciales. */
+const AVATAR_TINTS = ["bg-sand-chip", "bg-sage-chip", "bg-clay-chip"];
+
+/** Empty state V4: círculo tintado + título display + texto faint. */
+function EmptyState({ title, description }: Readonly<{ title: string; description: string }>) {
+  return (
+    <div className="flex flex-col items-center rounded-[20px] bg-bg px-6 py-8 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sand-chip">
+        <svg className="text-accent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 00-3-3.87" />
+        </svg>
+      </div>
+      <p className="mt-3 font-display text-[15px] font-semibold text-text">{title}</p>
+      <p className="mt-1 text-[12.5px] text-text-faint">{description}</p>
+    </div>
+  );
 }
 
 export function ContactosClient({
@@ -98,6 +119,8 @@ export function ContactosClient({
   const [tokkoModalOpen, setTokkoModalOpen] = useState(false);
   const [editTokkoContact, setEditTokkoContact] = useState<TokkoContact | null>(null);
   const [tokkoLoading, setTokkoLoading] = useState(false);
+
+  // Sync state
 
   function applyFilters(nextPage = 1) {
     const params = new URLSearchParams(searchParams.toString());
@@ -208,8 +231,8 @@ export function ContactosClient({
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-medium text-text">Contactos</h1>
-          <p className="text-sm text-text-muted">
+          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Contactos</h1>
+          <p className="text-[12.5px] text-text-faint">
             {total} resultado{total !== 1 ? "s" : ""}
             {totalAll != null && totalAll !== total && ` de ${totalAll} total`}
           </p>
@@ -218,9 +241,9 @@ export function ContactosClient({
           {tab === "manual" && (
             <button
               onClick={handleNew}
-              className="flex items-center gap-2 rounded-xl bg-secondary/20 px-3 py-2 text-sm font-medium text-secondary active:bg-secondary/30"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 active:opacity-90"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
@@ -231,22 +254,32 @@ export function ContactosClient({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-xl border border-border bg-surface/30 p-1">
+      <div className="inline-flex items-center gap-0.5 self-start rounded-full border border-border bg-surface p-1">
         <button
           onClick={() => switchTab("tokko")}
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-            tab === "tokko" ? "bg-primary text-bg" : "text-text-muted hover:text-text"
+          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] transition-colors ${
+            tab === "tokko" ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
           }`}
         >
           Tokko
+          {tab === "tokko" && (
+            <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10.5px] font-bold text-accent">
+              {totalAll ?? total}
+            </span>
+          )}
         </button>
         <button
           onClick={() => switchTab("manual")}
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-            tab === "manual" ? "bg-primary text-bg" : "text-text-muted hover:text-text"
+          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] transition-colors ${
+            tab === "manual" ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
           }`}
         >
           Manuales
+          {tab === "manual" && (
+            <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10.5px] font-bold text-accent">
+              {totalAll ?? total}
+            </span>
+          )}
         </button>
       </div>
 
@@ -254,7 +287,7 @@ export function ContactosClient({
       {tab === "tokko" && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
@@ -263,14 +296,13 @@ export function ContactosClient({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters(1)}
-              className="w-full rounded-xl border border-border bg-bg py-2.5 pl-10 pr-4 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+              className="h-11 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
           </div>
           {leadStatusOptions.length > 0 && (
-            <select
+            <SelectField
               value={leadStatusFilter}
               onChange={(e) => setLeadStatusFilter(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
             >
               <option value="">Todos los estados</option>
               {leadStatusOptions.map((s) => (
@@ -278,20 +310,31 @@ export function ContactosClient({
                   {s.value} ({s.count})
                 </option>
               ))}
-            </select>
+            </SelectField>
           )}
-          <label className="flex items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-xs text-text-muted">
+          <label className="flex h-11 cursor-pointer items-center gap-2 rounded-full border border-border bg-surface px-3.5 text-[12.5px] font-semibold text-text-muted">
             <input
               type="checkbox"
               checked={hideDeleted}
               onChange={(e) => setHideDeleted(e.target.checked)}
-              className="accent-secondary"
+              className="sr-only"
             />
+            <span
+              className={`flex h-5 w-5 items-center justify-center rounded-md transition-colors ${
+                hideDeleted ? "bg-dark" : "border border-border-strong bg-surface"
+              }`}
+            >
+              {hideDeleted && (
+                <svg className="text-accent" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </span>
             Ocultar eliminados
           </label>
           <button
             onClick={() => applyFilters(1)}
-            className="rounded-xl bg-secondary/20 px-4 py-2.5 text-sm font-medium text-secondary hover:bg-secondary/30"
+            className="inline-flex h-11 items-center justify-center rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90"
           >
             Buscar
           </button>
@@ -301,7 +344,7 @@ export function ContactosClient({
       {/* Filters — Manual tab */}
       {tab === "manual" && (
         <div className="relative">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
@@ -310,7 +353,7 @@ export function ContactosClient({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && applyFilters(1)}
-            className="w-full rounded-xl border border-border bg-surface/40 py-2.5 pl-10 pr-4 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+            className="h-11 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
           />
         </div>
       )}
@@ -321,21 +364,26 @@ export function ContactosClient({
           {/* Mobile cards */}
           <div className="space-y-2 sm:hidden">
             {tokkoContacts.length === 0 ? (
-              <div className="py-12 text-center text-sm text-text-muted">
-                {filters.q || filters.leadStatus ? "Sin resultados" : "No hay contactos sincronizados"}
-              </div>
+              <EmptyState
+                title={filters.q || filters.leadStatus ? "Sin resultados" : "No hay contactos"}
+                description={
+                  filters.q || filters.leadStatus
+                    ? "Probá ajustando la búsqueda o los filtros."
+                    : "Aún no hay contactos importados."
+                }
+              />
             ) : (
               tokkoContacts.map((c) => (
-                <div key={c.id} onClick={() => handleEditTokko(c)} className="cursor-pointer rounded-xl border border-border bg-surface/30 p-4 active:bg-surface/60">
+                <div key={c.id} onClick={() => handleEditTokko(c)} className="cursor-pointer rounded-[18px] border border-border bg-surface p-3.5 active:bg-bg">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-text">{c.name}</p>
+                      <p className="truncate text-[13.5px] font-bold text-text">{c.name}</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {c.email && (
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(c.email!); toast.success("Mail copiado"); }}
-                            className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                            className="flex min-h-[44px] items-center gap-1.5 rounded-full bg-bg px-3.5 text-[12px] font-semibold text-text-muted active:bg-surface"
                           >
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" /></svg>
                             <span className="max-w-[160px] truncate">{c.email}</span>
@@ -344,25 +392,24 @@ export function ContactosClient({
                         {(c.cellphone || c.phone) && (
                           <WhatsAppLink
                             phone={c.cellphone ?? c.phone}
-                            className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted transition-colors hover:border-success/30 hover:text-success active:bg-surface/80"
+                            className="flex min-h-[44px] items-center gap-1.5 rounded-full bg-sage-chip px-3.5 text-[12px] font-bold text-olive-light transition-opacity active:opacity-80"
                           >
                             {c.cellphone ?? c.phone}
                           </WhatsAppLink>
                         )}
                         {!c.email && !c.cellphone && !c.phone && (
-                          <span className="text-xs text-text-muted/50">Sin contacto</span>
+                          <span className="text-[11.5px] text-text-faint">Sin contacto</span>
                         )}
                       </div>
                     </div>
                     {c.leadStatus && (
-                      <span className="ml-2 flex shrink-0 items-center gap-1.5">
-                        <span className={`h-1.5 w-1.5 rounded-full ${getLeadStatusColor(c.leadStatus)}`} />
-                        <span className="text-xs text-text-muted">{c.leadStatus}</span>
+                      <span className={`ml-2 inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${getLeadStatusColor(c.leadStatus)}`}>
+                        {c.leadStatus}
                       </span>
                     )}
                   </div>
                   {c.externalCreatedAt && (
-                    <p className="mt-2 text-xs text-text-faint">{formatDate(c.externalCreatedAt)}</p>
+                    <p className="mt-2 text-[11.5px] text-text-faint">{formatDate(c.externalCreatedAt)}</p>
                   )}
                 </div>
               ))
@@ -370,33 +417,40 @@ export function ContactosClient({
           </div>
 
           {/* Desktop table */}
-          <div className="hidden overflow-hidden rounded-2xl border border-border bg-surface/30 sm:block">
+          <div className="hidden overflow-hidden rounded-[20px] border border-border bg-surface sm:block">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-border text-xs font-semibold uppercase tracking-widest text-text-muted">
-                  <th className="px-5 py-3">Nombre</th>
-                  <th className="hidden px-5 py-3 md:table-cell">Email</th>
-                  <th className="hidden px-5 py-3 lg:table-cell">Teléfono</th>
-                  <th className="px-5 py-3">Estado</th>
-                  <th className="hidden px-5 py-3 lg:table-cell">Fecha</th>
+                <tr className="border-b border-border">
+                  <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Nombre</th>
+                  <th className="hidden px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint md:table-cell">Email</th>
+                  <th className="hidden px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint lg:table-cell">Teléfono</th>
+                  <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Estado</th>
+                  <th className="hidden px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint lg:table-cell">Fecha</th>
                 </tr>
               </thead>
               <tbody>
                 {tokkoContacts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-12 text-center text-sm text-text-muted">
-                      {filters.q || filters.leadStatus ? "Sin resultados para los filtros" : "No hay contactos sincronizados"}
+                    <td colSpan={5} className="px-4 py-6">
+                      <EmptyState
+                        title={filters.q || filters.leadStatus ? "Sin resultados" : "No hay contactos"}
+                        description={
+                          filters.q || filters.leadStatus
+                            ? "Probá ajustando la búsqueda o los filtros."
+                            : "Aún no hay contactos importados."
+                        }
+                      />
                     </td>
                   </tr>
                 ) : (
                   tokkoContacts.map((c) => (
-                    <tr key={c.id} onClick={() => handleEditTokko(c)} className="cursor-pointer border-b border-border/50 transition-colors last:border-b-0 hover:bg-surface/50">
-                      <td className="px-5 py-3.5">
-                        <p className="font-medium text-text">{c.name}</p>
+                    <tr key={c.id} onClick={() => handleEditTokko(c)} className="cursor-pointer border-t border-border transition-colors hover:bg-bg">
+                      <td className="px-4 py-3.5">
+                        <p className="text-[13.5px] font-bold text-text">{c.name}</p>
                         {c.externalDeletedAt && (
-                          <p className="text-[10px] text-danger">Eliminado</p>
+                          <p className="text-[10.5px] font-bold text-terra">Eliminado</p>
                         )}
-                        <p className="mt-0.5 text-xs text-text-muted md:hidden">
+                        <p className="mt-0.5 text-[11.5px] text-text-faint md:hidden">
                           {c.email ?? ((c.cellphone || c.phone) ? (
                             <WhatsAppLink
                               phone={c.cellphone ?? c.phone}
@@ -407,8 +461,8 @@ export function ContactosClient({
                           ) : "—")}
                         </p>
                       </td>
-                      <td className="hidden px-5 py-3.5 text-text-muted md:table-cell">{c.email ?? "—"}</td>
-                      <td className="hidden px-5 py-3.5 text-text-muted lg:table-cell">
+                      <td className="hidden px-4 py-3.5 text-[13px] text-text-muted md:table-cell">{c.email ?? "—"}</td>
+                      <td className="hidden px-4 py-3.5 text-[13px] text-text-muted lg:table-cell">
                         <WhatsAppLink
                           phone={c.cellphone ?? c.phone}
                           className="inline-flex items-center gap-1.5 transition-colors hover:text-success"
@@ -417,15 +471,14 @@ export function ContactosClient({
                           {c.cellphone ?? c.phone}
                         </WhatsAppLink>
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3.5">
                         {c.leadStatus ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <span className={`h-1.5 w-1.5 rounded-full ${getLeadStatusColor(c.leadStatus)}`} />
-                            <span className="text-text-muted">{c.leadStatus}</span>
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${getLeadStatusColor(c.leadStatus)}`}>
+                            {c.leadStatus}
                           </span>
                         ) : "—"}
                       </td>
-                      <td className="hidden px-5 py-3.5 text-text-muted lg:table-cell">
+                      <td className="hidden px-4 py-3.5 text-[13px] text-text-muted lg:table-cell">
                         {c.externalCreatedAt ? formatDate(c.externalCreatedAt) : "—"}
                       </td>
                     </tr>
@@ -442,8 +495,15 @@ export function ContactosClient({
         <AnimatePresence mode="popLayout">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {clients.length === 0 ? (
-              <div className="col-span-full py-12 text-center text-sm text-text-muted">
-                {filters.q ? "Sin resultados para la búsqueda" : "No hay clientes registrados"}
+              <div className="col-span-full">
+                <EmptyState
+                  title={filters.q ? "Sin resultados" : "No hay clientes"}
+                  description={
+                    filters.q
+                      ? "Probá con otro nombre, teléfono o email."
+                      : "Creá tu primer cliente manual para empezar."
+                  }
+                />
               </div>
             ) : (
               clients.map((c, index) => (
@@ -456,25 +516,25 @@ export function ContactosClient({
                   transition={{ type: "spring", stiffness: 400, damping: 30, delay: index * 0.03 }}
                   whileTap={{ scale: 0.96, opacity: 0.8 }}
                   onClick={() => handleEdit(c)}
-                  className="cursor-pointer rounded-2xl border border-border bg-surface/30 p-5"
+                  className="cursor-pointer rounded-[20px] border border-border bg-surface p-4 transition-colors hover:bg-bg active:bg-bg md:p-5"
                 >
                   <div className="flex items-start gap-3">
                     <motion.div
                       layoutId={`contact-avatar-${c.id}`}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-sm font-semibold text-secondary"
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-text-muted ${AVATAR_TINTS[index % AVATAR_TINTS.length]}`}
                     >
                       {c.name.charAt(0).toUpperCase()}
                     </motion.div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-text">{c.name}</p>
+                      <p className="truncate text-[13.5px] font-bold text-text">{c.name}</p>
                     </div>
                   </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-3">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
                     {c.email && (
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(c.email!); toast.success("Mail copiado"); }}
-                        className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted active:bg-surface/80"
+                        className="flex min-h-[44px] items-center gap-1.5 rounded-full bg-bg px-3.5 text-[12px] font-semibold text-text-muted active:bg-surface"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" /></svg>
                         <span className="max-w-[140px] truncate">{c.email}</span>
@@ -483,14 +543,14 @@ export function ContactosClient({
                     {c.phone ? (
                       <WhatsAppLink
                         phone={c.phone}
-                        className="flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-bg px-3 text-xs text-text-muted transition-colors hover:border-success/30 hover:text-success active:bg-surface/80"
+                        className="flex min-h-[44px] items-center gap-1.5 rounded-full bg-sage-chip px-3.5 text-[12px] font-bold text-olive-light transition-opacity active:opacity-80"
                       >
                         {c.phone}
                       </WhatsAppLink>
                     ) : (
-                      !c.email && <span className="text-xs text-text-muted/50">Sin contacto</span>
+                      !c.email && <span className="text-[11.5px] text-text-faint">Sin contacto</span>
                     )}
-                    <span className="text-xs text-text-muted">
+                    <span className="text-[11.5px] text-text-faint">
                       {c._count?.visitas ?? 0} visita{(c._count?.visitas ?? 0) !== 1 ? "s" : ""}
                     </span>
                   </div>
@@ -514,7 +574,7 @@ export function ContactosClient({
           <>
             {isEdit ? (
               <button type="button" onClick={handleDelete} disabled={deleting}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-danger active:bg-danger-chip disabled:opacity-50">
+                className="flex h-10 items-center gap-1.5 rounded-full bg-clay-chip px-4 text-[13px] font-bold text-terra transition-opacity active:opacity-80 disabled:opacity-50">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="3 6 5 6 21 6" />
                   <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
@@ -523,9 +583,9 @@ export function ContactosClient({
               </button>
             ) : <div />}
             <div className="flex items-center gap-3">
-              <button type="button" onClick={handleClose} className="rounded-lg px-4 py-2 text-sm text-text-muted active:text-text">Cancelar</button>
+              <button type="button" onClick={handleClose} className="px-4 py-2 text-[13px] font-semibold text-text-faint active:text-text">Cancelar</button>
               <button type="submit" form="client-form" disabled={loading}
-                className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary active:bg-secondary/30 disabled:opacity-50">
+                className="flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity active:opacity-90 disabled:opacity-50">
                 {loading ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear cliente"}
               </button>
             </div>
@@ -534,29 +594,29 @@ export function ContactosClient({
       >
         <form id="client-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-muted">Nombre *</label>
+            <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Nombre *</label>
             <input name="name" required defaultValue={editClient?.name ?? ""} placeholder="Juan Pérez"
-              className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+              className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-text-muted">Teléfono</label>
+              <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Teléfono</label>
               <input name="phone" defaultValue={editClient?.phone ?? ""} placeholder="+54 11 1234-5678"
-                className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+                className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-text-muted">Email</label>
+              <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Email</label>
               <input name="email" type="email" defaultValue={editClient?.email ?? ""} placeholder="juan@email.com"
-                className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+                className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-muted">Notas</label>
+            <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Notas</label>
             <textarea name="notes" rows={3} defaultValue={editClient?.notes ?? ""} placeholder="Notas sobre el cliente..."
-              className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+              className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-muted">Audio / adjuntos</label>
+            <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Audio / adjuntos</label>
             <MediaUploader attachments={clientAttachments} onChange={setClientAttachments} signedUrls={clientSignedUrls} />
           </div>
         </form>
@@ -572,9 +632,9 @@ export function ContactosClient({
           <>
             <div />
             <div className="flex items-center gap-3">
-              <button type="button" onClick={handleCloseTokko} className="rounded-lg px-4 py-2 text-sm text-text-muted active:text-text">Cancelar</button>
+              <button type="button" onClick={handleCloseTokko} className="px-4 py-2 text-[13px] font-semibold text-text-faint active:text-text">Cancelar</button>
               <button type="submit" form="tokko-contact-form" disabled={tokkoLoading}
-                className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary active:bg-secondary/30 disabled:opacity-50">
+                className="flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity active:opacity-90 disabled:opacity-50">
                 {tokkoLoading ? "Guardando..." : "Guardar cambios"}
               </button>
             </div>
@@ -583,36 +643,36 @@ export function ContactosClient({
       >
         <form id="tokko-contact-form" onSubmit={handleSubmitTokko} className="flex flex-col gap-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-muted">Nombre</label>
+            <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Nombre</label>
             <input name="name" defaultValue={editTokkoContact?.name ?? ""} placeholder="Nombre del contacto"
-              className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+              className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-text-muted">Email</label>
+              <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Email</label>
               <input name="email" type="email" defaultValue={editTokkoContact?.email ?? ""} placeholder="email@ejemplo.com"
-                className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+                className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-text-muted">Celular</label>
+              <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Celular</label>
               <input name="cellphone" defaultValue={editTokkoContact?.cellphone ?? ""} placeholder="+54 11 1234-5678"
-                className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+                className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-muted">Teléfono</label>
+            <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Teléfono</label>
             <input name="phone" defaultValue={editTokkoContact?.phone ?? ""} placeholder="Teléfono fijo"
-              className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+              className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
           </div>
           {/* Estado (leadStatus) oculto del modal — visible solo en tabla y filtro
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-muted">Estado</label>
+            <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Estado</label>
             <input name="leadStatus" defaultValue={editTokkoContact?.leadStatus ?? ""} placeholder="Activo, Cerrado..."
-              className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
+              className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none" />
           </div>
           */}
           {editTokkoContact?.externalCreatedAt && (
-            <p className="text-xs text-text-faint">Creado: {formatDate(editTokkoContact.externalCreatedAt)}</p>
+            <p className="text-[11.5px] text-text-faint">Creado: {formatDate(editTokkoContact.externalCreatedAt)}</p>
           )}
         </form>
       </Sheet>

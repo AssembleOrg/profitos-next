@@ -20,7 +20,7 @@ export function SplashScreen() {
         <motion.div
           // Oscuro explícito: encadena con el login (que sigue en dark) y
           // resuelve en la app clara al salir. No usa --color-bg a propósito.
-          className="fixed inset-0 z-100 flex items-center justify-center bg-[#131410]"
+          className="fixed inset-0 z-100 flex items-center justify-center bg-[#14130F]"
           exit={{
             opacity: 0,
             scale: 1.15,
@@ -62,7 +62,7 @@ export function SplashScreen() {
 
             {/* "PROPIEDADES" — fades in below */}
             <motion.p
-              className="mt-3 self-end text-[11px] font-normal uppercase tracking-[0.5em] text-white/40"
+              className="mt-3 self-end text-[11px] font-normal uppercase tracking-[0.5em] text-accent"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{

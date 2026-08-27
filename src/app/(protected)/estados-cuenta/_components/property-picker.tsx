@@ -17,7 +17,7 @@ interface Props {
 }
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-faint focus:border-secondary focus:outline-none";
+  "w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none";
 
 export function PropertyPicker({ value, label, onChange }: Readonly<Props>) {
   const [query, setQuery] = useState("");
@@ -62,8 +62,8 @@ export function PropertyPicker({ value, label, onChange }: Readonly<Props>) {
 
   if (value) {
     return (
-      <div className="flex items-center gap-2 rounded-xl border border-border bg-bg px-3 py-2">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-olive-vivid">
+      <div className="flex items-center gap-2 rounded-[14px] border border-border bg-bg px-3.5 py-2.5">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-olive-light">
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
           <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
@@ -75,7 +75,7 @@ export function PropertyPicker({ value, label, onChange }: Readonly<Props>) {
             setQuery("");
           }}
           aria-label="Quitar propiedad"
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-surface hover:text-text"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-surface hover:text-text"
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
         </button>
@@ -97,7 +97,7 @@ export function PropertyPicker({ value, label, onChange }: Readonly<Props>) {
         className={inputClass}
       />
       {open && (query.trim().length >= 2 || loading) && (
-        <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-border bg-surface shadow-xl">
+        <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-[16px] border border-border bg-surface shadow-xl">
           {loading ? (
             <p className="px-3 py-2 text-xs text-text-faint">Buscando…</p>
           ) : results.length === 0 ? (
@@ -111,10 +111,10 @@ export function PropertyPicker({ value, label, onChange }: Readonly<Props>) {
                   onChange(p.id, p.address);
                   setOpen(false);
                 }}
-                className="block w-full px-3 py-2 text-left transition-colors hover:bg-bg/60"
+                className="block w-full px-3.5 py-2 text-left transition-colors hover:bg-bg"
               >
-                <span className="block truncate text-sm text-text">{p.address}</span>
-                <span className="block truncate text-[11px] text-text-muted">
+                <span className="block truncate text-sm font-semibold text-text">{p.address}</span>
+                <span className="block truncate text-[11px] text-text-faint">
                   {[p.zone, p.city].filter(Boolean).join(" · ") || p.referenceCode || "—"}
                 </span>
               </button>

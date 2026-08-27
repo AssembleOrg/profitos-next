@@ -10,6 +10,7 @@ import {
 } from "./searchable-select";
 import { Sheet } from "../../_components/sheet";
 import { MediaUploader, type NoteAttachment } from "@/components/notes/media-uploader";
+import { SelectField } from "@/components/ui/select-field";
 
 interface NuevaVisitaModalProps {
   open: boolean;
@@ -158,9 +159,9 @@ export function NuevaVisitaModal({
       maxWidth="sm:max-w-lg"
       footer={
         <div className="ml-auto flex gap-3">
-          <button type="button" onClick={handleClose} className="rounded-lg px-4 py-2 text-sm text-text-muted active:text-text">Cancelar</button>
+          <button type="button" onClick={handleClose} className="px-2 text-[13px] font-semibold text-text-faint active:text-text">Cancelar</button>
           <button type="submit" form="nueva-visita-form" disabled={loading}
-            className="flex items-center gap-2 rounded-xl bg-secondary/20 px-5 py-2 text-sm font-medium text-secondary active:bg-secondary/30 disabled:opacity-50">
+            className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50">
             {loading ? <Spinner /> : "Guardar visita"}
           </button>
         </div>
@@ -170,24 +171,24 @@ export function NuevaVisitaModal({
             <form id="nueva-visita-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
               {/* Title */}
               <div>
-                <label className="mb-1 block text-xs font-medium text-text-muted">
+                <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
                   Título *
                 </label>
                 <input
                   name="title"
                   required
                   placeholder="Ej: Visita depto 3amb - Palermo"
-                  className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                  className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                 />
               </div>
 
               {/* Date + Times */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-muted">
+                  <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
                     Fecha *
                   </label>
-                  <DatePicker name="date" required className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none" />
+                  <DatePicker name="date" required className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none" />
                 </div>
                 <TimePicker name="startTime" label="Inicio" required defaultValue="09:00" />
                 <TimePicker name="endTime" label="Fin" required defaultValue="10:00" />
@@ -195,20 +196,17 @@ export function NuevaVisitaModal({
 
               {/* Type */}
               <div>
-                <label className="mb-1 block text-xs font-medium text-text-muted">
+                <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
                   Tipo
                 </label>
-                <select
-                  name="type"
-                  defaultValue="visita"
-                  className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none [color-scheme:light]"
-                >
+                <SelectField name="type"
+                  defaultValue="visita" wrapperClassName="w-full">
                   {VISIT_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>
                       {t.label}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
 
               {/* Property selector */}
@@ -237,14 +235,14 @@ export function NuevaVisitaModal({
 
               {/* Description */}
               <div>
-                <label className="mb-1 block text-xs font-medium text-text-muted">
+                <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
                   Notas
                 </label>
                 <textarea
                   name="description"
                   rows={2}
                   placeholder="Notas adicionales..."
-                  className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                  className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
                 />
                 <div className="mt-2">
                   <MediaUploader attachments={attachments} onChange={setAttachments} />
@@ -253,7 +251,7 @@ export function NuevaVisitaModal({
 
               {/* Error */}
               {error && (
-                <p className="rounded-lg bg-danger-chip px-3 py-2 text-sm text-danger">
+                <p className="rounded-[14px] bg-clay-chip px-3.5 py-2 text-sm font-semibold text-terra">
                   {error}
                 </p>
               )}

@@ -78,21 +78,21 @@ export async function CobrosMesCard({
   const monthPending = Math.max(0, monthExpected - monthCollected);
 
   return (
-    <section className="flex flex-col rounded-2xl border border-border bg-surface/40 p-5">
+    <section className="flex flex-col rounded-[20px] border border-border bg-surface p-4 md:p-5">
       <header className="flex items-center justify-between">
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-text">
+          <h3 className="font-display text-base font-semibold text-text">
             Cobros del mes
           </h3>
-          <p className="mt-0.5 text-[11px] text-text-muted">
+          <p className="mt-0.5 text-[11.5px] text-text-faint">
             Vencimientos pendientes en el rango {daysPast}d atrás → {daysAhead}d adelante
           </p>
         </div>
         <Link
           href="/alquileres?tab=cobros"
-          className="rounded-lg border border-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:bg-surface hover:text-text"
+          className="shrink-0 text-[12.5px] font-bold text-terra transition-opacity hover:opacity-80"
         >
-          Ver todos
+          Ver todos →
         </Link>
       </header>
 
@@ -104,7 +104,7 @@ export async function CobrosMesCard({
 
       <div className="mt-4 flex flex-col gap-2">
         {filtered.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border bg-bg/30 px-3 py-6 text-center text-xs text-text-muted">
+          <p className="rounded-[14px] bg-bg px-3 py-6 text-center text-[12.5px] text-text-faint">
             Sin cobros pendientes en este rango.
           </p>
         ) : (
@@ -128,24 +128,24 @@ export async function CobrosMesCard({
               <Link
                 key={d.id}
                 href={`/alquileres?tab=cobros&q=${encodeURIComponent(d.contract.property.address)}`}
-                className={`flex items-center gap-3 rounded-xl border bg-bg/40 px-3 py-2.5 transition-colors hover:bg-bg/70 ${effective === "vencido" ? "border-danger/30 hover:border-danger/30" : "border-border hover:border-olive-bright/40"}`}
+                className={`flex items-center gap-3 rounded-[14px] border bg-bg px-3 py-2.5 transition-colors hover:bg-sand-chip/50 ${effective === "vencido" ? "border-danger/30 hover:border-danger/30" : "border-transparent hover:border-border"}`}
               >
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${style.chip}`}>
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${style.chip}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-text">
+                  <p className="truncate text-[13.5px] font-bold text-text">
                     {d.contract.property.address}
                     {d.contract.title ? ` · ${d.contract.title}` : ""}
                   </p>
-                  <p className="truncate text-[11px] text-text-muted">
+                  <p className="truncate text-[11.5px] text-text-faint">
                     {d.contract.tenant.fullName} · {formatDate(d.dueDate)} · {RENTAL_DUE_STATUS_LABEL[effective]}
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-0.5 text-right">
-                  <span className="font-mono text-xs text-text">{formatARS(pending)}</span>
+                  <span className="font-display text-xs font-bold text-text">{formatARS(pending)}</span>
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${effective === "vencido" ? "bg-danger-chip text-danger" : daysAway <= 1 ? "bg-warning-chip text-warning" : "bg-surface text-text-muted"}`}
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${effective === "vencido" ? "bg-clay-chip text-terra" : daysAway <= 1 ? "bg-sand-chip text-warning" : "bg-surface text-text-faint"}`}
                   >
                     {distance}
                   </span>
@@ -160,11 +160,11 @@ export async function CobrosMesCard({
 }
 
 function MonthStat({ label, value, tone }: { label: string; value: string; tone?: "emerald" | "amber" }) {
-  const v = tone === "emerald" ? "text-success" : tone === "amber" ? "text-warning" : "text-text";
+  const v = tone === "emerald" ? "text-olive-light" : tone === "amber" ? "text-warning" : "text-text";
   return (
-    <div className="flex flex-col gap-0.5 rounded-xl border border-border bg-bg/40 px-3 py-2">
-      <span className="text-[9px] font-semibold uppercase tracking-widest text-text-muted">{label}</span>
-      <span className={`font-mono text-sm font-semibold ${v}`}>{value}</span>
+    <div className="flex flex-col gap-0.5 rounded-[14px] bg-bg p-2.5">
+      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">{label}</span>
+      <span className={`font-display text-sm font-bold ${v}`}>{value}</span>
     </div>
   );
 }

@@ -104,7 +104,7 @@ export function SearchableSelect({
 
   return (
     <div ref={containerRef} className="relative">
-      <label className="mb-1 block text-xs font-medium text-text-muted">
+      <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
         {label}
       </label>
 
@@ -112,8 +112,8 @@ export function SearchableSelect({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`flex w-full items-center justify-between rounded-lg border border-border bg-bg px-3 py-2 text-left text-sm transition-colors focus:border-secondary focus:outline-none ${
-          value ? "text-text" : "text-text-muted/50"
+        className={`flex h-11 w-full items-center justify-between rounded-[14px] border border-border bg-surface px-3.5 text-left text-sm transition-colors focus:border-border-strong focus:outline-none ${
+          value ? "text-text" : "text-text-faint"
         }`}
       >
         <span className="truncate">
@@ -148,10 +148,10 @@ export function SearchableSelect({
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
           {/* Search input */}
           <div className="border-b border-border p-2">
-            <div className="flex items-center gap-2 rounded-lg bg-bg px-2.5 py-1.5">
+            <div className="flex items-center gap-2 rounded-full bg-bg px-3 py-1.5">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="flex-shrink-0 text-text-muted">
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -162,7 +162,7 @@ export function SearchableSelect({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={searchPlaceholder ?? "Buscar..."}
-                className="w-full bg-transparent text-sm text-text placeholder:text-text-muted/50 focus:outline-none"
+                className="w-full bg-transparent text-sm text-text placeholder:text-text-faint focus:outline-none"
               />
               {loading && (
                 <span className="h-3.5 w-3.5 flex-shrink-0 animate-spin rounded-full border-2 border-text-muted/20 border-t-text-muted" />
@@ -178,18 +178,18 @@ export function SearchableSelect({
                 type="button"
                 onClick={() => handleSelect(opt)}
                 className={`flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-bg ${
-                  value?.id === opt.id ? "bg-secondary/10" : ""
+                  value?.id === opt.id ? "bg-bg" : ""
                 }`}
               >
-                <span className="text-sm text-text">{opt.label}</span>
+                <span className="text-sm font-semibold text-text">{opt.label}</span>
                 {opt.sublabel && (
-                  <span className="text-[11px] text-text-muted">{opt.sublabel}</span>
+                  <span className="text-[11px] text-text-faint">{opt.sublabel}</span>
                 )}
               </button>
             ))}
 
             {noResults && !onCreate && (
-              <p className="px-3 py-4 text-center text-xs text-text-muted">
+              <p className="px-3 py-4 text-center text-xs text-text-faint">
                 Sin resultados
               </p>
             )}
@@ -200,10 +200,10 @@ export function SearchableSelect({
                 type="button"
                 onClick={handleCreate}
                 disabled={creating}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-secondary transition-colors hover:bg-secondary/10 disabled:opacity-50"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-bold text-terra transition-colors hover:bg-bg disabled:opacity-50"
               >
                 {creating ? (
-                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-secondary/30 border-t-secondary" />
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-terra/30 border-t-terra" />
                 ) : (
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <line x1="12" y1="5" x2="12" y2="19" />

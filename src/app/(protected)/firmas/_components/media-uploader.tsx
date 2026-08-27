@@ -54,16 +54,20 @@ export function MediaUploader({
       <div className="flex flex-wrap items-center gap-2">
         <label
           htmlFor={inputId}
-          className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-bg px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:border-olive-bright/40 hover:text-text ${uploading ? "pointer-events-none opacity-60" : ""}`}
+          title="Adjuntar archivos"
+          aria-label="Adjuntar archivos"
+          className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-full border border-border bg-surface font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text ${
+            compact ? "h-[38px] w-[38px]" : "h-10 px-4 text-[13px]"
+          } ${uploading ? "pointer-events-none opacity-60" : ""}`}
         >
           {uploading ? (
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-olive-bright border-t-transparent" />
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-text-faint border-t-transparent" />
           ) : (
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
             </svg>
           )}
-          Adjuntar archivos
+          {!compact && "Adjuntar archivos"}
         </label>
         <input
           ref={fileInputRef}
@@ -110,7 +114,7 @@ export function AttachmentPreview({
   const { kind, name } = attachment;
 
   return (
-    <div className="group relative flex flex-col gap-1 overflow-hidden rounded-xl border border-border bg-bg/60 p-1.5">
+    <div className="group relative flex flex-col gap-1 overflow-hidden rounded-[14px] border border-border bg-surface p-1.5">
       {kind === "image" && url && (
         <a href={url} target="_blank" rel="noreferrer" className="relative block aspect-square overflow-hidden rounded-lg bg-bg">
           <img src={url} alt={name} className="h-full w-full object-cover" />
@@ -152,7 +156,7 @@ export function AttachmentPreview({
           type="button"
           onClick={onRemove}
           aria-label={`Quitar ${name}`}
-          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-bg/80 text-text-muted opacity-0 transition-all hover:bg-danger-chip hover:text-danger group-hover:opacity-100"
+          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-surface/90 text-text-muted opacity-0 transition-all hover:bg-clay-chip hover:text-terra group-hover:opacity-100"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" />
