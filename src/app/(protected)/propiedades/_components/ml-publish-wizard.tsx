@@ -198,6 +198,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
   const [editingCategory, setEditingCategory] = useState(false);
   const [inferring, setInferring] = useState(false);
   const [inferDone, setInferDone] = useState(false);
+  const [catBusy, setCatBusy] = useState(false);
 
   // --- atributos ---
   const [attributes, setAttributes] = useState<MlAttribute[]>([]);
@@ -314,6 +315,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
     async (leaf: MlChildCategory) => {
       setLeafCategory(leaf);
       setEditingCategory(false);
+      setCatBusy(true);
       try {
         const [attrs, prices] = await Promise.all([
           api<MlAttribute[]>(
@@ -333,6 +335,8 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
         if (property) prefillAttributes(req, property);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Error al cargar características");
+      } finally {
+        setCatBusy(false);
       }
     },
     [property, prefillAttributes]
@@ -625,8 +629,12 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
           </div>
         )}
 
+        {connected && !showManage && !property && (
+          <div className="p-8 text-center text-sm text-text-muted">Cargando datos de la propiedad…</div>
+        )}
+
         {/* pantalla única de revisión */}
-        {connected && !showManage && (
+        {connected && !showManage && property && (
           <>
             <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
               {/* Categoría */}
@@ -943,7 +951,9 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
             {/* footer */}
             <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4">
               <div className="min-w-0 text-xs text-text-muted">
-                {canPublish ? (
+                {inferring || catBusy ? (
+                  <span className="truncate">Cargando datos de MercadoLibre…</span>
+                ) : canPublish ? (
                   <span className="truncate">
                     {currency} {price} · {listingName} · {pictures.length} fotos
                   </span>
