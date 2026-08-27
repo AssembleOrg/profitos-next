@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
-// Wizard de publicación en MercadoLibre. Dinámico: categorías, atributos,
-// tipos de publicación y lugares se leen en vivo de la API de ML.
+// Publicación en MercadoLibre — pantalla ÚNICA de revisión.
+// Todo se infiere/precarga desde la propiedad (categoría, ubicación, precio,
+// atributos, aviso, contacto); el usuario corrige lo que haga falta y publica.
+// Categorías, atributos, tipos de publicación y lugares se leen en vivo de ML.
 // ---------------------------------------------------------------------------
 
 interface MlChildCategory {
@@ -72,6 +74,7 @@ interface FullProperty {
   city: string | null;
   zone: string | null;
   type: string | null;
+  operationType: string | null;
   roomAmount: number | null;
   bathroomAmount: number | null;
   totalSurface: number | null;
@@ -98,12 +101,10 @@ interface Props {
   onPublished?: () => void;
 }
 
-const STEPS = ["Categoría", "Ubicación", "Características", "Precio", "Aviso", "Contacto"];
-
 const input =
   "w-full rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none";
 const select = input + " [color-scheme:light]";
-const label = "text-xs font-medium text-text-muted";
+const labelCls = "text-xs font-medium text-text-muted";
 const primaryBtn =
   "flex items-center justify-center gap-2 rounded-xl bg-secondary/20 px-5 py-2.5 text-sm font-medium text-secondary transition-colors hover:bg-secondary/30 disabled:opacity-50";
 const ghostBtn =
@@ -140,11 +141,47 @@ function normalizeCurrency(c: string | null): string {
   return "ARS";
 }
 
+// Normaliza para comparar nombres de categorías/lugares (sin acentos, minúsculas).
+function norm(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+// Elige la subcategoría de "tipo" que matchea property.type (ej. casa → Casas).
+function pickTypeChild(children: MlChildCategory[], type: string | null): MlChildCategory | undefined {
+  if (!type) return undefined;
+  const t = norm(type);
+  return children.find((c) => {
+    const n = norm(c.name);
+    return n.includes(t) || t.includes(n.replace(/s$/, ""));
+  });
+}
+
+// Elige la subcategoría de "operación" que matchea property.operationType.
+function pickOperationChild(
+  children: MlChildCategory[],
+  operation: string | null
+): MlChildCategory | undefined {
+  if (!operation) return undefined;
+  const op = norm(operation);
+  if (op.includes("temporal"))
+    return children.find((c) => norm(c.name).includes("temporal"));
+  if (op.includes("alquiler"))
+    return (
+      children.find((c) => norm(c.name) === "alquiler") ??
+      children.find((c) => norm(c.name).includes("alquiler") && !norm(c.name).includes("temporal"))
+    );
+  if (op.includes("venta")) return children.find((c) => norm(c.name).includes("venta"));
+  return undefined;
+}
+
 export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublished }: Props) {
   const [connected, setConnected] = useState<boolean | null>(null);
   const [configured, setConfigured] = useState(true);
   const [property, setProperty] = useState<FullProperty | null>(null);
-  const [step, setStep] = useState(0);
   const [publishing, setPublishing] = useState(false);
 
   // --- publicación existente (gestión) ---
@@ -153,10 +190,14 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
   const [statusBusy, setStatusBusy] = useState(false);
 
   // --- categoría ---
+  const [rootCat, setRootCat] = useState<MlCategory | null>(null);
   const [catPath, setCatPath] = useState<MlChildCategory[]>([]);
   const [currentCat, setCurrentCat] = useState<MlCategory | null>(null);
   const [catLoading, setCatLoading] = useState(false);
   const [leafCategory, setLeafCategory] = useState<MlChildCategory | null>(null);
+  const [editingCategory, setEditingCategory] = useState(false);
+  const [inferring, setInferring] = useState(false);
+  const [inferDone, setInferDone] = useState(false);
 
   // --- atributos ---
   const [attributes, setAttributes] = useState<MlAttribute[]>([]);
@@ -193,7 +234,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
   // --- contacto ---
   const [contact, setContact] = useState({ contact: "", area_code: "", phone: "", email: "" });
 
-  // Carga inicial: estado de conexión + propiedad + categoría raíz + provincias.
+  // Carga inicial: conexión + propiedad + categoría raíz + provincias + publicación.
   useEffect(() => {
     (async () => {
       try {
@@ -211,38 +252,68 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
           api<Publication | null>(`/api/integrations/mercadolibre/publications/${propertyId}`),
         ]);
         setProperty(prop);
+        setRootCat(root);
         setCurrentCat(root);
         setStates(sts);
         setPublication(pub);
-        // Si ya existe un item publicado, arrancá en la pantalla de gestión.
         if (pub?.externalId) setShowManage(true);
 
         // Prefill del aviso / precio / ubicación desde la propiedad.
-        setTitle(prop.publicationTitle ?? prop.address ?? "");
+        setTitle((prop.publicationTitle ?? prop.address ?? "").slice(0, 60));
         setDescription(prop.description ?? prop.richDescription ?? "");
         setPrice(prop.operationPrice ? String(prop.operationPrice) : "");
         setCurrency(normalizeCurrency(prop.operationCurrency));
         const photos = extractPhotos(prop.photos, prop.coverImageUrl);
         setAllPhotos(photos);
         setPictures(photos);
+
+        // Auto-selección best-effort de provincia por nombre dentro de la dirección.
+        const haystack = norm(`${prop.city ?? ""} ${prop.zone ?? ""} ${prop.address ?? ""}`);
+        const st = sts.find((s) => haystack.includes(norm(s.name)));
         setLoc((l) => ({
           ...l,
           address_line: prop.address ?? "",
           neighborhood: prop.zone ?? "",
           cityName: prop.city ?? "",
+          stateId: st?.id ?? "",
+          stateName: st?.name ?? "",
           latitude: prop.geoLat != null ? String(prop.geoLat) : "",
           longitude: prop.geoLong != null ? String(prop.geoLong) : "",
         }));
+        if (st) loadCities(st.id, prop.city ?? "");
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Error al cargar MercadoLibre");
       }
     })();
+     
   }, [propertyId]);
+
+  // Prefill de atributos comunes desde los campos de la propiedad.
+  const prefillAttributes = useCallback(
+    (attrs: MlAttribute[], prop: FullProperty) => {
+      const next: Record<string, AttrValue> = {};
+      for (const a of attrs) {
+        const numUnit = (n: number | null, unit?: string) =>
+          n != null
+            ? { number: String(n), unit: unit ?? a.default_unit ?? a.allowed_units?.[0]?.id }
+            : null;
+        let v: AttrValue | null = null;
+        if (a.id === "ROOMS") v = numUnit(prop.roomAmount);
+        else if (a.id === "FULL_BATHROOMS" || a.id === "BATHROOMS") v = numUnit(prop.bathroomAmount);
+        else if (a.id === "TOTAL_AREA") v = numUnit(prop.totalSurface, a.default_unit ?? "m²");
+        else if (a.id === "COVERED_AREA") v = numUnit(prop.roofedSurface, a.default_unit ?? "m²");
+        if (v) next[a.id] = v;
+      }
+      setAttrValues((prev) => ({ ...next, ...prev }));
+    },
+    []
+  );
 
   // Fija la categoría hoja y carga atributos + tipos de publicación.
   const selectLeaf = useCallback(
     async (leaf: MlChildCategory) => {
       setLeafCategory(leaf);
+      setEditingCategory(false);
       try {
         const [attrs, prices] = await Promise.all([
           api<MlAttribute[]>(
@@ -252,7 +323,6 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
             `/api/integrations/mercadolibre/catalog?resource=listing_prices&id=${leaf.id}`
           ),
         ]);
-        // Solo requeridos, sin los que ya cubrimos aparte (precio/ubicación).
         const req = attrs.filter((a) => a.tags?.required);
         setAttributes(req);
         setListingPrices(prices);
@@ -260,32 +330,13 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
           const free = prices.find((p) => p.listing_type_id === "free");
           setListingTypeId((free ?? prices[0]).listing_type_id);
         }
-        prefillAttributes(req);
-        setStep(1);
+        if (property) prefillAttributes(req, property);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Error al cargar características");
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [property]
+    [property, prefillAttributes]
   );
-
-  // Prefill de atributos comunes desde los campos de la propiedad.
-  function prefillAttributes(attrs: MlAttribute[]) {
-    if (!property) return;
-    const next: Record<string, AttrValue> = {};
-    for (const a of attrs) {
-      const numUnit = (n: number | null, unit?: string) =>
-        n != null ? { number: String(n), unit: unit ?? a.default_unit ?? a.allowed_units?.[0]?.id } : null;
-      let v: AttrValue | null = null;
-      if (a.id === "ROOMS") v = numUnit(property.roomAmount);
-      else if (a.id === "FULL_BATHROOMS" || a.id === "BATHROOMS") v = numUnit(property.bathroomAmount);
-      else if (a.id === "TOTAL_AREA") v = numUnit(property.totalSurface, a.default_unit ?? "m²");
-      else if (a.id === "COVERED_AREA") v = numUnit(property.roofedSurface, a.default_unit ?? "m²");
-      if (v) next[a.id] = v;
-    }
-    setAttrValues((prev) => ({ ...next, ...prev }));
-  }
 
   // Navega a una subcategoría (o la selecciona si es hoja).
   const openCategory = useCallback(
@@ -310,18 +361,65 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
     [selectLeaf]
   );
 
-  const goToState = useCallback(async (stateId: string) => {
-    const st = states.find((s) => s.id === stateId);
-    setLoc((l) => ({ ...l, stateId, stateName: st?.name ?? "", cityId: "", cityName: l.cityName }));
-    if (!stateId) return setCities([]);
+  // Inferencia automática de categoría: tipo → operación (camina el árbol vivo).
+  const inferCategory = useCallback(
+    async (root: MlCategory, prop: FullProperty) => {
+      setInferring(true);
+      try {
+        const typeNode = pickTypeChild(root.children_categories ?? [], prop.type);
+        if (!typeNode) return;
+        const typeCat = await api<MlCategory>(
+          `/api/integrations/mercadolibre/catalog?resource=category&id=${typeNode.id}`
+        );
+        if (!typeCat.children_categories?.length) {
+          await selectLeaf({ id: typeCat.id, name: typeNode.name });
+          return;
+        }
+        const opNode = pickOperationChild(typeCat.children_categories, prop.operationType);
+        if (!opNode) return;
+        const opCat = await api<MlCategory>(
+          `/api/integrations/mercadolibre/catalog?resource=category&id=${opNode.id}`
+        );
+        if (opCat.children_categories?.length) return; // más profundo → dejar manual
+        await selectLeaf({ id: opNode.id, name: `${typeNode.name} · ${opNode.name}` });
+      } catch {
+        // silencioso: si no se pudo inferir, el usuario elige manual
+      } finally {
+        setInferring(false);
+      }
+    },
+    [selectLeaf]
+  );
+
+  // Dispara la inferencia una vez que hay propiedad + árbol raíz.
+  useEffect(() => {
+    if (inferDone || !property || !rootCat || leafCategory || publication?.externalId) return;
+    setInferDone(true);
+    inferCategory(rootCat, property);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [property, rootCat, publication]);
+
+  async function loadCities(stateId: string, preselectCityName = "") {
     try {
       const cs = await api<MlPlace[]>(
         `/api/integrations/mercadolibre/catalog?resource=cities&id=${stateId}`
       );
       setCities(cs);
+      if (preselectCityName) {
+        const match = cs.find((c) => norm(c.name) === norm(preselectCityName));
+        if (match) setLoc((l) => ({ ...l, cityId: match.id, cityName: match.name }));
+      }
     } catch {
       setCities([]);
     }
+  }
+
+  const goToState = useCallback((stateId: string) => {
+    const st = states.find((s) => s.id === stateId);
+    setLoc((l) => ({ ...l, stateId, stateName: st?.name ?? "", cityId: "" }));
+    if (!stateId) return setCities([]);
+    loadCities(stateId);
+     
   }, [states]);
 
   const canPublish = useMemo(
@@ -364,14 +462,15 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
           },
           attributes: buildAttributesPayload(),
           pictures,
-          sellerContact: contact.contact || contact.phone
-            ? {
-                contact: contact.contact || undefined,
-                area_code: contact.area_code || undefined,
-                phone: contact.phone || undefined,
-                email: contact.email || undefined,
-              }
-            : undefined,
+          sellerContact:
+            contact.contact || contact.phone
+              ? {
+                  contact: contact.contact || undefined,
+                  area_code: contact.area_code || undefined,
+                  phone: contact.phone || undefined,
+                  email: contact.email || undefined,
+                }
+              : undefined,
           description: description || undefined,
         },
       };
@@ -383,7 +482,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
           body: JSON.stringify(payload),
         }
       );
-      toast.success("Publicado en MercadoLibre");
+      toast.success(publication?.externalId ? "Publicación actualizada" : "Publicado en MercadoLibre");
       if (pub.permalink) window.open(pub.permalink, "_blank");
       onPublished?.();
       onClose();
@@ -417,7 +516,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
     }
   }
 
-  // Entra al wizard para editar el aviso existente (precarga categoría/tipo).
+  // Entra a editar el aviso existente (precarga categoría/tipo).
   async function enterEdit() {
     if (!publication?.categoryId) {
       setShowManage(false);
@@ -435,7 +534,16 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
     }
   }
 
+  function startEditCategory() {
+    setEditingCategory(true);
+    setCatPath([]);
+    setCurrentCat(rootCat);
+  }
+
   // ------------------------------- render ---------------------------------
+
+  const listingName =
+    listingPrices.find((p) => p.listing_type_id === listingTypeId)?.listing_type_name ?? listingTypeId;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
@@ -468,6 +576,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
           </div>
         )}
 
+        {/* gestión de publicación existente */}
         {connected && showManage && publication && (
           <div className="flex flex-col gap-4 p-6">
             <div
@@ -479,39 +588,22 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                 {STATUS_LABEL[publication.status] ?? publication.status}
               </span>
               {publication.permalink && (
-                <a
-                  href={publication.permalink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs font-medium underline"
-                >
+                <a href={publication.permalink} target="_blank" rel="noreferrer" className="text-xs font-medium underline">
                   Ver aviso ↗
                 </a>
               )}
             </div>
-
             {publication.lastError && (
-              <p className="rounded-lg bg-danger-chip px-3 py-2 text-xs text-danger">
-                {publication.lastError}
-              </p>
+              <p className="rounded-lg bg-danger-chip px-3 py-2 text-xs text-danger">{publication.lastError}</p>
             )}
-
             <div className="grid grid-cols-2 gap-2">
               {publication.status === "active" && (
-                <button
-                  className={ghostBtn}
-                  disabled={statusBusy}
-                  onClick={() => changeStatus("pause")}
-                >
+                <button className={ghostBtn} disabled={statusBusy} onClick={() => changeStatus("pause")}>
                   Pausar
                 </button>
               )}
               {publication.status === "paused" && (
-                <button
-                  className={ghostBtn}
-                  disabled={statusBusy}
-                  onClick={() => changeStatus("activate")}
-                >
+                <button className={ghostBtn} disabled={statusBusy} onClick={() => changeStatus("activate")}>
                   Activar
                 </button>
               )}
@@ -525,7 +617,6 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                 </button>
               )}
             </div>
-
             {publication.status !== "closed" && (
               <button className={primaryBtn} onClick={enterEdit}>
                 Editar aviso
@@ -534,91 +625,100 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
           </div>
         )}
 
+        {/* pantalla única de revisión */}
         {connected && !showManage && (
           <>
-            {/* stepper */}
-            <div className="flex items-center gap-1 overflow-x-auto border-b border-border px-5 py-3">
-              {STEPS.map((s, i) => (
-                <div key={s} className="flex flex-shrink-0 items-center gap-1">
-                  <span
-                    className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold ${
-                      i === step
-                        ? "bg-secondary text-white"
-                        : i < step
-                          ? "bg-secondary/20 text-secondary"
-                          : "bg-bg text-text-muted"
-                    }`}
-                  >
-                    {i + 1}
-                  </span>
-                  <span className={`text-xs ${i === step ? "font-medium text-text" : "text-text-muted"}`}>{s}</span>
-                  {i < STEPS.length - 1 && <span className="mx-1 text-text-muted/40">·</span>}
-                </div>
-              ))}
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-5 py-5">
-              {/* STEP 0 — categoría */}
-              {step === 0 && (
-                <div className="flex flex-col gap-3">
-                  <p className="text-sm text-text-muted">
-                    Elegí la categoría del inmueble (tipo + operación). Se usa la que exige ML.
-                  </p>
-                  {leafCategory ? (
-                    <div className="flex items-center justify-between rounded-xl border border-secondary/40 bg-secondary/10 px-3 py-2.5">
-                      <span className="text-sm font-medium text-secondary">✓ {leafCategory.name}</span>
-                      <button
-                        className="text-xs text-text-muted underline"
-                        onClick={() => {
-                          setLeafCategory(null);
-                          setCatPath([]);
-                          setAttributes([]);
-                          openRoot();
-                        }}
-                      >
-                        Cambiar
+            <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
+              {/* Categoría */}
+              <Section title="Categoría">
+                {!editingCategory && leafCategory && (
+                  <div className="flex items-center justify-between rounded-xl border border-secondary/40 bg-secondary/10 px-3 py-2.5">
+                    <span className="text-sm font-medium text-secondary">✓ {leafCategory.name}</span>
+                    <button className="text-xs text-text-muted underline" onClick={startEditCategory}>
+                      Cambiar
+                    </button>
+                  </div>
+                )}
+                {!editingCategory && !leafCategory && (
+                  <div className="flex items-center justify-between rounded-xl border border-warning/40 bg-warning-chip px-3 py-2.5">
+                    <span className="text-sm text-warning">
+                      {inferring ? "Detectando categoría…" : "No se pudo inferir la categoría."}
+                    </span>
+                    {!inferring && (
+                      <button className="text-xs text-warning underline" onClick={startEditCategory}>
+                        Elegir
                       </button>
+                    )}
+                  </div>
+                )}
+                {editingCategory && (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center gap-1 text-xs text-text-muted">
+                      <button className="underline" onClick={startEditCategory}>
+                        Inmuebles
+                      </button>
+                      {catPath.map((c) => (
+                        <span key={c.id} className="flex items-center gap-1">
+                          <span>/</span>
+                          <span className="text-text">{c.name}</span>
+                        </span>
+                      ))}
                     </div>
-                  ) : (
-                    <>
-                      {catPath.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-1 text-xs text-text-muted">
-                          <button className="underline" onClick={openRoot}>
-                            Inmuebles
-                          </button>
-                          {catPath.map((c, i) => (
-                            <span key={c.id} className="flex items-center gap-1">
-                              <span>/</span>
-                              {i === catPath.length - 1 ? (
-                                <span className="text-text">{c.name}</span>
-                              ) : (
-                                <span>{c.name}</span>
-                              )}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex flex-col gap-1.5">
-                        {catLoading && <p className="text-sm text-text-muted">Cargando…</p>}
-                        {!catLoading &&
-                          currentCat?.children_categories?.map((c) => (
-                            <button
-                              key={c.id}
-                              onClick={() => openCategory(c.id)}
-                              className="flex items-center justify-between rounded-xl border border-border bg-bg px-3 py-2.5 text-left text-sm text-text transition-colors hover:border-secondary/40 hover:bg-secondary/5"
-                            >
-                              <span>{c.name}</span>
-                              <span className="text-text-muted">›</span>
-                            </button>
-                          ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+                    {catLoading && <p className="text-sm text-text-muted">Cargando…</p>}
+                    {!catLoading &&
+                      currentCat?.children_categories?.map((c) => (
+                        <button
+                          key={c.id}
+                          onClick={() => openCategory(c.id)}
+                          className="flex items-center justify-between rounded-xl border border-border bg-bg px-3 py-2.5 text-left text-sm text-text transition-colors hover:border-secondary/40 hover:bg-secondary/5"
+                        >
+                          <span>{c.name}</span>
+                          <span className="text-text-muted">›</span>
+                        </button>
+                      ))}
+                    {leafCategory && (
+                      <button className="self-start text-xs text-text-muted underline" onClick={() => setEditingCategory(false)}>
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                )}
+              </Section>
 
-              {/* STEP 1 — ubicación */}
-              {step === 1 && (
+              {/* Precio */}
+              <Section title="Precio y publicación">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label="Precio">
+                    <input
+                      className={input}
+                      inputMode="numeric"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ""))}
+                      placeholder="0"
+                    />
+                  </Field>
+                  <Field label="Moneda">
+                    <select className={select} value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                      <option value="ARS">Pesos (ARS)</option>
+                      <option value="USD">Dólares (USD)</option>
+                    </select>
+                  </Field>
+                  <Field label="Tipo de publicación" className="sm:col-span-2">
+                    <select className={select} value={listingTypeId} onChange={(e) => setListingTypeId(e.target.value)}>
+                      {listingPrices.length === 0 && <option value="">—</option>}
+                      {listingPrices.map((p) => (
+                        <option key={p.listing_type_id} value={p.listing_type_id}>
+                          {p.listing_type_name}
+                          {p.listing_fee_amount ? ` — $${p.listing_fee_amount}` : " — gratis"}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+              </Section>
+
+              {/* Ubicación */}
+              <Section title="Ubicación">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field label="Dirección" className="sm:col-span-2">
                     <input
@@ -657,185 +757,105 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                     </select>
                   </Field>
                   <Field label="Barrio">
-                    <input
-                      className={input}
-                      value={loc.neighborhood}
-                      onChange={(e) => setLoc({ ...loc, neighborhood: e.target.value })}
-                    />
+                    <input className={input} value={loc.neighborhood} onChange={(e) => setLoc({ ...loc, neighborhood: e.target.value })} />
                   </Field>
                   <Field label="Código postal">
-                    <input
-                      className={input}
-                      value={loc.zip_code}
-                      onChange={(e) => setLoc({ ...loc, zip_code: e.target.value })}
-                    />
+                    <input className={input} value={loc.zip_code} onChange={(e) => setLoc({ ...loc, zip_code: e.target.value })} />
                   </Field>
                   <Field label="Latitud">
-                    <input
-                      className={input}
-                      value={loc.latitude}
-                      onChange={(e) => setLoc({ ...loc, latitude: e.target.value })}
-                      inputMode="decimal"
-                    />
+                    <input className={input} value={loc.latitude} onChange={(e) => setLoc({ ...loc, latitude: e.target.value })} inputMode="decimal" />
                   </Field>
                   <Field label="Longitud">
-                    <input
-                      className={input}
-                      value={loc.longitude}
-                      onChange={(e) => setLoc({ ...loc, longitude: e.target.value })}
-                      inputMode="decimal"
-                    />
+                    <input className={input} value={loc.longitude} onChange={(e) => setLoc({ ...loc, longitude: e.target.value })} inputMode="decimal" />
                   </Field>
                 </div>
-              )}
+              </Section>
 
-              {/* STEP 2 — atributos dinámicos */}
-              {step === 2 && (
-                <div className="flex flex-col gap-3">
-                  {attributes.length === 0 && (
-                    <p className="text-sm text-text-muted">Esta categoría no exige características adicionales.</p>
-                  )}
-                  {attributes.map((a) => (
-                    <Field key={a.id} label={a.name} hint={a.hint}>
-                      {a.value_type === "list" && a.values?.length ? (
-                        <select
-                          className={select}
-                          value={attrValues[a.id]?.value_id ?? ""}
-                          onChange={(e) =>
-                            setAttrValues({ ...attrValues, [a.id]: { value_id: e.target.value } })
-                          }
-                        >
-                          <option value="">Seleccionar…</option>
-                          {a.values.map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {v.name}
-                            </option>
-                          ))}
-                        </select>
-                      ) : a.value_type === "boolean" ? (
-                        <select
-                          className={select}
-                          value={attrValues[a.id]?.value_id ?? ""}
-                          onChange={(e) =>
-                            setAttrValues({ ...attrValues, [a.id]: { value_id: e.target.value } })
-                          }
-                        >
-                          <option value="">Seleccionar…</option>
-                          {(a.values ?? [
-                            { id: "242085", name: "Sí" },
-                            { id: "242084", name: "No" },
-                          ]).map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {v.name}
-                            </option>
-                          ))}
-                        </select>
-                      ) : a.value_type === "number_unit" ? (
-                        <div className="flex gap-2">
-                          <input
-                            className={input}
-                            inputMode="decimal"
-                            value={attrValues[a.id]?.number ?? ""}
-                            onChange={(e) =>
-                              setAttrValues({
-                                ...attrValues,
-                                [a.id]: { ...attrValues[a.id], number: e.target.value },
-                              })
-                            }
-                          />
+              {/* Características */}
+              {attributes.length > 0 && (
+                <Section title="Características">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {attributes.map((a) => (
+                      <Field key={a.id} label={a.name} hint={a.hint}>
+                        {a.value_type === "list" && a.values?.length ? (
                           <select
-                            className={select + " max-w-[120px]"}
-                            value={attrValues[a.id]?.unit ?? a.default_unit ?? a.allowed_units?.[0]?.id ?? ""}
-                            onChange={(e) =>
-                              setAttrValues({
-                                ...attrValues,
-                                [a.id]: { ...attrValues[a.id], unit: e.target.value },
-                              })
-                            }
+                            className={select}
+                            value={attrValues[a.id]?.value_id ?? ""}
+                            onChange={(e) => setAttrValues({ ...attrValues, [a.id]: { value_id: e.target.value } })}
                           >
-                            {(a.allowed_units ?? [{ id: a.default_unit ?? "m²", name: a.default_unit ?? "m²" }]).map(
-                              (u) => (
+                            <option value="">Seleccionar…</option>
+                            {a.values.map((v) => (
+                              <option key={v.id} value={v.id}>
+                                {v.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : a.value_type === "boolean" ? (
+                          <select
+                            className={select}
+                            value={attrValues[a.id]?.value_id ?? ""}
+                            onChange={(e) => setAttrValues({ ...attrValues, [a.id]: { value_id: e.target.value } })}
+                          >
+                            <option value="">Seleccionar…</option>
+                            {(a.values ?? [
+                              { id: "242085", name: "Sí" },
+                              { id: "242084", name: "No" },
+                            ]).map((v) => (
+                              <option key={v.id} value={v.id}>
+                                {v.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : a.value_type === "number_unit" ? (
+                          <div className="flex gap-2">
+                            <input
+                              className={input}
+                              inputMode="decimal"
+                              value={attrValues[a.id]?.number ?? ""}
+                              onChange={(e) => setAttrValues({ ...attrValues, [a.id]: { ...attrValues[a.id], number: e.target.value } })}
+                            />
+                            <select
+                              className={select + " max-w-[120px]"}
+                              value={attrValues[a.id]?.unit ?? a.default_unit ?? a.allowed_units?.[0]?.id ?? ""}
+                              onChange={(e) => setAttrValues({ ...attrValues, [a.id]: { ...attrValues[a.id], unit: e.target.value } })}
+                            >
+                              {(a.allowed_units ?? [{ id: a.default_unit ?? "m²", name: a.default_unit ?? "m²" }]).map((u) => (
                                 <option key={u.id} value={u.id}>
                                   {u.name}
                                 </option>
-                              )
-                            )}
-                          </select>
-                        </div>
-                      ) : a.value_type === "number" ? (
-                        <input
-                          className={input}
-                          inputMode="numeric"
-                          value={attrValues[a.id]?.number ?? ""}
-                          onChange={(e) =>
-                            setAttrValues({ ...attrValues, [a.id]: { number: e.target.value } })
-                          }
-                        />
-                      ) : (
-                        <input
-                          className={input}
-                          value={attrValues[a.id]?.value_name ?? ""}
-                          onChange={(e) =>
-                            setAttrValues({ ...attrValues, [a.id]: { value_name: e.target.value } })
-                          }
-                        />
-                      )}
-                    </Field>
-                  ))}
-                </div>
+                              ))}
+                            </select>
+                          </div>
+                        ) : a.value_type === "number" ? (
+                          <input
+                            className={input}
+                            inputMode="numeric"
+                            value={attrValues[a.id]?.number ?? ""}
+                            onChange={(e) => setAttrValues({ ...attrValues, [a.id]: { number: e.target.value } })}
+                          />
+                        ) : (
+                          <input
+                            className={input}
+                            value={attrValues[a.id]?.value_name ?? ""}
+                            onChange={(e) => setAttrValues({ ...attrValues, [a.id]: { value_name: e.target.value } })}
+                          />
+                        )}
+                      </Field>
+                    ))}
+                  </div>
+                </Section>
               )}
 
-              {/* STEP 3 — precio y tipo de publicación */}
-              {step === 3 && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Field label="Precio">
-                    <input
-                      className={input}
-                      inputMode="numeric"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ""))}
-                      placeholder="0"
-                    />
-                  </Field>
-                  <Field label="Moneda">
-                    <select className={select} value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                      <option value="ARS">Pesos (ARS)</option>
-                      <option value="USD">Dólares (USD)</option>
-                    </select>
-                  </Field>
-                  <Field label="Tipo de publicación" className="sm:col-span-2">
-                    <select
-                      className={select}
-                      value={listingTypeId}
-                      onChange={(e) => setListingTypeId(e.target.value)}
-                    >
-                      {listingPrices.length === 0 && <option value="">—</option>}
-                      {listingPrices.map((p) => (
-                        <option key={p.listing_type_id} value={p.listing_type_id}>
-                          {p.listing_type_name}
-                          {p.listing_fee_amount ? ` — $${p.listing_fee_amount}` : " — gratis"}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                </div>
-              )}
-
-              {/* STEP 4 — aviso (título, descripción, fotos) */}
-              {step === 4 && (
+              {/* Aviso */}
+              <Section title="Aviso">
                 <div className="flex flex-col gap-3">
                   <Field label="Título del aviso">
-                    <input
-                      className={input}
-                      value={title}
-                      maxLength={60}
-                      onChange={(e) => setTitle(e.target.value)}
-                    />
+                    <input className={input} value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} />
                     <span className="mt-1 text-[11px] text-text-muted">{title.length}/60</span>
                   </Field>
                   <Field label="Descripción">
                     <textarea
-                      className={input + " min-h-[120px] resize-y"}
+                      className={input + " min-h-[110px] resize-y"}
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                     />
@@ -843,8 +863,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                   <Field label={`Fotos (${pictures.length} seleccionadas)`}>
                     <div className="flex flex-col gap-3">
                       <p className="text-[11px] text-text-muted/70">
-                        Tocá una foto para incluirla o quitarla del aviso. La primera seleccionada
-                        es la portada.
+                        Tocá una foto para incluirla o quitarla. La primera seleccionada es la portada.
                       </p>
                       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                         {allPhotos.map((url) => {
@@ -855,11 +874,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                               key={url}
                               type="button"
                               onClick={() =>
-                                setPictures(
-                                  selected
-                                    ? pictures.filter((u) => u !== url)
-                                    : [...pictures, url]
-                                )
+                                setPictures(selected ? pictures.filter((u) => u !== url) : [...pictures, url])
                               }
                               className={`relative aspect-square overflow-hidden rounded-lg border-2 transition-colors ${
                                 selected ? "border-secondary" : "border-transparent opacity-50 hover:opacity-80"
@@ -904,74 +919,42 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                     </div>
                   </Field>
                 </div>
-              )}
+              </Section>
 
-              {/* STEP 5 — contacto + revisión */}
-              {step === 5 && (
-                <div className="flex flex-col gap-4">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Field label="Nombre de contacto" className="sm:col-span-2">
-                      <input
-                        className={input}
-                        value={contact.contact}
-                        onChange={(e) => setContact({ ...contact, contact: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="Cód. área">
-                      <input
-                        className={input}
-                        value={contact.area_code}
-                        onChange={(e) => setContact({ ...contact, area_code: e.target.value })}
-                        placeholder="11"
-                      />
-                    </Field>
-                    <Field label="Teléfono">
-                      <input
-                        className={input}
-                        value={contact.phone}
-                        onChange={(e) => setContact({ ...contact, phone: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="Email" className="sm:col-span-2">
-                      <input
-                        className={input}
-                        value={contact.email}
-                        onChange={(e) => setContact({ ...contact, email: e.target.value })}
-                      />
-                    </Field>
-                  </div>
-
-                  <div className="rounded-xl border border-border bg-bg p-3 text-xs text-text-muted">
-                    <p className="mb-1 font-medium text-text">Resumen</p>
-                    <p>Categoría: {leafCategory?.name ?? "—"}</p>
-                    <p>
-                      Precio: {currency} {price || "—"} · {listingPrices.find((p) => p.listing_type_id === listingTypeId)?.listing_type_name ?? listingTypeId}
-                    </p>
-                    <p>Fotos: {pictures.length}</p>
-                    {!canPublish && (
-                      <p className="mt-2 text-warning">
-                        Faltan datos: categoría, título, tipo, precio &gt; 0 y al menos una foto.
-                      </p>
-                    )}
-                  </div>
+              {/* Contacto */}
+              <Section title="Contacto (opcional)">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label="Nombre de contacto" className="sm:col-span-2">
+                    <input className={input} value={contact.contact} onChange={(e) => setContact({ ...contact, contact: e.target.value })} />
+                  </Field>
+                  <Field label="Cód. área">
+                    <input className={input} value={contact.area_code} onChange={(e) => setContact({ ...contact, area_code: e.target.value })} placeholder="11" />
+                  </Field>
+                  <Field label="Teléfono">
+                    <input className={input} value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} />
+                  </Field>
+                  <Field label="Email" className="sm:col-span-2">
+                    <input className={input} value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
+                  </Field>
                 </div>
-              )}
+              </Section>
             </div>
 
-            {/* footer nav */}
-            <div className="flex items-center justify-between gap-2 border-t border-border px-5 py-4">
-              <button className={ghostBtn} onClick={() => (step === 0 ? onClose() : setStep(step - 1))}>
-                {step === 0 ? "Cancelar" : "Atrás"}
-              </button>
-              {step < STEPS.length - 1 ? (
-                <button
-                  className={primaryBtn}
-                  disabled={step === 0 && !leafCategory}
-                  onClick={() => setStep(step + 1)}
-                >
-                  Siguiente
+            {/* footer */}
+            <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4">
+              <div className="min-w-0 text-xs text-text-muted">
+                {canPublish ? (
+                  <span className="truncate">
+                    {currency} {price} · {listingName} · {pictures.length} fotos
+                  </span>
+                ) : (
+                  <span className="text-warning">Faltan: categoría, título, tipo, precio &gt; 0 y ≥1 foto.</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button className={ghostBtn} onClick={onClose}>
+                  Cancelar
                 </button>
-              ) : (
                 <button className={primaryBtn} disabled={!canPublish || publishing} onClick={handlePublish}>
                   {publishing
                     ? "Publicando…"
@@ -979,24 +962,22 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                       ? "Actualizar publicación"
                       : "Publicar"}
                 </button>
-              )}
+              </div>
             </div>
           </>
         )}
       </div>
     </div>
   );
+}
 
-  async function openRoot() {
-    setCatPath([]);
-    setCatLoading(true);
-    try {
-      const root = await api<MlCategory>("/api/integrations/mercadolibre/catalog?resource=category");
-      setCurrentCat(root);
-    } finally {
-      setCatLoading(false);
-    }
-  }
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted/70">{title}</h3>
+      {children}
+    </div>
+  );
 }
 
 function Field({
@@ -1012,7 +993,7 @@ function Field({
 }) {
   return (
     <label className={`flex flex-col gap-1.5 ${className ?? ""}`}>
-      <span className={label}>{text}</span>
+      <span className={labelCls}>{text}</span>
       {children}
       {hint && <span className="text-[11px] text-text-muted/70">{hint}</span>}
     </label>
