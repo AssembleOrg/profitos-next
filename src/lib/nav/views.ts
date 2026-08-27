@@ -18,6 +18,7 @@ export const APP_VIEWS: AppView[] = [
   { href: "/contactos", label: "Contactos" },
   { href: "/consultants", label: "Últimos contactos" },
   { href: "/consultants-followups", label: "Seg. consultas" },
+  { href: "/preguntas", label: "Preguntas ML" },
   { href: "/seguimientos", label: "Seguimientos" },
   { href: "/agenda", label: "Agenda" },
   { href: "/propiedades", label: "Propiedades" },

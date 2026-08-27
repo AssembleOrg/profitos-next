@@ -4,6 +4,7 @@ import { ok } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
 import { ML_PORTAL } from "@/lib/mercadolibre/config";
 import { getItem, getQuestion } from "@/lib/mercadolibre/items";
+import { upsertPortalQuestion } from "@/lib/mercadolibre/questions";
 
 // Webhook de notificaciones de MercadoLibre (topics: items, questions).
 // Público: ML hace POST sin sesión. SIEMPRE responde 200 rápido para no
@@ -43,27 +44,7 @@ async function handleItem(itemId: string) {
 
 async function handleQuestion(questionId: string) {
   const q = await getQuestion(questionId);
-  const publication = await prisma.propertyPublication.findFirst({
-    where: { portal: ML_PORTAL, externalId: q.item_id },
-    select: { propertyId: true },
-  });
-  const data = {
-    portal: ML_PORTAL,
-    itemId: q.item_id,
-    propertyId: publication?.propertyId ?? null,
-    text: q.text ?? "",
-    status: q.answer?.text ? "ANSWERED" : q.status ?? "UNANSWERED",
-    answerText: q.answer?.text ?? null,
-    fromUserId: q.from?.id != null ? String(q.from.id) : null,
-    askedAt: q.date_created ? new Date(q.date_created) : null,
-    answeredAt: q.answer?.date_created ? new Date(q.answer.date_created) : null,
-    rawPayload: q as object,
-  };
-  await prisma.portalQuestion.upsert({
-    where: { portal_externalId: { portal: ML_PORTAL, externalId: String(q.id) } },
-    create: { externalId: String(q.id), ...data },
-    update: data,
-  });
+  await upsertPortalQuestion(q);
 }
 
 async function handleNotification(notif: MlNotification) {

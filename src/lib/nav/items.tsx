@@ -96,6 +96,19 @@ export const NAV_META_LIST: NavMeta[] = [
     ),
   },
   {
+    href: "/preguntas",
+    label: "Preguntas ML",
+    shortLabel: "Preguntas",
+    group: "clientes",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+        <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+        <line x1="12" y1="17" x2="12" y2="17" />
+      </svg>
+    ),
+  },
+  {
     href: "/seguimientos",
     label: "Seguimientos",
     shortLabel: "Seguim.",

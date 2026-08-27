@@ -128,3 +128,22 @@ export interface MlQuestion {
 export function getQuestion(questionId: string | number) {
   return mlFetch<MlQuestion>(`/questions/${questionId}`);
 }
+
+// Responde una pregunta. text: respuesta pública en el aviso.
+export function answerQuestion(questionId: string | number, text: string) {
+  return mlFetch(`/answers`, {
+    method: "POST",
+    body: { question_id: Number(questionId), text },
+  });
+}
+
+// Trae preguntas recibidas del vendedor autenticado (para backfill/sync).
+export async function searchReceivedQuestions(
+  status: "UNANSWERED" | "ANSWERED" | "ALL" = "UNANSWERED",
+  limit = 50
+): Promise<MlQuestion[]> {
+  const query: Record<string, string | number> = { api_version: "4", limit, sort_fields: "date_created", sort_types: "DESC" };
+  if (status !== "ALL") query.status = status;
+  const res = await mlFetch<{ questions?: MlQuestion[] }>("/my/received_questions/search", { query });
+  return res.questions ?? [];
+}
