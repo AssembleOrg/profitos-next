@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   try {
     url = buildAuthUrl(state, challenge);
   } catch (err) {
-    const base = request.nextUrl.origin;
+    const base = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
     const msg = err instanceof Error ? err.message : "Error";
     return NextResponse.redirect(`${base}/propiedades?ml_error=${encodeURIComponent(msg)}`);
   }

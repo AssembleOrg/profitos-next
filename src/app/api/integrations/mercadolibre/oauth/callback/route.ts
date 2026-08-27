@@ -3,7 +3,9 @@ import { exchangeCode } from "@/lib/mercadolibre/oauth";
 
 // Callback del OAuth de ML: canjea el code por tokens y vuelve a /propiedades.
 export async function GET(request: NextRequest) {
-  const base = request.nextUrl.origin;
+  // En Railway/proxies, request.nextUrl.origin puede ser el host interno
+  // (localhost:8080). Preferimos la URL pública configurada.
+  const base = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
   const sp = request.nextUrl.searchParams;
   const code = sp.get("code");
   const state = sp.get("state");
