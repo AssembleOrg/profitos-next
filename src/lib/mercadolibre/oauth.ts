@@ -131,9 +131,32 @@ export interface MlConnectionStatus {
 export async function getConnectionStatus(): Promise<MlConnectionStatus> {
   const configured = Boolean(ML.clientId && ML.clientSecret);
   const row = await prisma.portalToken.findUnique({ where: { portal: ML_PORTAL } });
+  let connected = Boolean(row?.refreshToken);
+  let nickname = row?.nickname ?? null;
+
+  // Validación real: la fila puede existir pero el token estar revocado
+  // (el usuario quitó la app en "Administrar aplicaciones" de ML). Pingeamos
+  // /users/me; si el token ya no sirve, marcamos desconectado para forzar reconexión.
+  if (connected) {
+    try {
+      const token = await getValidAccessToken();
+      const res = await fetch(`${ML.apiBase}/users/me`, {
+        headers: { authorization: `Bearer ${token}`, accept: "application/json" },
+      });
+      if (!res.ok) {
+        connected = false;
+      } else {
+        const me = (await res.json().catch(() => ({}))) as { nickname?: string };
+        if (me.nickname) nickname = me.nickname;
+      }
+    } catch {
+      connected = false; // refresh inválido (revocado) u otro error de auth
+    }
+  }
+
   return {
-    connected: Boolean(row?.refreshToken),
-    nickname: row?.nickname ?? null,
+    connected,
+    nickname,
     externalUser: row?.externalUser ?? null,
     expiresAt: row?.expiresAt?.toISOString() ?? null,
     configured,
