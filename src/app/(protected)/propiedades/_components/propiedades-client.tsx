@@ -1283,6 +1283,50 @@ export function PropiedadesClient({
                 )}
               </form>
 
+              {/* Estado de publicación en MercadoLibre */}
+              {isEdit && editProperty?.mlPublication?.published && (
+                <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border bg-surface/40 px-5 py-3">
+                  <div className="flex items-center gap-2">
+                    <MlChip status={editProperty.mlPublication.status} permalink={null} />
+                    <span className="text-xs text-text-muted">Publicado en MercadoLibre</span>
+                  </div>
+                  {editProperty.mlPublication.permalink && (
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={editProperty.mlPublication.permalink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-text-muted transition-colors active:bg-surface"
+                      >
+                        Ver aviso
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M7 17L17 7" />
+                          <path d="M7 7h10v10" />
+                        </svg>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(editProperty.mlPublication!.permalink!);
+                            toast.success("Link copiado");
+                          } catch {
+                            toast.error("No se pudo copiar");
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-text-muted transition-colors active:bg-surface"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                        </svg>
+                        Copiar link
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Footer fijo con acciones */}
               <div
                 className="flex flex-shrink-0 items-center justify-between border-t border-border px-5 py-4"
@@ -1317,7 +1361,7 @@ export function PropiedadesClient({
                           <polyline points="16 6 12 2 8 6" />
                           <line x1="12" y1="2" x2="12" y2="15" />
                         </svg>
-                        Publicar en ML
+                        {editProperty.mlPublication?.published ? "Gestionar en ML" : "Publicar en ML"}
                       </button>
                     )}
                   </div>
