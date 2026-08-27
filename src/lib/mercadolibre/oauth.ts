@@ -1,18 +1,33 @@
-// OAuth 2.0 (authorization_code) para MercadoLibre.
+// OAuth 2.0 (authorization_code + PKCE) para MercadoLibre.
 // access_token dura 6h; refresh_token es de un solo uso (se rota en cada refresh).
+// ML exige PKCE (code_challenge S256 en el authorize, code_verifier en el token).
+import { createHash, randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma/client";
 import { ML, ML_PORTAL, assertMlConfigured } from "./config";
 
 // Margen para refrescar antes de que venza (5 min).
 const REFRESH_MARGIN_MS = 5 * 60 * 1000;
 
-export function buildAuthUrl(state: string): string {
+function base64url(buf: Buffer): string {
+  return buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+// Genera el par PKCE. El verifier se guarda (cookie) y se manda al canjear el code.
+export function generatePkce(): { verifier: string; challenge: string } {
+  const verifier = base64url(randomBytes(32)); // 43 chars
+  const challenge = base64url(createHash("sha256").update(verifier).digest());
+  return { verifier, challenge };
+}
+
+export function buildAuthUrl(state: string, codeChallenge: string): string {
   assertMlConfigured();
   const params = new URLSearchParams({
     response_type: "code",
     client_id: ML.clientId,
     redirect_uri: ML.redirectUri,
     state,
+    code_challenge: codeChallenge,
+    code_challenge_method: "S256",
   });
   return `${ML.authBase}/authorization?${params.toString()}`;
 }
@@ -71,7 +86,7 @@ async function persistToken(tok: MlTokenResponse, opts: { connected?: boolean } 
 }
 
 // Canjea el `code` del callback por tokens y los guarda (conexión inicial).
-export async function exchangeCode(code: string): Promise<void> {
+export async function exchangeCode(code: string, codeVerifier: string): Promise<void> {
   assertMlConfigured();
   const tok = await requestToken({
     grant_type: "authorization_code",
@@ -79,6 +94,7 @@ export async function exchangeCode(code: string): Promise<void> {
     client_secret: ML.clientSecret,
     code,
     redirect_uri: ML.redirectUri,
+    code_verifier: codeVerifier,
   });
   await persistToken(tok, { connected: true });
 }

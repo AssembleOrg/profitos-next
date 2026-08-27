@@ -16,12 +16,16 @@ export async function GET(request: NextRequest) {
   }
 
   const expectedState = request.cookies.get("ml_oauth_state")?.value;
+  const verifier = request.cookies.get("ml_oauth_verifier")?.value;
   if (!code || !state || !expectedState || state !== expectedState) {
     return back("ml_error=" + encodeURIComponent("Estado OAuth inválido, reintentá."));
   }
+  if (!verifier) {
+    return back("ml_error=" + encodeURIComponent("Falta el verificador PKCE, reintentá la conexión."));
+  }
 
   try {
-    await exchangeCode(code);
+    await exchangeCode(code, verifier);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error al conectar";
     return back("ml_error=" + encodeURIComponent(msg));
@@ -29,5 +33,6 @@ export async function GET(request: NextRequest) {
 
   const res = back("ml_connected=1");
   res.cookies.delete("ml_oauth_state");
+  res.cookies.delete("ml_oauth_verifier");
   return res;
 }
