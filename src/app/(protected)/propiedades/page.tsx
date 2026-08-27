@@ -119,12 +119,16 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     referenceCode: string | null;
     publicUrl: string | null;
     city: string | null;
+    province: string | null;
     zone: string | null;
     type: string | null;
     status: string;
     roomAmount: number | null;
+    bedrooms: number | null;
     bathroomAmount: number | null;
+    parkingLotAmount: number | null;
     totalSurface: number | null;
+    roofedSurface: number | null;
     operationType: string | null;
     operationPrice: number | null;
     operationCurrency: string | null;
@@ -144,12 +148,16 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     referenceCode: p.referenceCode,
     publicUrl: p.publicUrl,
     city: p.city,
+    province: p.province,
     zone: p.zone,
     type: p.type,
     status: p.status,
     roomAmount: p.roomAmount,
+    bedrooms: p.bedrooms,
     bathroomAmount: p.bathroomAmount,
+    parkingLotAmount: p.parkingLotAmount,
     totalSurface: p.totalSurface,
+    roofedSurface: p.roofedSurface,
     operationType: p.operationType,
     operationPrice: p.operationPrice,
     operationCurrency: p.operationCurrency,

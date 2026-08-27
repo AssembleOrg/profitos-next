@@ -72,11 +72,14 @@ interface FullProperty {
   description: string | null;
   richDescription: string | null;
   city: string | null;
+  province: string | null;
   zone: string | null;
   type: string | null;
   operationType: string | null;
   roomAmount: number | null;
+  bedrooms: number | null;
   bathroomAmount: number | null;
+  parkingLotAmount: number | null;
   totalSurface: number | null;
   roofedSurface: number | null;
   operationPrice: number | null;
@@ -268,9 +271,11 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
         setAllPhotos(photos);
         setPictures(photos);
 
-        // Auto-selección best-effort de provincia por nombre dentro de la dirección.
+        // Auto-selección de provincia: primero el campo province, luego best-effort por nombre.
         const haystack = norm(`${prop.city ?? ""} ${prop.zone ?? ""} ${prop.address ?? ""}`);
-        const st = sts.find((s) => haystack.includes(norm(s.name)));
+        const st =
+          (prop.province ? sts.find((s) => norm(s.name) === norm(prop.province!)) : undefined) ??
+          sts.find((s) => haystack.includes(norm(s.name)));
         setLoc((l) => ({
           ...l,
           address_line: prop.address ?? "",
@@ -300,7 +305,9 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
             : null;
         let v: AttrValue | null = null;
         if (a.id === "ROOMS") v = numUnit(prop.roomAmount);
+        else if (a.id === "BEDROOMS") v = numUnit(prop.bedrooms);
         else if (a.id === "FULL_BATHROOMS" || a.id === "BATHROOMS") v = numUnit(prop.bathroomAmount);
+        else if (a.id === "PARKING_LOTS") v = numUnit(prop.parkingLotAmount);
         else if (a.id === "TOTAL_AREA") v = numUnit(prop.totalSurface, a.default_unit ?? "m²");
         else if (a.id === "COVERED_AREA") v = numUnit(prop.roofedSurface, a.default_unit ?? "m²");
         if (v) next[a.id] = v;

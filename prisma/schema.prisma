@@ -64,6 +64,7 @@ model Property {
   realAddress       String?   @map("real_address")
   addressComplement String?   @map("address_complement")
   city              String?
+  province          String?
   zone              String?
   type              String?   // departamento, casa, local, terreno, oficina, etc
   status            String    @default("activa") // activa, vendida, alquilada, suspendida
@@ -74,6 +75,7 @@ model Property {
   richDescription   String?   @map("rich_description")
   age               Int?
   roomAmount        Int?      @map("room_amount")
+  bedrooms          Int?
   bathroomAmount    Int?      @map("bathroom_amount")
   suiteAmount       Int?      @map("suite_amount")
   parkingLotAmount  Int?      @map("parking_lot_amount")

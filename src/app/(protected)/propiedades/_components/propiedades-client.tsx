@@ -26,12 +26,16 @@ interface Property {
   referenceCode: string | null;
   publicUrl: string | null;
   city: string | null;
+  province: string | null;
   zone: string | null;
   type: string | null;
   status: string;
   roomAmount: number | null;
+  bedrooms: number | null;
   bathroomAmount: number | null;
+  parkingLotAmount: number | null;
   totalSurface: number | null;
+  roofedSurface: number | null;
   operationType: string | null;
   operationPrice: number | null;
   operationCurrency: string | null;
@@ -311,12 +315,16 @@ export function PropiedadesClient({
       referenceCode: (form.get("referenceCode") as string) || null,
       publicUrl: (form.get("publicUrl") as string) || null,
       city: (form.get("city") as string) || null,
+      province: (form.get("province") as string) || null,
       zone: (form.get("zone") as string) || null,
       type: (form.get("type") as string) || null,
       status: form.get("status") as string,
       roomAmount: (form.get("roomAmount") as string) || null,
+      bedrooms: (form.get("bedrooms") as string) || null,
       bathroomAmount: (form.get("bathroomAmount") as string) || null,
+      parkingLotAmount: (form.get("parkingLotAmount") as string) || null,
       totalSurface: (form.get("totalSurface") as string) || null,
+      roofedSurface: (form.get("roofedSurface") as string) || null,
       operationType: (form.get("operationType") as string) || null,
       operationPrice: (form.get("operationPrice") as string) || null,
       operationCurrency: (form.get("operationCurrency") as string) || null,
@@ -1127,22 +1135,31 @@ export function PropiedadesClient({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Zona</label>
+                    <label className="mb-1 block text-xs font-medium text-text-muted">Provincia</label>
                     <input
-                      name="zone"
-                      defaultValue={editProperty?.zone ?? ""}
-                      placeholder="Palermo"
+                      name="province"
+                      defaultValue={editProperty?.province ?? ""}
+                      placeholder="Buenos Aires"
                       className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Ciudad</label>
+                    <label className="mb-1 block text-xs font-medium text-text-muted">Ciudad / Partido</label>
                     <input
                       name="city"
                       defaultValue={editProperty?.city ?? ""}
-                      placeholder="Buenos Aires"
+                      placeholder="Quilmes"
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-text-muted">Barrio / Zona</label>
+                    <input
+                      name="zone"
+                      defaultValue={editProperty?.zone ?? ""}
+                      placeholder="Ezpeleta"
                       className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none"
                     />
                   </div>
@@ -1187,6 +1204,16 @@ export function PropiedadesClient({
                     />
                   </div>
                   <div>
+                    <label className="mb-1 block text-xs font-medium text-text-muted">Dormitorios</label>
+                    <input
+                      name="bedrooms"
+                      type="number"
+                      min={0}
+                      defaultValue={editProperty?.bedrooms ?? ""}
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                    />
+                  </div>
+                  <div>
                     <label className="mb-1 block text-xs font-medium text-text-muted">Baños</label>
                     <input
                       name="bathroomAmount"
@@ -1197,13 +1224,34 @@ export function PropiedadesClient({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Sup. total</label>
+                    <label className="mb-1 block text-xs font-medium text-text-muted">Cocheras</label>
+                    <input
+                      name="parkingLotAmount"
+                      type="number"
+                      min={0}
+                      defaultValue={editProperty?.parkingLotAmount ?? ""}
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-secondary focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-text-muted">Sup. total (m²)</label>
                     <input
                       name="totalSurface"
                       type="number"
                       min={0}
                       step="0.01"
                       defaultValue={editProperty?.totalSurface ?? ""}
+                      className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-text-muted">Sup. cubierta (m²)</label>
+                    <input
+                      name="roofedSurface"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      defaultValue={editProperty?.roofedSurface ?? ""}
                       className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text focus:border-secondary focus:outline-none"
                     />
                   </div>
