@@ -4,15 +4,34 @@ import { ok } from "@/lib/api/response";
 import { getAuthContext } from "@/lib/api/auth";
 import { prisma } from "@/lib/prisma/client";
 import { ML_PORTAL } from "@/lib/mercadolibre/config";
-import { setItemStatus } from "@/lib/mercadolibre/items";
+import { getItem, setItemStatus } from "@/lib/mercadolibre/items";
 
 // Estado de la publicación de MercadoLibre para una propiedad.
+// Refresca el estado real desde ML (evita desincronización si el webhook no llegó).
 export const GET = withHandler(async (request: NextRequest, context) => {
   await getAuthContext();
   const { propertyId } = (await context!.params) as { propertyId: string };
-  const publication = await prisma.propertyPublication.findUnique({
+  let publication = await prisma.propertyPublication.findUnique({
     where: { propertyId_portal: { propertyId, portal: ML_PORTAL } },
   });
+
+  if (publication?.externalId) {
+    try {
+      const item = await getItem(publication.externalId);
+      const changed =
+        (item.status && item.status !== publication.status) ||
+        (item.permalink && item.permalink !== publication.permalink);
+      if (changed) {
+        publication = await prisma.propertyPublication.update({
+          where: { propertyId_portal: { propertyId, portal: ML_PORTAL } },
+          data: { status: item.status ?? publication.status, permalink: item.permalink ?? publication.permalink },
+        });
+      }
+    } catch {
+      // si ML no responde, devolvemos lo que hay en DB
+    }
+  }
+
   return ok(publication, "Publicación", request.nextUrl.pathname);
 });
 
