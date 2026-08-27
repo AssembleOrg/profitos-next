@@ -160,6 +160,29 @@ model PropertyPublication {
   @@map("jp_property_publications")
 }
 
+// Preguntas recibidas en publicaciones de portales (leads). Poblado por webhook.
+model PortalQuestion {
+  id         String    @id @default(cuid())
+  portal     String    @default("mercadolibre")
+  externalId String    @map("external_id") // id de la pregunta en el portal
+  itemId     String    @map("item_id") // MLA... del aviso
+  propertyId String?   @map("property_id") // resuelto vía publicación (sin FK)
+  text       String
+  status     String    @default("UNANSWERED")
+  answerText String?   @map("answer_text")
+  fromUserId String?   @map("from_user_id")
+  askedAt    DateTime? @map("asked_at")
+  answeredAt DateTime? @map("answered_at")
+  rawPayload Json?     @map("raw_payload")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@unique([portal, externalId])
+  @@index([propertyId])
+  @@index([itemId])
+  @@map("jp_portal_questions")
+}
+
 model Client {
   id        String   @id @default(cuid())
   name      String

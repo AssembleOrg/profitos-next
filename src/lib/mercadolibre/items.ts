@@ -114,3 +114,17 @@ export function getItem(itemId: string) {
 export function setItemStatus(itemId: string, status: "paused" | "active" | "closed") {
   return mlFetch<MlItem>(`/items/${itemId}`, { method: "PUT", body: { status } });
 }
+
+export interface MlQuestion {
+  id: number;
+  text: string;
+  status: string;
+  item_id: string;
+  date_created?: string;
+  from?: { id?: number };
+  answer?: { text?: string; status?: string; date_created?: string } | null;
+}
+
+export function getQuestion(questionId: string | number) {
+  return mlFetch<MlQuestion>(`/questions/${questionId}`);
+}
