@@ -76,7 +76,6 @@ export function ContactosClient({
   total,
   limit,
   totalAll,
-  isAdmin,
   filters,
   leadStatusOptions = [],
 }: ContactosClientProps) {
@@ -99,10 +98,6 @@ export function ContactosClient({
   const [tokkoModalOpen, setTokkoModalOpen] = useState(false);
   const [editTokkoContact, setEditTokkoContact] = useState<TokkoContact | null>(null);
   const [tokkoLoading, setTokkoLoading] = useState(false);
-
-  // Sync state
-  const [syncing, setSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState<{ offset: number; total: number } | null>(null);
 
   function applyFilters(nextPage = 1) {
     const params = new URLSearchParams(searchParams.toString());
@@ -128,41 +123,6 @@ export function ContactosClient({
     router.push(params.toString() ? `${pathname}?${params}` : pathname);
   }
 
-  async function handleFullSync(reset = false) {
-    setSyncing(true);
-    setSyncProgress(null);
-    let totalCreated = 0;
-    let totalUpdated = 0;
-
-    try {
-      let done = false;
-      while (!done) {
-        const res = await fetch("/api/integrations/tokko/contacts-full-sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reset: reset && totalCreated === 0 && totalUpdated === 0 }),
-        });
-        const body = await res.json();
-        if (!res.ok) {
-          toast.error(body.message ?? "Error en sincronización");
-          break;
-        }
-        const data = body.data;
-        totalCreated += data.created ?? 0;
-        totalUpdated += data.updated ?? 0;
-        setSyncProgress({ offset: data.offset, total: data.totalCount });
-        done = data.done;
-      }
-      toast.success(`Sincronización completa: ${totalCreated} nuevos, ${totalUpdated} actualizados`);
-      router.refresh();
-    } catch {
-      toast.error("Error de conexión durante sincronización");
-    } finally {
-      setSyncing(false);
-      setSyncProgress(null);
-    }
-  }
-
   // Tokko contact handlers
   function handleEditTokko(c: TokkoContact) { setEditTokkoContact(c); setTokkoModalOpen(true); }
   function handleCloseTokko() { setTokkoModalOpen(false); setEditTokkoContact(null); }
@@ -180,7 +140,7 @@ export function ContactosClient({
       leadStatus: (form.get("leadStatus") as string) || null,
     };
     try {
-      const res = await fetch(`/api/contactos-tokko/${editTokkoContact.id}`, {
+      const res = await fetch(`/api/contactos/${editTokkoContact.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -255,23 +215,6 @@ export function ContactosClient({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {isAdmin && tab === "tokko" && (
-            <button
-              onClick={() => handleFullSync(false)}
-              disabled={syncing}
-              className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text-muted active:bg-surface disabled:opacity-50"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
-                <polyline points="21 3 21 8 16 8" />
-              </svg>
-              {syncing ? (
-                syncProgress
-                  ? `${syncProgress.offset} / ${syncProgress.total}`
-                  : "Sincronizando..."
-              ) : "Sincronizar Tokko"}
-            </button>
-          )}
           {tab === "manual" && (
             <button
               onClick={handleNew}
@@ -435,7 +378,7 @@ export function ContactosClient({
                   <th className="hidden px-5 py-3 md:table-cell">Email</th>
                   <th className="hidden px-5 py-3 lg:table-cell">Teléfono</th>
                   <th className="px-5 py-3">Estado</th>
-                  <th className="hidden px-5 py-3 lg:table-cell">Fecha Tokko</th>
+                  <th className="hidden px-5 py-3 lg:table-cell">Fecha</th>
                 </tr>
               </thead>
               <tbody>
@@ -451,7 +394,7 @@ export function ContactosClient({
                       <td className="px-5 py-3.5">
                         <p className="font-medium text-text">{c.name}</p>
                         {c.tokkoDeletedAt && (
-                          <p className="text-[10px] text-danger">Eliminado en Tokko</p>
+                          <p className="text-[10px] text-danger">Eliminado</p>
                         )}
                         <p className="mt-0.5 text-xs text-text-muted md:hidden">
                           {c.email ?? ((c.cellphone || c.phone) ? (
@@ -669,7 +612,7 @@ export function ContactosClient({
           </div>
           */}
           {editTokkoContact?.tokkoCreatedAt && (
-            <p className="text-xs text-text-faint">Creado en Tokko: {formatDate(editTokkoContact.tokkoCreatedAt)}</p>
+            <p className="text-xs text-text-faint">Creado: {formatDate(editTokkoContact.tokkoCreatedAt)}</p>
           )}
         </form>
       </Sheet>

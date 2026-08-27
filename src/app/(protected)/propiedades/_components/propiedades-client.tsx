@@ -88,7 +88,7 @@ const PROPERTY_STATUSES = [
 ];
 
 /**
- * Distintivo para propiedades cargadas a mano (no sincronizadas de Tokko).
+ * Distintivo para propiedades cargadas a mano (no importadas de un portal).
  * Chip con lápiz + "Manual" para que se entienda el origen de un vistazo.
  */
 function ManualChip() {
@@ -185,7 +185,6 @@ export function PropiedadesClient({
   const [confirmAction, setConfirmAction] = useState<"save" | "delete" | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assigning, setAssigning] = useState(false);
-  const [syncingTokko, setSyncingTokko] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [isMobile, setIsMobile] = useState(false);
 
@@ -416,43 +415,6 @@ export function PropiedadesClient({
     }
   }
 
-  async function handleSyncTokko(mode: "auto" | "api") {
-    setSyncingTokko(true);
-    try {
-      const res = await fetch("/api/integrations/tokko/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.message ?? "No se pudo sincronizar con Tokko");
-        return;
-      }
-      if (data.data?.skipped) {
-        if (data.data.reason === "sync_in_progress") {
-          toast.info("Sincronización ya en curso, esperá un momento");
-        } else if (data.data.reason === "cooldown") {
-          toast.info(`Tokko actualizado recientemente. Disponible en ${data.data.minutesLeft} min`);
-        }
-        return;
-      }
-      if (data.data?.noChanges) {
-        toast.success("Tokko al día. No se detectaron nuevas propiedades.");
-        router.refresh();
-        return;
-      }
-      toast.success(
-        `Tokko sincronizado · nuevos: ${data.data?.created ?? 0}, actualizados: ${data.data?.updated ?? 0}`
-      );
-      router.refresh();
-    } catch {
-      toast.error("Error de conexión al sincronizar Tokko");
-    } finally {
-      setSyncingTokko(false);
-    }
-  }
-
   function handlePdfClick(
     e: React.MouseEvent<HTMLButtonElement>,
     property: Property,
@@ -557,20 +519,6 @@ export function PropiedadesClient({
               </svg>
               <span className="hidden sm:inline">Asignar seguimiento</span>
               <span className="sm:hidden">Asignar</span>
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              onClick={() => handleSyncTokko("auto")}
-              disabled={syncingTokko}
-              className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text-muted active:bg-surface disabled:opacity-50"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
-                <polyline points="21 3 21 8 16 8" />
-              </svg>
-              <span className="hidden sm:inline">{syncingTokko ? "Sincronizando..." : "Actualizar Tokko"}</span>
-              <span className="sm:hidden">{syncingTokko ? "..." : "Tokko"}</span>
             </button>
           )}
           <button
@@ -703,7 +651,7 @@ export function PropiedadesClient({
               <option value="price_asc">Precio menor</option>
               <option value="price_desc">Precio mayor</option>
               <option value="surface_desc">Mayor superficie</option>
-              <option value="tokko_newest">Más nuevas Tokko</option>
+              <option value="tokko_newest">Más nuevas</option>
             </select>
           </div>
         )}
@@ -775,7 +723,7 @@ export function PropiedadesClient({
             <option value="price_asc">Precio menor</option>
             <option value="price_desc">Precio mayor</option>
             <option value="surface_desc">Mayor superficie</option>
-            <option value="tokko_newest">Más nuevas Tokko</option>
+            <option value="tokko_newest">Más nuevas</option>
           </select>
         </div>
 
@@ -1045,7 +993,7 @@ export function PropiedadesClient({
                             onClick={(event) => event.stopPropagation()}
                           className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-secondary/40 bg-secondary/15 px-3 text-xs font-medium text-secondary transition-colors hover:bg-secondary/25"
                         >
-                          Ver en Tokko
+                          Ver publicación
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M7 17L17 7" />
                             <path d="M7 7h10v10" />
