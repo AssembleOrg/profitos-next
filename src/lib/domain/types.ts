@@ -16,7 +16,7 @@ export type PropertyStatus = "activa" | "vendida" | "alquilada" | "suspendida";
 
 export interface AppProperty {
   id: string;
-  tokkoId?: number | null;
+  externalId?: number | null;
   source?: string;
   address: string;
   publicationTitle?: string | null;

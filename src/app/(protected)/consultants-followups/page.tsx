@@ -73,8 +73,8 @@ export default async function ConsultantsFollowUpsPage({ searchParams }: Readonl
     updatedAt: item.updatedAt.toISOString(),
     recentContact: {
       ...item.recentContact,
-      tokkoCreatedAt: item.recentContact.tokkoCreatedAt?.toISOString() ?? null,
-      tokkoDeletedAt: item.recentContact.tokkoDeletedAt?.toISOString() ?? null,
+      externalCreatedAt: item.recentContact.externalCreatedAt?.toISOString() ?? null,
+      externalDeletedAt: item.recentContact.externalDeletedAt?.toISOString() ?? null,
       syncAt: item.recentContact.syncAt?.toISOString() ?? null,
       createdAt: item.recentContact.createdAt.toISOString(),
       updatedAt: item.recentContact.updatedAt.toISOString(),

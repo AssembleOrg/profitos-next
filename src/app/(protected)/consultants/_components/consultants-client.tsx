@@ -11,7 +11,7 @@ import { WhatsAppLink } from "@/components/whatsapp-link";
 
 interface ConsultantItem {
   id: string;
-  tokkoContactId: number;
+  externalId: number;
   name: string;
   email: string | null;
   phone: string | null;
@@ -19,7 +19,7 @@ interface ConsultantItem {
   leadStatus: string | null;
   agentName: string | null;
   agentEmail: string | null;
-  tokkoCreatedAt: string | null;
+  externalCreatedAt: string | null;
   syncAt: string | null;
 }
 
@@ -323,7 +323,7 @@ export function ConsultantsClient({
               </div>
               <div className="mt-2 flex items-center justify-between text-xs text-text-muted">
                 <span>{item.agentName ?? "—"}</span>
-                <span>{formatDateTime24(item.tokkoCreatedAt)}</span>
+                <span>{formatDateTime24(item.externalCreatedAt)}</span>
               </div>
             </div>
           ))
@@ -352,7 +352,7 @@ export function ConsultantsClient({
                 <tr key={item.id} className="border-b border-border/50 last:border-b-0">
                   <td className="px-5 py-3.5">
                     <p className="font-medium text-text">{item.name}</p>
-                    <p className="text-xs text-text-muted">#{item.tokkoContactId}</p>
+                    <p className="text-xs text-text-muted">#{item.externalId}</p>
                     {item.email && (
                       <button
                         onClick={() => { navigator.clipboard.writeText(item.email!); toast.success("Mail copiado"); }}
@@ -381,7 +381,7 @@ export function ConsultantsClient({
                     )}
                   </td>
                   <td className="hidden px-5 py-3.5 text-text-muted lg:table-cell">
-                    {formatDateTime24(item.tokkoCreatedAt)}
+                    {formatDateTime24(item.externalCreatedAt)}
                   </td>
                 </tr>
               ))

@@ -18,7 +18,7 @@ export const GET = withHandler(async (request) => {
   const [contacts, followUps, contactFollowUps, properties, overdueFollowUps] = await Promise.all([
     prisma.recentContact.findMany({
       where: contactWhere,
-      orderBy: [{ tokkoCreatedAt: "desc" }, { tokkoContactId: "desc" }],
+      orderBy: [{ externalCreatedAt: "desc" }, { externalId: "desc" }],
       take: limit,
       select: {
         id: true,
@@ -29,9 +29,9 @@ export const GET = withHandler(async (request) => {
         leadStatus: true,
         agentName: true,
         agentEmail: true,
-        tokkoCreatedAt: true,
+        externalCreatedAt: true,
         createdAt: true,
-        tokkoContactId: true,
+        externalId: true,
       },
     }),
     prisma.propertyFollowUp.findMany({
@@ -111,10 +111,10 @@ export const GET = withHandler(async (request) => {
   const merged = [
     ...contacts.map((item) => ({
       kind: "contact" as const,
-      eventAt: item.tokkoCreatedAt ?? item.createdAt,
+      eventAt: item.externalCreatedAt ?? item.createdAt,
       payload: {
         ...item,
-        tokkoCreatedAt: item.tokkoCreatedAt?.toISOString() ?? null,
+        externalCreatedAt: item.externalCreatedAt?.toISOString() ?? null,
         createdAt: item.createdAt.toISOString(),
       },
     })),

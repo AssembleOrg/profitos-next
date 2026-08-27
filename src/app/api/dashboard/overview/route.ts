@@ -91,7 +91,7 @@ export const GET = withHandler(async (request: NextRequest) => {
     }),
     prisma.recentContact.findMany({
       where: contactWhere,
-      orderBy: [{ tokkoCreatedAt: "desc" }, { tokkoContactId: "desc" }],
+      orderBy: [{ externalCreatedAt: "desc" }, { externalId: "desc" }],
       take: 5,
       select: {
         id: true,
@@ -101,7 +101,7 @@ export const GET = withHandler(async (request: NextRequest) => {
         phone: true,
         leadStatus: true,
         agentName: true,
-        tokkoCreatedAt: true,
+        externalCreatedAt: true,
       },
     }),
     prisma.propertyFollowUp.findMany({
@@ -252,7 +252,7 @@ export const GET = withHandler(async (request: NextRequest) => {
     })),
     lastContacts: lastContactsRaw.map((item) => ({
       ...item,
-      tokkoCreatedAt: item.tokkoCreatedAt?.toISOString() ?? null,
+      externalCreatedAt: item.externalCreatedAt?.toISOString() ?? null,
     })),
     recentFollowUps,
     recentActions,

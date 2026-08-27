@@ -43,18 +43,18 @@ export default async function ConsultantsPage({ searchParams }: Props) {
     });
   }
   if (agent) andFilters.push({ agentName: { equals: agent, mode: "insensitive" } });
-  if (from) andFilters.push({ tokkoCreatedAt: { gte: new Date(`${from}T00:00:00`) } });
-  if (to) andFilters.push({ tokkoCreatedAt: { lte: new Date(`${to}T23:59:59`) } });
+  if (from) andFilters.push({ externalCreatedAt: { gte: new Date(`${from}T00:00:00`) } });
+  if (to) andFilters.push({ externalCreatedAt: { lte: new Date(`${to}T23:59:59`) } });
   const where: Prisma.RecentContactWhereInput = andFilters.length > 0 ? { AND: andFilters } : {};
 
   const orderBy: Prisma.RecentContactOrderByWithRelationInput[] =
     sort === "created_asc"
-      ? [{ tokkoCreatedAt: "asc" }, { tokkoContactId: "asc" }]
+      ? [{ externalCreatedAt: "asc" }, { externalId: "asc" }]
       : sort === "name_asc"
         ? [{ name: "asc" }]
         : sort === "name_desc"
           ? [{ name: "desc" }]
-          : [{ tokkoCreatedAt: "desc" }, { tokkoContactId: "desc" }];
+          : [{ externalCreatedAt: "desc" }, { externalId: "desc" }];
 
   const [items, total, totalAll, syncState, agentOptions] = await Promise.all([
     prisma.recentContact.findMany({
@@ -66,7 +66,7 @@ export default async function ConsultantsPage({ searchParams }: Props) {
     prisma.recentContact.count({ where }),
     prisma.recentContact.count(),
     prisma.integrationSyncState.findUnique({
-      where: { integrationKey: "tokko_contacts" },
+      where: { integrationKey: "recent_contacts" },
       select: { lastRunAt: true },
     }),
     prisma.recentContact.findMany({
@@ -80,7 +80,7 @@ export default async function ConsultantsPage({ searchParams }: Props) {
 
   const serialized = items.map((row: {
     id: string;
-    tokkoContactId: number;
+    externalId: number;
     name: string;
     email: string | null;
     phone: string | null;
@@ -88,11 +88,11 @@ export default async function ConsultantsPage({ searchParams }: Props) {
     leadStatus: string | null;
     agentName: string | null;
     agentEmail: string | null;
-    tokkoCreatedAt: Date | null;
+    externalCreatedAt: Date | null;
     syncAt: Date | null;
   }) => ({
     id: row.id,
-    tokkoContactId: row.tokkoContactId,
+    externalId: row.externalId,
     name: row.name,
     email: row.email,
     phone: row.phone,
@@ -100,7 +100,7 @@ export default async function ConsultantsPage({ searchParams }: Props) {
     leadStatus: row.leadStatus,
     agentName: row.agentName,
     agentEmail: row.agentEmail,
-    tokkoCreatedAt: row.tokkoCreatedAt ? row.tokkoCreatedAt.toISOString() : null,
+    externalCreatedAt: row.externalCreatedAt ? row.externalCreatedAt.toISOString() : null,
     syncAt: row.syncAt ? row.syncAt.toISOString() : null,
   }));
 

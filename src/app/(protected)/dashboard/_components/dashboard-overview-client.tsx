@@ -39,7 +39,7 @@ interface DashboardOverview {
     phone: string | null;
     leadStatus: string | null;
     agentName: string | null;
-    tokkoCreatedAt: string | null;
+    externalCreatedAt: string | null;
   }>;
   recentFollowUps: Array<{
     kind: "propiedad" | "consulta";
@@ -268,7 +268,7 @@ function TabbedFeed({ data }: { data: DashboardOverview }) {
         key={item.id}
         primary={item.name}
         secondary={`${item.leadStatus ?? "Sin estado"} · ${item.agentName ?? "Sin agente"}`}
-        badge={item.tokkoCreatedAt ? formatDateShort(item.tokkoCreatedAt) : undefined}
+        badge={item.externalCreatedAt ? formatDateShort(item.externalCreatedAt) : undefined}
         badgeColor="neutral"
       />
     )),

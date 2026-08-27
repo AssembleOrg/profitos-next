@@ -18,7 +18,7 @@ const PropertiesMap = dynamic(
 
 interface Property {
   id: string;
-  tokkoId: number | null;
+  externalId: number | null;
   source: string;
   address: string;
   realAddress: string | null;
@@ -651,7 +651,7 @@ export function PropiedadesClient({
               <option value="price_asc">Precio menor</option>
               <option value="price_desc">Precio mayor</option>
               <option value="surface_desc">Mayor superficie</option>
-              <option value="tokko_newest">Más nuevas</option>
+              <option value="external_newest">Más nuevas</option>
             </select>
           </div>
         )}
@@ -723,7 +723,7 @@ export function PropiedadesClient({
             <option value="price_asc">Precio menor</option>
             <option value="price_desc">Precio mayor</option>
             <option value="surface_desc">Mayor superficie</option>
-            <option value="tokko_newest">Más nuevas</option>
+            <option value="external_newest">Más nuevas</option>
           </select>
         </div>
 
@@ -944,7 +944,7 @@ export function PropiedadesClient({
                       </div>
                       <p className="text-xs text-text-muted">{p.publicationTitle ?? p.realAddress ?? "Sin título"}</p>
                     </td>
-                    <td className="px-5 py-3.5 text-text-muted">{p.referenceCode ?? (p.tokkoId ? `#${p.tokkoId}` : "—")}</td>
+                    <td className="px-5 py-3.5 text-text-muted">{p.referenceCode ?? (p.externalId ? `#${p.externalId}` : "—")}</td>
                     <td className="px-5 py-3.5 text-text-muted">
                       {p.operationPrice ? `${p.operationCurrency ?? "USD"} ${p.operationPrice.toLocaleString("es-AR")}` : "—"}
                     </td>

@@ -24,7 +24,7 @@ interface Client {
 
 interface TokkoContact {
   id: string;
-  tokkoContactId: number;
+  externalId: number;
   name: string;
   email: string | null;
   phone: string | null;
@@ -35,8 +35,8 @@ interface TokkoContact {
   agentName: string | null;
   agentEmail: string | null;
   tags: string[];
-  tokkoCreatedAt: string | null;
-  tokkoDeletedAt: string | null;
+  externalCreatedAt: string | null;
+  externalDeletedAt: string | null;
   createdAt: string;
 }
 
@@ -361,8 +361,8 @@ export function ContactosClient({
                       </span>
                     )}
                   </div>
-                  {c.tokkoCreatedAt && (
-                    <p className="mt-2 text-xs text-text-faint">{formatDate(c.tokkoCreatedAt)}</p>
+                  {c.externalCreatedAt && (
+                    <p className="mt-2 text-xs text-text-faint">{formatDate(c.externalCreatedAt)}</p>
                   )}
                 </div>
               ))
@@ -393,7 +393,7 @@ export function ContactosClient({
                     <tr key={c.id} onClick={() => handleEditTokko(c)} className="cursor-pointer border-b border-border/50 transition-colors last:border-b-0 hover:bg-surface/50">
                       <td className="px-5 py-3.5">
                         <p className="font-medium text-text">{c.name}</p>
-                        {c.tokkoDeletedAt && (
+                        {c.externalDeletedAt && (
                           <p className="text-[10px] text-danger">Eliminado</p>
                         )}
                         <p className="mt-0.5 text-xs text-text-muted md:hidden">
@@ -426,7 +426,7 @@ export function ContactosClient({
                         ) : "—"}
                       </td>
                       <td className="hidden px-5 py-3.5 text-text-muted lg:table-cell">
-                        {c.tokkoCreatedAt ? formatDate(c.tokkoCreatedAt) : "—"}
+                        {c.externalCreatedAt ? formatDate(c.externalCreatedAt) : "—"}
                       </td>
                     </tr>
                   ))
@@ -611,8 +611,8 @@ export function ContactosClient({
               className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-text placeholder:text-text-muted/50 focus:border-secondary focus:outline-none" />
           </div>
           */}
-          {editTokkoContact?.tokkoCreatedAt && (
-            <p className="text-xs text-text-faint">Creado: {formatDate(editTokkoContact.tokkoCreatedAt)}</p>
+          {editTokkoContact?.externalCreatedAt && (
+            <p className="text-xs text-text-faint">Creado: {formatDate(editTokkoContact.externalCreatedAt)}</p>
           )}
         </form>
       </Sheet>

@@ -58,7 +58,7 @@ model User {
 
 model Property {
   id                String    @id @default(cuid())
-  tokkoId           Int?      @unique @map("tokko_id")
+  externalId        Int?      @unique @map("external_id")
   source            String    @default("manual")
   address           String
   realAddress       String?   @map("real_address")
@@ -101,8 +101,8 @@ model Property {
   tags              Json?
   extraAttributes   Json?     @map("extra_attributes")
   deletedAt         DateTime? @map("deleted_at")
-  tokkoCreatedAt    DateTime? @map("tokko_created_at")
-  tokkoUpdatedAt    DateTime? @map("tokko_updated_at")
+  externalCreatedAt DateTime? @map("external_created_at")
+  externalUpdatedAt DateTime? @map("external_updated_at")
   rawPayload        Json?     @map("raw_payload")
   ownerReportData   Json?     @map("owner_report_data")
   syncAt            DateTime? @map("sync_at")
@@ -238,8 +238,8 @@ model FollowUpAction {
 
 model RecentContact {
   id               String    @id @default(cuid())
-  tokkoContactId   Int       @unique @map("tokko_contact_id")
-  source           String    @default("tokko")
+  externalId       Int       @unique @map("external_id")
+  source           String    @default("legacy")
   name             String
   email            String?
   phone            String?
@@ -252,8 +252,8 @@ model RecentContact {
   agentEmail       String?   @map("agent_email")
   agentPhone       String?   @map("agent_phone")
   tags             Json?
-  tokkoCreatedAt   DateTime? @map("tokko_created_at")
-  tokkoDeletedAt   DateTime? @map("tokko_deleted_at")
+  externalCreatedAt DateTime? @map("external_created_at")
+  externalDeletedAt DateTime? @map("external_deleted_at")
   rawPayload       Json?     @map("raw_payload")
   syncAt           DateTime? @map("sync_at")
   createdAt        DateTime  @default(now()) @map("created_at")

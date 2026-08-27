@@ -14,9 +14,9 @@ export interface NotificationItem {
   leadStatus?: string | null;
   agentName?: string | null;
   agentEmail?: string | null;
-  tokkoCreatedAt?: string | null;
+  externalCreatedAt?: string | null;
   createdAt?: string;
-  tokkoContactId?: number;
+  externalId?: number;
   title?: string | null;
   status?: string;
   dueDate?: string | null;
@@ -58,7 +58,7 @@ export function useNotifications() {
       }
       const lastSeenMs = new Date(lastSeen).getTime();
       const count = items.filter((item) => {
-        const eventAt = item.eventAt ?? item.tokkoCreatedAt ?? item.createdAt;
+        const eventAt = item.eventAt ?? item.externalCreatedAt ?? item.createdAt;
         if (!eventAt) return false;
         return new Date(eventAt).getTime() > lastSeenMs;
       }).length;

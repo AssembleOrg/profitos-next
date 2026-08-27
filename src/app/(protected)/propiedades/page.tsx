@@ -74,7 +74,7 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     if (sort === "price_asc") return [{ operationPrice: "asc" }, { createdAt: "desc" }];
     if (sort === "price_desc") return [{ operationPrice: "desc" }, { createdAt: "desc" }];
     if (sort === "surface_desc") return [{ totalSurface: "desc" }, { createdAt: "desc" }];
-    if (sort === "tokko_newest") return [{ tokkoCreatedAt: "desc" }, { createdAt: "desc" }];
+    if (sort === "external_newest") return [{ externalCreatedAt: "desc" }, { createdAt: "desc" }];
     return [{ createdAt: "desc" }];
   })();
 
@@ -111,7 +111,7 @@ export default async function PropiedadesPage({ searchParams }: Props) {
 
   const serialized = properties.map((p: {
     id: string;
-    tokkoId: number | null;
+    externalId: number | null;
     source: string;
     address: string;
     realAddress: string | null;
@@ -136,7 +136,7 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     publications: { status: string; permalink: string | null; externalId: string | null }[];
   }) => ({
     id: p.id,
-    tokkoId: p.tokkoId,
+    externalId: p.externalId,
     source: p.source,
     address: p.address,
     realAddress: p.realAddress,
