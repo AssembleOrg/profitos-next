@@ -5,10 +5,43 @@
  * wizard MVC clásico y los endpoints de escritura solo piden las cookies de
  * sesión (sin token ni captcha). Solo el LOGIN tiene reCAPTCHA → se hace una
  * vez con navegador (scripts/scraper/login.ts argenprop-gestion) y acá reusamos
- * esas cookies con fetch de Node. Corre en Railway sin proxy (ArgenProp no
- * bloquea la IP de datacenter).
+ * esas cookies con fetch de Node. En Railway hay que salir por proxy residencial
+ * (ARGENPROP_PROXY o PROXY_SERVER/USER/PASS): Cloudflare de gestión bloquea la IP
+ * de datacenter con 403.
  */
 import { prisma } from "@/lib/prisma/client";
+// fetch de undici (no el global): así comparte versión con ProxyAgent. Mezclar
+// el ProxyAgent de npm con el fetch interno de Node rompe (invalid onRequestStart).
+import { fetch as httpFetch, ProxyAgent } from "undici";
+
+/** Proxy residencial para los fetch de gestión (403 sin él en Railway). */
+let dispatcherCache: ProxyAgent | null | undefined;
+function proxyDispatcher(): ProxyAgent | undefined {
+  if (dispatcherCache !== undefined) return dispatcherCache ?? undefined;
+  let uri = process.env.ARGENPROP_PROXY?.trim() || "";
+  if (!uri) {
+    const server = process.env.PROXY_SERVER?.trim();
+    if (server) {
+      try {
+        const u = new URL(server);
+        if (process.env.PROXY_USER?.trim()) u.username = process.env.PROXY_USER.trim();
+        if (process.env.PROXY_PASS?.trim()) u.password = process.env.PROXY_PASS.trim();
+        uri = u.toString();
+      } catch {
+        /* server mal formado → sin proxy */
+      }
+    }
+  }
+  dispatcherCache = uri ? new ProxyAgent(uri) : null;
+  return dispatcherCache ?? undefined;
+}
+
+type FetchInit = NonNullable<Parameters<typeof httpFetch>[1]>;
+/** Agrega el dispatcher del proxy al init del fetch (si hay proxy configurado). */
+function withProxy(init: FetchInit): FetchInit {
+  const d = proxyDispatcher();
+  return d ? { ...init, dispatcher: d } : init;
+}
 
 export const GESTION_PORTAL = "argenprop-gestion";
 const BASE = "https://gestion.argenprop.com";
@@ -72,12 +105,12 @@ export async function gestionPostForm(
 ): Promise<GestionResponse> {
   const cookie = await cookieHeader();
   const body = pairs.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await httpFetch(`${BASE}${path}`, withProxy({
     method: "POST",
     redirect: "manual",
     headers: { ...baseHeaders(cookie), "content-type": "application/x-www-form-urlencoded" },
     body,
-  });
+  }));
   const location = res.headers.get("location");
   assertNotLoginRedirect(location);
   return { status: res.status, location, text: await res.text().catch(() => "") };
@@ -86,12 +119,12 @@ export async function gestionPostForm(
 /** POST con cuerpo JSON (ej: GetPreSignedUrl). Devuelve JSON parseado. */
 export async function gestionPostJson<T = unknown>(path: string, body: unknown): Promise<T> {
   const cookie = await cookieHeader();
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await httpFetch(`${BASE}${path}`, withProxy({
     method: "POST",
     redirect: "manual",
     headers: { ...baseHeaders(cookie), "content-type": "application/json", accept: "application/json" },
     body: JSON.stringify(body),
-  });
+  }));
   assertNotLoginRedirect(res.headers.get("location"));
   if (res.status >= 400) throw new Error(`Gestión POST ${path} → ${res.status}`);
   return JSON.parse(await res.text()) as T;
@@ -100,11 +133,11 @@ export async function gestionPostJson<T = unknown>(path: string, body: unknown):
 /** GET (para datos de referencia: provincias, partidos, coordenadas...). */
 export async function gestionGetJson<T = unknown>(path: string): Promise<T> {
   const cookie = await cookieHeader();
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await httpFetch(`${BASE}${path}`, withProxy({
     method: "GET",
     redirect: "manual",
     headers: { ...baseHeaders(cookie), accept: "application/json, text/plain, */*" },
-  });
+  }));
   const location = res.headers.get("location");
   assertNotLoginRedirect(location);
   if (res.status >= 400) throw new Error(`Gestión GET ${path} → ${res.status}`);
