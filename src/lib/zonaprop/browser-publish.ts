@@ -87,6 +87,11 @@ async function launch(userDataDir: string): Promise<BrowserContext> {
     timezoneId: "America/Argentina/Buenos_Aires",
     ...(proxy() ? { proxy: proxy() } : {}),
   };
+  // Brave (SCRAPER_CHROME_PATH) pasa Cloudflare donde el chromium bundle falla.
+  const execPath = process.env.SCRAPER_CHROME_PATH?.trim();
+  if (execPath) {
+    return await chromiumExtra.launchPersistentContext(userDataDir, { ...opts, executablePath: execPath });
+  }
   try {
     return await chromiumExtra.launchPersistentContext(userDataDir, { ...opts, channel: "chrome" });
   } catch {

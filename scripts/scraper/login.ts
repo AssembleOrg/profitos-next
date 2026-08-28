@@ -42,10 +42,15 @@ async function launch(): Promise<BrowserContext> {
     ignoreDefaultArgs: ["--enable-automation"],
   };
   let browser;
-  try {
-    browser = await chromium.launch({ ...opts, channel: "chrome" });
-  } catch {
-    browser = await chromium.launch(opts);
+  const execPath = process.env.SCRAPER_CHROME_PATH?.trim();
+  if (execPath) {
+    browser = await chromium.launch({ ...opts, executablePath: execPath });
+  } else {
+    try {
+      browser = await chromium.launch({ ...opts, channel: "chrome" });
+    } catch {
+      browser = await chromium.launch(opts);
+    }
   }
   const ctx = await browser.newContext({ viewport: null, locale: "es-AR" });
   await ctx.addInitScript(() => {

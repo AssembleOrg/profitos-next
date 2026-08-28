@@ -18,8 +18,11 @@ async function main() {
     // Valores conocidos-válidos de la captura: Casa=1, subtipo=42, venta=1.
     operation: { operationType: "1", realEstateTypeId: "1", realEstateSubTypeId: "42" },
     description: {
-      title: "PRUEBA API — BORRAR",
-      description: "Borrador de prueba de la integración de publicación. No publicar. Borrar.",
+      title: "PRUEBA API BORRADOR NO PUBLICAR BORRAR",
+      description:
+        "Este es un borrador de prueba generado por la integracion automatica de publicacion. " +
+        "No corresponde a una propiedad real y no debe publicarse bajo ninguna circunstancia. " +
+        "Por favor ignorar y eliminar este borrador. Texto de relleno para cumplir el minimo de longitud requerido por ZonaProp.",
     },
   });
   console.log(`\n🎉 Borrador creado: postingId=${id} (status DRAFT, no publicado)`);
