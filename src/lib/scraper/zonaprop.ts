@@ -1,11 +1,20 @@
-import type { BrowserContext, Page } from "playwright";
-import { fetchJsonInPage, getCookie, withPortalPage, type Portal } from "./session";
+import {
+  fetchJsonViaZenrows,
+  getStoredCookie,
+  markSessionOk,
+  SessionExpiredError,
+  type Portal,
+} from "./session";
 import { existingExternalIds, saveLeads, type LeadRow } from "./persist";
 
 const PORTAL: Portal = "zonaprop";
 const BASE = "https://www.zonaprop.com.ar";
-const BOOTSTRAP = `${BASE}/panel/interesados`;
 const LIMIT = 40; // margen holgado para una corrida horaria
+
+// El enriquecimiento (perfil + polígono de zona) hace 1 request por lead nuevo,
+// lo que multiplica el costo en créditos de ZenRows. Apagado por defecto para
+// que cada corrida cueste fijo (solo las secciones). Prender con plan pago.
+const ENRICH = process.env.ZONAPROP_ENRICH === "true";
 
 // Cada pestaña de "Interesados" se distingue por action_type.
 const SECTIONS: { key: string; actionTypes: number[] }[] = [
@@ -55,26 +64,23 @@ function toDate(s?: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/** Headers de auth que la SPA de ZonaProp manda a leads-api. */
-async function authHeaders(context: BrowserContext): Promise<Record<string, string>> {
-  const sessionid = (await getCookie(context, "sessionId")) ?? "";
+/** Headers de auth que la SPA de ZonaProp manda a leads-api (los reenvía ZenRows). */
+function authHeaders(sessionId: string): Record<string, string> {
   return {
     "x-panel-portal": "ZPAR",
-    sessionid,
-    "content-type": "application/json;charset=UTF-8",
+    sessionid: sessionId,
+    cookie: `sessionId=${sessionId}`,
   };
 }
 
 /** Trae el perfil del interesado (¿qué busca? + polígono de zona). */
 async function enrich(
-  page: Page,
   headers: Record<string, string>,
   contactId?: string
 ): Promise<{ profile: unknown; polygon: unknown } | null> {
   if (!contactId) return null;
   try {
-    const profile = await fetchJsonInPage<{ searched_locations?: { polygons?: unknown } }>(
-      page,
+    const profile = await fetchJsonViaZenrows<{ searched_locations?: { polygons?: unknown } }>(
       `${BASE}/leads-api/publisher/contact/${contactId}/user-profile`,
       PORTAL,
       headers
@@ -86,11 +92,10 @@ async function enrich(
 }
 
 async function scrapeSection(
-  page: Page,
   headers: Record<string, string>,
   section: { key: string; actionTypes: number[] }
 ): Promise<{ section: string; total: number; nuevos: number }> {
-  const data = await fetchJsonInPage<{ result?: ZpLead[] }>(page, listUrl(section.actionTypes), PORTAL, headers);
+  const data = await fetchJsonViaZenrows<{ result?: ZpLead[] }>(listUrl(section.actionTypes), PORTAL, headers);
   const leads = data.result ?? [];
   const ids = leads.map((l) => l.id);
   const seen = await existingExternalIds(PORTAL, section.key, ids);
@@ -98,7 +103,7 @@ async function scrapeSection(
 
   const rows: LeadRow[] = [];
   for (const l of fresh) {
-    const extra = await enrich(page, headers, l.contact_publisher_user_id);
+    const extra = ENRICH ? await enrich(headers, l.contact_publisher_user_id) : null;
     const phones = l.phone_list?.map((p) => p.phone).filter(Boolean).join(", ");
     rows.push({
       portal: PORTAL,
@@ -124,12 +129,15 @@ async function scrapeSection(
 }
 
 export async function scrapeZonaprop() {
-  return withPortalPage(PORTAL, BOOTSTRAP, async (page, context) => {
-    const headers = await authHeaders(context);
-    const sections = [];
-    for (const s of SECTIONS) {
-      sections.push(await scrapeSection(page, headers, s));
-    }
-    return { portal: PORTAL, sections };
-  });
+  const sessionId = await getStoredCookie(PORTAL, "sessionId");
+  if (!sessionId) throw new SessionExpiredError(PORTAL);
+
+  const headers = authHeaders(sessionId);
+  const sections = [];
+  for (const s of SECTIONS) {
+    sections.push(await scrapeSection(headers, s));
+  }
+
+  await markSessionOk(PORTAL);
+  return { portal: PORTAL, sections };
 }
