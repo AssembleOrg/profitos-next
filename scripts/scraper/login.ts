@@ -19,6 +19,8 @@ import fs from "node:fs";
 const HOME: Record<string, string> = {
   zonaprop: "https://www.zonaprop.com.ar/panel/interesados",
   argenprop: "https://www.argenprop.com/micuenta/mismensajes",
+  // CRM de ArgenProp para publicar (login con reCAPTCHA → cookies para HTTP plano).
+  "argenprop-gestion": "https://gestion.argenprop.com/",
 };
 
 function prisma(): PrismaClient {
