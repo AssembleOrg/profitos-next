@@ -11,6 +11,7 @@ import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
 import { buildPropertyWhatsAppLink } from "@/lib/whatsapp";
 import { MlPublishWizard } from "./ml-publish-wizard";
+import { PortalesPanel } from "./portales-panel";
 
 const PropertiesMap = dynamic(
   () => import("./properties-map").then((mod) => mod.PropertiesMap),
@@ -1353,6 +1354,13 @@ export function PropiedadesClient({
                   <p className="rounded-[14px] bg-clay-chip px-3.5 py-2 text-[13px] font-semibold text-terra">{error}</p>
                 )}
               </form>
+
+              {/* Publicación multi-portal (ML + ZonaProp + ArgenProp) */}
+              {isEdit && editProperty?.id && (
+                <div className="flex-shrink-0 border-t border-border px-5 py-3">
+                  <PortalesPanel propertyId={editProperty.id} />
+                </div>
+              )}
 
               {/* Estado de publicación en MercadoLibre */}
               {isEdit && editProperty?.mlPublication?.published && (
