@@ -1,8 +1,7 @@
-import { prisma } from "@/lib/prisma/client";
-import { getCurrentUser } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth/session";
+import { getInboxMessages } from "@/lib/messages/inbox";
 import { ConsultantsClient } from "./_components/consultants-client";
-import { Prisma } from "@/generated/prisma/client";
 
 const PAGE_SIZE = 20;
 
@@ -11,112 +10,36 @@ interface Props {
     page?: string;
     limit?: string;
     q?: string;
-    agent?: string;
+    portal?: string;
     from?: string;
     to?: string;
-    sort?: string;
   }>;
 }
 
-export default async function ConsultantsPage({ searchParams }: Props) {
+export default async function ConsultantsPage({ searchParams }: Readonly<Props>) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const sp = await searchParams;
-  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
   const limit = Math.min(100, Math.max(1, Number.parseInt(sp.limit ?? `${PAGE_SIZE}`, 10) || PAGE_SIZE));
   const q = (sp.q ?? "").trim();
-  const agent = (sp.agent ?? "").trim();
+  const portal = (sp.portal ?? "").trim();
   const from = (sp.from ?? "").trim();
   const to = (sp.to ?? "").trim();
-  const sort = (sp.sort ?? "created_desc").trim();
 
-  const andFilters: Prisma.RecentContactWhereInput[] = [];
-  if (q) {
-    andFilters.push({
-      OR: [
-        { name: { contains: q, mode: "insensitive" } },
-        { email: { contains: q, mode: "insensitive" } },
-        { phone: { contains: q, mode: "insensitive" } },
-        { cellphone: { contains: q, mode: "insensitive" } },
-      ],
-    });
-  }
-  if (agent) andFilters.push({ agentName: { equals: agent, mode: "insensitive" } });
-  if (from) andFilters.push({ externalCreatedAt: { gte: new Date(`${from}T00:00:00`) } });
-  if (to) andFilters.push({ externalCreatedAt: { lte: new Date(`${to}T23:59:59`) } });
-  const where: Prisma.RecentContactWhereInput = andFilters.length > 0 ? { AND: andFilters } : {};
-
-  const orderBy: Prisma.RecentContactOrderByWithRelationInput[] =
-    sort === "created_asc"
-      ? [{ externalCreatedAt: "asc" }, { externalId: "asc" }]
-      : sort === "name_asc"
-        ? [{ name: "asc" }]
-        : sort === "name_desc"
-          ? [{ name: "desc" }]
-          : [{ externalCreatedAt: "desc" }, { externalId: "desc" }];
-
-  const [items, total, totalAll, syncState, agentOptions] = await Promise.all([
-    prisma.recentContact.findMany({
-      where,
-      orderBy,
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-    prisma.recentContact.count({ where }),
-    prisma.recentContact.count(),
-    prisma.integrationSyncState.findUnique({
-      where: { integrationKey: "recent_contacts" },
-      select: { lastRunAt: true },
-    }),
-    prisma.recentContact.findMany({
-      where: { agentName: { not: null } },
-      distinct: ["agentName"],
-      select: { agentName: true },
-      orderBy: { agentName: "asc" },
-      take: 300,
-    }),
-  ]);
-
-  const serialized = items.map((row: {
-    id: string;
-    externalId: number;
-    name: string;
-    email: string | null;
-    phone: string | null;
-    cellphone: string | null;
-    leadStatus: string | null;
-    agentName: string | null;
-    agentEmail: string | null;
-    externalCreatedAt: Date | null;
-    syncAt: Date | null;
-  }) => ({
-    id: row.id,
-    externalId: row.externalId,
-    name: row.name,
-    email: row.email,
-    phone: row.phone,
-    cellphone: row.cellphone,
-    leadStatus: row.leadStatus,
-    agentName: row.agentName,
-    agentEmail: row.agentEmail,
-    externalCreatedAt: row.externalCreatedAt ? row.externalCreatedAt.toISOString() : null,
-    syncAt: row.syncAt ? row.syncAt.toISOString() : null,
-  }));
+  const { items, total, totalAll, counts } = await getInboxMessages({ portal, q, from, to, page, limit });
 
   return (
     <ConsultantsClient
-      isAdmin={user.role === "admin"}
-      currentUserEmail={user.email}
-      items={serialized}
+      items={items}
       page={page}
       total={total}
       totalAll={totalAll}
-      totalPages={Math.ceil(total / limit)}
+      totalPages={Math.max(1, Math.ceil(total / limit))}
       limit={limit}
-      lastSyncRunAt={syncState?.lastRunAt ? syncState.lastRunAt.toISOString() : null}
-      filters={{ q, agent, from, to, sort }}
-      agentOptions={agentOptions.map((x) => x.agentName).filter((x): x is string => !!x)}
+      counts={counts}
+      filters={{ q, portal, from, to }}
     />
   );
 }
