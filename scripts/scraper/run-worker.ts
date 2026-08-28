@@ -23,6 +23,18 @@ const killer = setTimeout(() => {
 }, MAX_RUNTIME_MS);
 
 async function main() {
+  // Modo PRUEBA de publicación (on-demand): en vez de scrapear, crea un borrador
+  // dummy en cada portal y termina. Se activa con SCRAPER_PUBLISH_TEST=1 y se
+  // apaga sacando la var (no correr agendado: spamea borradores). Ver
+  // scripts/scraper/publish-both-test.ts.
+  if (process.env.SCRAPER_PUBLISH_TEST === "1") {
+    console.log("[worker] MODO PUBLISH TEST — creando borradores dummy...");
+    const { publishBothDrafts } = await import("./publish-both-test");
+    await publishBothDrafts();
+    console.log("[worker] Publish test listo.");
+    return;
+  }
+
   const force = process.argv.includes("--force") || process.env.SCRAPER_FORCE === "1";
   const result = await runScraperLeads(force);
 
