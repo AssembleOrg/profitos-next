@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatDate as fmtDate, formatDateTime as fmtDateTime } from "@/lib/datetime";
+import { formatDateTime as fmtDateTime } from "@/lib/datetime";
 
 const SPRING = { type: "spring" as const, stiffness: 400, damping: 30 };
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -15,9 +15,7 @@ interface DashboardOverview {
   kpis: {
     propertiesActive: number;
     propertiesNewPeriod: number;
-    contactsNewPeriod: number;
     pendingPropertyFollowUps: number;
-    pendingContactFollowUps: number;
     overduePropertyFollowUps: number;
   };
   lastProperties: Array<{
@@ -31,18 +29,8 @@ interface DashboardOverview {
     operationCurrency: string | null;
     createdAt: string;
   }>;
-  lastContacts: Array<{
-    id: string;
-    name: string;
-    email: string | null;
-    cellphone: string | null;
-    phone: string | null;
-    leadStatus: string | null;
-    agentName: string | null;
-    externalCreatedAt: string | null;
-  }>;
   recentFollowUps: Array<{
-    kind: "propiedad" | "consulta";
+    kind: "propiedad";
     id: string;
     title: string;
     status: string;
@@ -50,7 +38,7 @@ interface DashboardOverview {
     updatedAt: string;
   }>;
   recentActions: Array<{
-    kind: "propiedad" | "consulta";
+    kind: "propiedad";
     id: string;
     type: string;
     description: string;
@@ -65,11 +53,6 @@ function formatDateTime(value: string | null) {
   try { return fmtDateTime(value); } catch { return "—"; }
 }
 
-function formatDateShort(value: string | null) {
-  if (!value) return "—";
-  try { return fmtDate(value); } catch { return "—"; }
-}
-
 // ─── KPI Cards ───────────────────────────────────────────────────────────────
 // 4 cards clicables. Mobile: carousel snap. Desktop: grid 4 cols.
 // Cada card navega a la lista filtrada correspondiente.
@@ -80,7 +63,7 @@ function KpiStrip({
   kpis: DashboardOverview["kpis"];
   selectedDays: number;
 }) {
-  const totalPending = kpis.pendingPropertyFollowUps + kpis.pendingContactFollowUps;
+  const totalPending = kpis.pendingPropertyFollowUps;
   const isOverdue = kpis.overduePropertyFollowUps > 0;
   const isPendingZero = totalPending === 0;
 
@@ -101,18 +84,11 @@ function KpiStrip({
       href: "/propiedades?status=activa",
     },
     {
-      label: "Consultas",
-      value: kpis.contactsNewPeriod,
-      sub: `nuevas en ${periodLabel}`,
-      variant: "default",
-      href: `/consultants`,
-    },
-    {
       label: "Pendientes",
       value: isPendingZero ? "✓" : totalPending,
       sub: isPendingZero ? "Al día" : "seguimientos",
       variant: isPendingZero ? "green" : "default",
-      href: "/consultants-followups?status=pendiente",
+      href: "/seguimientos?status=pendiente",
     },
     {
       label: "Vencidos",
@@ -301,9 +277,8 @@ function KpiStrip({
 // ─── Tabbed Feed ─────────────────────────────────────────────────────────────
 const TABS = [
   { key: "propiedades", label: "Propiedades", href: "/propiedades" },
-  { key: "contactos", label: "Contactos", href: "/consultants" },
-  { key: "seguimientos", label: "Seguimientos", href: "/consultants-followups" },
-  { key: "acciones", label: "Acciones", href: "/consultants-followups" },
+  { key: "seguimientos", label: "Seguimientos", href: "/seguimientos" },
+  { key: "acciones", label: "Acciones", href: "/seguimientos" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -319,15 +294,6 @@ function TabbedFeed({ data }: { data: DashboardOverview }) {
         secondary={`${item.operationType ?? "Op."} · ${item.operationCurrency ?? ""} ${item.operationPrice?.toLocaleString("es-AR") ?? "s/d"}`}
         badge={item.status}
         badgeColor="olive"
-      />
-    )),
-    contactos: data.lastContacts.map((item) => (
-      <FeedRow
-        key={item.id}
-        primary={item.name}
-        secondary={`${item.leadStatus ?? "Sin estado"} · ${item.agentName ?? "Sin agente"}`}
-        badge={item.externalCreatedAt ? formatDateShort(item.externalCreatedAt) : undefined}
-        badgeColor="neutral"
       />
     )),
     seguimientos: data.recentFollowUps.map((item) => (

@@ -71,32 +71,23 @@ export async function GET(request: NextRequest, context: { params: Promise<Recor
   // ── fetch data ──
   const [
     segPropAsignados, segPropCompletados, segPropVencidos,
-    segContactosAsignados, visitasRealizadas, clientesCreados,
-    accionesSeg, accionesContacto, cambiosEstado,
-    segPropPorEstadoRaw, segContactosPorEstadoRaw,
-    accionesPorTipoRaw, accionesContactoPorTipoRaw,
-    seguimientosProp, seguimientosContacto, visitas,
+    visitasRealizadas, clientesCreados,
+    accionesSeg,
+    segPropPorEstadoRaw,
+    accionesPorTipoRaw,
+    seguimientosProp, visitas,
   ] = await Promise.all([
     prisma.propertyFollowUp.count({ where: { assignedToUserId: userId, createdAt: dateRange } }),
     prisma.propertyFollowUp.count({ where: { assignedToUserId: userId, status: "hecho", updatedAt: dateRange } }),
     prisma.propertyFollowUp.count({ where: { assignedToUserId: userId, status: { notIn: ["hecho", "cancelado"] }, dueDate: { lt: new Date() } } }),
-    prisma.contactFollowUp.count({ where: { assignedToUserId: userId, createdAt: dateRange } }),
     prisma.visit.count({ where: { userId, date: dateRange } }),
     prisma.client.count({ where: { userId, createdAt: dateRange } }),
     prisma.followUpAction.count({ where: { createdByUserId: userId, createdAt: dateRange } }),
-    prisma.contactFollowUpAction.count({ where: { createdByUserId: userId, createdAt: dateRange } }),
-    prisma.contactFollowUpStatusChange.count({ where: { changedByUserId: userId, createdAt: dateRange } }),
     prisma.propertyFollowUp.groupBy({ by: ["status"], where: { assignedToUserId: userId, createdAt: dateRange }, _count: { _all: true } }),
-    prisma.contactFollowUp.groupBy({ by: ["status"], where: { assignedToUserId: userId, createdAt: dateRange }, _count: { _all: true } }),
     prisma.followUpAction.groupBy({ by: ["type"], where: { createdByUserId: userId, createdAt: dateRange }, _count: { _all: true } }),
-    prisma.contactFollowUpAction.groupBy({ by: ["type"], where: { createdByUserId: userId, createdAt: dateRange }, _count: { _all: true } }),
     prisma.propertyFollowUp.findMany({
       where: { assignedToUserId: userId, createdAt: dateRange }, orderBy: { createdAt: "desc" }, take: 25,
       select: { title: true, status: true, dueDate: true, property: { select: { address: true } }, _count: { select: { actions: true } } },
-    }),
-    prisma.contactFollowUp.findMany({
-      where: { assignedToUserId: userId, createdAt: dateRange }, orderBy: { createdAt: "desc" }, take: 25,
-      select: { status: true, recentContact: { select: { name: true, email: true, cellphone: true } }, _count: { select: { actions: true } } },
     }),
     prisma.visit.findMany({
       where: { userId, date: dateRange }, orderBy: { date: "desc" }, take: 25,
@@ -105,7 +96,7 @@ export async function GET(request: NextRequest, context: { params: Promise<Recor
   ]);
 
   // ── computed ──
-  const totalAcciones = accionesSeg + accionesContacto;
+  const totalAcciones = accionesSeg;
   const dias = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / 86400000));
   const tasaResolucion = segPropAsignados > 0 ? Math.round((segPropCompletados / segPropAsignados) * 100) : null;
   const actPorDia = Math.round((totalAcciones / dias) * 10) / 10;
@@ -114,11 +105,8 @@ export async function GET(request: NextRequest, context: { params: Promise<Recor
 
   const segPropEstado: Record<string, number> = {};
   for (const r of segPropPorEstadoRaw) segPropEstado[r.status] = r._count._all;
-  const segContEstado: Record<string, number> = {};
-  for (const r of segContactosPorEstadoRaw) segContEstado[r.status] = r._count._all;
   const accTipo: Record<string, number> = {};
   for (const r of accionesPorTipoRaw) accTipo[r.type] = (accTipo[r.type] ?? 0) + r._count._all;
-  for (const r of accionesContactoPorTipoRaw) accTipo[r.type] = (accTipo[r.type] ?? 0) + r._count._all;
 
   // ── build PDF ──
   const pdf = await PDFDocument.create();
@@ -196,7 +184,6 @@ export async function GET(request: NextRequest, context: { params: Promise<Recor
   const kpis = [
     { label: "Tasa resolución", value: tasaResolucion !== null ? `${tasaResolucion}%` : "—" },
     { label: "Acciones/día", value: String(actPorDia) },
-    { label: "Contactos", value: String(seguimientosContacto.length) },
     { label: "Acciones total", value: String(totalAcciones) },
     { label: "Vencidos", value: String(segPropVencidos) },
   ];
@@ -213,11 +200,9 @@ export async function GET(request: NextRequest, context: { params: Promise<Recor
   drawSectionTitle("Indicadores del período");
   drawRow("Seg. propiedades asignados", String(segPropAsignados));
   drawRow("Seg. propiedades completados", String(segPropCompletados));
-  drawRow("Seg. contactos asignados", String(segContactosAsignados));
   drawRow("Visitas realizadas", String(visitasRealizadas));
   drawRow("Clientes creados", String(clientesCreados));
   drawRow("Acciones realizadas", String(totalAcciones));
-  drawRow("Cambios de estado", String(cambiosEstado));
 
   // ── Breakdown: seg. propiedades por estado ──
   if (Object.keys(segPropEstado).length > 0) {
@@ -228,42 +213,12 @@ export async function GET(request: NextRequest, context: { params: Promise<Recor
     }
   }
 
-  // ── Breakdown: seg. contactos por estado ──
-  if (Object.keys(segContEstado).length > 0) {
-    drawDivider();
-    drawSectionTitle("Seg. contactos por estado");
-    for (const [status, count] of Object.entries(segContEstado)) {
-      drawRow(capitalize(status), String(count));
-    }
-  }
-
   // ── Breakdown: acciones por tipo ──
   if (Object.keys(accTipo).length > 0) {
     drawDivider();
     drawSectionTitle("Acciones por tipo");
     for (const [type, count] of Object.entries(accTipo)) {
       drawRow(capitalize(type), String(count));
-    }
-  }
-
-  // ── Contactos gestionados ──
-  if (seguimientosContacto.length > 0) {
-    drawDivider();
-    drawSectionTitle(`Contactos gestionados (${seguimientosContacto.length})`);
-    for (const s of seguimientosContacto) {
-      newPageIfNeeded(28);
-      y -= 14;
-      const name = truncate(s.recentContact?.name ?? "Sin nombre", 40);
-      const contact = s.recentContact?.email ?? s.recentContact?.cellphone ?? "";
-      page.drawText(name, { x: M + 10, y, size: 8.5, font: fontB, color: C.text });
-      page.drawText(`${s._count.actions} acc.  ·  ${capitalize(s.status)}`, {
-        x: W - M - 10 - fontR.widthOfTextAtSize(`${s._count.actions} acc.  ·  ${capitalize(s.status)}`, 7.5),
-        y, size: 7.5, font: fontR, color: C.textMuted,
-      });
-      if (contact) {
-        y -= 11;
-        page.drawText(truncate(contact, 50), { x: M + 10, y, size: 7, font: fontR, color: C.textFaint });
-      }
     }
   }
 

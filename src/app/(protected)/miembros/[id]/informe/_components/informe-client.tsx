@@ -22,22 +22,18 @@ interface InformeData {
     tasaResolucion: number | null;
     actividadPorDia: number;
     totalAcciones: number;
-    contactosGestionados: number;
     segVencidos: number;
     estadoGeneral: "alto" | "moderado" | "bajo";
   };
   kpis: {
     segPropAsignados: number;
     segPropCompletados: number;
-    segContactosAsignados: number;
     visitasRealizadas: number;
     clientesCreados: number;
     totalAcciones: number;
-    cambiosEstado: number;
   };
   breakdowns: {
     segPropPorEstado: Record<string, number>;
-    segContactosPorEstado: Record<string, number>;
     accionesPorTipo: Record<string, number>;
   };
   seguimientosProp: Array<{
@@ -48,16 +44,6 @@ interface InformeData {
     createdAt: string;
     property: { id: string; address: string };
     _count: { actions: number };
-  }>;
-  seguimientosContacto: Array<{
-    id: string;
-    status: string;
-    notes: string | null;
-    createdAt: string;
-    updatedAt: string;
-    recentContact: { id: string; name: string; email: string | null; cellphone: string | null; phone: string | null };
-    _count: { actions: number };
-    statusChanges: Array<{ fromStatus: string; toStatus: string; createdAt: string }>;
   }>;
   visitas: Array<{
     id: string;
@@ -110,15 +96,11 @@ const STATUS_COLORS: Record<string, string> = {
 
 const TIMELINE_COLORS: Record<string, string> = {
   accion_seguimiento: "bg-sand-chip text-warning",
-  accion_contacto: "bg-sage-chip text-olive-light",
-  cambio_estado: "bg-info-chip text-info",
   visita: "bg-sage-chip text-olive-light",
 };
 
 const TIMELINE_LABELS: Record<string, string> = {
   accion_seguimiento: "Seg. propiedad",
-  accion_contacto: "Seg. contacto",
-  cambio_estado: "Cambio estado",
   visita: "Visita",
 };
 
@@ -266,7 +248,7 @@ export function InformeClient({ memberId, from, to }: Props) {
           <span className={`text-sm font-bold ${estadoConfig.color}`}>{estadoConfig.label}</span>
           <span className="text-xs text-text-muted">· {formatDate(data.dateRange.from)} — {formatDate(data.dateRange.to)}</span>
         </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div>
             <p className="font-display text-2xl font-bold text-text">{resumen.tasaResolucion === null ? "—" : `${resumen.tasaResolucion}%`}</p>
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Tasa resolución</p>
@@ -274,10 +256,6 @@ export function InformeClient({ memberId, from, to }: Props) {
           <div>
             <p className="font-display text-2xl font-bold text-text">{resumen.actividadPorDia}</p>
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Acciones/día</p>
-          </div>
-          <div>
-            <p className="font-display text-2xl font-bold text-text">{resumen.contactosGestionados}</p>
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Contactos gestionados</p>
           </div>
           <div>
             <p className="font-display text-2xl font-bold text-text">{resumen.totalAcciones}</p>
@@ -291,14 +269,13 @@ export function InformeClient({ memberId, from, to }: Props) {
       </motion.div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {[
           { label: "Seg. propiedades", value: kpis.segPropAsignados },
           { label: "Completados", value: kpis.segPropCompletados },
-          { label: "Seg. contactos", value: kpis.segContactosAsignados },
           { label: "Visitas", value: kpis.visitasRealizadas },
           { label: "Clientes creados", value: kpis.clientesCreados },
-          { label: "Cambios estado", value: kpis.cambiosEstado },
+          { label: "Acciones totales", value: kpis.totalAcciones },
         ].map((kpi) => (
           <div key={kpi.label} className="rounded-[18px] bg-bg px-4 py-3.5">
             <p className="font-display text-xl font-bold text-text">{kpi.value}</p>
@@ -308,7 +285,7 @@ export function InformeClient({ memberId, from, to }: Props) {
       </div>
 
       {/* Breakdowns */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Seg. propiedades por estado */}
         <div className="rounded-[20px] border border-border bg-surface p-4">
           <h3 className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Seg. propiedades por estado</h3>
@@ -317,26 +294,6 @@ export function InformeClient({ memberId, from, to }: Props) {
           ) : (
             <div className="space-y-2">
               {Object.entries(breakdowns.segPropPorEstado).map(([status, count]) => (
-                <div key={status} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className={`h-2 w-2 rounded-full ${STATUS_COLORS[status] ?? "bg-text-muted"}`} />
-                    <span className="text-sm capitalize text-text">{status}</span>
-                  </div>
-                  <span className="text-sm font-medium text-text">{count}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Seg. contactos por estado */}
-        <div className="rounded-[20px] border border-border bg-surface p-4">
-          <h3 className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Seg. contactos por estado</h3>
-          {Object.keys(breakdowns.segContactosPorEstado).length === 0 ? (
-            <p className="text-sm text-text-faint">Sin datos</p>
-          ) : (
-            <div className="space-y-2">
-              {Object.entries(breakdowns.segContactosPorEstado).map(([status, count]) => (
                 <div key={status} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className={`h-2 w-2 rounded-full ${STATUS_COLORS[status] ?? "bg-text-muted"}`} />
@@ -366,68 +323,6 @@ export function InformeClient({ memberId, from, to }: Props) {
           )}
         </div>
       </div>
-
-      {/* Contactos gestionados */}
-      {data.seguimientosContacto.length > 0 && (
-        <div className="rounded-[20px] border border-border bg-surface">
-          <div className="border-b border-border px-5 py-3">
-            <h3 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
-              Contactos gestionados ({data.seguimientosContacto.length})
-            </h3>
-          </div>
-          <div className="divide-y divide-border/50">
-            {data.seguimientosContacto.map((s) => {
-              const contactInfo = s.recentContact.email ?? s.recentContact.cellphone ?? s.recentContact.phone ?? null;
-              const isEmail = !!s.recentContact.email;
-              const lastChange = s.statusChanges.length > 0
-                ? s.statusChanges[0]
-                : null;
-              const validChange = lastChange && lastChange.fromStatus && lastChange.toStatus
-                ? `${lastChange.fromStatus} → ${lastChange.toStatus}`
-                : null;
-              return (
-                <div key={s.id} className="flex items-center justify-between px-5 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-text">{s.recentContact.name}</p>
-                    <div className="flex flex-wrap items-center gap-x-1 text-xs text-text-muted">
-                      {contactInfo ? (
-                        isEmail ? (
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(contactInfo);
-                              toast.success("Mail copiado");
-                            }}
-                            className="truncate transition-colors hover:text-text"
-                            title="Copiar mail"
-                          >
-                            {contactInfo}
-                          </button>
-                        ) : (
-                          <span className="truncate">{contactInfo}</span>
-                        )
-                      ) : (
-                        <span>Sin contacto</span>
-                      )}
-                      <span>·</span>
-                      <span>{s._count.actions} accion{s._count.actions !== 1 ? "es" : ""}</span>
-                      {validChange && (
-                        <>
-                          <span>·</span>
-                          <span>Último cambio: {validChange}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="ml-3 flex shrink-0 items-center gap-1.5">
-                    <span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS[s.status] ?? "bg-text-muted"}`} />
-                    <span className="text-xs capitalize text-text-muted">{s.status}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Seguimientos de propiedades */}
       {data.seguimientosProp.length > 0 && (

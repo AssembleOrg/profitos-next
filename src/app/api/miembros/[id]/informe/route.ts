@@ -50,29 +50,21 @@ export const GET = withHandler(async (request: NextRequest, context) => {
     segPropAsignados,
     segPropCompletados,
     segPropVencidos,
-    segContactosAsignados,
     visitasRealizadas,
     clientesCreados,
     accionesSeg,
-    accionesContacto,
-    cambiosEstado,
 
     // Breakdown
     segPropPorEstadoRaw,
-    segContactosPorEstadoRaw,
     accionesPorTipoRaw,
-    accionesContactoPorTipoRaw,
 
     // Detail lists
     seguimientosProp,
-    seguimientosContacto,
     visitas,
     clientes,
 
     // Timeline items
     followUpActions,
-    contactFollowUpActions,
-    statusChanges,
   ] = await Promise.all([
     // KPIs
     prisma.propertyFollowUp.count({
@@ -88,9 +80,6 @@ export const GET = withHandler(async (request: NextRequest, context) => {
         dueDate: { lt: new Date() },
       },
     }),
-    prisma.contactFollowUp.count({
-      where: { assignedToUserId: userId, createdAt: dateRange },
-    }),
     prisma.visit.count({
       where: { userId, date: dateRange },
     }),
@@ -100,12 +89,6 @@ export const GET = withHandler(async (request: NextRequest, context) => {
     prisma.followUpAction.count({
       where: { createdByUserId: userId, createdAt: dateRange },
     }),
-    prisma.contactFollowUpAction.count({
-      where: { createdByUserId: userId, createdAt: dateRange },
-    }),
-    prisma.contactFollowUpStatusChange.count({
-      where: { changedByUserId: userId, createdAt: dateRange },
-    }),
 
     // Breakdowns
     prisma.propertyFollowUp.groupBy({
@@ -113,17 +96,7 @@ export const GET = withHandler(async (request: NextRequest, context) => {
       where: { assignedToUserId: userId, createdAt: dateRange },
       _count: { _all: true },
     }),
-    prisma.contactFollowUp.groupBy({
-      by: ["status"],
-      where: { assignedToUserId: userId, createdAt: dateRange },
-      _count: { _all: true },
-    }),
     prisma.followUpAction.groupBy({
-      by: ["type"],
-      where: { createdByUserId: userId, createdAt: dateRange },
-      _count: { _all: true },
-    }),
-    prisma.contactFollowUpAction.groupBy({
       by: ["type"],
       where: { createdByUserId: userId, createdAt: dateRange },
       _count: { _all: true },
@@ -141,28 +114,6 @@ export const GET = withHandler(async (request: NextRequest, context) => {
         createdAt: true,
         property: { select: { id: true, address: true } },
         _count: { select: { actions: true } },
-      },
-    }),
-
-    // Detail: contact follow-ups
-    prisma.contactFollowUp.findMany({
-      where: { assignedToUserId: userId, createdAt: dateRange },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        status: true,
-        notes: true,
-        createdAt: true,
-        updatedAt: true,
-        recentContact: {
-          select: { id: true, name: true, email: true, cellphone: true, phone: true },
-        },
-        _count: { select: { actions: true } },
-        statusChanges: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-          select: { fromStatus: true, toStatus: true, createdAt: true },
-        },
       },
     }),
 
@@ -210,37 +161,6 @@ export const GET = withHandler(async (request: NextRequest, context) => {
         },
       },
     }),
-
-    // Timeline: contact follow-up actions
-    prisma.contactFollowUpAction.findMany({
-      where: { createdByUserId: userId, createdAt: dateRange },
-      orderBy: { actionAt: "desc" },
-      select: {
-        id: true,
-        type: true,
-        description: true,
-        actionAt: true,
-        followUp: {
-          select: { recentContact: { select: { name: true } } },
-        },
-      },
-    }),
-
-    // Timeline: status changes
-    prisma.contactFollowUpStatusChange.findMany({
-      where: { changedByUserId: userId, createdAt: dateRange },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        fromStatus: true,
-        toStatus: true,
-        note: true,
-        createdAt: true,
-        followUp: {
-          select: { recentContact: { select: { name: true } } },
-        },
-      },
-    }),
   ]);
 
   // Build timeline
@@ -251,20 +171,6 @@ export const GET = withHandler(async (request: NextRequest, context) => {
       type: a.type,
       description: a.description,
       entity: a.followUp.property.address,
-    })),
-    ...contactFollowUpActions.map((a) => ({
-      kind: "accion_contacto" as const,
-      date: a.actionAt.toISOString(),
-      type: a.type,
-      description: a.description,
-      entity: a.followUp.recentContact.name,
-    })),
-    ...statusChanges.map((s) => ({
-      kind: "cambio_estado" as const,
-      date: s.createdAt.toISOString(),
-      type: "estado",
-      description: `${s.fromStatus} → ${s.toStatus}${s.note ? ` (${s.note})` : ""}`,
-      entity: s.followUp.recentContact.name,
     })),
     ...visitas.map((v) => ({
       kind: "visita" as const,
@@ -279,15 +185,11 @@ export const GET = withHandler(async (request: NextRequest, context) => {
   const segPropPorEstado: Record<string, number> = {};
   for (const r of segPropPorEstadoRaw) segPropPorEstado[r.status] = r._count._all;
 
-  const segContactosPorEstado: Record<string, number> = {};
-  for (const r of segContactosPorEstadoRaw) segContactosPorEstado[r.status] = r._count._all;
-
   const allActionTypes: Record<string, number> = {};
   for (const r of accionesPorTipoRaw) allActionTypes[r.type] = (allActionTypes[r.type] ?? 0) + r._count._all;
-  for (const r of accionesContactoPorTipoRaw) allActionTypes[r.type] = (allActionTypes[r.type] ?? 0) + r._count._all;
 
   // Resumen ejecutivo
-  const totalAcciones = accionesSeg + accionesContacto;
+  const totalAcciones = accionesSeg;
   const diasEnRango = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)));
   const tasaResolucion = segPropAsignados > 0 ? Math.round((segPropCompletados / segPropAsignados) * 100) : null;
   const actividadPorDia = Math.round((totalAcciones / diasEnRango) * 10) / 10;
@@ -310,37 +212,24 @@ export const GET = withHandler(async (request: NextRequest, context) => {
       tasaResolucion,
       actividadPorDia,
       totalAcciones,
-      contactosGestionados: seguimientosContacto.length,
       segVencidos: segPropVencidos,
       estadoGeneral,
     },
     kpis: {
       segPropAsignados,
       segPropCompletados,
-      segContactosAsignados,
       visitasRealizadas,
       clientesCreados,
       totalAcciones,
-      cambiosEstado,
     },
     breakdowns: {
       segPropPorEstado,
-      segContactosPorEstado,
       accionesPorTipo: allActionTypes,
     },
     seguimientosProp: seguimientosProp.map((s) => ({
       ...s,
       dueDate: s.dueDate?.toISOString() ?? null,
       createdAt: s.createdAt.toISOString(),
-    })),
-    seguimientosContacto: seguimientosContacto.map((s) => ({
-      ...s,
-      createdAt: s.createdAt.toISOString(),
-      updatedAt: s.updatedAt.toISOString(),
-      statusChanges: s.statusChanges.map((sc) => ({
-        ...sc,
-        createdAt: sc.createdAt.toISOString(),
-      })),
     })),
     visitas: visitas.map((v) => ({
       ...v,

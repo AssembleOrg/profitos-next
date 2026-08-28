@@ -4,25 +4,15 @@ import { useState, useEffect } from "react";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
 export interface NotificationItem {
-  kind: "contact" | "followup_assignment" | "contact_followup" | "property" | "overdue_followup";
+  kind: "followup_assignment" | "property" | "overdue_followup";
   eventAt: string;
   id: string;
-  name?: string;
-  email?: string | null;
-  cellphone?: string | null;
-  phone?: string | null;
-  leadStatus?: string | null;
-  agentName?: string | null;
-  agentEmail?: string | null;
-  externalCreatedAt?: string | null;
   createdAt?: string;
-  externalId?: number;
   title?: string | null;
   status?: string;
   dueDate?: string | null;
   updatedAt?: string;
   property?: { id: string; address: string };
-  recentContact?: { id: string; name: string; email: string | null; cellphone: string | null };
   assignedToUser?: { id: string; fullName: string | null; email: string };
   assignedByUser?: { id: string; fullName: string | null; email: string };
   address?: string;
@@ -58,7 +48,7 @@ export function useNotifications() {
       }
       const lastSeenMs = new Date(lastSeen).getTime();
       const count = items.filter((item) => {
-        const eventAt = item.eventAt ?? item.externalCreatedAt ?? item.createdAt;
+        const eventAt = item.eventAt ?? item.createdAt;
         if (!eventAt) return false;
         return new Date(eventAt).getTime() > lastSeenMs;
       }).length;
@@ -86,9 +76,6 @@ export function useNotifications() {
     const schema = process.env.NEXT_PUBLIC_DB_SCHEMA ?? "profitos";
     const channel = supabase
       .channel("bottom-nav-notifications")
-      .on("postgres_changes", { event: "INSERT", schema, table: "jp_ultimos_contactos" }, () => void loadNotifications())
-      .on("postgres_changes", { event: "INSERT", schema, table: "jp_contact_followups" }, () => void loadNotifications())
-      .on("postgres_changes", { event: "UPDATE", schema, table: "jp_contact_followups" }, () => void loadNotifications())
       .on("postgres_changes", { event: "INSERT", schema, table: "jp_propiedades" }, () => void loadNotifications())
       .on("postgres_changes", { event: "INSERT", schema, table: "jp_property_followups" }, () => void loadNotifications())
       .on("postgres_changes", { event: "UPDATE", schema, table: "jp_property_followups" }, () => void loadNotifications())

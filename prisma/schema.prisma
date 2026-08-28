@@ -37,10 +37,6 @@ model User {
   assignedFollowUps  PropertyFollowUp[] @relation("FollowUpAssignedTo")
   createdFollowUps   PropertyFollowUp[] @relation("FollowUpAssignedBy")
   followUpActions    FollowUpAction[]   @relation("FollowUpActionCreatedBy")
-  assignedContactFollowUps ContactFollowUp[] @relation("ContactFollowUpAssignedTo")
-  createdContactFollowUps  ContactFollowUp[] @relation("ContactFollowUpAssignedBy")
-  contactFollowUpActions   ContactFollowUpAction[] @relation("ContactFollowUpActionCreatedBy")
-  contactFollowUpStatusChanges ContactFollowUpStatusChange[] @relation("ContactFollowUpStatusChangedBy")
   tasaciones           Tasacion[]
   assignedObjectiveCards ObjectiveCard[]   @relation("ObjectiveCardAssignedTo")
   createdObjectiveCards  ObjectiveCard[]   @relation("ObjectiveCardCreatedBy")
@@ -259,81 +255,6 @@ model FollowUpAction {
   createdAt       DateTime         @default(now()) @map("created_at")
 
   @@map("jp_followup_actions")
-}
-
-model RecentContact {
-  id               String    @id @default(cuid())
-  externalId       Int       @unique @map("external_id")
-  source           String    @default("legacy")
-  name             String
-  email            String?
-  phone            String?
-  cellphone        String?
-  leadStatus       String?   @map("lead_status")
-  isCompany        Boolean?  @map("is_company")
-  isOwner          Boolean?  @map("is_owner")
-  agentId          Int?      @map("agent_id")
-  agentName        String?   @map("agent_name")
-  agentEmail       String?   @map("agent_email")
-  agentPhone       String?   @map("agent_phone")
-  tags             Json?
-  externalCreatedAt DateTime? @map("external_created_at")
-  externalDeletedAt DateTime? @map("external_deleted_at")
-  rawPayload       Json?     @map("raw_payload")
-  syncAt           DateTime? @map("sync_at")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  followUp         ContactFollowUp?
-
-  @@map("jp_ultimos_contactos")
-}
-
-model ContactFollowUp {
-  id               String                    @id @default(cuid())
-  recentContactId  String                    @unique @map("recent_contact_id")
-  recentContact    RecentContact             @relation(fields: [recentContactId], references: [id], onDelete: Cascade)
-  status           String                    @default("pendiente")
-  notes            String?
-  assignedToUserId String?                   @map("assigned_to_user_id")
-  assignedToUser   User?                     @relation("ContactFollowUpAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
-  assignedByUserId String?                   @map("assigned_by_user_id")
-  assignedByUser   User?                     @relation("ContactFollowUpAssignedBy", fields: [assignedByUserId], references: [id], onDelete: SetNull)
-  actions          ContactFollowUpAction[]
-  statusChanges    ContactFollowUpStatusChange[]
-  createdAt        DateTime                  @default(now()) @map("created_at")
-  updatedAt        DateTime                  @updatedAt @map("updated_at")
-
-  @@map("jp_contact_followups")
-}
-
-model ContactFollowUpAction {
-  id              String          @id @default(cuid())
-  followUpId      String          @map("followup_id")
-  followUp        ContactFollowUp @relation(fields: [followUpId], references: [id], onDelete: Cascade)
-  type            String          @default("nota")
-  description     String
-  audioUrl        String?         @map("audio_url")
-  attachments     Json?
-  actionAt        DateTime        @map("action_at")
-  createdByUserId String?         @map("created_by_user_id")
-  createdByUser   User?           @relation("ContactFollowUpActionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  createdAt       DateTime        @default(now()) @map("created_at")
-
-  @@map("jp_contact_followup_actions")
-}
-
-model ContactFollowUpStatusChange {
-  id              String          @id @default(cuid())
-  followUpId      String          @map("followup_id")
-  followUp        ContactFollowUp @relation(fields: [followUpId], references: [id], onDelete: Cascade)
-  fromStatus      String?         @map("from_status")
-  toStatus        String          @map("to_status")
-  note            String
-  changedByUserId String?         @map("changed_by_user_id")
-  changedByUser   User?           @relation("ContactFollowUpStatusChangedBy", fields: [changedByUserId], references: [id], onDelete: SetNull)
-  createdAt       DateTime        @default(now()) @map("created_at")
-
-  @@map("jp_contact_followup_status_changes")
 }
 
 model IntegrationSyncState {

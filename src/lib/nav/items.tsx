@@ -82,20 +82,6 @@ export const NAV_META_LIST: NavMeta[] = [
     ),
   },
   {
-    href: "/consultants-followups",
-    label: "Seg. consultas",
-    shortLabel: "Consultas",
-    group: "clientes",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 4h18v12H3z" />
-        <path d="M7 20h10" />
-        <path d="M9 16v4" />
-        <path d="M15 16v4" />
-      </svg>
-    ),
-  },
-  {
     href: "/preguntas",
     label: "Preguntas ML",
     shortLabel: "Preguntas",

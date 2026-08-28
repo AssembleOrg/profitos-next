@@ -10,17 +10,13 @@ function formatNotifDate(value: string) {
 
 // Estilos y etiquetas por tipo de notificación (evita ternarios anidados).
 const NOTIF_BADGE_CLASS: Record<NotificationItem["kind"], string> = {
-  contact: "bg-info-chip text-info",
   followup_assignment: "bg-warning-chip text-warning",
-  contact_followup: "bg-sage-chip text-olive-light",
   overdue_followup: "bg-clay-chip text-terra",
   property: "bg-sage-chip text-success",
 };
 
 const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
-  contact: "Nuevo contacto",
   followup_assignment: "Seguimiento",
-  contact_followup: "Seg. consulta",
   overdue_followup: "Vencido",
   property: "Propiedad nueva",
 };
@@ -28,8 +24,6 @@ const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
 function notifOrigin(item: NotificationItem): string {
   const propUser = item.createdByUser?.fullName?.trim() || item.createdByUser?.email;
   switch (item.kind) {
-    case "contact":
-      return `Agente: ${item.agentName?.trim() || item.agentEmail || "Sin agente"}`;
     case "property":
       return propUser
         ? `Usuario: ${propUser}`
@@ -42,24 +36,10 @@ function notifOrigin(item: NotificationItem): string {
 function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
   const responsable = item.assignedToUser?.fullName?.trim() || item.assignedToUser?.email || "Sin responsable";
   switch (item.kind) {
-    case "contact":
-      return (
-        <>
-          <p className="text-sm font-bold leading-tight text-text">{item.name ?? "Contacto sin nombre"}</p>
-          <p className="mt-0.5 text-xs text-text-faint">Estado: {item.leadStatus ?? "Sin estado"} · {notifOrigin(item)}</p>
-        </>
-      );
     case "followup_assignment":
       return (
         <>
           <p className="text-sm font-bold leading-tight text-text">{item.property?.address ?? "Propiedad sin dirección"}</p>
-          <p className="mt-0.5 text-xs text-text-faint">Responsable: {responsable} · Estado: {item.status ?? "pendiente"}</p>
-        </>
-      );
-    case "contact_followup":
-      return (
-        <>
-          <p className="text-sm font-bold leading-tight text-text">{item.recentContact?.name ?? "Consulta"}</p>
           <p className="mt-0.5 text-xs text-text-faint">Responsable: {responsable} · Estado: {item.status ?? "pendiente"}</p>
         </>
       );
@@ -133,7 +113,6 @@ export function NotifPanelBody({
       <div className="mx-4 mb-3 flex items-center justify-between gap-2 border-t border-border pt-2.5">
         <NotifFooterLink href="/consultants" label="Últimos contactos" onNavigate={onNavigate} />
         <NotifFooterLink href="/seguimientos" label="Seg. propiedades" onNavigate={onNavigate} />
-        <NotifFooterLink href="/consultants-followups" label="Seg. consultas" onNavigate={onNavigate} />
       </div>
     </>
   );

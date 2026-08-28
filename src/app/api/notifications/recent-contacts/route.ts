@@ -9,31 +9,9 @@ export const GET = withHandler(async (request) => {
   const limitRaw = Number.parseInt(searchParams.get("limit") ?? "15", 10);
   const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(100, limitRaw)) : 15;
 
-  const contactWhere = auth.isAdmin
-    ? {}
-    : { agentEmail: { equals: auth.email, mode: "insensitive" as const } };
-
   const followUpWhere = auth.isAdmin ? {} : { assignedToUserId: auth.userId };
 
-  const [contacts, followUps, contactFollowUps, properties, overdueFollowUps] = await Promise.all([
-    prisma.recentContact.findMany({
-      where: contactWhere,
-      orderBy: [{ externalCreatedAt: "desc" }, { externalId: "desc" }],
-      take: limit,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        cellphone: true,
-        phone: true,
-        leadStatus: true,
-        agentName: true,
-        agentEmail: true,
-        externalCreatedAt: true,
-        createdAt: true,
-        externalId: true,
-      },
-    }),
+  const [followUps, properties, overdueFollowUps] = await Promise.all([
     prisma.propertyFollowUp.findMany({
       where: followUpWhere,
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
@@ -47,26 +25,6 @@ export const GET = withHandler(async (request) => {
         property: { select: { id: true, address: true } },
         assignedToUser: { select: { id: true, fullName: true, email: true } },
         assignedByUser: { select: { id: true, fullName: true, email: true } },
-      },
-    }),
-    prisma.contactFollowUp.findMany({
-      where: auth.isAdmin ? {} : { assignedToUserId: auth.userId },
-      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-      take: limit,
-      select: {
-        id: true,
-        status: true,
-        updatedAt: true,
-        createdAt: true,
-        recentContact: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            cellphone: true,
-          },
-        },
-        assignedToUser: { select: { id: true, fullName: true, email: true } },
       },
     }),
     prisma.property.findMany({
@@ -109,15 +67,6 @@ export const GET = withHandler(async (request) => {
   ]);
 
   const merged = [
-    ...contacts.map((item) => ({
-      kind: "contact" as const,
-      eventAt: item.externalCreatedAt ?? item.createdAt,
-      payload: {
-        ...item,
-        externalCreatedAt: item.externalCreatedAt?.toISOString() ?? null,
-        createdAt: item.createdAt.toISOString(),
-      },
-    })),
     ...followUps.map((item) => ({
       kind: "followup_assignment" as const,
       eventAt: item.updatedAt,
@@ -130,18 +79,6 @@ export const GET = withHandler(async (request) => {
         property: item.property,
         assignedToUser: item.assignedToUser,
         assignedByUser: item.assignedByUser,
-      },
-    })),
-    ...contactFollowUps.map((item) => ({
-      kind: "contact_followup" as const,
-      eventAt: item.updatedAt,
-      payload: {
-        id: item.id,
-        status: item.status,
-        updatedAt: item.updatedAt.toISOString(),
-        createdAt: item.createdAt.toISOString(),
-        recentContact: item.recentContact,
-        assignedToUser: item.assignedToUser,
       },
     })),
     ...properties.map((item) => ({
