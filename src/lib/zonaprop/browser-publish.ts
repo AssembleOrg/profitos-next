@@ -38,20 +38,34 @@ function headless(): boolean {
   return process.env.SCRAPER_HEADLESS !== "false";
 }
 
-/** Proxy residencial para publicar (mismo formato que el scraper). */
+/**
+ * Proxy residencial para publicar. Acepta dos formatos:
+ *  - ZONAPROP_PROXY=http://user:pass@host:port  (combinado), o
+ *  - PROXY_SERVER / PROXY_USER / PROXY_PASS      (separado).
+ */
 function proxy(): { server: string; username?: string; password?: string } | undefined {
   const url = process.env.ZONAPROP_PROXY?.trim();
-  if (!url) return undefined;
-  try {
-    const u = new URL(url);
-    return {
-      server: `${u.protocol}//${u.host}`,
-      username: u.username ? decodeURIComponent(u.username) : undefined,
-      password: u.password ? decodeURIComponent(u.password) : undefined,
-    };
-  } catch {
-    return undefined;
+  if (url) {
+    try {
+      const u = new URL(url);
+      return {
+        server: `${u.protocol}//${u.host}`,
+        username: u.username ? decodeURIComponent(u.username) : undefined,
+        password: u.password ? decodeURIComponent(u.password) : undefined,
+      };
+    } catch {
+      /* cae al formato separado */
+    }
   }
+  const server = process.env.PROXY_SERVER?.trim();
+  if (server) {
+    return {
+      server,
+      username: process.env.PROXY_USER?.trim() || undefined,
+      password: process.env.PROXY_PASS?.trim() || undefined,
+    };
+  }
+  return undefined;
 }
 
 type StorageState = {
