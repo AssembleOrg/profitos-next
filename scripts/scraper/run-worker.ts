@@ -11,6 +11,7 @@
 import "dotenv/config";
 import { prisma } from "@/lib/prisma/client";
 import { runScraperLeads } from "@/lib/scraper/run";
+import { processPendingPublishJobs } from "@/lib/publish/portales";
 
 console.log("[worker] proceso iniciado", new Date().toISOString());
 
@@ -33,6 +34,15 @@ async function main() {
     await publishBothDrafts();
     console.log("[worker] Publish test listo.");
     return;
+  }
+
+  // Cola de publicaciones (ZonaProp/ArgenProp): siempre, sin throttle. El worker
+  // es el único con navegador+proxy para publicar.
+  try {
+    const { processed } = await processPendingPublishJobs();
+    if (processed) console.log(`[worker] Publicaciones procesadas: ${processed}`);
+  } catch (e) {
+    console.warn("[worker] Error en cola de publicaciones:", e instanceof Error ? e.message : e);
   }
 
   const force = process.argv.includes("--force") || process.env.SCRAPER_FORCE === "1";

@@ -158,6 +158,24 @@ model PropertyPublication {
   @@map("jp_property_publications")
 }
 
+// Cola de trabajos de publicación. ZonaProp/ArgenProp requieren navegador+proxy
+// (solo el worker de Railway los tiene), así que la web ENCOLA y el worker
+// procesa en su corrida. MercadoLibre no usa esto (publica sync vía su wizard).
+model PublishJob {
+  id          String    @id @default(cuid())
+  propertyId  String    @map("property_id")
+  portal      String // zonaprop | argenprop
+  action      String    @default("publish") // publish | pause | close
+  status      String    @default("pending") // pending | running | done | error
+  error       String?
+  attempts    Int       @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  processedAt DateTime? @map("processed_at")
+
+  @@index([status, portal])
+  @@map("jp_publish_jobs")
+}
+
 // Preguntas recibidas en publicaciones de portales (leads). Poblado por webhook.
 model PortalQuestion {
   id         String    @id @default(cuid())
