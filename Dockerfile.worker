@@ -18,8 +18,18 @@ RUN corepack enable && corepack prepare pnpm@10.18.1 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
-# --- 2) Google Chrome REAL ---
-# El scraper usa Chrome de Google (pasa Cloudflare mejor que el Chromium pelado).
+# --- 2) Navegador REAL: Brave ---
+# Brave pasa el anti-bot de Cloudflare mejor que Google Chrome bajo Xvfb (trae
+# anti-fingerprint propio; probado que resuelve el challenge donde Chrome come
+# 403 en el XHR). El scraper lo usa vía SCRAPER_CHROME_PATH (executablePath).
+# Se instala Chrome también como fallback por si se desactiva el env.
+RUN curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg \
+      https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg \
+ && echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg arch=amd64] https://brave-browser-apt-release.s3.brave.com/ stable main" \
+      > /etc/apt/sources.list.d/brave-browser-release.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends brave-browser \
+ && rm -rf /var/lib/apt/lists/*
 RUN pnpm exec playwright install chrome
 
 # --- 3) Código + cliente Prisma (el worker NO necesita compilar la web) ---
@@ -29,6 +39,8 @@ RUN pnpm run db:generate
 # El navegador corre HEADED bajo Xvfb (Railway no tiene monitor).
 ENV SCRAPER_HEADLESS=false
 ENV NODE_ENV=production
+# Usar Brave (pasa Cloudflare); si se borra, cae al canal "chrome".
+ENV SCRAPER_CHROME_PATH=/usr/bin/brave-browser
 
 # Arrancamos Xvfb a mano (más confiable que xvfb-run, que se cuelga acá),
 # exportamos DISPLAY, y corremos el worker como proceso principal (exec) para

@@ -23,7 +23,7 @@ const killer = setTimeout(() => {
 }, MAX_RUNTIME_MS);
 
 async function main() {
-  const force = process.argv.includes("--force");
+  const force = process.argv.includes("--force") || process.env.SCRAPER_FORCE === "1";
   const result = await runScraperLeads(force);
 
   if (!result.ran) {
