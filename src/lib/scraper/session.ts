@@ -63,7 +63,7 @@ export async function markSessionOk(portal: Portal): Promise<void> {
 /**
  * Devuelve el valor de una cookie de la sesión GUARDADA en la DB (sin abrir
  * navegador). Respeta el flag `valid`: si la sesión venció, devuelve null.
- * Lo usa el transporte por ZenRows, que no tiene un contexto de browser vivo.
+ * Útil para leer cookies sin abrir navegador.
  */
 export async function getStoredCookie(portal: Portal, name: string): Promise<string | null> {
   const state = await loadStorageState(portal);
@@ -88,9 +88,17 @@ function parseProxy(url: string | undefined): ProxyConfig | undefined {
   }
 }
 
-/** Proxy configurado para un portal, vía env `<PORTAL>_PROXY` (ej: ZONAPROP_PROXY). */
+/** Proxy: `<PORTAL>_PROXY` o el genérico PROXY_SERVER / USER / PASS. */
 function proxyForPortal(portal: Portal): ProxyConfig | undefined {
-  return parseProxy(process.env[`${portal.toUpperCase()}_PROXY`]);
+  const named = parseProxy(process.env[`${portal.toUpperCase()}_PROXY`]);
+  if (named) return named;
+  const server = process.env.PROXY_SERVER?.trim();
+  if (!server) return undefined;
+  return {
+    server,
+    username: process.env.PROXY_USER?.trim() || undefined,
+    password: process.env.PROXY_PASS?.trim() || undefined,
+  };
 }
 
 /**
@@ -107,6 +115,13 @@ async function launchPersistent(userDataDir: string, proxy?: ProxyConfig): Promi
     timezoneId: "America/Argentina/Buenos_Aires",
     ...(proxy ? { proxy } : {}),
   };
+  // Chrome real pasa el anti-bot de Cloudflare; el chromium bundle no. En local
+  // sin Google Chrome instalado, apuntar a un Chromium real (ej: Brave) con
+  // SCRAPER_CHROME_PATH. Si no está, se intenta el canal "chrome" del sistema.
+  const execPath = process.env.SCRAPER_CHROME_PATH?.trim();
+  if (execPath) {
+    return await chromiumExtra.launchPersistentContext(userDataDir, { ...opts, executablePath: execPath });
+  }
   try {
     return await chromiumExtra.launchPersistentContext(userDataDir, { ...opts, channel: "chrome" });
   } catch {
@@ -118,6 +133,24 @@ async function launchPersistent(userDataDir: string, proxy?: ProxyConfig): Promi
 export async function getCookie(context: BrowserContext, name: string): Promise<string | null> {
   const cookies = await context.cookies();
   return cookies.find((c) => c.name === name)?.value ?? null;
+}
+
+function looksLikeCloudflare(title: string, url = "", body = ""): boolean {
+  return /just a moment|un momento|cf-|challenge|verify you are human|verifica que eres/i.test(
+    `${title} ${url} ${body}`
+  );
+}
+
+/** Espera a que Cloudflare termine el challenge JS. Devuelve false si no pasó. */
+export async function waitForCloudflare(page: Page, timeoutMs = 35_000): Promise<boolean> {
+  const title = await page.title().catch(() => "");
+  if (!looksLikeCloudflare(title, page.url())) return true;
+  await page
+    .waitForFunction(() => !/just a moment|un momento/i.test(document.title), { timeout: timeoutMs })
+    .catch(() => {});
+  await page.waitForTimeout(2000);
+  const after = await page.title().catch(() => "");
+  return !looksLikeCloudflare(after, page.url());
 }
 
 /**
@@ -140,6 +173,21 @@ export async function withPortalPage<T>(
     await context.addInitScript(() => {
       Object.defineProperty(navigator, "webdriver", { get: () => undefined });
     });
+    const origins = (state as { origins?: { origin: string; localStorage?: { name: string; value: string }[] }[] })
+      .origins ?? [];
+    if (origins.length) {
+      await context.addInitScript((entries) => {
+        try {
+          const match = entries.find(
+            (o) => location.origin === o.origin || location.href.startsWith(o.origin)
+          );
+          if (!match?.localStorage) return;
+          for (const { name, value } of match.localStorage) localStorage.setItem(name, value);
+        } catch {
+          /* noop */
+        }
+      }, origins);
+    }
 
     // Con proxy (se paga por tráfico), bloqueamos recursos pesados que no
     // necesitamos (imágenes/media/fuentes). No afecta el challenge JS ni la API.
@@ -155,8 +203,12 @@ export async function withPortalPage<T>(
 
     const page = context.pages()[0] ?? (await context.newPage());
     const resp = await page.goto(bootstrapUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
+    const cfOk = await waitForCloudflare(page);
+    if (!cfOk) {
+      throw new Error(`Cloudflare no resolvió el challenge en ${portal} (${page.url()})`);
+    }
 
-    if (resp && (resp.status() === 401 || resp.status() === 403)) {
+    if (resp && resp.status() === 401) {
       await markSessionInvalid(portal);
       throw new SessionExpiredError(portal);
     }
@@ -205,85 +257,4 @@ export async function fetchJsonInPage<T = unknown>(
     throw new Error(`Fetch ${url} devolvió ${res.status}`);
   }
   return JSON.parse(res.text) as T;
-}
-
-// ─── Transporte por ZenRows (API de scraping con bypass de Cloudflare) ───────
-//
-// ZonaProp bloquea la IP de datacenter de Railway. En vez de manejar un
-// navegador, delegamos el bypass a ZenRows: le pasamos la URL de la API interna
-// de ZonaProp y nuestros headers de auth (sessionid + cookie), y ZenRows
-// resuelve el challenge y nos devuelve el JSON. El sessionId autentica sin
-// importar la IP (probado), así que no necesitamos navegador para ZonaProp.
-
-const ZENROWS_ENDPOINT = "https://api.zenrows.com/v1/";
-const ZENROWS_PROXY_COUNTRY = process.env.ZENROWS_PROXY_COUNTRY ?? "ar";
-
-function zenrowsKey(): string {
-  const k = process.env.ZENROWS_API_KEY?.trim();
-  if (!k) throw new Error("Falta ZENROWS_API_KEY en el entorno.");
-  return k;
-}
-
-/** Parseo tolerante: con js_render el JSON puede venir crudo o dentro de HTML. */
-function parseJsonLoose(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start !== -1 && end > start) return JSON.parse(text.slice(start, end + 1));
-    throw new Error(`Respuesta de ZenRows no es JSON: ${text.slice(0, 200)}`);
-  }
-}
-
-/**
- * GET a una API interna del portal a través de ZenRows. Reenvía `headers` al
- * target (custom_headers=true). Reintenta ante fallos transitorios de ZenRows
- * (422 render / 429 rate / 5xx). Lanza SessionExpiredError si el target
- * responde 401/403 (sesión vencida).
- */
-export async function fetchJsonViaZenrows<T = unknown>(
-  targetUrl: string,
-  portal: Portal,
-  headers: Record<string, string> = {},
-  attempts = 2
-): Promise<T> {
-  let lastErr: Error | null = null;
-
-  for (let i = 0; i < attempts; i++) {
-    const params = new URLSearchParams({
-      url: targetUrl,
-      apikey: zenrowsKey(),
-      js_render: "true", // resuelve el challenge JS de Cloudflare
-      premium_proxy: "true", // IP residencial
-      proxy_country: ZENROWS_PROXY_COUNTRY,
-      custom_headers: "true", // reenvía nuestros headers de auth al target
-    });
-
-    const res = await fetch(`${ZENROWS_ENDPOINT}?${params.toString()}`, {
-      method: "GET",
-      headers: { accept: "application/json", ...headers },
-    });
-    const text = await res.text();
-    const contentType = res.headers.get("content-type") ?? "";
-
-    // Error propio de ZenRows (créditos, rate limit, render fallido).
-    if (contentType.includes("problem+json")) {
-      lastErr = new Error(`ZenRows ${res.status}: ${text.slice(0, 200)}`);
-      if (res.status === 422 || res.status === 429 || res.status >= 500) continue; // transitorio → reintentar
-      throw lastErr;
-    }
-
-    // Status del TARGET (ZenRows lo refleja).
-    if (res.status === 401 || res.status === 403) {
-      await markSessionInvalid(portal);
-      throw new SessionExpiredError(portal);
-    }
-    if (res.status >= 400) {
-      throw new Error(`Target ${res.status} en ${targetUrl}: ${text.slice(0, 200)}`);
-    }
-    return parseJsonLoose(text) as T;
-  }
-
-  throw lastErr ?? new Error("ZenRows: sin respuesta tras reintentos.");
 }

@@ -12,7 +12,11 @@
  * en producción hay que salir por IP residencial (env ZONAPROP_PROXY) o correr
  * desde una máquina residencial. Local (IP de casa) funciona sin proxy.
  */
-import { chromium, type BrowserContext, type Page } from "playwright";
+import { chromium as chromiumExtra } from "playwright-extra";
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
+import type { BrowserContext, Page } from "playwright";
+
+chromiumExtra.use(StealthPlugin());
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -20,6 +24,7 @@ import {
   loadStorageState,
   markSessionInvalid,
   SessionExpiredError,
+  waitForCloudflare,
   type Portal,
 } from "@/lib/scraper/session";
 import { createFullDraft, publishHeaders, type DraftInput, type StepResult, type StepRunner } from "./publish";
@@ -83,9 +88,9 @@ async function launch(userDataDir: string): Promise<BrowserContext> {
     ...(proxy() ? { proxy: proxy() } : {}),
   };
   try {
-    return await chromium.launchPersistentContext(userDataDir, { ...opts, channel: "chrome" });
+    return await chromiumExtra.launchPersistentContext(userDataDir, { ...opts, channel: "chrome" });
   } catch {
-    return await chromium.launchPersistentContext(userDataDir, opts);
+    return await chromiumExtra.launchPersistentContext(userDataDir, opts);
   }
 }
 
@@ -153,8 +158,12 @@ export async function publishDraftViaBrowser(input: DraftInput): Promise<string>
     if (cookies.length) await context.addCookies(cookies);
 
     const page = context.pages()[0] ?? (await context.newPage());
-    const resp = await page.goto(PANEL, { waitUntil: "domcontentloaded", timeout: 45_000 });
-    if (resp && (resp.status() === 401 || resp.status() === 403)) {
+    const resp = await page.goto(PANEL, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    const cfOk = await waitForCloudflare(page);
+    if (!cfOk) {
+      throw new Error(`Cloudflare no resolvió el challenge en zonaprop (${page.url()})`);
+    }
+    if (resp && resp.status() === 401) {
       await markSessionInvalid(PORTAL);
       throw new SessionExpiredError(PORTAL);
     }

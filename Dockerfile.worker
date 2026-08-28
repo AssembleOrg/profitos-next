@@ -6,8 +6,8 @@
 
 # Partimos de la imagen OFICIAL de Playwright: ya trae Chromium, TODAS las
 # librerías del sistema que el navegador necesita, y Xvfb (la pantalla virtual).
-# El tag DEBE coincidir con la versión de "playwright" en package.json (1.62.0).
-FROM mcr.microsoft.com/playwright:v1.62.0-noble
+# El tag DEBE coincidir con la versión de "playwright" en package.json (1.62.1).
+FROM mcr.microsoft.com/playwright:v1.62.1-noble
 
 WORKDIR /app
 
