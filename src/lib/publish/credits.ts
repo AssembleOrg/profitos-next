@@ -11,7 +11,7 @@
  * payload crudo (`raw`) para reajustar el parseo con datos reales del deploy.
  */
 import { prisma } from "@/lib/prisma/client";
-import { withPortalPage, fetchJsonInPage } from "@/lib/scraper/session";
+import { withPortalPage, markSessionInvalid } from "@/lib/scraper/session";
 
 export type PlanCredit = { plan: string; label: string; available: number | null; used: number | null; total: number | null };
 
@@ -29,7 +29,14 @@ function num(v: unknown): number | null {
 
 /** Detecta el plan (1/2/3) de una entrada por código numérico o por nombre. */
 function detectPlan(entry: Record<string, unknown>): { value: string; label: string } | null {
-  const code = entry.plan ?? entry.publicationPlan ?? entry.publication_plan ?? entry.planId ?? entry.id ?? entry.code;
+  const code =
+    entry.publicationPlanId ??
+    entry.plan ??
+    entry.publicationPlan ??
+    entry.publication_plan ??
+    entry.planId ??
+    entry.id ??
+    entry.code;
   const codeStr = code == null ? "" : String(code).trim();
   if (["1", "2", "3"].includes(codeStr)) {
     const m = PLAN_META.find((p) => p.value === codeStr)!;
@@ -42,6 +49,7 @@ function detectPlan(entry: Record<string, unknown>): { value: string; label: str
 
 function pickAvailable(e: Record<string, unknown>): number | null {
   return (
+    num(e.availableItems) ??
     num(e.available) ??
     num(e.remaining) ??
     num(e.availableCredits) ??
@@ -53,32 +61,68 @@ function pickAvailable(e: Record<string, unknown>): number | null {
   );
 }
 
-/** Convierte el payload crudo del portal en una lista de planes con cupo. */
+/**
+ * Forma real de /avisos-api/credits (relevada 2026-08-29):
+ *   { branchCredits: [{ creditItems: [
+ *       { publicationPlanId, publicationType, name, availableItems,
+ *         consumedItems, purchasedItems, isDevelopment } ], branchName }] }
+ * Extrae los creditItems de todas las sucursales (sumando por plan si hay más
+ * de una). Cae a un scan genérico si el payload viniera distinto.
+ */
 export function normalizeCredits(raw: unknown): PlanCredit[] {
-  // Junta todos los arrays candidatos que aparezcan en el payload.
-  const buckets: Record<string, unknown>[] = [];
-  const visit = (v: unknown) => {
-    if (Array.isArray(v)) v.forEach((x) => x && typeof x === "object" && buckets.push(x as Record<string, unknown>));
-    else if (v && typeof v === "object") {
-      const o = v as Record<string, unknown>;
-      for (const k of ["credits", "plans", "publicationPlans", "data", "items", "result"]) if (o[k]) visit(o[k]);
-    }
-  };
-  visit(raw);
+  const root = (raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}) as Record<string, unknown>;
+  const creditsResp = (root.credits as Record<string, unknown> | undefined) ?? root;
 
-  const byPlan = new Map<string, PlanCredit>();
-  for (const e of buckets) {
-    const p = detectPlan(e);
-    if (!p) continue;
-    const available = pickAvailable(e);
-    const used = num(e.used) ?? num(e.consumed) ?? num(e.consumidos);
-    const total = num(e.total) ?? num(e.cupo) ?? (available != null && used != null ? available + used : null);
-    // Si un plan aparece más de una vez, nos quedamos con el que tenga más datos.
-    const prev = byPlan.get(p.value);
-    if (!prev || (available != null && prev.available == null)) {
-      byPlan.set(p.value, { plan: p.value, label: p.label, available, used, total });
+  const items: Record<string, unknown>[] = [];
+  const branches = creditsResp?.branchCredits;
+  if (Array.isArray(branches)) {
+    for (const b of branches) {
+      const ci = (b as Record<string, unknown>)?.creditItems;
+      if (Array.isArray(ci)) items.push(...(ci as Record<string, unknown>[]));
     }
   }
+
+  const byPlan = new Map<string, PlanCredit>();
+  for (const e of items) {
+    if (e.isDevelopment === true) continue; // planes de "Desarrollo": no son el cupo estándar
+    const p = detectPlan(e);
+    if (!p) continue; // sólo 1/2/3 (Simple/Destacado/Súper)
+    const available = pickAvailable(e);
+    const used = num(e.consumedItems) ?? num(e.used) ?? num(e.consumed);
+    const total = num(e.purchasedItems) ?? num(e.total) ?? (available != null && used != null ? available + used : null);
+    const prev = byPlan.get(p.value);
+    // Si hay varias sucursales, sumamos el cupo del mismo plan.
+    byPlan.set(p.value, {
+      plan: p.value,
+      label: p.label,
+      available: (prev?.available ?? 0) + (available ?? 0),
+      used: (prev?.used ?? 0) + (used ?? 0),
+      total: (prev?.total ?? 0) + (total ?? 0),
+    });
+  }
+
+  // Fallback genérico si no hubo branchCredits (payload inesperado).
+  if (byPlan.size === 0) {
+    const buckets: Record<string, unknown>[] = [];
+    const visit = (v: unknown) => {
+      if (Array.isArray(v)) v.forEach((x) => x && typeof x === "object" && buckets.push(x as Record<string, unknown>));
+      else if (v && typeof v === "object") {
+        const o = v as Record<string, unknown>;
+        for (const k of ["credits", "plans", "publicationPlans", "creditItems", "branchCredits", "data", "items", "result"])
+          if (o[k]) visit(o[k]);
+      }
+    };
+    visit(raw);
+    for (const e of buckets) {
+      const p = detectPlan(e);
+      if (!p || e.isDevelopment === true) continue;
+      const available = pickAvailable(e);
+      const used = num(e.consumedItems) ?? num(e.used) ?? num(e.consumed);
+      const total = num(e.purchasedItems) ?? num(e.total) ?? (available != null && used != null ? available + used : null);
+      if (!byPlan.has(p.value)) byPlan.set(p.value, { plan: p.value, label: p.label, available, used, total });
+    }
+  }
+
   // Orden fijo: Simple, Destacado, Súper (3,2,1).
   return ["3", "2", "1"].map((v) => byPlan.get(v)).filter((x): x is PlanCredit => Boolean(x));
 }
@@ -93,12 +137,41 @@ const PLANS_URL =
  */
 export async function refreshZonapropCredits(): Promise<PlanCredit[]> {
   try {
+    // La API de créditos exige headers propios del panel: `x-panel-portal: ZPAR`
+    // y `sessionid` (valor de la cookie sessionId). Sin ellos devuelve 401
+    // "Role/SessionId not found". Los mandamos en el fetch in-page.
     const raw = await withPortalPage("zonaprop", "https://www.zonaprop.com.ar/panel/avisos", async (page) => {
-      const credits = await fetchJsonInPage(page, CREDITS_URL, "zonaprop").catch(() => null);
-      const plans = await fetchJsonInPage(page, PLANS_URL, "zonaprop").catch(() => null);
-      return { credits, plans };
+      return await page.evaluate(
+        async (urls) => {
+          const parts = document.cookie.split(";").map((s) => s.trim());
+          let sid = "";
+          for (const c of parts) if (c.indexOf("sessionId=") === 0) { sid = c.substring(10); break; }
+          if (!sid) for (const c of parts) if (c.indexOf("session_id=") === 0) { sid = c.substring(11); break; }
+          const h = { accept: "application/json", "x-panel-portal": "ZPAR", sessionid: sid };
+          const results: { status: number; json: unknown }[] = [];
+          for (const u of urls) {
+            try {
+              const r = await fetch(u, { credentials: "include", headers: h });
+              const t = await r.text();
+              let j: unknown = null;
+              try { j = JSON.parse(t); } catch { j = null; }
+              results.push({ status: r.status, json: j });
+            } catch {
+              results.push({ status: 0, json: null });
+            }
+          }
+          return { credits: results[0], plans: results[1] };
+        },
+        [CREDITS_URL, PLANS_URL]
+      );
     });
-    const normalized = normalizeCredits(raw);
+
+    const status = raw.credits?.status ?? 0;
+    if (status === 401 || status === 403) {
+      await markSessionInvalid("zonaprop");
+      throw new Error(`Créditos: ${status} (sesión ZonaProp vencida — reconectá el portal)`);
+    }
+    const normalized = normalizeCredits({ credits: raw.credits?.json, plans: raw.plans?.json });
     await prisma.portalCredits.upsert({
       where: { portal: "zonaprop" },
       create: { portal: "zonaprop", plans: normalized, raw: raw as object, error: null, fetchedAt: new Date() },
