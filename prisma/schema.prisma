@@ -166,6 +166,8 @@ model PublishJob {
   propertyId  String    @map("property_id")
   portal      String // zonaprop | argenprop
   action      String    @default("publish") // publish | pause | close
+  activate    Boolean   @default(false) // true = publicar ONLINE (gasta crédito); false = solo borrador
+  plan        String? // plan de publicación (ej ZonaProp: "3"=Simples) cuando activate
   status      String    @default("pending") // pending | running | done | error
   error       String?
   attempts    Int       @default(0)

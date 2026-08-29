@@ -14,12 +14,14 @@ export const POST = withHandler(async (request: NextRequest, context) => {
   const { portal } = (await context!.params) as { portal: string };
   if (!isPublishPortal(portal)) throw new AppError(400, `Portal no soportado: ${portal}`);
 
-  const body = (await request.json().catch(() => ({}))) as { propertyId?: string };
+  const body = (await request.json().catch(() => ({}))) as { propertyId?: string; activate?: boolean; plan?: string };
   if (!body.propertyId) throw new AppError(400, "Falta propertyId");
 
   const property = await prisma.property.findUnique({ where: { id: body.propertyId }, select: { id: true } });
   if (!property) throw new AppError(404, "Propiedad no encontrada");
 
-  const jobId = await enqueuePublish(body.propertyId, portal);
-  return ok({ queued: true, jobId, portal }, "Publicación encolada", path);
+  // activate:true PUBLICA (gasta 1 crédito del plan); false = solo borrador.
+  const jobId = await enqueuePublish(body.propertyId, portal, { activate: Boolean(body.activate), plan: body.plan });
+  const msg = body.activate ? "Publicación (activar) encolada" : "Borrador encolado";
+  return ok({ queued: true, jobId, portal, activate: Boolean(body.activate) }, msg, path);
 });

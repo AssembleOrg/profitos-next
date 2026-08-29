@@ -11,10 +11,13 @@
  * MercadoLibre NO pasa por acá (publica sync vía su wizard propio).
  */
 import { prisma } from "@/lib/prisma/client";
-import { publishDraftViaBrowser } from "@/lib/zonaprop/browser-publish";
-import type { DraftInput } from "@/lib/zonaprop/publish";
+import { publishViaBrowser, type FullPublishInput, type PhotoSource } from "@/lib/zonaprop/browser-publish";
+import type { Feature } from "@/lib/zonaprop/publish";
 import { createFicha, type FichaInput } from "@/lib/argenprop/publish";
 import { resolveLocation } from "@/lib/argenprop/location";
+
+/** Responsable ZonaProp (userId que recibe las consultas). Opcional. */
+const ZP_RESPONSIBLE_USER_ID = process.env.ZONAPROP_RESPONSIBLE_USER_ID?.trim() || undefined;
 
 export type PublishPortal = "zonaprop" | "argenprop";
 export const PUBLISH_PORTALS: PublishPortal[] = ["zonaprop", "argenprop"];
@@ -39,6 +42,12 @@ type PropertyForPublish = {
   bathroomAmount: number | null;
   roomAmount: number | null;
   roofedSurface: number | null;
+  totalSurface: number | null;
+  age: number | null;
+  parkingLotAmount: number | null;
+  geoLat: number | null;
+  geoLong: number | null;
+  photos: unknown;
 };
 
 const PROPERTY_SELECT = {
@@ -57,7 +66,27 @@ const PROPERTY_SELECT = {
   bathroomAmount: true,
   roomAmount: true,
   roofedSurface: true,
+  totalSurface: true,
+  age: true,
+  parkingLotAmount: true,
+  geoLat: true,
+  geoLong: true,
+  photos: true,
 } as const;
+
+/** Extrae URLs de fotos del campo Json `photos` (soporta [url] o [{url}]). */
+function photoUrls(photos: unknown): PhotoSource[] {
+  if (!Array.isArray(photos)) return [];
+  const urls: string[] = [];
+  for (const p of photos) {
+    if (typeof p === "string") urls.push(p);
+    else if (p && typeof p === "object") {
+      const u = (p as Record<string, unknown>).url ?? (p as Record<string, unknown>).src;
+      if (typeof u === "string") urls.push(u);
+    }
+  }
+  return urls.filter((u) => /^https?:\/\//.test(u)).map((url) => ({ url }));
+}
 
 function titleFor(p: PropertyForPublish): string {
   const base = (p.publicationTitle || p.address || "Propiedad").trim();
@@ -96,24 +125,51 @@ function zpCurrency(cur: string | null): string {
   return (cur ?? "USD").toUpperCase().includes("ARS") ? "ARS" : "USD";
 }
 
-function mapZonaprop(p: PropertyForPublish): DraftInput {
-  const t = zpRealEstateType(p.type);
-  const input: DraftInput = {
-    operation: { operationType: zpOperationType(p.operationType), realEstateTypeId: t.id, realEstateSubTypeId: t.sub },
-    description: { title: titleFor(p), description: descriptionFor(p) },
+// Características principales → features CFT (códigos relevados de la captura).
+function zpMainFeatures(p: PropertyForPublish): Feature[] {
+  const f: Feature[] = [];
+  const add = (id: string, v: number | null, unit?: string) => {
+    if (v !== null && v !== undefined && !Number.isNaN(v)) f.push({ feature_id: id, value: v, value_unit: unit });
   };
-  if (p.operationPrice) {
-    input.price = { currency: zpCurrency(p.operationCurrency), amount: Math.round(p.operationPrice) };
+  add("CFT100", p.totalSurface, "1"); // superficie total (m2)
+  add("CFT101", p.roofedSurface, "1"); // superficie cubierta (m2)
+  add("CFT2", p.roomAmount); // ambientes
+  add("CFT1", p.bedrooms); // dormitorios
+  add("CFT3", p.bathroomAmount); // baños
+  add("CFT7", p.parkingLotAmount); // cocheras
+  add("CFT5", p.age); // antigüedad
+  return f;
+}
+
+function mapZonaprop(p: PropertyForPublish): FullPublishInput {
+  const t = zpRealEstateType(p.type);
+  const main = zpMainFeatures(p);
+  const input: FullPublishInput = {
+    draft: {
+      operation: { operationType: zpOperationType(p.operationType), realEstateTypeId: t.id, realEstateSubTypeId: t.sub },
+      description: { title: titleFor(p), description: descriptionFor(p) },
+      ...(main.length ? { main } : {}),
+      ...(p.operationPrice
+        ? { price: { currency: zpCurrency(p.operationCurrency), amount: Math.round(p.operationPrice) } }
+        : {}),
+    },
+    photos: photoUrls(p.photos),
+    responsibleUserId: ZP_RESPONSIBLE_USER_ID,
+  };
+  if (p.geoLat && p.geoLong) {
+    input.coords = { lat: p.geoLat, lng: p.geoLong, address: p.address };
   }
   return input;
 }
 
-async function runZonaprop(p: PropertyForPublish): Promise<{ externalId: string; permalink: string }> {
-  const id = await publishDraftViaBrowser(mapZonaprop(p));
-  return {
-    externalId: id,
-    permalink: `https://www.zonaprop.com.ar/panel/publicador-profesionales/edition?postingId=${id}`,
-  };
+async function runZonaprop(
+  p: PropertyForPublish,
+  activate?: { plan: string }
+): Promise<{ externalId: string; permalink: string; active: boolean }> {
+  const input = mapZonaprop(p);
+  if (activate) input.activate = { publicationPlan: activate.plan };
+  const r = await publishViaBrowser(input);
+  return { externalId: r.postingId, permalink: r.permalink, active: r.published };
 }
 
 // ─── ArgenProp ───────────────────────────────────────────────────────────────
@@ -159,16 +215,33 @@ async function mapArgenprop(p: PropertyForPublish): Promise<FichaInput> {
   };
 }
 
-async function runArgenprop(p: PropertyForPublish): Promise<{ externalId: string; permalink: string }> {
+async function runArgenprop(p: PropertyForPublish): Promise<{ externalId: string; permalink: string; active: boolean }> {
   const id = await createFicha(await mapArgenprop(p));
-  return { externalId: id, permalink: `https://gestion.argenprop.com/avisos/editar/${id}/datosinmueble` };
+  return { externalId: id, permalink: `https://gestion.argenprop.com/avisos/editar/${id}/datosinmueble`, active: false };
 }
 
 // ─── Cola ────────────────────────────────────────────────────────────────────
 
-/** Encola una publicación y marca la publicación como "publishing". Idempotente por (propertyId,portal). */
-export async function enqueuePublish(propertyId: string, portal: PublishPortal, action = "publish"): Promise<string> {
-  const job = await prisma.publishJob.create({ data: { propertyId, portal, action, status: "pending" } });
+// Plan por defecto al activar en ZonaProp: "3" = Simples (el más barato).
+const ZP_DEFAULT_PLAN = "3";
+
+export type EnqueueOpts = { activate?: boolean; plan?: string; action?: string };
+
+/**
+ * Encola una publicación y marca la publicación como "publishing". Idempotente
+ * por (propertyId,portal). `activate:true` → publica ONLINE (gasta crédito).
+ */
+export async function enqueuePublish(propertyId: string, portal: PublishPortal, opts: EnqueueOpts = {}): Promise<string> {
+  const job = await prisma.publishJob.create({
+    data: {
+      propertyId,
+      portal,
+      action: opts.action ?? "publish",
+      activate: opts.activate ?? false,
+      plan: opts.plan ?? null,
+      status: "pending",
+    },
+  });
   await prisma.propertyPublication.upsert({
     where: { propertyId_portal: { propertyId, portal } },
     create: { propertyId, portal, status: "publishing" },
@@ -177,8 +250,12 @@ export async function enqueuePublish(propertyId: string, portal: PublishPortal, 
   return job.id;
 }
 
-async function runPortal(portal: PublishPortal, p: PropertyForPublish) {
-  return portal === "zonaprop" ? runZonaprop(p) : runArgenprop(p);
+async function runPortal(
+  portal: PublishPortal,
+  p: PropertyForPublish,
+  activate?: { plan: string }
+): Promise<{ externalId: string; permalink: string; active: boolean }> {
+  return portal === "zonaprop" ? runZonaprop(p, activate) : runArgenprop(p);
 }
 
 /** Procesa un job: corre el motor y actualiza PropertyPublication. Lo llama el worker. */
@@ -199,11 +276,13 @@ export async function processPublishJob(jobId: string): Promise<void> {
   }
 
   try {
-    const { externalId, permalink } = await runPortal(portal, property);
+    const activate = job.activate && portal === "zonaprop" ? { plan: job.plan ?? ZP_DEFAULT_PLAN } : undefined;
+    const { externalId, permalink, active } = await runPortal(portal, property, activate);
+    const status = active ? "active" : "draft";
     await prisma.propertyPublication.upsert({
       where: { propertyId_portal: { propertyId: job.propertyId, portal } },
-      create: { propertyId: job.propertyId, portal, externalId, permalink, status: "draft", publishedAt: new Date() },
-      update: { externalId, permalink, status: "draft", lastError: null, publishedAt: new Date() },
+      create: { propertyId: job.propertyId, portal, externalId, permalink, status, publishedAt: new Date() },
+      update: { externalId, permalink, status, lastError: null, publishedAt: new Date() },
     });
     await prisma.publishJob.update({ where: { id: jobId }, data: { status: "done", error: null, processedAt: new Date() } });
   } catch (err) {

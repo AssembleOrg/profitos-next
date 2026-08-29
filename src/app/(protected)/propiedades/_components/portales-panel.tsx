@@ -80,19 +80,26 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
 
   const connOf = (portal: PortalKey) => conn.find((c) => c.portal === portal);
 
-  async function publishOne(portal: PortalKey) {
+  async function publishOne(portal: PortalKey, activate = false) {
+    if (
+      activate &&
+      !window.confirm(
+        `Publicar en ${PORTAL_META[portal].label} pone el aviso ONLINE y CONSUME 1 crédito de tu plan (Simple). ¿Confirmás?`
+      )
+    )
+      return;
     setBusy(portal);
     try {
       const res = await fetch(`/api/integrations/portales/${portal}/publish`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ propertyId }),
+        body: JSON.stringify({ propertyId, activate }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.message ?? "No se pudo encolar");
       }
-      toast.success(`${PORTAL_META[portal].label}: encolado — lo procesa el worker`);
+      toast.success(activate ? `${PORTAL_META[portal].label}: publicando activo (gasta crédito)` : `${PORTAL_META[portal].label}: borrador encolado`);
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al publicar");
@@ -196,12 +203,23 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                         aria-label={`Seleccionar ${meta.label} para publicación grupal`}
                       />
                       <button
-                        onClick={() => void publishOne(portal)}
+                        onClick={() => void publishOne(portal, false)}
                         disabled={busy !== null || pub?.status === "publishing"}
-                        className="rounded-full bg-dark px-3 py-1.5 text-[12px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
+                        className="rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-bold text-text transition-colors hover:bg-bg disabled:opacity-50"
+                        title="Crea el aviso como borrador (gratis)"
                       >
-                        {pub?.published ? "Republicar" : "Publicar"}
+                        Borrador
                       </button>
+                      {portal === "zonaprop" && (
+                        <button
+                          onClick={() => void publishOne(portal, true)}
+                          disabled={busy !== null || pub?.status === "publishing"}
+                          className="rounded-full bg-dark px-3 py-1.5 text-[12px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
+                          title="Publica el aviso ONLINE — consume 1 crédito"
+                        >
+                          Publicar activo
+                        </button>
+                      )}
                     </>
                   ) : (
                     <span className="text-[11px] text-text-faint">Usá el wizard ML</span>

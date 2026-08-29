@@ -120,6 +120,43 @@ export function setPrice(run: StepRunner, postingId: string, input: PriceInput):
   });
 }
 
+// ─── Paso 7: multimedia (adjunta las fotos ya subidas a /reipro-api/preview) ──
+// Cada foto se sube antes con POST /reipro-api/preview (multipart) que devuelve
+// temporalUrl + fullName; acá se adjuntan al aviso.
+
+export type PictureInput = { temporalUrl: string; fullName: string; id?: string | null; order?: number };
+
+export function setMultimedia(run: StepRunner, postingId: string, pictures: PictureInput[]): Promise<StepResult> {
+  return run(`${API}/posting/STEP_MULTIMEDIA`, {
+    postingId,
+    pictures: pictures.map((p, i) => ({
+      file: null,
+      angle: 0,
+      multimediaTypeEnum: "IMAGE",
+      id: p.id ?? null,
+      error: null,
+      delete: false,
+      tag360: false,
+      title: null,
+      id_multimedia: null,
+      order: p.order ?? i + 1,
+      temporalUrl: p.temporalUrl,
+      fullName: p.fullName,
+    })),
+  });
+}
+
+// ─── Paso 8: selección de plan = PUBLICA (status → ONLINE). GASTA UN CRÉDITO ──
+// publicationPlan: "1" Super Destacados | "2" Destacados | "3" Simples.
+
+export function selectPlan(run: StepRunner, postingId: string, publicationPlan: string): Promise<StepResult> {
+  return run(`${API}/posting/STEP_PLAN_SELECTION`, {
+    postingId,
+    publication_plan: publicationPlan,
+    commission_share: 0,
+  });
+}
+
 // ─── Orquestación: crear un borrador completo (sin fotos ni confirmación) ─────
 
 export type DraftInput = {
