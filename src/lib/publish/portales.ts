@@ -81,7 +81,8 @@ function photoUrls(photos: unknown): PhotoSource[] {
   for (const p of photos) {
     if (typeof p === "string") urls.push(p);
     else if (p && typeof p === "object") {
-      const u = (p as Record<string, unknown>).url ?? (p as Record<string, unknown>).src;
+      const o = p as Record<string, unknown>;
+      const u = o.image ?? o.url ?? o.src ?? o.photo;
       if (typeof u === "string") urls.push(u);
     }
   }
