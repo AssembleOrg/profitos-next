@@ -127,6 +127,14 @@ async function main() {
       `    el endpoint de ACTIVAR. Enter cuando el aviso quedó publicado/activo... `
   );
 
+  marker("D-mejorar-exposicion");
+  await rl.question(
+    `\n[D] MEJORAR EXPOSICIÓN (upgrade de plan): en un aviso publicado, tocá "Mejorar exposición",\n` +
+      `    elegí un plan superior (ej: Destacado). Para capturar el UPGRADE completo hay que\n` +
+      `    CONFIRMAR (gasta otro crédito); si no querés gastar, frená ANTES de pagar (capturamos\n` +
+      `    igual la selección). Enter cuando terminaste (o si lo salteás)... `
+  );
+
   marker("fin");
   console.log(`\n✔ Listo. Pasame este archivo:\n  ${netPath}`);
   console.log(`  (tiene datos de sesión → lo borramos después de analizarlo)`);
