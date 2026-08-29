@@ -80,12 +80,32 @@ function zpOperationType(op: string | null): string {
   return "1"; // venta (default)
 }
 
+// Códigos real_estate_type_id de ZonaProp (de docs/ZONAPROP-PUBLISH.md).
+// El subtipo solo se conoce para Casa (42); para el resto null (STEP_OPERATION
+// lo acepta y el aviso queda para completar en el portal).
+function zpRealEstateType(type: string | null): { id: string; sub: string | null } {
+  const s = (type ?? "").toLowerCase();
+  if (s.includes("depart")) return { id: "2", sub: null };
+  if (s.includes("ph")) return { id: "2001", sub: null };
+  if (s.includes("terren") || s.includes("lote")) return { id: "26", sub: null };
+  if (s.includes("local")) return { id: "5", sub: null };
+  return { id: "1", sub: "42" }; // casa (default, subtipo conocido)
+}
+
+function zpCurrency(cur: string | null): string {
+  return (cur ?? "USD").toUpperCase().includes("ARS") ? "ARS" : "USD";
+}
+
 function mapZonaprop(p: PropertyForPublish): DraftInput {
-  return {
-    // Tipo fijo (Casa/venta) a nivel borrador; el tipo/subtipo exacto es Fase 4.
-    operation: { operationType: zpOperationType(p.operationType), realEstateTypeId: "1", realEstateSubTypeId: "42" },
+  const t = zpRealEstateType(p.type);
+  const input: DraftInput = {
+    operation: { operationType: zpOperationType(p.operationType), realEstateTypeId: t.id, realEstateSubTypeId: t.sub },
     description: { title: titleFor(p), description: descriptionFor(p) },
   };
+  if (p.operationPrice) {
+    input.price = { currency: zpCurrency(p.operationCurrency), amount: Math.round(p.operationPrice) };
+  }
+  return input;
 }
 
 async function runZonaprop(p: PropertyForPublish): Promise<{ externalId: string; permalink: string }> {
