@@ -26,7 +26,7 @@ import { prisma } from "@/lib/prisma/client";
 
 chromiumExtra.use(StealthPlugin());
 
-const PANEL = "https://www.zonaprop.com.ar/panel/inmuebles";
+const PANEL = "https://www.zonaprop.com.ar/panel/avisos";
 const OUT = path.join(os.tmpdir(), `zp-discover-${Date.now()}`);
 
 function proxy() {
