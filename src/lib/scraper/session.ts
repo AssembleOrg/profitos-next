@@ -154,6 +154,25 @@ export async function waitForCloudflare(page: Page, timeoutMs = 35_000): Promise
 }
 
 /**
+ * Navega a `url` reintentando el challenge de Cloudflare con backoff. Un desafío
+ * transitorio suele pasar al 2º intento; una IP FICHADA falla en todos (ahí el
+ * fix es otra IP/esperar, no reintentar). Devuelve la última respuesta y si pasó.
+ */
+export async function gotoPassingCloudflare(
+  page: Page,
+  url: string,
+  attempts = 3
+): Promise<{ ok: boolean; response: Awaited<ReturnType<Page["goto"]>> }> {
+  let response: Awaited<ReturnType<Page["goto"]>> = null;
+  for (let i = 0; i < attempts; i++) {
+    response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45_000 }).catch(() => null);
+    if (await waitForCloudflare(page)) return { ok: true, response };
+    if (i < attempts - 1) await page.waitForTimeout(3000 + i * 4000); // backoff antes de reintentar
+  }
+  return { ok: false, response };
+}
+
+/**
  * Abre un contexto persistente con las cookies de la sesión guardada, navega a
  * `bootstrapUrl` (pasa el anti-bot y calienta la sesión) y ejecuta `fn`.
  * Limpia el perfil temporal al terminar y refresca las cookies en DB.
@@ -202,8 +221,7 @@ export async function withPortalPage<T>(
     if (state.cookies?.length) await context.addCookies(state.cookies);
 
     const page = context.pages()[0] ?? (await context.newPage());
-    const resp = await page.goto(bootstrapUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
-    const cfOk = await waitForCloudflare(page);
+    const { ok: cfOk, response: resp } = await gotoPassingCloudflare(page, bootstrapUrl);
     if (!cfOk) {
       throw new Error(`Cloudflare no resolvió el challenge en ${portal} (${page.url()})`);
     }

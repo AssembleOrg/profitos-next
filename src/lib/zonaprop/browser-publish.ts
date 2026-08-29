@@ -24,7 +24,7 @@ import {
   loadStorageState,
   markSessionInvalid,
   SessionExpiredError,
-  waitForCloudflare,
+  gotoPassingCloudflare,
   type Portal,
 } from "@/lib/scraper/session";
 import { createFullDraft, publishHeaders, type DraftInput, type StepResult, type StepRunner } from "./publish";
@@ -163,8 +163,7 @@ export async function publishDraftViaBrowser(input: DraftInput): Promise<string>
     if (cookies.length) await context.addCookies(cookies);
 
     const page = context.pages()[0] ?? (await context.newPage());
-    const resp = await page.goto(PANEL, { waitUntil: "domcontentloaded", timeout: 60_000 });
-    const cfOk = await waitForCloudflare(page);
+    const { ok: cfOk, response: resp } = await gotoPassingCloudflare(page, PANEL);
     if (!cfOk) {
       throw new Error(`Cloudflare no resolvió el challenge en zonaprop (${page.url()})`);
     }
