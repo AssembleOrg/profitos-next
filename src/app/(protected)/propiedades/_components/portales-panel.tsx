@@ -100,7 +100,12 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.message ?? "No se pudo encolar");
       }
-      toast.success(activate ? `${PORTAL_META[portal].label}: publicando activo (gasta crédito)` : `${PORTAL_META[portal].label}: borrador encolado`);
+      const okMsg = activate
+        ? `${PORTAL_META[portal].label}: publicando activo (gasta crédito)`
+        : portal === "argenprop"
+          ? `${PORTAL_META[portal].label}: publicación encolada`
+          : `${PORTAL_META[portal].label}: borrador encolado`;
+      toast.success(okMsg);
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al publicar");
@@ -272,9 +277,13 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                         onClick={() => void publishOne(portal, false)}
                         disabled={busy !== null || pub?.status === "publishing"}
                         className="rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-bold text-text transition-colors hover:bg-bg disabled:opacity-50"
-                        title="Crea el aviso como borrador (gratis)"
+                        title={
+                          portal === "argenprop"
+                            ? "Crea y publica el aviso en ArgenProp (no tiene borrador)"
+                            : "Crea el aviso como borrador (gratis)"
+                        }
                       >
-                        Borrador
+                        {portal === "argenprop" ? "Publicar" : "Borrador"}
                       </button>
                       {portal === "zonaprop" && (
                         <button

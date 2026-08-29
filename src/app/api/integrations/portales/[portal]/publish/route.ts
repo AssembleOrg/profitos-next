@@ -4,6 +4,7 @@ import { ok } from "@/lib/api/response";
 import { getAuthContext } from "@/lib/api/auth";
 import { prisma } from "@/lib/prisma/client";
 import { enqueuePublish, isPublishPortal } from "@/lib/publish/portales";
+import { triggerWorkerProcess } from "@/lib/publish/worker-trigger";
 
 // Encola la publicación de una propiedad en un portal (ZonaProp/ArgenProp).
 // El worker de Railway procesa la cola (necesita navegador+proxy).
@@ -22,6 +23,7 @@ export const POST = withHandler(async (request: NextRequest, context) => {
 
   // activate:true PUBLICA (gasta 1 crédito del plan); false = solo borrador.
   const jobId = await enqueuePublish(body.propertyId, portal, { activate: Boolean(body.activate), plan: body.plan });
+  await triggerWorkerProcess(); // despierta al worker para procesar ya (no esperar al tick)
   const msg = body.activate ? "Publicación (activar) encolada" : "Borrador encolado";
   return ok({ queued: true, jobId, portal, activate: Boolean(body.activate) }, msg, path);
 });

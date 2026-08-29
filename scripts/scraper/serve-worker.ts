@@ -37,16 +37,36 @@ const NOVNC_DIR = path.resolve(process.cwd(), "node_modules/@novnc/novnc");
 // ---------------------------------------------------------------------------
 // 1) Loop periódico (cola de publicaciones + scraper de leads)
 // ---------------------------------------------------------------------------
-let ticking = false;
+// Un solo navegador (Brave+proxy) a la vez sobre el display Xvfb: este mutex lo
+// comparten el tick del scraper y el disparo on-demand de la cola.
+let browserBusy = false;
+
+/**
+ * Procesa la cola de publicaciones YA (disparado por la web al encolar, para no
+ * esperar al próximo tick). Si el navegador está ocupado o hay login remoto, no
+ * hace nada: los jobs quedan pending y el próximo tick los toma.
+ */
+async function processQueueNow(): Promise<{ processed: number; deferred: boolean }> {
+  if (browserBusy || isReloginActive()) return { processed: 0, deferred: true };
+  browserBusy = true;
+  try {
+    const { processed } = await processPendingPublishJobs();
+    if (processed) console.log(`[worker] Publicaciones procesadas (on-demand): ${processed}`);
+    return { processed, deferred: false };
+  } finally {
+    browserBusy = false;
+  }
+}
+
 async function tick(): Promise<void> {
-  if (ticking) return;
+  if (browserBusy) return;
   // Mientras hay un login remoto abierto, no lanzamos otro navegador (chocarían
   // en el mismo display Xvfb y competirían por el proxy).
   if (isReloginActive()) {
     console.log("[worker] tick salteado: login remoto en curso.");
     return;
   }
-  ticking = true;
+  browserBusy = true;
   try {
     const { processed } = await processPendingPublishJobs();
     if (processed) console.log(`[worker] Publicaciones procesadas: ${processed}`);
@@ -62,7 +82,7 @@ async function tick(): Promise<void> {
   } catch (e) {
     console.warn("[worker] Error en tick:", e instanceof Error ? e.message : e);
   } finally {
-    ticking = false;
+    browserBusy = false;
   }
 }
 
@@ -137,7 +157,16 @@ const server = http.createServer(async (req, res) => {
   const u = new URL(req.url ?? "/", "http://localhost");
   const p = u.pathname;
 
-  if (p === "/health") return send(res, 200, { ok: true, relogin: isReloginActive() });
+  if (p === "/health") return send(res, 200, { ok: true, relogin: isReloginActive(), busy: browserBusy });
+
+  // Disparo on-demand de la cola de publicaciones: la web lo pincha al encolar
+  // para no esperar al tick. Responde YA y procesa en background.
+  if (p === "/process" && req.method === "POST") {
+    const body = await readJson(req);
+    if (!verifyReloginToken(String(body.token ?? ""))) return send(res, 401, { message: "token inválido" });
+    void processQueueNow().catch((e) => console.warn("[worker] /process:", e instanceof Error ? e.message : e));
+    return send(res, 202, { accepted: true });
+  }
 
   if (p.startsWith("/novnc/")) return serveNovnc(res, p.slice("/novnc/".length));
 
@@ -151,7 +180,7 @@ const server = http.createServer(async (req, res) => {
     const body = await readJson(req);
     const portal = verifyReloginToken(String(body.token ?? ""));
     if (!portal) return send(res, 401, { message: "token inválido" });
-    if (ticking) return send(res, 503, { message: "El worker está scrapeando; probá de nuevo en unos segundos." });
+    if (browserBusy) return send(res, 503, { message: "El worker está ocupado; probá de nuevo en unos segundos." });
     try {
       const r = await startReloginSession(portal);
       return send(res, 200, r);

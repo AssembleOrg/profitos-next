@@ -4,6 +4,7 @@ import { ok } from "@/lib/api/response";
 import { getAuthContext } from "@/lib/api/auth";
 import { prisma } from "@/lib/prisma/client";
 import { enqueuePublish, isPublishPortal } from "@/lib/publish/portales";
+import { triggerWorkerProcess } from "@/lib/publish/worker-trigger";
 
 // Publicación GRUPAL: encola una propiedad en varios portales a la vez.
 // Body: { propertyId, portals: ["zonaprop","argenprop"] }
@@ -29,6 +30,7 @@ export const POST = withHandler(async (request: NextRequest) => {
     const jobId = await enqueuePublish(body.propertyId, portal, { activate: Boolean(body.activate), plan: body.plan });
     queued.push({ portal, jobId });
   }
+  await triggerWorkerProcess(); // despierta al worker para procesar ya (no esperar al tick)
   const msg = body.activate ? "Publicación (activar) encolada" : "Borrador encolado";
   return ok({ queued }, `${msg} en ${queued.length} portal(es)`, path);
 });
