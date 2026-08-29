@@ -21,6 +21,15 @@ const STATUS_CHIP: Record<string, { label: string; cls: string }> = {
   error: { label: "Error", cls: "bg-clay-chip text-terra" },
 };
 
+// Planes de publicación de ZonaProp (a más "exposición", más caro). El value es
+// el publication_plan que espera STEP_PLAN_SELECTION.
+const ZP_PLANS: { value: string; label: string }[] = [
+  { value: "3", label: "Simple" },
+  { value: "2", label: "Destacado" },
+  { value: "1", label: "Súper Destacado" },
+];
+const ZP_PLAN_LABEL = (v: string) => ZP_PLANS.find((p) => p.value === v)?.label ?? "Simple";
+
 type ConnStatus = { portal: PortalKey; connected: boolean; lastOkAt: string | null; needsAction: boolean; actionHint: string | null };
 type Publication = { portal: string; status: string; published: boolean; permalink: string | null; lastError: string | null };
 
@@ -42,6 +51,7 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [relogin, setRelogin] = useState<{ portal: PortalKey; viewUrl: string; sessionId: string } | null>(null);
+  const [zpPlan, setZpPlan] = useState<string>("3"); // plan de exposición para ZonaProp activo
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
@@ -82,10 +92,13 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
   const connOf = (portal: PortalKey) => conn.find((c) => c.portal === portal);
 
   async function publishOne(portal: PortalKey, activate = false) {
+    const plan = portal === "zonaprop" && activate ? zpPlan : undefined;
     if (
       activate &&
       !window.confirm(
-        `Publicar en ${PORTAL_META[portal].label} pone el aviso ONLINE y CONSUME 1 crédito de tu plan (Simple). ¿Confirmás?`
+        `Publicar en ${PORTAL_META[portal].label} pone el aviso ONLINE y CONSUME 1 crédito` +
+          (plan ? ` del plan ${ZP_PLAN_LABEL(plan)}` : "") +
+          `. ¿Confirmás?`
       )
     )
       return;
@@ -94,7 +107,7 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
       const res = await fetch(`/api/integrations/portales/${portal}/publish`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ propertyId, activate }),
+        body: JSON.stringify({ propertyId, activate, plan }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -286,14 +299,30 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                         {portal === "argenprop" ? "Publicar" : "Borrador"}
                       </button>
                       {portal === "zonaprop" && (
-                        <button
-                          onClick={() => void publishOne(portal, true)}
-                          disabled={busy !== null || pub?.status === "publishing"}
-                          className="rounded-full bg-dark px-3 py-1.5 text-[12px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
-                          title="Publica el aviso ONLINE — consume 1 crédito"
-                        >
-                          Publicar activo
-                        </button>
+                        <>
+                          <select
+                            value={zpPlan}
+                            onChange={(e) => setZpPlan(e.target.value)}
+                            disabled={busy !== null || pub?.status === "publishing"}
+                            className="rounded-full border border-border bg-surface px-2 py-1.5 text-[11.5px] font-semibold text-text-muted disabled:opacity-50"
+                            title="Exposición del aviso al publicarlo activo (a más exposición, más crédito)"
+                            aria-label="Plan de exposición ZonaProp"
+                          >
+                            {ZP_PLANS.map((pl) => (
+                              <option key={pl.value} value={pl.value}>
+                                {pl.label}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => void publishOne(portal, true)}
+                            disabled={busy !== null || pub?.status === "publishing"}
+                            className="rounded-full bg-dark px-3 py-1.5 text-[12px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
+                            title="Publica el aviso ONLINE — consume 1 crédito del plan elegido"
+                          >
+                            Publicar activo
+                          </button>
+                        </>
                       )}
                     </>
                   ) : (
