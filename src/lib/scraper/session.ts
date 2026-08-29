@@ -71,7 +71,7 @@ export async function getStoredCookie(portal: Portal, name: string): Promise<str
   return state.cookies?.find((c) => c.name === name)?.value ?? null;
 }
 
-type ProxyConfig = { server: string; username?: string; password?: string };
+export type ProxyConfig = { server: string; username?: string; password?: string };
 
 /** Parsea una URL de proxy (http://user:pass@host:port) al formato de Playwright. */
 function parseProxy(url: string | undefined): ProxyConfig | undefined {
@@ -89,7 +89,7 @@ function parseProxy(url: string | undefined): ProxyConfig | undefined {
 }
 
 /** Proxy: `<PORTAL>_PROXY` o el genérico PROXY_SERVER / USER / PASS. */
-function proxyForPortal(portal: Portal): ProxyConfig | undefined {
+export function proxyForPortal(portal: Portal): ProxyConfig | undefined {
   const named = parseProxy(process.env[`${portal.toUpperCase()}_PROXY`]);
   if (named) return named;
   const server = process.env.PROXY_SERVER?.trim();

@@ -28,7 +28,7 @@ RUN curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg \
  && echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg arch=amd64] https://brave-browser-apt-release.s3.brave.com/ stable main" \
       > /etc/apt/sources.list.d/brave-browser-release.list \
  && apt-get update \
- && apt-get install -y --no-install-recommends brave-browser \
+ && apt-get install -y --no-install-recommends brave-browser x11vnc \
  && rm -rf /var/lib/apt/lists/*
 RUN pnpm exec playwright install chrome
 
@@ -42,7 +42,10 @@ ENV NODE_ENV=production
 # Usar Brave (pasa Cloudflare); si se borra, cae al canal "chrome".
 ENV SCRAPER_CHROME_PATH=/usr/bin/brave-browser
 
-# Arrancamos Xvfb a mano (más confiable que xvfb-run, que se cuelga acá),
-# exportamos DISPLAY, y corremos el worker como proceso principal (exec) para
-# que sus logs salgan al contenedor y el exit se propague bien.
-CMD ["sh", "-c", "Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp & export DISPLAY=:99; sleep 2; echo '[entry] Xvfb listo, arrancando worker'; exec pnpm exec tsx scripts/scraper/run-worker.ts"]
+# El worker es AHORA un servicio always-on (no cron): corre el loop del scraper
+# + la cola de publicaciones, y expone el servidor de login remoto (noVNC) en
+# $PORT. Railway debe correrlo como servicio (restart always), no como cron.
+# Arrancamos Xvfb a mano (más confiable que xvfb-run), exportamos DISPLAY, y
+# corremos el server como proceso principal (exec) para que sus logs salgan al
+# contenedor y las señales se propaguen bien.
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp & export DISPLAY=:99; sleep 2; echo '[entry] Xvfb listo, arrancando worker (server)'; exec pnpm exec tsx scripts/scraper/serve-worker.ts"]

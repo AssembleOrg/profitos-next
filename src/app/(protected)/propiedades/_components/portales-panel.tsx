@@ -41,6 +41,7 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
   const [selected, setSelected] = useState<Set<PortalKey>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [relogin, setRelogin] = useState<{ portal: PortalKey; viewUrl: string; sessionId: string } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
@@ -132,6 +133,59 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
     }
   }
 
+  async function startRelogin(portal: PortalKey) {
+    setBusy(`relogin:${portal}`);
+    try {
+      const res = await fetch("/api/integrations/portales/relogin/start", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ portal }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.message ?? "No se pudo iniciar");
+      const { viewUrl, sessionId } = body.data ?? {};
+      if (!viewUrl || !sessionId) throw new Error("Respuesta inválida del worker");
+      setRelogin({ portal, viewUrl, sessionId });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al iniciar el login remoto");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function finishRelogin() {
+    if (!relogin) return;
+    setBusy("relogin:finish");
+    try {
+      const res = await fetch("/api/integrations/portales/relogin/finish", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ portal: relogin.portal, sessionId: relogin.sessionId }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body?.data?.ok) throw new Error(body?.data?.message ?? body?.message ?? "Todavía no estás logueado");
+      toast.success(body.data.message ?? "Conexión restablecida");
+      setRelogin(null);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo confirmar el login");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function cancelRelogin() {
+    const portal = relogin?.portal;
+    setRelogin(null);
+    if (portal) {
+      void fetch("/api/integrations/portales/relogin/cancel", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ portal }),
+      });
+    }
+  }
+
   function toggle(portal: PortalKey) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -176,6 +230,18 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                   <span className={`h-1.5 w-1.5 rounded-full ${c?.connected ? "bg-olive-light" : "bg-terra"}`} aria-hidden />
                   {c?.connected ? "Conectado" : c?.actionHint ?? "Sin conexión"}
                 </span>
+
+                {/* Reconectar (login remoto) — sólo ZonaProp/ArgenProp; ML usa OAuth */}
+                {!c?.connected && portal !== "mercadolibre" && (
+                  <button
+                    onClick={() => void startRelogin(portal)}
+                    disabled={busy !== null}
+                    className="rounded-full border border-terra/40 bg-clay-chip px-2.5 py-0.5 text-[11px] font-bold text-terra transition-colors hover:bg-terra hover:text-white disabled:opacity-50"
+                    title="Abrí una ventana para loguearte de nuevo en el portal"
+                  >
+                    {busy === `relogin:${portal}` ? "Abriendo…" : "Reconectar"}
+                  </button>
+                )}
 
                 {/* Estado publicación */}
                 {chip ? (
@@ -241,6 +307,45 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
             >
               Publicar seleccionados
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de login remoto: transmite el navegador del worker (noVNC). */}
+      {relogin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-[16px] border border-border bg-surface shadow-xl">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <div>
+                <h4 className="text-[14px] font-bold text-text">Reconectar {PORTAL_META[relogin.portal].label}</h4>
+                <p className="text-[11.5px] text-text-faint">
+                  Logueate en la ventana (usuario, clave y captcha si aparece). Cuando estés adentro, apretá “Ya entré”.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => void cancelRelogin()}
+                  disabled={busy === "relogin:finish"}
+                  className="rounded-full border border-border bg-bg px-3 py-1.5 text-[12px] font-bold text-text-muted hover:bg-surface disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => void finishRelogin()}
+                  disabled={busy === "relogin:finish"}
+                  className="rounded-full bg-dark px-3.5 py-1.5 text-[12px] font-bold text-dark-fg hover:opacity-90 disabled:opacity-50"
+                >
+                  {busy === "relogin:finish" ? "Verificando…" : "Ya entré"}
+                </button>
+              </div>
+            </div>
+            <iframe
+              src={relogin.viewUrl}
+              title="Login remoto del portal"
+              className="min-h-0 flex-1 bg-[#1a1a1a]"
+              // El visor sólo necesita ejecutar su script y aceptar teclado/mouse.
+              sandbox="allow-scripts allow-same-origin"
+            />
           </div>
         </div>
       )}
