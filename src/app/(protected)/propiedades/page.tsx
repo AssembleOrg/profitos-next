@@ -84,8 +84,7 @@ export default async function PropiedadesPage({ searchParams }: Props) {
       include: {
         _count: { select: { visitas: true } },
         publications: {
-          where: { portal: "mercadolibre" },
-          select: { status: true, permalink: true, externalId: true },
+          select: { portal: true, status: true, permalink: true, externalId: true },
         },
       },
       orderBy,
@@ -137,7 +136,7 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     ownerReportData: unknown;
     createdAt: Date;
     _count: { visitas: number };
-    publications: { status: string; permalink: string | null; externalId: string | null }[];
+    publications: { portal: string; status: string; permalink: string | null; externalId: string | null }[];
   }) => ({
     id: p.id,
     externalId: p.externalId,
@@ -166,13 +165,13 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     ownerReportData: (p.ownerReportData as Record<string, unknown>) ?? null,
     createdAt: p.createdAt.toISOString(),
     _count: p._count,
-    mlPublication: p.publications[0]
-      ? {
-          status: p.publications[0].status,
-          permalink: p.publications[0].permalink,
-          published: Boolean(p.publications[0].externalId),
-        }
-      : null,
+    mlPublication: (() => {
+      const ml = p.publications.find((x) => x.portal === "mercadolibre");
+      return ml ? { status: ml.status, permalink: ml.permalink, published: Boolean(ml.externalId) } : null;
+    })(),
+    portalPublications: p.publications
+      .filter((x) => x.portal === "zonaprop" || x.portal === "argenprop")
+      .map((x) => ({ portal: x.portal, status: x.status, permalink: x.permalink })),
   }));
 
   return (

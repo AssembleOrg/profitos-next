@@ -47,6 +47,7 @@ interface Property {
   createdAt: string;
   _count?: { visitas: number };
   mlPublication?: { status: string; permalink: string | null; published: boolean } | null;
+  portalPublications?: { portal: string; status: string; permalink: string | null }[];
 }
 
 interface PropiedadesClientProps {
@@ -137,6 +138,45 @@ function MlChip({ status, permalink }: { status: string; permalink: string | nul
         <circle cx="7" cy="7" r="3" />
       </svg>
       {c.label}
+    </span>
+  );
+  return permalink ? (
+    <a href={permalink} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+      {chip}
+    </a>
+  ) : (
+    chip
+  );
+}
+
+/**
+ * Chip de estado de la publicación en ZonaProp / ArgenProp (mismo idioma visual
+ * que el de ML). Un punto del color del portal + estado. Sólo se muestra si hay
+ * fila de publicación para ese portal.
+ */
+const PUB_CHIP: Record<string, { label: string; cls: string }> = {
+  active: { label: "activa", cls: "border-success/30 bg-success/10 text-success" },
+  draft: { label: "borrador", cls: "border-border bg-sand-chip text-warning" },
+  publishing: { label: "publicando…", cls: "border-info/30 bg-info/10 text-info" },
+  paused: { label: "pausada", cls: "border-warning/30 bg-warning-chip text-warning" },
+  closed: { label: "cerrada", cls: "border-border bg-bg text-text-muted" },
+  error: { label: "error", cls: "border-danger/30 bg-danger-chip text-danger" },
+};
+const PORTAL_UI: Record<string, { abbr: string; name: string; dot: string }> = {
+  zonaprop: { abbr: "ZP", name: "ZonaProp", dot: "#7b61ff" },
+  argenprop: { abbr: "AP", name: "ArgenProp", dot: "#e2574c" },
+};
+function PortalChip({ portal, status, permalink }: { portal: string; status: string; permalink: string | null }) {
+  const c = PUB_CHIP[status];
+  const ui = PORTAL_UI[portal];
+  if (!c || !ui) return null;
+  const chip = (
+    <span
+      title={`${ui.name}: ${c.label}`}
+      className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${c.cls}`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ui.dot }} aria-hidden />
+      {ui.abbr} {c.label}
     </span>
   );
   return permalink ? (
@@ -831,6 +871,9 @@ export function PropiedadesClient({
                     {p.mlPublication?.published && (
                       <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
                     )}
+                    {p.portalPublications?.map((pub) => (
+                      <PortalChip key={pub.portal} portal={pub.portal} status={pub.status} permalink={pub.permalink} />
+                    ))}
                   </div>
                   <p className="mt-0.5 truncate text-[11.5px] text-text-faint">
                     {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
@@ -891,6 +934,9 @@ export function PropiedadesClient({
                       {p.mlPublication?.published && (
                         <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
                       )}
+                      {p.portalPublications?.map((pub) => (
+                        <PortalChip key={pub.portal} portal={pub.portal} status={pub.status} permalink={pub.permalink} />
+                      ))}
                     </div>
                     <p className="mt-0.5 truncate text-[11.5px] text-text-faint">
                       {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
@@ -977,6 +1023,9 @@ export function PropiedadesClient({
                         {p.mlPublication?.published && (
                           <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
                         )}
+                        {p.portalPublications?.map((pub) => (
+                          <PortalChip key={pub.portal} portal={pub.portal} status={pub.status} permalink={pub.permalink} />
+                        ))}
                       </div>
                       <p className="text-[11.5px] text-text-faint">{p.publicationTitle ?? p.realAddress ?? "Sin título"}</p>
                     </td>
