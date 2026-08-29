@@ -45,24 +45,85 @@ export type ResolvedLocation = {
   idBarrio?: string;
 };
 
-export type LocationNames = { province?: string | null; city?: string | null; locality?: string | null; zone?: string | null };
+export type LocationNames = {
+  province?: string | null;
+  city?: string | null;
+  locality?: string | null;
+  zone?: string | null;
+  /** Jerarquía completa del scraper: "Argentina | Región | Partido | Barrio | Localidad". */
+  locationFull?: string | null;
+};
+
+function firstNonEmpty(...vals: (string | null | undefined)[]): string | null {
+  for (const v of vals) if (v && v.trim()) return v.trim();
+  return null;
+}
+
+/**
+ * Deriva el nombre de provincia (como lo llama ArgenProp) desde la "región" del
+ * scraper. El scraper no guarda provincia, pero sí la región (ej "G.B.A. Zona
+ * Sur", "Capital Federal", "Costa Atlántica"), que mapea a una provincia real.
+ */
+export function deriveProvince(region: string | null | undefined): string | null {
+  const r = normalize(region);
+  if (!r) return null;
+  if (r.includes("capital federal") || r.includes("caba") || r.includes("ciudad autonoma")) return "Capital Federal";
+  if (
+    r.includes("g.b.a") ||
+    r.includes("gba") ||
+    r.includes("gran buenos aires") ||
+    r.includes("buenos aires") ||
+    r.includes("costa atlantica")
+  )
+    return "Buenos Aires";
+  // Otras provincias: la región suele ser la provincia misma (Córdoba, Santa Fe…).
+  return (region ?? "").trim() || null;
+}
+
+type ParsedLocation = { province: string | null; partido: string | null; localidad: string | null; barrio: string | null };
+
+/** Parsea "Argentina | Región | Partido | [Barrio] | [Localidad]" del scraper. */
+export function parseLocationFull(locationFull: string | null | undefined): ParsedLocation {
+  const segs = (locationFull ?? "").split("|").map((s) => s.trim()).filter(Boolean);
+  // segs[0] = país. Ignoramos.
+  const region = segs[1] ?? null;
+  const partido = segs[2] ?? null;
+  let barrio: string | null = null;
+  let localidad: string | null = null;
+  const rest = segs.slice(3);
+  if (rest.length >= 2) {
+    barrio = rest[0];
+    localidad = rest[rest.length - 1];
+  } else if (rest.length === 1) {
+    localidad = rest[0];
+  }
+  return { province: deriveProvince(region), partido, localidad, barrio };
+}
 
 /**
  * Resuelve los IDs de ubicación desde los nombres de la propiedad. Provincia,
  * partido y localidad son obligatorios (el form los pide); barrio es opcional.
- * Lanza un error claro si falta resolver un nivel obligatorio.
+ * Usa `locationFull` (jerarquía del scraper) como fuente principal cuando los
+ * campos explícitos vienen vacíos — el scraper no guarda `province` pero sí la
+ * jerarquía completa. Lanza un error claro si falta un nivel obligatorio.
  */
 export async function resolveLocation(input: LocationNames): Promise<ResolvedLocation> {
-  const provincia = matchOption(await getProvincias(), input.province);
-  if (!provincia) throw new Error(`Ubicación: no encontré la provincia "${input.province}".`);
+  const parsed = parseLocationFull(input.locationFull);
+  const provinceName = firstNonEmpty(input.province, parsed.province);
+  const partidoName = firstNonEmpty(input.city, parsed.partido, input.locality);
+  const localidadName = firstNonEmpty(input.locality, parsed.localidad, input.city, parsed.partido);
+  const barrioName = firstNonEmpty(parsed.barrio, input.zone);
 
-  const partido = matchOption(await getPartidos(provincia.Value), input.city ?? input.locality);
-  if (!partido) throw new Error(`Ubicación: no encontré el partido para "${input.city ?? input.locality}".`);
+  const provincia = matchOption(await getProvincias(), provinceName);
+  if (!provincia) throw new Error(`Ubicación: no encontré la provincia "${provinceName ?? "?"}".`);
 
-  const localidad = matchOption(await getLocalidades(partido.Value), input.locality ?? input.city);
-  if (!localidad) throw new Error(`Ubicación: no encontré la localidad para "${input.locality ?? input.city}".`);
+  const partido = matchOption(await getPartidos(provincia.Value), partidoName);
+  if (!partido) throw new Error(`Ubicación: no encontré el partido para "${partidoName ?? "?"}".`);
 
-  const barrio = matchOption(await getBarrios(localidad.Value), input.zone);
+  const localidad = matchOption(await getLocalidades(partido.Value), localidadName);
+  if (!localidad) throw new Error(`Ubicación: no encontré la localidad para "${localidadName ?? "?"}".`);
+
+  const barrio = matchOption(await getBarrios(localidad.Value), barrioName);
   return {
     idProvincia: provincia.Value,
     idPartido: partido.Value,

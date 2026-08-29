@@ -14,6 +14,7 @@ export type PropertyLike = {
   province?: string | null;
   city?: string | null;
   zone?: string | null;
+  locationFull?: string | null;
   address?: string | null;
   publicationTitle?: string | null;
   description?: string | null;
@@ -115,10 +116,15 @@ function n(v?: number | null): number | undefined {
  * nivel obligatorio de ubicación.
  */
 export async function propertyToFicha(p: PropertyLike): Promise<FichaInput> {
-  // Fallback de provincia: el dataset actual no la trae (viene null) y es todo
-  // GBA. CABA necesitaría detectarse aparte (o elegirse en el wizard).
-  const province = p.province ?? "Buenos Aires";
-  const location = await resolveLocation({ province, city: p.city, zone: p.zone });
+  // La provincia se deriva de location_full (el scraper no guarda province);
+  // resolveLocation usa location_full como fuente principal y lanza si no puede
+  // resolver un nivel obligatorio.
+  const location = await resolveLocation({
+    province: p.province ?? undefined,
+    city: p.city,
+    zone: p.zone,
+    locationFull: p.locationFull,
+  });
   const tp = tipoPropiedad(p.type);
   const { calle, numero, piso, departamento } = splitAddress(p.address);
 

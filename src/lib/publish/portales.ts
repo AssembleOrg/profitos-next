@@ -38,6 +38,7 @@ type PropertyForPublish = {
   province: string | null;
   city: string | null;
   zone: string | null;
+  locationFull: string | null;
   bedrooms: number | null;
   bathroomAmount: number | null;
   roomAmount: number | null;
@@ -62,6 +63,7 @@ const PROPERTY_SELECT = {
   province: true,
   city: true,
   zone: true,
+  locationFull: true,
   bedrooms: true,
   bathroomAmount: true,
   roomAmount: true,
@@ -189,7 +191,13 @@ function apPropertyType(type: string | null): string {
 }
 
 async function mapArgenprop(p: PropertyForPublish): Promise<FichaInput> {
-  const loc = await resolveLocation({ province: p.province, city: p.city, locality: p.city, zone: p.zone });
+  const loc = await resolveLocation({
+    province: p.province,
+    city: p.city,
+    locality: p.city,
+    zone: p.zone,
+    locationFull: p.locationFull,
+  });
   const tipo = apPropertyType(p.type);
   return {
     tipoPropiedad: tipo,
