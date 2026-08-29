@@ -104,16 +104,28 @@ async function main() {
   console.log("Abriendo el panel de inmuebles...");
   await page.goto(PANEL, { waitUntil: "domcontentloaded", timeout: 60_000 }).catch(() => {});
 
-  await rl.question(`\n[1] Esperá a que cargue la LISTA de tus avisos (si pide login, avisá y frenamos). Enter... `);
+  console.log(`\n⚠️  OJO: este flujo captura una PUBLICACIÓN REAL → consume 1 crédito/plan de ZonaProp.`);
+  console.log(`   Hacelo con un aviso que quieras publicar DE VERDAD (así el crédito no se desperdicia).`);
 
-  marker("A-pausar");
-  await rl.question(`\n[A] Elegí un aviso ACTIVO y PAUSALO (botón pausar/despublicar). Enter cuando pausó... `);
+  await rl.question(`\n[1] Esperá a que cargue el panel (si pide login, avisá y frenamos). Enter... `);
 
-  marker("B-activar");
-  await rl.question(`\n[B] Ahora REACTIVÁ ese mismo aviso (publicar/activar). ESTO captura el endpoint de ACTIVAR. Enter cuando volvió a activo... `);
+  marker("A-wizard-fotos");
+  await rl.question(
+    `\n[A] Entrá a "Publicar aviso" y completá los pasos (operación, tipo, ubicación,\n` +
+      `    descripción, características, precio) INCLUYENDO las FOTOS (subí al menos una).\n` +
+      `    Frená JUSTO ANTES de elegir plan / confirmar. Enter cuando estés en el paso de plan... `
+  );
 
-  marker("C-fotos");
-  await rl.question(`\n[C] Entrá a las FOTOS de un aviso y AGREGÁ una (o reordená). Captura la subida. Enter cuando terminaste... `);
+  marker("B-elegir-plan");
+  await rl.question(
+    `\n[B] Elegí el PLAN de publicación (ej: Simple). NO confirmes todavía. Enter cuando lo elegiste... `
+  );
+
+  marker("C-confirmar-publicar");
+  await rl.question(
+    `\n[C] Ahora CONFIRMÁ la publicación (Publicar / Finalizar). Esto GASTA el crédito y captura\n` +
+      `    el endpoint de ACTIVAR. Enter cuando el aviso quedó publicado/activo... `
+  );
 
   marker("fin");
   console.log(`\n✔ Listo. Pasame este archivo:\n  ${netPath}`);
