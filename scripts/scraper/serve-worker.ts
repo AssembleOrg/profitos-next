@@ -22,6 +22,7 @@ import { prisma } from "@/lib/prisma/client";
 import { runScraperLeads } from "@/lib/scraper/run";
 import { processPendingPublishJobs } from "@/lib/publish/portales";
 import { verifyReloginToken } from "@/lib/scraper/relogin-token";
+import { refreshZonapropCredits } from "@/lib/publish/credits";
 import {
   startReloginSession,
   finishReloginSession,
@@ -51,8 +52,26 @@ async function processQueueNow(): Promise<{ processed: number; deferred: boolean
   browserBusy = true;
   try {
     const { processed } = await processPendingPublishJobs();
-    if (processed) console.log(`[worker] Publicaciones procesadas (on-demand): ${processed}`);
+    if (processed) {
+      console.log(`[worker] Publicaciones procesadas (on-demand): ${processed}`);
+      // El cupo cambió: refrescamos con el mismo navegador ya "caliente".
+      await refreshZonapropCredits().catch((e) => console.warn("[worker] refresh créditos:", e instanceof Error ? e.message : e));
+    }
     return { processed, deferred: false };
+  } finally {
+    browserBusy = false;
+  }
+}
+
+/** Refresca el cupo de créditos (GET gratis). Respeta el mutex del navegador. */
+async function refreshCredits(): Promise<{ ok: boolean; error?: string }> {
+  if (browserBusy || isReloginActive()) return { ok: false, error: "worker ocupado" };
+  browserBusy = true;
+  try {
+    await refreshZonapropCredits();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "error" };
   } finally {
     browserBusy = false;
   }
@@ -69,7 +88,10 @@ async function tick(): Promise<void> {
   browserBusy = true;
   try {
     const { processed } = await processPendingPublishJobs();
-    if (processed) console.log(`[worker] Publicaciones procesadas: ${processed}`);
+    if (processed) {
+      console.log(`[worker] Publicaciones procesadas: ${processed}`);
+      await refreshZonapropCredits().catch(() => {});
+    }
     const result = await runScraperLeads(false);
     if (!result.ran) {
       console.log(`[worker] scraper salteado (${result.decision.reason}).`);
@@ -168,6 +190,14 @@ const server = http.createServer(async (req, res) => {
     return send(res, 202, { accepted: true });
   }
 
+  // Refresca el cupo de créditos en vivo (GET gratis) y lo cachea en la DB.
+  if (p === "/credits/refresh" && req.method === "POST") {
+    const body = await readJson(req);
+    if (!verifyReloginToken(String(body.token ?? ""))) return send(res, 401, { message: "token inválido" });
+    const r = await refreshCredits();
+    return send(res, r.ok ? 200 : 503, r);
+  }
+
   if (p.startsWith("/novnc/")) return serveNovnc(res, p.slice("/novnc/".length));
 
   if (p === "/relogin/view" && req.method === "GET") {
@@ -232,6 +262,8 @@ server.listen(PORT, () => {
 // Primer tick al arrancar + loop periódico.
 void tick();
 setInterval(() => void tick(), TICK_MS);
+// Cupo inicial para la web (con delay, para no chocar con el primer tick).
+setTimeout(() => void refreshCredits(), 20_000);
 
 async function shutdown() {
   await cancelReloginSession().catch(() => {});

@@ -32,6 +32,8 @@ const ZP_PLAN_LABEL = (v: string) => ZP_PLANS.find((p) => p.value === v)?.label 
 
 type ConnStatus = { portal: PortalKey; connected: boolean; lastOkAt: string | null; needsAction: boolean; actionHint: string | null };
 type Publication = { portal: string; status: string; published: boolean; permalink: string | null; lastError: string | null };
+type PlanCredit = { plan: string; label: string; available: number | null; used: number | null; total: number | null };
+type Credits = { plans: PlanCredit[]; fetchedAt: string | null; error: string | null };
 
 async function getJson<T>(url: string): Promise<T | null> {
   try {
@@ -52,12 +54,15 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
   const [loading, setLoading] = useState(true);
   const [relogin, setRelogin] = useState<{ portal: PortalKey; viewUrl: string; sessionId: string } | null>(null);
   const [zpPlan, setZpPlan] = useState<string>("3"); // plan de exposición para ZonaProp activo
+  const [credits, setCredits] = useState<Credits | null>(null);
+  const [refreshingCredits, setRefreshingCredits] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
-    const [statusData, pubData] = await Promise.all([
+    const [statusData, pubData, creditsData] = await Promise.all([
       getJson<{ portals: ConnStatus[] }>("/api/integrations/portales/status"),
       getJson<{ publications: Publication[] }>(`/api/integrations/portales/publications/${propertyId}`),
+      getJson<Credits>("/api/integrations/portales/credits"),
     ]);
     if (statusData) setConn(statusData.portals);
     if (pubData) {
@@ -65,8 +70,24 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
       for (const p of pubData.publications) map[p.portal] = p;
       setPubs(map);
     }
+    if (creditsData) setCredits(creditsData);
     setLoading(false);
   }, [propertyId]);
+
+  async function refreshCredits() {
+    setRefreshingCredits(true);
+    try {
+      const res = await fetch("/api/integrations/portales/credits", { method: "POST" });
+      const body = await res.json().catch(() => ({}));
+      if (body?.data) setCredits(body.data);
+      if (body?.data?.refreshed) toast.success("Cupo actualizado");
+      else toast.message(body?.message ?? "No se pudo actualizar el cupo");
+    } catch {
+      toast.error("Error al actualizar el cupo");
+    } finally {
+      setRefreshingCredits(false);
+    }
+  }
 
   useEffect(() => {
     void load();
@@ -221,6 +242,36 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
           Actualizar
         </button>
       </div>
+
+      {/* Cupo de créditos de ZonaProp (los pagos son por fuera de la app). */}
+      {credits && (
+        <div
+          className="mb-3 flex flex-wrap items-center gap-2 rounded-[12px] border border-border bg-bg px-3 py-2"
+          title={credits.fetchedAt ? `Actualizado: ${new Date(credits.fetchedAt).toLocaleString("es-AR")}` : undefined}
+        >
+          <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-faint">Cupo ZonaProp</span>
+          {credits.plans.length ? (
+            credits.plans.map((pl) => (
+              <span
+                key={pl.plan}
+                className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-[11.5px] font-semibold text-text"
+              >
+                {pl.label}:{" "}
+                <span className={pl.available === 0 ? "text-terra" : "text-olive-light"}>{pl.available ?? "—"}</span>
+              </span>
+            ))
+          ) : (
+            <span className="text-[11.5px] text-text-faint">{credits.error ? "Sin datos (error al leer)" : "Sin datos aún"}</span>
+          )}
+          <button
+            onClick={() => void refreshCredits()}
+            disabled={refreshingCredits}
+            className="ml-auto rounded-full border border-border bg-surface px-2.5 py-1 text-[11.5px] font-bold text-text-muted hover:bg-bg disabled:opacity-50"
+          >
+            {refreshingCredits ? "Actualizando…" : "Actualizar cupo"}
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <p className="py-4 text-center text-[12.5px] text-text-faint">Cargando…</p>
