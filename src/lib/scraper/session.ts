@@ -141,14 +141,15 @@ function looksLikeCloudflare(title: string, url = "", body = ""): boolean {
   );
 }
 
-/** Espera a que Cloudflare termine el challenge JS. Devuelve false si no pasó. */
-export async function waitForCloudflare(page: Page, timeoutMs = 35_000): Promise<boolean> {
+/** Espera a que Cloudflare termine el challenge JS. Devuelve false si no pasó.
+ *  Paciente (90s por defecto): algunos challenges "managed" tardan bastante. */
+export async function waitForCloudflare(page: Page, timeoutMs = 90_000): Promise<boolean> {
   const title = await page.title().catch(() => "");
   if (!looksLikeCloudflare(title, page.url())) return true;
   await page
     .waitForFunction(() => !/just a moment|un momento/i.test(document.title), { timeout: timeoutMs })
     .catch(() => {});
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(3000);
   const after = await page.title().catch(() => "");
   return !looksLikeCloudflare(after, page.url());
 }
