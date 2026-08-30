@@ -140,13 +140,16 @@ export async function refreshZonapropCredits(): Promise<PlanCredit[]> {
     // La API de créditos exige headers propios del panel: `x-panel-portal: ZPAR`
     // y `sessionid` (valor de la cookie sessionId). Sin ellos devuelve 401
     // "Role/SessionId not found". Los mandamos en el fetch in-page.
-    const raw = await withPortalPage("zonaprop", "https://www.zonaprop.com.ar/panel/avisos", async (page) => {
+    const raw = await withPortalPage("zonaprop", "https://www.zonaprop.com.ar/panel/avisos", async (page, context) => {
+      // La cookie sessionId se lee desde Node (context.cookies) — en Railway el
+      // `document.cookie` in-page puede dar SecurityError según el origen.
+      const cookies = await context.cookies("https://www.zonaprop.com.ar");
+      const sid =
+        cookies.find((c) => c.name === "sessionId")?.value ??
+        cookies.find((c) => c.name === "session_id")?.value ??
+        "";
       return await page.evaluate(
-        async (urls) => {
-          const parts = document.cookie.split(";").map((s) => s.trim());
-          let sid = "";
-          for (const c of parts) if (c.indexOf("sessionId=") === 0) { sid = c.substring(10); break; }
-          if (!sid) for (const c of parts) if (c.indexOf("session_id=") === 0) { sid = c.substring(11); break; }
+        async ({ urls, sid }) => {
           const h = { accept: "application/json", "x-panel-portal": "ZPAR", sessionid: sid };
           const results: { status: number; json: unknown }[] = [];
           for (const u of urls) {
@@ -162,7 +165,7 @@ export async function refreshZonapropCredits(): Promise<PlanCredit[]> {
           }
           return { credits: results[0], plans: results[1] };
         },
-        [CREDITS_URL, PLANS_URL]
+        { urls: [CREDITS_URL, PLANS_URL], sid }
       );
     });
 
