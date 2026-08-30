@@ -25,7 +25,9 @@ import {
   markSessionInvalid,
   SessionExpiredError,
   gotoPassingCloudflare,
+  proxyForPortal,
   type Portal,
+  type ProxyConfig,
 } from "@/lib/scraper/session";
 import {
   createFullDraft,
@@ -53,33 +55,12 @@ function headless(): boolean {
 }
 
 /**
- * Proxy residencial para publicar. Acepta dos formatos:
- *  - ZONAPROP_PROXY=http://user:pass@host:port  (combinado), o
- *  - PROXY_SERVER / PROXY_USER / PROXY_PASS      (separado).
+ * Proxy residencial para publicar. Usa el POOL centralizado (PROXY_POOL) o el
+ * único PROXY_SERVER — misma lógica que el scraper (ver session.ts). Un
+ * ZONAPROP_PROXY explícito tiene prioridad.
  */
-function proxy(): { server: string; username?: string; password?: string } | undefined {
-  const url = process.env.ZONAPROP_PROXY?.trim();
-  if (url) {
-    try {
-      const u = new URL(url);
-      return {
-        server: `${u.protocol}//${u.host}`,
-        username: u.username ? decodeURIComponent(u.username) : undefined,
-        password: u.password ? decodeURIComponent(u.password) : undefined,
-      };
-    } catch {
-      /* cae al formato separado */
-    }
-  }
-  const server = process.env.PROXY_SERVER?.trim();
-  if (server) {
-    return {
-      server,
-      username: process.env.PROXY_USER?.trim() || undefined,
-      password: process.env.PROXY_PASS?.trim() || undefined,
-    };
-  }
-  return undefined;
+function proxy(): ProxyConfig | undefined {
+  return proxyForPortal("zonaprop");
 }
 
 type StorageState = {
@@ -88,13 +69,14 @@ type StorageState = {
 };
 
 async function launch(userDataDir: string): Promise<BrowserContext> {
+  const chosen = proxy(); // una sola elección por contexto (evita mezclar IPs)
   const opts = {
     headless: headless(),
     args: STEALTH_ARGS,
     ignoreDefaultArgs: ["--enable-automation"],
     locale: "es-AR",
     timezoneId: "America/Argentina/Buenos_Aires",
-    ...(proxy() ? { proxy: proxy() } : {}),
+    ...(chosen ? { proxy: chosen } : {}),
   };
   // Brave (SCRAPER_CHROME_PATH) pasa Cloudflare donde el chromium bundle falla.
   const execPath = process.env.SCRAPER_CHROME_PATH?.trim();

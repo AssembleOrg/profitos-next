@@ -88,10 +88,40 @@ function parseProxy(url: string | undefined): ProxyConfig | undefined {
   }
 }
 
-/** Proxy: `<PORTAL>_PROXY` o el genérico PROXY_SERVER / USER / PASS. */
-export function proxyForPortal(portal: Portal): ProxyConfig | undefined {
-  const named = parseProxy(process.env[`${portal.toUpperCase()}_PROXY`]);
-  if (named) return named;
+/** Parsea una entrada de proxy flexible: `http://user:pass@host:port`,
+ *  `user:pass@host:port` o `host:port` (asume http). */
+function parseProxyEntry(raw: string): ProxyConfig | undefined {
+  const s = raw.trim();
+  if (!s) return undefined;
+  const withScheme = /^\w+:\/\//.test(s) ? s : `http://${s}`;
+  try {
+    const u = new URL(withScheme);
+    return {
+      server: `${u.protocol}//${u.host}`,
+      username: u.username ? decodeURIComponent(u.username) : undefined,
+      password: u.password ? decodeURIComponent(u.password) : undefined,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/** POOL de proxies (PROXY_POOL): varias IPs separadas por coma / ; / salto de
+ *  línea. Cada request abre un contexto nuevo → se elige una al azar = rotación
+ *  entre las IPs del pool (resiliencia si una cae o queda fichada). */
+export function proxyPool(): ProxyConfig[] {
+  const raw = process.env.PROXY_POOL?.trim();
+  if (!raw) return [];
+  return raw
+    .split(/[\n,;]+/)
+    .map(parseProxyEntry)
+    .filter((x): x is ProxyConfig => Boolean(x));
+}
+
+/** Elige un proxy: del POOL (al azar) o, si no hay pool, el único PROXY_SERVER. */
+export function pickProxy(): ProxyConfig | undefined {
+  const pool = proxyPool();
+  if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
   const server = process.env.PROXY_SERVER?.trim();
   if (!server) return undefined;
   return {
@@ -99,6 +129,13 @@ export function proxyForPortal(portal: Portal): ProxyConfig | undefined {
     username: process.env.PROXY_USER?.trim() || undefined,
     password: process.env.PROXY_PASS?.trim() || undefined,
   };
+}
+
+/** Proxy: `<PORTAL>_PROXY` (fijo por portal) o el POOL / PROXY_SERVER genérico. */
+export function proxyForPortal(portal: Portal): ProxyConfig | undefined {
+  const named = parseProxy(process.env[`${portal.toUpperCase()}_PROXY`]);
+  if (named) return named;
+  return pickProxy();
 }
 
 /**

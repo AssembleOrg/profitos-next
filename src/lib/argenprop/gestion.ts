@@ -10,30 +10,31 @@
  * de datacenter con 403.
  */
 import { prisma } from "@/lib/prisma/client";
+import { pickProxy } from "@/lib/scraper/session";
 // fetch de undici (no el global): así comparte versión con ProxyAgent. Mezclar
 // el ProxyAgent de npm con el fetch interno de Node rompe (invalid onRequestStart).
 import { fetch as httpFetch, ProxyAgent } from "undici";
 
-/** Proxy residencial para los fetch de gestión (403 sin él en Railway). */
-let dispatcherCache: ProxyAgent | null | undefined;
-function proxyDispatcher(): ProxyAgent | undefined {
-  if (dispatcherCache !== undefined) return dispatcherCache ?? undefined;
-  let uri = process.env.ARGENPROP_PROXY?.trim() || "";
-  if (!uri) {
-    const server = process.env.PROXY_SERVER?.trim();
-    if (server) {
-      try {
-        const u = new URL(server);
-        if (process.env.PROXY_USER?.trim()) u.username = process.env.PROXY_USER.trim();
-        if (process.env.PROXY_PASS?.trim()) u.password = process.env.PROXY_PASS.trim();
-        uri = u.toString();
-      } catch {
-        /* server mal formado → sin proxy */
-      }
-    }
+/** Proxy residencial para los fetch de gestión (403 sin él en Railway).
+ *  Usa el POOL centralizado (pickProxy) → elige una IP por llamada; un
+ *  ARGENPROP_PROXY explícito tiene prioridad. Sin cache para permitir rotación. */
+function proxyUri(): string {
+  const explicit = process.env.ARGENPROP_PROXY?.trim();
+  if (explicit) return explicit;
+  const p = pickProxy();
+  if (!p) return "";
+  try {
+    const u = new URL(p.server);
+    if (p.username) u.username = p.username;
+    if (p.password) u.password = p.password;
+    return u.toString();
+  } catch {
+    return "";
   }
-  dispatcherCache = uri ? new ProxyAgent(uri) : null;
-  return dispatcherCache ?? undefined;
+}
+function proxyDispatcher(): ProxyAgent | undefined {
+  const uri = proxyUri();
+  return uri ? new ProxyAgent(uri) : undefined;
 }
 
 type FetchInit = NonNullable<Parameters<typeof httpFetch>[1]>;
