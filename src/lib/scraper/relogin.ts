@@ -20,7 +20,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { prisma } from "@/lib/prisma/client";
-import { proxyForPortal, gotoPassingCloudflare, type Portal } from "@/lib/scraper/session";
+import { proxyForPortal, proxyPool, gotoPassingCloudflare, type Portal, type ProxyConfig } from "@/lib/scraper/session";
 
 chromiumExtra.use(StealthPlugin());
 
@@ -95,9 +95,34 @@ function startVnc(): ChildProcess {
   return proc;
 }
 
+/**
+ * Proxy para el re-login: FIJO, no rotativo. Cloudflare mete un challenge
+ * interactivo (checkbox) que entra en loop si la IP está fichada; para loguearse
+ * hay que usar una IP buena y estable. Prioridad: RELOGIN_PROXY explícito →
+ * primera IP del pool → proxy genérico del portal.
+ */
+function reloginProxy(portal: string): ProxyConfig | undefined {
+  const explicit = process.env.RELOGIN_PROXY?.trim();
+  if (explicit) {
+    try {
+      const u = new URL(/^\w+:\/\//.test(explicit) ? explicit : `http://${explicit}`);
+      return {
+        server: `${u.protocol}//${u.host}`,
+        username: u.username ? decodeURIComponent(u.username) : undefined,
+        password: u.password ? decodeURIComponent(u.password) : undefined,
+      };
+    } catch {
+      /* mal formado → sigue */
+    }
+  }
+  const pool = proxyPool();
+  if (pool.length) return pool[0]; // fija: primera IP del pool (estable)
+  return proxyForPortal(portal as Portal);
+}
+
 /** Abre Brave headful sobre Xvfb, apuntando al login del portal. */
 async function launchInteractive(portal: string, dir: string): Promise<BrowserContext> {
-  const proxy = proxyForPortal(portal as Portal);
+  const proxy = reloginProxy(portal);
   const context = await chromiumExtra.launchPersistentContext(dir, {
     headless: false, // headful: se ve en la pantalla Xvfb que transmite el VNC
     executablePath: process.env.SCRAPER_CHROME_PATH?.trim() || undefined,
