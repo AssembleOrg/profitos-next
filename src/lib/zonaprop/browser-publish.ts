@@ -26,6 +26,8 @@ import {
   SessionExpiredError,
   gotoPassingCloudflare,
   proxyForPortal,
+  markProxyBad,
+  markProxyGood,
   type Portal,
   type ProxyConfig,
 } from "@/lib/scraper/session";
@@ -68,8 +70,7 @@ type StorageState = {
   origins?: { origin: string; localStorage?: { name: string; value: string }[] }[];
 };
 
-async function launch(userDataDir: string): Promise<BrowserContext> {
-  const chosen = proxy(); // una sola elección por contexto (evita mezclar IPs)
+async function launch(userDataDir: string, chosen: ProxyConfig | undefined): Promise<BrowserContext> {
   const opts = {
     headless: headless(),
     args: STEALTH_ARGS,
@@ -131,8 +132,9 @@ async function withPublishPage<T>(fn: (page: Page, sessionId: string) => Promise
   const lsEntries: [string, string][] =
     state.origins?.find((o) => o.origin.includes("zonaprop"))?.localStorage?.map((e) => [e.name, e.value]) ?? [];
 
+  const chosen = proxy(); // una sola IP por contexto (para poder marcarla buena/mala)
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "zpublish-"));
-  const context = await launch(dir);
+  const context = await launch(dir, chosen);
   try {
     await context.addInitScript((entries: [string, string][]) => {
       try {
@@ -148,16 +150,22 @@ async function withPublishPage<T>(fn: (page: Page, sessionId: string) => Promise
 
     const page = context.pages()[0] ?? (await context.newPage());
     const { ok: cfOk, response: resp } = await gotoPassingCloudflare(page, PANEL);
-    if (!cfOk) throw new Error(`Cloudflare no resolvió el challenge en zonaprop (${page.url()})`);
+    const url = page.url();
+    if (!cfOk || !url || url === "about:blank" || url.startsWith("chrome-error://")) {
+      markProxyBad(chosen?.server); // pool inteligente: saltear esta IP un rato
+      throw new Error(`Cloudflare/red no resolvió en zonaprop (${url})`);
+    }
     if (resp && resp.status() === 401) {
       await markSessionInvalid(PORTAL);
       throw new SessionExpiredError(PORTAL);
     }
-    if (/login|signin|ingresar|acceder/i.test(page.url())) {
+    if (/login|signin|ingresar|acceder/i.test(url)) {
       await markSessionInvalid(PORTAL);
       throw new SessionExpiredError(PORTAL);
     }
-    return await fn(page, sessionId);
+    const out = await fn(page, sessionId);
+    markProxyGood(chosen?.server); // la IP sirvió
+    return out;
   } finally {
     await context.close().catch(() => {});
     fs.rmSync(dir, { recursive: true, force: true });

@@ -138,19 +138,26 @@ export async function refreshZonapropCredits(): Promise<PlanCredit[]> {
     // cae en chrome-error y el fetch falla ("Failed to fetch", status 0). Como
     // cada intento abre un contexto NUEVO (= sesión de proxy nueva = IP nueva),
     // reintentamos: normalmente una IP limpia aparece en pocos intentos.
+    // El pool inteligente pone en cooldown la IP que falla, así el próximo intento
+    // (contexto nuevo) elige otra IP sana. Una IP flagueada hace que withPublishPage
+    // TIRE (nav en chrome-error) → lo atrapamos y reintentamos.
     let raw: Awaited<ReturnType<typeof fetchCreditsRaw>> | null = null;
     let st = 0;
+    let lastErr = "";
     for (let attempt = 1; attempt <= 4; attempt++) {
-      raw = await fetchCreditsRaw();
+      try {
+        raw = await fetchCreditsRaw();
+      } catch (e) {
+        lastErr = e instanceof Error ? e.message : String(e);
+        continue; // IP mala (ya quedó en cooldown) → reintentar con otra
+      }
       st = raw.credits?.status ?? 0;
       if (st === 401 || st === 403) throw new Error(`Créditos: ${st} (sesión ZonaProp — reconectá el portal)`);
       if (st >= 200 && st < 300) break; // cargó bien
-      // status 0 (nav falló / IP flagueada) o 5xx → reintentar con IP nueva.
+      lastErr = raw.credits?.bodySnippet ?? `status ${st}`;
     }
     if (!raw || st < 200 || st >= 300) {
-      throw new Error(
-        `Créditos: no cargó tras reintentos (${raw?.pageUrl ?? "?"}): ${raw?.credits?.bodySnippet ?? `status ${st}`}`
-      );
+      throw new Error(`Créditos: no cargó tras reintentos: ${lastErr || "sin detalle"}`);
     }
     const normalized = normalizeCredits({ credits: raw.credits?.json, plans: raw.plans?.json });
     await prisma.portalCredits.upsert({

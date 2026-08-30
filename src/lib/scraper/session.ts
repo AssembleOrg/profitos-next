@@ -118,10 +118,45 @@ export function proxyPool(): ProxyConfig[] {
     .filter((x): x is ProxyConfig => Boolean(x));
 }
 
-/** Elige un proxy: del POOL (al azar) o, si no hay pool, el único PROXY_SERVER. */
+// ─── Pool inteligente: cooldown de IPs que fallan ────────────────────────────
+// Si una IP del pool falla (Cloudflare no pasa, navegación cae en chrome-error,
+// proxy caído), la marcamos "mala" y la salteamos por un rato. Se recupera sola
+// al vencer el cooldown. Estado en memoria (por proceso; el worker es uno solo).
+const proxyCooldown = new Map<string, number>(); // server → epoch ms hasta cuándo
+const COOLDOWN_MS = Number(process.env.PROXY_COOLDOWN_MS ?? 15 * 60_000);
+
+/** Marca una IP como mala: la saca de rotación por COOLDOWN_MS. */
+export function markProxyBad(server: string | undefined): void {
+  if (!server) return;
+  proxyCooldown.set(server, Date.now() + COOLDOWN_MS);
+  console.warn(`[proxy] ${server} en cooldown ${Math.round(COOLDOWN_MS / 60000)}min (falló)`);
+}
+
+/** Marca una IP como sana: la vuelve a habilitar de inmediato. */
+export function markProxyGood(server: string | undefined): void {
+  if (server) proxyCooldown.delete(server);
+}
+
+function inCooldown(server: string): boolean {
+  const until = proxyCooldown.get(server);
+  if (until == null) return false;
+  if (until <= Date.now()) {
+    proxyCooldown.delete(server);
+    return false;
+  }
+  return true;
+}
+
+/** Elige un proxy: del POOL (al azar, salteando las que están en cooldown) o,
+ *  si no hay pool, el único PROXY_SERVER. Si TODAS están en cooldown, igual
+ *  prueba una (mejor intentar que no conectar). */
 export function pickProxy(): ProxyConfig | undefined {
   const pool = proxyPool();
-  if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
+  if (pool.length) {
+    const healthy = pool.filter((p) => !inCooldown(p.server));
+    const candidates = healthy.length ? healthy : pool;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
   const server = process.env.PROXY_SERVER?.trim();
   if (!server) return undefined;
   return {
@@ -170,6 +205,12 @@ async function launchPersistent(userDataDir: string, proxy?: ProxyConfig): Promi
 export async function getCookie(context: BrowserContext, name: string): Promise<string | null> {
   const cookies = await context.cookies();
   return cookies.find((c) => c.name === name)?.value ?? null;
+}
+
+/** URL que delata una navegación fallida (proxy caído/rechazado): la página
+ *  quedó en blanco o en la pantalla de error del navegador. */
+function isBadNav(url: string): boolean {
+  return !url || url === "about:blank" || url.startsWith("chrome-error://");
 }
 
 function looksLikeCloudflare(title: string, url = "", body = ""): boolean {
@@ -260,8 +301,10 @@ export async function withPortalPage<T>(
 
     const page = context.pages()[0] ?? (await context.newPage());
     const { ok: cfOk, response: resp } = await gotoPassingCloudflare(page, bootstrapUrl);
-    if (!cfOk) {
-      throw new Error(`Cloudflare no resolvió el challenge en ${portal} (${page.url()})`);
+    // Nav fallida (proxy caído/fichado): CF no pasó o quedó en página de error.
+    if (!cfOk || isBadNav(page.url())) {
+      markProxyBad(proxy?.server); // pool inteligente: saltear esta IP un rato
+      throw new Error(`Cloudflare/red no resolvió en ${portal} (${page.url()})`);
     }
 
     if (resp && resp.status() === 401) {
@@ -276,6 +319,7 @@ export async function withPortalPage<T>(
     const result = await fn(page, context);
 
     await saveStorageState(portal, await context.storageState());
+    markProxyGood(proxy?.server); // la IP sirvió: la mantenemos sana
     return result;
   } finally {
     await context.close().catch(() => {});
