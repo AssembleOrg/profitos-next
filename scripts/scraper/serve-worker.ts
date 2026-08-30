@@ -23,6 +23,7 @@ import { runScraperLeads } from "@/lib/scraper/run";
 import { processPendingPublishJobs } from "@/lib/publish/portales";
 import { verifyReloginToken } from "@/lib/scraper/relogin-token";
 import { refreshZonapropCredits } from "@/lib/publish/credits";
+import { syncMlPublications } from "@/lib/mercadolibre/sync";
 import {
   startReloginSession,
   finishReloginSession,
@@ -264,6 +265,25 @@ void tick();
 setInterval(() => void tick(), TICK_MS);
 // Cupo inicial para la web (con delay, para no chocar con el primer tick).
 setTimeout(() => void refreshCredits(), 20_000);
+
+// Sync de estados de MercadoLibre (API oficial, sin navegador/proxy → no usa el
+// mutex). Corrige chips desincronizados (ej: aviso pausado por ML). Cada 2h.
+const ML_SYNC_MS = Number(process.env.ML_SYNC_INTERVAL_MS ?? 2 * 60 * 60_000);
+let mlSyncing = false;
+async function runMlSync(): Promise<void> {
+  if (mlSyncing) return;
+  mlSyncing = true;
+  try {
+    const { total, updated } = await syncMlPublications();
+    if (updated) console.log(`[worker] ML sync: ${updated}/${total} publicaciones actualizadas`);
+  } catch (e) {
+    console.warn("[worker] ML sync falló:", e instanceof Error ? e.message : e);
+  } finally {
+    mlSyncing = false;
+  }
+}
+setTimeout(() => void runMlSync(), 40_000); // sync inicial (tras arrancar)
+setInterval(() => void runMlSync(), ML_SYNC_MS);
 
 async function shutdown() {
   await cancelReloginSession().catch(() => {});
