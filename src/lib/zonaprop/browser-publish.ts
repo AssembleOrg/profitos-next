@@ -255,23 +255,41 @@ export async function publishDraftViaBrowser(input: DraftInput): Promise<string>
   return withPublishPage((page, sessionId) => createFullDraft(makeRunner(page, sessionId), input));
 }
 
+export type CreditsFetch = { status: number; json: unknown; bodySnippet?: string };
 /**
- * Lee el cupo de créditos (GET gratis) usando la MISMA infra probada del publish
- * (withPublishPage navega al panel del publicador → in-page fetch funciona en el
- * worker; getInPage manda los headers sessionid + x-panel-portal). Devuelve el
- * crudo de /avisos-api/credits (+ publicationplans). Sin normalizar.
+ * Lee el cupo (GET gratis) usando withPublishPage (la página del publicador que
+ * el worker carga de forma confiable). Captura url + status + snippet para poder
+ * diagnosticar si algo falla. Sin normalizar.
  */
-export async function fetchCreditsRaw(): Promise<{ credits: unknown; plans: unknown }> {
+export async function fetchCreditsRaw(): Promise<{ credits: CreditsFetch; plans: CreditsFetch; pageUrl: string }> {
   return withPublishPage(async (page, sessionId) => {
-    const credits = await getInPage<unknown>(page, sessionId, `${BASE}/avisos-api/credits`).catch(() => null);
-    const plans = await getInPage<unknown>(
-      page,
-      sessionId,
-      `${BASE}/avisos-api/panel/api/v2/credits/publicationplans?operationType=2&publisherType=2`
-    ).catch(() => null);
-    return { credits, plans };
+    const urls = [
+      `${BASE}/avisos-api/credits`,
+      `${BASE}/avisos-api/panel/api/v2/credits/publicationplans?operationType=2&publisherType=2`,
+    ];
+    const out = await page.evaluate(
+      async ({ urls, sessionId }) => {
+        const h = { accept: "application/json", sessionid: sessionId, "x-panel-portal": "ZPAR" };
+        const results: { status: number; json: unknown; bodySnippet?: string }[] = [];
+        for (const u of urls) {
+          try {
+            const r = await fetch(u, { method: "GET", credentials: "include", headers: h });
+            const t = await r.text();
+            let j: unknown = null;
+            try { j = JSON.parse(t); } catch { j = null; }
+            results.push({ status: r.status, json: j, bodySnippet: j ? undefined : t.slice(0, 160) });
+          } catch (e) {
+            results.push({ status: 0, json: null, bodySnippet: String(e).slice(0, 160) });
+          }
+        }
+        return { credits: results[0], plans: results[1], href: location.href };
+      },
+      { urls, sessionId }
+    );
+    return { credits: out.credits, plans: out.plans, pageUrl: out.href };
   });
 }
+
 
 export type PhotoSource = { url: string };
 export type FullPublishInput = {

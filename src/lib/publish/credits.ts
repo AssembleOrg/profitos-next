@@ -138,7 +138,12 @@ export async function refreshZonapropCredits(): Promise<PlanCredit[]> {
     // (sessionid + x-panel-portal). En el worker esto funciona; withPortalPage a
     // /panel/avisos dejaba el documento en un origen donde el fetch fallaba.
     const raw = await fetchCreditsRaw();
-    const normalized = normalizeCredits({ credits: raw.credits, plans: raw.plans });
+    const st = raw.credits?.status ?? 0;
+    if (st === 401 || st === 403) throw new Error(`Créditos: ${st} (sesión ZonaProp — reconectá el portal)`);
+    if (st === 0) {
+      throw new Error(`Créditos: no cargó la página (${raw.pageUrl ?? "?"}): ${raw.credits?.bodySnippet ?? "sin detalle"}`);
+    }
+    const normalized = normalizeCredits({ credits: raw.credits?.json, plans: raw.plans?.json });
     await prisma.portalCredits.upsert({
       where: { portal: "zonaprop" },
       create: { portal: "zonaprop", plans: normalized, raw: raw as object, error: null, fetchedAt: new Date() },
