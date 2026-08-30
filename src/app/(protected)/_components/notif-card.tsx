@@ -13,13 +13,22 @@ const NOTIF_BADGE_CLASS: Record<NotificationItem["kind"], string> = {
   followup_assignment: "bg-warning-chip text-warning",
   overdue_followup: "bg-clay-chip text-terra",
   property: "bg-sage-chip text-success",
+  publication_closed: "bg-clay-chip text-terra",
 };
 
 const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
   followup_assignment: "Seguimiento",
   overdue_followup: "Vencido",
   property: "Propiedad nueva",
+  publication_closed: "Baja aviso",
 };
+
+const PORTAL_LABEL: Record<string, string> = {
+  mercadolibre: "MercadoLibre",
+  zonaprop: "ZonaProp",
+  argenprop: "ArgenProp",
+};
+const STATUS_LABEL: Record<string, string> = { paused: "pausada", closed: "cerrada" };
 
 function notifOrigin(item: NotificationItem): string {
   const propUser = item.createdByUser?.fullName?.trim() || item.createdByUser?.email;
@@ -48,6 +57,15 @@ function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
         <>
           <p className="text-sm font-bold leading-tight text-text">{item.property?.address ?? "Propiedad sin dirección"}</p>
           <p className="mt-0.5 text-xs font-semibold text-terra">Vencido: {item.dueDate ? formatNotifDate(item.dueDate) : "sin fecha"} · {responsable}</p>
+        </>
+      );
+    case "publication_closed":
+      return (
+        <>
+          <p className="text-sm font-bold leading-tight text-text">{item.property?.address ?? "Propiedad sin dirección"}</p>
+          <p className="mt-0.5 text-xs font-semibold text-terra">
+            {PORTAL_LABEL[item.portal ?? ""] ?? item.portal ?? "Portal"}: {STATUS_LABEL[item.status ?? ""] ?? item.status ?? "baja"}
+          </p>
         </>
       );
     default:

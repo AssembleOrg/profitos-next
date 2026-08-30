@@ -11,7 +11,7 @@ export const GET = withHandler(async (request) => {
 
   const followUpWhere = auth.isAdmin ? {} : { assignedToUserId: auth.userId };
 
-  const [followUps, properties, overdueFollowUps] = await Promise.all([
+  const [followUps, properties, overdueFollowUps, closedPublications] = await Promise.all([
     prisma.propertyFollowUp.findMany({
       where: followUpWhere,
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
@@ -64,6 +64,21 @@ export const GET = withHandler(async (request) => {
         assignedByUser: { select: { id: true, fullName: true, email: true } },
       },
     }),
+    // Publicaciones que pasaron a pausada/cerrada (ej: ML pausó un aviso). El
+    // sync del worker actualiza el estado → updatedAt marca el evento.
+    prisma.propertyPublication.findMany({
+      where: { status: { in: ["paused", "closed"] } },
+      orderBy: [{ updatedAt: "desc" }],
+      take: limit,
+      select: {
+        id: true,
+        portal: true,
+        status: true,
+        permalink: true,
+        updatedAt: true,
+        property: { select: { id: true, address: true } },
+      },
+    }),
   ]);
 
   const merged = [
@@ -111,6 +126,17 @@ export const GET = withHandler(async (request) => {
         property: item.property,
         assignedToUser: item.assignedToUser,
         assignedByUser: item.assignedByUser,
+      },
+    })),
+    ...closedPublications.map((item) => ({
+      kind: "publication_closed" as const,
+      eventAt: item.updatedAt,
+      payload: {
+        id: item.id,
+        portal: item.portal,
+        status: item.status,
+        permalink: item.permalink,
+        property: item.property,
       },
     })),
   ]
