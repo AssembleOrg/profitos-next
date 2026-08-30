@@ -11,7 +11,7 @@
  * payload crudo (`raw`) para reajustar el parseo con datos reales del deploy.
  */
 import { prisma } from "@/lib/prisma/client";
-import { withPortalPage, markSessionInvalid } from "@/lib/scraper/session";
+import { fetchCreditsRaw } from "@/lib/zonaprop/browser-publish";
 
 export type PlanCredit = { plan: string; label: string; available: number | null; used: number | null; total: number | null };
 
@@ -127,54 +127,18 @@ export function normalizeCredits(raw: unknown): PlanCredit[] {
   return ["3", "2", "1"].map((v) => byPlan.get(v)).filter((x): x is PlanCredit => Boolean(x));
 }
 
-const CREDITS_URL = "https://www.zonaprop.com.ar/avisos-api/credits";
-const PLANS_URL =
-  "https://www.zonaprop.com.ar/avisos-api/panel/api/v2/credits/publicationplans?operationType=2&publisherType=2";
-
 /**
  * Lee el cupo en vivo desde ZonaProp (GET gratis) y lo cachea en la DB.
  * Devuelve los planes normalizados. Guarda el crudo para reajustes.
  */
 export async function refreshZonapropCredits(): Promise<PlanCredit[]> {
   try {
-    // La API de créditos exige headers propios del panel: `x-panel-portal: ZPAR`
-    // y `sessionid` (valor de la cookie sessionId). Sin ellos devuelve 401
-    // "Role/SessionId not found". Los mandamos en el fetch in-page.
-    const raw = await withPortalPage("zonaprop", "https://www.zonaprop.com.ar/panel/avisos", async (page, context) => {
-      // La cookie sessionId se lee desde Node (context.cookies) — en Railway el
-      // `document.cookie` in-page puede dar SecurityError según el origen.
-      const cookies = await context.cookies("https://www.zonaprop.com.ar");
-      const sid =
-        cookies.find((c) => c.name === "sessionId")?.value ??
-        cookies.find((c) => c.name === "session_id")?.value ??
-        "";
-      return await page.evaluate(
-        async ({ urls, sid }) => {
-          const h = { accept: "application/json", "x-panel-portal": "ZPAR", sessionid: sid };
-          const results: { status: number; json: unknown }[] = [];
-          for (const u of urls) {
-            try {
-              const r = await fetch(u, { credentials: "include", headers: h });
-              const t = await r.text();
-              let j: unknown = null;
-              try { j = JSON.parse(t); } catch { j = null; }
-              results.push({ status: r.status, json: j });
-            } catch {
-              results.push({ status: 0, json: null });
-            }
-          }
-          return { credits: results[0], plans: results[1] };
-        },
-        { urls: [CREDITS_URL, PLANS_URL], sid }
-      );
-    });
-
-    const status = raw.credits?.status ?? 0;
-    if (status === 401 || status === 403) {
-      await markSessionInvalid("zonaprop");
-      throw new Error(`Créditos: ${status} (sesión ZonaProp vencida — reconectá el portal)`);
-    }
-    const normalized = normalizeCredits({ credits: raw.credits?.json, plans: raw.plans?.json });
+    // Usa la infra probada del publish (withPublishPage + getInPage): navega al
+    // panel del publicador y hace el GET in-page con los headers del panel
+    // (sessionid + x-panel-portal). En el worker esto funciona; withPortalPage a
+    // /panel/avisos dejaba el documento en un origen donde el fetch fallaba.
+    const raw = await fetchCreditsRaw();
+    const normalized = normalizeCredits({ credits: raw.credits, plans: raw.plans });
     await prisma.portalCredits.upsert({
       where: { portal: "zonaprop" },
       create: { portal: "zonaprop", plans: normalized, raw: raw as object, error: null, fetchedAt: new Date() },

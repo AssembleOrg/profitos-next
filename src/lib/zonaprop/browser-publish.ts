@@ -255,6 +255,24 @@ export async function publishDraftViaBrowser(input: DraftInput): Promise<string>
   return withPublishPage((page, sessionId) => createFullDraft(makeRunner(page, sessionId), input));
 }
 
+/**
+ * Lee el cupo de créditos (GET gratis) usando la MISMA infra probada del publish
+ * (withPublishPage navega al panel del publicador → in-page fetch funciona en el
+ * worker; getInPage manda los headers sessionid + x-panel-portal). Devuelve el
+ * crudo de /avisos-api/credits (+ publicationplans). Sin normalizar.
+ */
+export async function fetchCreditsRaw(): Promise<{ credits: unknown; plans: unknown }> {
+  return withPublishPage(async (page, sessionId) => {
+    const credits = await getInPage<unknown>(page, sessionId, `${BASE}/avisos-api/credits`).catch(() => null);
+    const plans = await getInPage<unknown>(
+      page,
+      sessionId,
+      `${BASE}/avisos-api/panel/api/v2/credits/publicationplans?operationType=2&publisherType=2`
+    ).catch(() => null);
+    return { credits, plans };
+  });
+}
+
 export type PhotoSource = { url: string };
 export type FullPublishInput = {
   draft: DraftInput;
