@@ -167,10 +167,13 @@ function mapZonaprop(p: PropertyForPublish): FullPublishInput {
 
 async function runZonaprop(
   p: PropertyForPublish,
-  activate?: { plan: string }
+  activate?: { plan: string },
+  responsibleUserId?: string
 ): Promise<{ externalId: string; permalink: string; active: boolean }> {
   const input = mapZonaprop(p);
   if (activate) input.activate = { publicationPlan: activate.plan };
+  // Responsable elegido en la web pisa el default del env.
+  if (responsibleUserId) input.responsibleUserId = responsibleUserId;
   const r = await publishViaBrowser(input);
   return { externalId: r.postingId, permalink: r.permalink, active: r.published };
 }
@@ -234,7 +237,7 @@ async function runArgenprop(p: PropertyForPublish): Promise<{ externalId: string
 // Plan por defecto al activar en ZonaProp: "3" = Simples (el más barato).
 const ZP_DEFAULT_PLAN = "3";
 
-export type EnqueueOpts = { activate?: boolean; plan?: string; action?: string };
+export type EnqueueOpts = { activate?: boolean; plan?: string; action?: string; responsibleUserId?: string };
 
 /**
  * Encola una publicación y marca la publicación como "publishing". Idempotente
@@ -248,6 +251,7 @@ export async function enqueuePublish(propertyId: string, portal: PublishPortal, 
       action: opts.action ?? "publish",
       activate: opts.activate ?? false,
       plan: opts.plan ?? null,
+      responsibleUserId: opts.responsibleUserId ?? null,
       status: "pending",
     },
   });
@@ -262,9 +266,10 @@ export async function enqueuePublish(propertyId: string, portal: PublishPortal, 
 async function runPortal(
   portal: PublishPortal,
   p: PropertyForPublish,
-  activate?: { plan: string }
+  activate?: { plan: string },
+  responsibleUserId?: string
 ): Promise<{ externalId: string; permalink: string; active: boolean }> {
-  return portal === "zonaprop" ? runZonaprop(p, activate) : runArgenprop(p);
+  return portal === "zonaprop" ? runZonaprop(p, activate, responsibleUserId) : runArgenprop(p);
 }
 
 /** Procesa un job: corre el motor y actualiza PropertyPublication. Lo llama el worker. */
@@ -286,7 +291,7 @@ export async function processPublishJob(jobId: string): Promise<void> {
 
   try {
     const activate = job.activate && portal === "zonaprop" ? { plan: job.plan ?? ZP_DEFAULT_PLAN } : undefined;
-    const { externalId, permalink, active } = await runPortal(portal, property, activate);
+    const { externalId, permalink, active } = await runPortal(portal, property, activate, job.responsibleUserId ?? undefined);
     const status = active ? "active" : "draft";
     await prisma.propertyPublication.upsert({
       where: { propertyId_portal: { propertyId: job.propertyId, portal } },

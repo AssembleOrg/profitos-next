@@ -34,6 +34,7 @@ type ConnStatus = { portal: PortalKey; connected: boolean; lastOkAt: string | nu
 type Publication = { portal: string; status: string; published: boolean; permalink: string | null; lastError: string | null };
 type PlanCredit = { plan: string; label: string; available: number | null; used: number | null; total: number | null };
 type Credits = { plans: PlanCredit[]; fetchedAt: string | null; error: string | null };
+type Responsible = { userId: number; name: string; lastName: string; email: string };
 
 async function getJson<T>(url: string): Promise<T | null> {
   try {
@@ -56,14 +57,18 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
   const [zpPlan, setZpPlan] = useState<string>("3"); // plan de exposición para ZonaProp activo
   const [credits, setCredits] = useState<Credits | null>(null);
   const [refreshingCredits, setRefreshingCredits] = useState(false);
+  const [responsibles, setResponsibles] = useState<Responsible[]>([]);
+  const [respUserId, setRespUserId] = useState<string>(""); // "" = responsable por defecto
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
-    const [statusData, pubData, creditsData] = await Promise.all([
+    const [statusData, pubData, creditsData, respData] = await Promise.all([
       getJson<{ portals: ConnStatus[] }>("/api/integrations/portales/status"),
       getJson<{ publications: Publication[] }>(`/api/integrations/portales/publications/${propertyId}`),
       getJson<Credits>("/api/integrations/portales/credits"),
+      getJson<{ responsibles: Responsible[] }>("/api/integrations/portales/responsibles"),
     ]);
+    if (respData?.responsibles) setResponsibles(respData.responsibles);
     if (statusData) setConn(statusData.portals);
     if (pubData) {
       const map: Record<string, Publication> = {};
@@ -114,6 +119,7 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
 
   async function publishOne(portal: PortalKey, activate = false) {
     const plan = portal === "zonaprop" && activate ? zpPlan : undefined;
+    const responsibleUserId = portal === "zonaprop" && respUserId ? respUserId : undefined;
     if (
       activate &&
       !window.confirm(
@@ -128,7 +134,7 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
       const res = await fetch(`/api/integrations/portales/${portal}/publish`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ propertyId, activate, plan }),
+        body: JSON.stringify({ propertyId, activate, plan, responsibleUserId }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -351,6 +357,23 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                       </button>
                       {portal === "zonaprop" && (
                         <>
+                          {responsibles.length > 0 && (
+                            <select
+                              value={respUserId}
+                              onChange={(e) => setRespUserId(e.target.value)}
+                              disabled={busy !== null || pub?.status === "publishing"}
+                              className="max-w-[140px] rounded-full border border-border bg-surface px-2 py-1.5 text-[11.5px] font-semibold text-text-muted disabled:opacity-50"
+                              title="Responsable del aviso (quién recibe las consultas)"
+                              aria-label="Responsable ZonaProp"
+                            >
+                              <option value="">Responsable: por defecto</option>
+                              {responsibles.map((r) => (
+                                <option key={r.userId} value={String(r.userId)}>
+                                  {r.name} {r.lastName}
+                                </option>
+                              ))}
+                            </select>
+                          )}
                           <select
                             value={zpPlan}
                             onChange={(e) => setZpPlan(e.target.value)}

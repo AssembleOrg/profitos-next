@@ -31,6 +31,7 @@ import {
   type Portal,
   type ProxyConfig,
 } from "@/lib/scraper/session";
+import { normalizeResponsibles, saveResponsibles } from "@/lib/publish/responsibles";
 import {
   createFullDraft,
   publishHeaders,
@@ -347,6 +348,19 @@ export async function publishViaBrowser(input: FullPublishInput): Promise<FullPu
           await fetch(url, { method: "PUT", credentials: "include", headers });
         }, { url, headers })
         .catch(() => {});
+    }
+
+    // Refrescar la lista de responsables (viene en STEP_PLAN_SELECTION) para el
+    // selector de la web. Best-effort: no rompe la publicación si falla.
+    try {
+      const step = await getInPage<{ userWithPermissions?: unknown }>(
+        page,
+        sessionId,
+        `${PUB_API}/posting/STEP_PLAN_SELECTION/${postingId}`
+      );
+      await saveResponsibles("zonaprop", normalizeResponsibles(step.userWithPermissions));
+    } catch {
+      /* noop */
     }
 
     // Paso 8: activar (gasta crédito). Solo si viene `activate`.

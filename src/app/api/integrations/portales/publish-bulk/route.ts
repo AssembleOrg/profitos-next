@@ -16,6 +16,7 @@ export const POST = withHandler(async (request: NextRequest) => {
     portals?: string[];
     activate?: boolean;
     plan?: string;
+    responsibleUserId?: string;
   };
 
   if (!body.propertyId) throw new AppError(400, "Falta propertyId");
@@ -27,7 +28,11 @@ export const POST = withHandler(async (request: NextRequest) => {
 
   const queued: { portal: string; jobId: string }[] = [];
   for (const portal of portals) {
-    const jobId = await enqueuePublish(body.propertyId, portal, { activate: Boolean(body.activate), plan: body.plan });
+    const jobId = await enqueuePublish(body.propertyId, portal, {
+      activate: Boolean(body.activate),
+      plan: body.plan,
+      responsibleUserId: body.responsibleUserId,
+    });
     queued.push({ portal, jobId });
   }
   await triggerWorkerProcess(); // despierta al worker para procesar ya (no esperar al tick)
