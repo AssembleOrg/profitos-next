@@ -133,15 +133,24 @@ export function normalizeCredits(raw: unknown): PlanCredit[] {
  */
 export async function refreshZonapropCredits(): Promise<PlanCredit[]> {
   try {
-    // Usa la infra probada del publish (withPublishPage + getInPage): navega al
-    // panel del publicador y hace el GET in-page con los headers del panel
-    // (sessionid + x-panel-portal). En el worker esto funciona; withPortalPage a
-    // /panel/avisos dejaba el documento en un origen donde el fetch fallaba.
-    const raw = await fetchCreditsRaw();
-    const st = raw.credits?.status ?? 0;
-    if (st === 401 || st === 403) throw new Error(`Créditos: ${st} (sesión ZonaProp — reconectá el portal)`);
-    if (st === 0) {
-      throw new Error(`Créditos: no cargó la página (${raw.pageUrl ?? "?"}): ${raw.credits?.bodySnippet ?? "sin detalle"}`);
+    // El GET del cupo se hace desde la página del publicador (withPublishPage).
+    // El proxy residencial rotativo a veces da una IP flagueada: la navegación
+    // cae en chrome-error y el fetch falla ("Failed to fetch", status 0). Como
+    // cada intento abre un contexto NUEVO (= sesión de proxy nueva = IP nueva),
+    // reintentamos: normalmente una IP limpia aparece en pocos intentos.
+    let raw: Awaited<ReturnType<typeof fetchCreditsRaw>> | null = null;
+    let st = 0;
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      raw = await fetchCreditsRaw();
+      st = raw.credits?.status ?? 0;
+      if (st === 401 || st === 403) throw new Error(`Créditos: ${st} (sesión ZonaProp — reconectá el portal)`);
+      if (st >= 200 && st < 300) break; // cargó bien
+      // status 0 (nav falló / IP flagueada) o 5xx → reintentar con IP nueva.
+    }
+    if (!raw || st < 200 || st >= 300) {
+      throw new Error(
+        `Créditos: no cargó tras reintentos (${raw?.pageUrl ?? "?"}): ${raw?.credits?.bodySnippet ?? `status ${st}`}`
+      );
     }
     const normalized = normalizeCredits({ credits: raw.credits?.json, plans: raw.plans?.json });
     await prisma.portalCredits.upsert({
