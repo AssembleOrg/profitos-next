@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useTransition } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DatePicker } from "@/components/ui/date-picker";
 import { SelectField } from "@/components/ui/select-field";
@@ -78,6 +79,17 @@ interface PdfPopupState {
   left: number;
 }
 
+/** Foto de una propiedad (respuesta de /api/propiedades/[id]/fotos). */
+interface ModalPhoto {
+  image: string;
+  thumb: string | null;
+  original: string | null;
+  order: number;
+  description: string | null;
+  isFrontCover: boolean;
+  isBlueprint: boolean;
+}
+
 const PROPERTY_TYPES = [
   { value: "", label: "Sin especificar" },
   { value: "departamento", label: "Departamento" },
@@ -87,6 +99,11 @@ const PROPERTY_TYPES = [
   { value: "oficina", label: "Oficina" },
   { value: "otro", label: "Otro" },
 ];
+
+// Estilos compartidos de los campos del modal de propiedad.
+const MODAL_FIELD =
+  "w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none";
+const MODAL_LABEL = "mb-1 block text-[12.5px] font-semibold text-text-muted";
 
 const PROPERTY_STATUSES = [
   { value: "activa", label: "Activa", color: "bg-sage-chip text-olive-light" },
@@ -464,6 +481,10 @@ export function PropiedadesClient({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editProperty, setEditProperty] = useState<Property | null>(null);
+  // Pestañas del modal. Las fotos NO viajan con la paginación: se piden al abrir.
+  const [modalTab, setModalTab] = useState<"datos" | "ubicacion" | "fotos" | "portales">("datos");
+  const [modalPhotos, setModalPhotos] = useState<ModalPhoto[] | null>(null);
+  const [photosLoading, setPhotosLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -615,11 +636,15 @@ export function PropiedadesClient({
 
   function handleNew() {
     setEditProperty(null);
+    setModalTab("datos");
+    setModalPhotos(null);
     setModalOpen(true);
   }
 
   function handleEdit(p: Property) {
     setEditProperty(p);
+    setModalTab("datos");
+    setModalPhotos(null);
     setModalOpen(true);
   }
 
@@ -627,7 +652,31 @@ export function PropiedadesClient({
     setModalOpen(false);
     setEditProperty(null);
     setError(null);
+    setModalTab("datos");
+    setModalPhotos(null);
   }
+
+  // Fotos bajo demanda: se piden al abrir una propiedad (no en la paginación).
+  useEffect(() => {
+    if (!modalOpen || !editProperty?.id) return;
+    let cancelled = false;
+    setPhotosLoading(true);
+    fetch(`/api/propiedades/${editProperty.id}/fotos`)
+      .then((r) => r.json())
+      .then((body) => {
+        if (!cancelled) setModalPhotos((body?.data?.photos ?? []) as ModalPhoto[]);
+      })
+      .catch(() => {
+        if (!cancelled) setModalPhotos([]);
+      })
+      .finally(() => {
+        if (!cancelled) setPhotosLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalOpen, editProperty?.id]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -1500,311 +1549,297 @@ export function PropiedadesClient({
               {/* Drag handle — solo mobile */}
               <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-border sm:hidden" />
 
-              {/* Header fijo */}
-              <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
-                <h2 className="flex items-center gap-2 font-display text-[17px] font-semibold text-text">
-                  {isEdit ? "Editar propiedad" : "Nueva propiedad"}
-                  {isEdit && editProperty?.source === "manual" && <ManualChip />}
-                </h2>
-                <button
-                  onClick={handleClose}
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted transition-colors active:bg-bg"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
+              {/* Header fijo: título + pestañas */}
+              <div className="flex-shrink-0 border-b border-border px-5 pt-4 sm:px-8">
+                <div className="flex items-center justify-between">
+                  <h2 className="flex min-w-0 items-center gap-2 font-display text-[17px] font-semibold text-text">
+                    <span className="truncate">
+                      {isEdit ? (editProperty?.realAddress || editProperty?.address || "Editar propiedad") : "Nueva propiedad"}
+                    </span>
+                    {isEdit && editProperty?.source === "manual" && <ManualChip />}
+                  </h2>
+                  <button
+                    onClick={handleClose}
+                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-text-muted transition-colors active:bg-bg"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="scrollbar-none -mb-px mt-3 flex gap-1 overflow-x-auto">
+                  {(
+                    [
+                      { key: "datos", label: "Datos" },
+                      { key: "ubicacion", label: "Ubicación" },
+                      ...(isEdit
+                        ? [
+                            { key: "fotos", label: `Fotos${modalPhotos ? ` (${modalPhotos.length})` : ""}` },
+                            { key: "portales", label: "Portales" },
+                          ]
+                        : []),
+                    ] as { key: typeof modalTab; label: string }[]
+                  ).map((t) => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => setModalTab(t.key)}
+                      className={`flex-shrink-0 whitespace-nowrap rounded-t-[12px] border-b-2 px-4 py-2.5 text-[13px] font-bold transition-colors ${
+                        modalTab === t.key
+                          ? "border-dark text-text"
+                          : "border-transparent text-text-faint hover:text-text-muted"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Body scrolleable */}
-              <form id="property-form" onSubmit={handleSubmit} className="grid flex-1 grid-cols-1 content-start gap-4 overflow-y-auto overscroll-contain px-5 py-4 sm:gap-5 sm:px-8 sm:py-6 lg:grid-cols-2">
-                <div className="lg:col-span-2">
-                  <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Dirección *</label>
-                  <input
-                    name="address"
-                    required
-                    defaultValue={editProperty?.address ?? ""}
-                    placeholder="Av. Corrientes 1234, 5to A"
-                    className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                  />
-                </div>
+              {/* Body scrolleable con pestañas */}
+              <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-8 sm:py-6">
+                {/* El form envuelve Datos + Ubicación; las pestañas ocultas quedan
+                    montadas (hidden) para que FormData conserve todos los campos. */}
+                <form
+                  id="property-form"
+                  onSubmit={handleSubmit}
+                  className={modalTab === "datos" || modalTab === "ubicacion" ? "" : "hidden"}
+                >
+                  {/* ================= Pestaña DATOS ================= */}
+                  <div className={modalTab === "datos" ? "space-y-7" : "hidden"}>
+                    <section>
+                      <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-text-faint">Identificación</h3>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className={MODAL_LABEL}>Dirección *</label>
+                          <input name="address" required defaultValue={editProperty?.address ?? ""} placeholder="Av. Corrientes 1234, 5to A" className={MODAL_FIELD} />
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Dirección real</label>
+                          <input name="realAddress" defaultValue={editProperty?.realAddress ?? ""} placeholder="Brown 1082 - 2B" className={MODAL_FIELD} />
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Título publicación</label>
+                          <input name="publicationTitle" defaultValue={editProperty?.publicationTitle ?? ""} placeholder="Título de aviso" className={MODAL_FIELD} />
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Código referencia</label>
+                          <input name="referenceCode" defaultValue={editProperty?.referenceCode ?? ""} placeholder="Ej: ZP-M-51545814" className={MODAL_FIELD} />
+                        </div>
+                      </div>
+                    </section>
 
-                <div className="grid grid-cols-2 gap-3 lg:col-span-2">
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Título publicación</label>
-                    <input
-                      name="publicationTitle"
-                      defaultValue={editProperty?.publicationTitle ?? ""}
-                      placeholder="Título de aviso"
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Código referencia</label>
-                    <input
-                      name="referenceCode"
-                      defaultValue={editProperty?.referenceCode ?? ""}
-                      placeholder="Ej: ZP-M-51545814"
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                </div>
+                    <section>
+                      <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-text-faint">Características</h3>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <div>
+                          <label className={MODAL_LABEL}>Tipo</label>
+                          <SelectField name="type" defaultValue={editProperty?.type ?? ""}>
+                            {PROPERTY_TYPES.map((t) => (
+                              <option key={t.value} value={t.value}>{t.label}</option>
+                            ))}
+                          </SelectField>
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Estado</label>
+                          <SelectField name="status" defaultValue={editProperty?.status ?? "activa"}>
+                            {PROPERTY_STATUSES.map((s) => (
+                              <option key={s.value} value={s.value}>{s.label}</option>
+                            ))}
+                          </SelectField>
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Ambientes</label>
+                          <input name="roomAmount" type="number" min={0} defaultValue={editProperty?.roomAmount ?? ""} className={MODAL_FIELD} />
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Dormitorios</label>
+                          <input name="bedrooms" type="number" min={0} defaultValue={editProperty?.bedrooms ?? ""} className={MODAL_FIELD} />
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Baños</label>
+                          <input name="bathroomAmount" type="number" min={0} defaultValue={editProperty?.bathroomAmount ?? ""} className={MODAL_FIELD} />
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Cocheras</label>
+                          <input name="parkingLotAmount" type="number" min={0} defaultValue={editProperty?.parkingLotAmount ?? ""} className={MODAL_FIELD} />
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Sup. total (m²)</label>
+                          <input name="totalSurface" type="number" min={0} step="0.01" defaultValue={editProperty?.totalSurface ?? ""} className={MODAL_FIELD} />
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Sup. cubierta (m²)</label>
+                          <input name="roofedSurface" type="number" min={0} step="0.01" defaultValue={editProperty?.roofedSurface ?? ""} className={MODAL_FIELD} />
+                        </div>
+                      </div>
+                    </section>
 
-                <div>
-                  <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Dirección real</label>
-                  <input
-                    name="realAddress"
-                    defaultValue={editProperty?.realAddress ?? ""}
-                    placeholder="Brown 1082 - 2B"
-                    className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                  />
-                </div>
+                    <section>
+                      <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-text-faint">Operación</h3>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <div>
+                          <label className={MODAL_LABEL}>Operación</label>
+                          <SelectField name="operationType" defaultValue={editProperty?.operationType ?? ""}>
+                            <option value="">Sin especificar</option>
+                            <option value="Venta">Venta</option>
+                            <option value="Alquiler">Alquiler</option>
+                          </SelectField>
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Moneda</label>
+                          <SelectField name="operationCurrency" defaultValue={editProperty?.operationCurrency ?? ""}>
+                            <option value="">Sin especificar</option>
+                            <option value="USD">USD</option>
+                            <option value="ARS">ARS</option>
+                          </SelectField>
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Precio</label>
+                          <input name="operationPrice" type="number" min={0} step="0.01" defaultValue={editProperty?.operationPrice ?? ""} className={MODAL_FIELD} />
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>URL pública</label>
+                          <input name="publicUrl" defaultValue={editProperty?.publicUrl ?? ""} placeholder="https://..." className={MODAL_FIELD} />
+                        </div>
+                      </div>
+                    </section>
+                  </div>
 
-                <div className="grid grid-cols-3 gap-3 lg:col-span-2">
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Provincia</label>
-                    <input
-                      name="province"
-                      defaultValue={editProperty?.province ?? ""}
-                      placeholder="Buenos Aires"
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Ciudad / Partido</label>
-                    <input
-                      name="city"
-                      defaultValue={editProperty?.city ?? ""}
-                      placeholder="Quilmes"
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Barrio / Zona</label>
-                    <input
-                      name="zone"
-                      defaultValue={editProperty?.zone ?? ""}
-                      placeholder="Ezpeleta"
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                </div>
+                  {/* ================= Pestaña UBICACIÓN ================= */}
+                  <div className={modalTab === "ubicacion" ? "space-y-7" : "hidden"}>
+                    <section>
+                      <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-text-faint">Zona</h3>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div>
+                          <label className={MODAL_LABEL}>Provincia</label>
+                          <input name="province" defaultValue={editProperty?.province ?? ""} placeholder="Buenos Aires" className={MODAL_FIELD} />
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Ciudad / Partido</label>
+                          <input name="city" defaultValue={editProperty?.city ?? ""} placeholder="Quilmes" className={MODAL_FIELD} />
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Barrio / Zona</label>
+                          <input name="zone" defaultValue={editProperty?.zone ?? ""} placeholder="Ezpeleta" className={MODAL_FIELD} />
+                        </div>
+                      </div>
+                    </section>
 
-                <div className="grid grid-cols-2 gap-3 lg:col-span-2">
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Tipo</label>
-                    <SelectField
-                      name="type"
-                      defaultValue={editProperty?.type ?? ""}
-                    >
-                      {PROPERTY_TYPES.map((t) => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
-                      ))}
-                    </SelectField>
+                    <section>
+                      <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-text-faint">Coordenadas</h3>
+                      <div className="grid grid-cols-2 gap-3 sm:max-w-md">
+                        <div>
+                          <label className={MODAL_LABEL}>Latitud</label>
+                          <input name="geoLat" type="number" step="any" defaultValue={editProperty?.geoLat ?? ""} placeholder="-34.6037" className={MODAL_FIELD} />
+                        </div>
+                        <div>
+                          <label className={MODAL_LABEL}>Longitud</label>
+                          <input name="geoLong" type="number" step="any" defaultValue={editProperty?.geoLong ?? ""} placeholder="-58.3816" className={MODAL_FIELD} />
+                        </div>
+                      </div>
+                      <p className="mt-2 text-[12px] text-text-faint">Se usan para el mapa y para vincular avisos de portales por cercanía.</p>
+                    </section>
                   </div>
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Estado</label>
-                    <SelectField
-                      name="status"
-                      defaultValue={editProperty?.status ?? "activa"}
-                    >
-                      {PROPERTY_STATUSES.map((s) => (
-                        <option key={s.value} value={s.value}>{s.label}</option>
-                      ))}
-                    </SelectField>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-3 gap-3 lg:col-span-2 lg:grid-cols-6">
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Ambientes</label>
-                    <input
-                      name="roomAmount"
-                      type="number"
-                      min={0}
-                      defaultValue={editProperty?.roomAmount ?? ""}
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Dormitorios</label>
-                    <input
-                      name="bedrooms"
-                      type="number"
-                      min={0}
-                      defaultValue={editProperty?.bedrooms ?? ""}
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Baños</label>
-                    <input
-                      name="bathroomAmount"
-                      type="number"
-                      min={0}
-                      defaultValue={editProperty?.bathroomAmount ?? ""}
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Cocheras</label>
-                    <input
-                      name="parkingLotAmount"
-                      type="number"
-                      min={0}
-                      defaultValue={editProperty?.parkingLotAmount ?? ""}
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Sup. total (m²)</label>
-                    <input
-                      name="totalSurface"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      defaultValue={editProperty?.totalSurface ?? ""}
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-text-muted">Sup. cubierta (m²)</label>
-                    <input
-                      name="roofedSurface"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      defaultValue={editProperty?.roofedSurface ?? ""}
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Operación y Moneda ocultas del modal — visibles solo en tabla y filtros
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Operación</label>
-                    <input
-                      name="operationType"
-                      defaultValue={editProperty?.operationType ?? ""}
-                      placeholder="Venta / Alquiler"
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Moneda</label>
-                    <input
-                      name="operationCurrency"
-                      defaultValue={editProperty?.operationCurrency ?? ""}
-                      placeholder="USD"
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                */}
-                <div>
-                  <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Precio</label>
-                  <input
-                    name="operationPrice"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    defaultValue={editProperty?.operationPrice ?? ""}
-                    className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text focus:border-border-strong focus:outline-none"
-                  />
-                </div>
-                {/* fin campos ocultos */}
-
-                <div>
-                  <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">URL pública</label>
-                  <input
-                    name="publicUrl"
-                    defaultValue={editProperty?.publicUrl ?? ""}
-                    placeholder="https://..."
-                    className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Latitud</label>
-                    <input
-                      name="geoLat"
-                      type="number"
-                      step="any"
-                      defaultValue={editProperty?.geoLat ?? ""}
-                      placeholder="-34.6037"
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Longitud</label>
-                    <input
-                      name="geoLong"
-                      type="number"
-                      step="any"
-                      defaultValue={editProperty?.geoLong ?? ""}
-                      placeholder="-58.3816"
-                      className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                {error && (
-                  <p className="rounded-[14px] bg-clay-chip px-3.5 py-2 text-[13px] font-semibold text-terra">{error}</p>
-                )}
-              </form>
-
-              {/* Publicación multi-portal (ML + ZonaProp + ArgenProp) */}
-              {isEdit && editProperty?.id && (
-                <div className="flex-shrink-0 border-t border-border px-5 py-3">
-                  <PortalesPanel propertyId={editProperty.id} />
-                </div>
-              )}
-
-              {/* Estado de publicación en MercadoLibre */}
-              {isEdit && editProperty?.mlPublication?.published && (
-                <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border bg-sand-chip/40 px-5 py-3">
-                  <div className="flex items-center gap-2">
-                    <MlChip status={editProperty.mlPublication.status} permalink={null} />
-                    <span className="text-xs text-text-muted">Publicado en MercadoLibre</span>
-                  </div>
-                  {editProperty.mlPublication.permalink && (
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={editProperty.mlPublication.permalink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex h-9 items-center gap-1 rounded-full border border-border bg-surface px-3.5 text-[12.5px] font-semibold text-text-muted transition-colors hover:bg-bg"
-                      >
-                        Ver aviso
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M7 17L17 7" />
-                          <path d="M7 7h10v10" />
-                        </svg>
-                      </a>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(editProperty.mlPublication!.permalink!);
-                            toast.success("Link copiado");
-                          } catch {
-                            toast.error("No se pudo copiar");
-                          }
-                        }}
-                        className="inline-flex h-9 items-center gap-1 rounded-full border border-border bg-surface px-3.5 text-[12.5px] font-semibold text-text-muted transition-colors hover:bg-bg"
-                      >
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                        </svg>
-                        Copiar link
-                      </button>
-                    </div>
+                  {error && (
+                    <p className="mt-4 rounded-[14px] bg-clay-chip px-3.5 py-2 text-[13px] font-semibold text-terra">{error}</p>
                   )}
-                </div>
-              )}
+                </form>
+
+                {/* ================= Pestaña FOTOS ================= */}
+                {isEdit && (
+                  <div className={modalTab === "fotos" ? "" : "hidden"}>
+                    {photosLoading ? (
+                      <div className="flex items-center justify-center py-16">
+                        <span className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-text" />
+                      </div>
+                    ) : !modalPhotos?.length ? (
+                      <p className="py-16 text-center text-[13.5px] text-text-faint">Esta propiedad no tiene fotos cargadas.</p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+                        {modalPhotos.map((ph) => (
+                          <a
+                            key={`${ph.order}-${ph.image}`}
+                            href={ph.original ?? ph.image}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group relative block overflow-hidden rounded-[14px] border border-border bg-bg"
+                          >
+                            {/* next/image: el optimizador cachea en server + navegador
+                                (Supabase sirve no-cache; así igual cacheamos). Lazy por defecto. */}
+                            <Image
+                              src={ph.image}
+                              alt={ph.description ?? `Foto ${ph.order}`}
+                              width={400}
+                              height={300}
+                              className="aspect-[4/3] w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+                            />
+                            {ph.isFrontCover && (
+                              <span className="absolute left-2 top-2 rounded-full bg-dark px-2 py-0.5 text-[10px] font-bold text-dark-fg">Portada</span>
+                            )}
+                            {ph.isBlueprint && (
+                              <span className="absolute right-2 top-2 rounded-full bg-info-chip px-2 py-0.5 text-[10px] font-bold text-info">Plano</span>
+                            )}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+
+                {/* ================= Pestaña PORTALES ================= */}
+                {isEdit && editProperty?.id && (
+                  <div className={modalTab === "portales" ? "space-y-4" : "hidden"}>
+                    <PortalesPanel propertyId={editProperty.id} />
+
+                    {editProperty?.mlPublication?.published && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-[14px] bg-sand-chip/40 px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <MlChip status={editProperty.mlPublication.status} permalink={null} />
+                          <span className="text-xs text-text-muted">Publicado en MercadoLibre</span>
+                        </div>
+                        {editProperty.mlPublication.permalink && (
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={editProperty.mlPublication.permalink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex h-9 items-center gap-1 rounded-full border border-border bg-surface px-3.5 text-[12.5px] font-semibold text-text-muted transition-colors hover:bg-bg"
+                            >
+                              Ver aviso
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M7 17L17 7" />
+                                <path d="M7 7h10v10" />
+                              </svg>
+                            </a>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  await navigator.clipboard.writeText(editProperty.mlPublication!.permalink!);
+                                  toast.success("Link copiado");
+                                } catch {
+                                  toast.error("No se pudo copiar");
+                                }
+                              }}
+                              className="inline-flex h-9 items-center gap-1 rounded-full border border-border bg-surface px-3.5 text-[12.5px] font-semibold text-text-muted transition-colors hover:bg-bg"
+                            >
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                              </svg>
+                              Copiar link
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Footer fijo con acciones */}
               <div

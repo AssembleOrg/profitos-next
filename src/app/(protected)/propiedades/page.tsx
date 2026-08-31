@@ -81,7 +81,35 @@ export default async function PropiedadesPage({ searchParams }: Props) {
   const [properties, total, totalAll, usersForAssignments, propertiesForAssignments] = await Promise.all([
     prisma.property.findMany({
       where,
-      include: {
+      // select (no include): las fotos (~20/propiedad) y descripciones largas
+      // NO se traen en la paginación — se piden al abrir la propiedad.
+      select: {
+        id: true,
+        externalId: true,
+        source: true,
+        address: true,
+        realAddress: true,
+        publicationTitle: true,
+        referenceCode: true,
+        publicUrl: true,
+        city: true,
+        province: true,
+        zone: true,
+        type: true,
+        status: true,
+        roomAmount: true,
+        bedrooms: true,
+        bathroomAmount: true,
+        parkingLotAmount: true,
+        totalSurface: true,
+        roofedSurface: true,
+        operationType: true,
+        operationPrice: true,
+        operationCurrency: true,
+        geoLat: true,
+        geoLong: true,
+        ownerReportData: true,
+        createdAt: true,
         _count: { select: { visitas: true } },
         publications: {
           select: { portal: true, status: true, permalink: true, externalId: true },

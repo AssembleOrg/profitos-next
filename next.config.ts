@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
     "puppeteer-extra-plugin-stealth",
   ],
   images: {
+    // Cache del optimizador: 1 día. Las fotos de propiedades rotan seguido
+    // (altas/bajas/reemplazos semanales); un reemplazo en la misma URL puede
+    // tardar hasta 24h en verse. Subir si el catálogo se vuelve más estático.
+    minimumCacheTTL: 86400,
     remotePatterns: [
       {
         protocol: "https",
