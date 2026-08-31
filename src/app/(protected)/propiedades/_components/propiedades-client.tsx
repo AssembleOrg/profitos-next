@@ -656,6 +656,21 @@ export function PropiedadesClient({
     setModalPhotos(null);
   }
 
+  // Deep-link: /propiedades?q=...&open=<id> abre el modal de esa propiedad
+  // (lo usan las notificaciones de contactos recientes). El param se limpia
+  // para que un back/refresh no reabra el modal.
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    if (!openId) return;
+    const target = properties.find((p) => p.id === openId);
+    if (target) handleEdit(target);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("open");
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, properties]);
+
   // Fotos bajo demanda: se piden al abrir una propiedad (no en la paginación).
   useEffect(() => {
     if (!modalOpen || !editProperty?.id) return;

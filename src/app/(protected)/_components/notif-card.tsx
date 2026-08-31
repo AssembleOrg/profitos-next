@@ -80,10 +80,23 @@ function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
   }
 }
 
+/**
+ * Link a la propiedad de la notificación: lista filtrada por dirección y
+ * `open=<id>` para que el modal se abra solo. Null si no hay propiedad.
+ */
+function notifHref(item: NotificationItem): string | null {
+  const propId = item.kind === "property" ? item.id : item.property?.id;
+  if (!propId) return null;
+  const addr = item.kind === "property" ? item.address : item.property?.address;
+  const q = addr ? `q=${encodeURIComponent(addr)}&` : "";
+  return `/propiedades?${q}open=${propId}`;
+}
+
 /** Tarjeta de notificación V4 — fondo canvas, pill tintada por tipo. */
-export function NotifCard({ item }: Readonly<{ item: NotificationItem }>) {
-  return (
-    <div className="flex items-start gap-2.5 rounded-[14px] bg-bg px-3 py-2.5">
+export function NotifCard({ item, onNavigate }: Readonly<{ item: NotificationItem; onNavigate?: () => void }>) {
+  const href = notifHref(item);
+  const body = (
+    <>
       <span className={`mt-0.5 inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[10px] font-bold ${NOTIF_BADGE_CLASS[item.kind]}`}>
         {NOTIF_LABEL[item.kind]}
       </span>
@@ -91,8 +104,20 @@ export function NotifCard({ item }: Readonly<{ item: NotificationItem }>) {
         <NotifBody item={item} />
       </div>
       <span className="shrink-0 text-[10.5px] text-text-faint">{formatNotifDate(item.eventAt)}</span>
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link
+        href={href}
+        onClick={onNavigate}
+        className="flex items-start gap-2.5 rounded-[14px] bg-bg px-3 py-2.5 transition-colors hover:bg-surface-elevated"
+      >
+        {body}
+      </Link>
+    );
+  }
+  return <div className="flex items-start gap-2.5 rounded-[14px] bg-bg px-3 py-2.5">{body}</div>;
 }
 
 /** Popover/sheet de notificaciones — cuerpo compartido entre topbar y bottom nav. */
@@ -125,7 +150,7 @@ export function NotifPanelBody({
         {notifications.length === 0 ? (
           <p className="rounded-[14px] bg-bg px-3 py-4 text-sm text-text-faint">Sin notificaciones.</p>
         ) : (
-          notifications.map((item) => <NotifCard key={`${item.kind}-${item.id}`} item={item} />)
+          notifications.map((item) => <NotifCard key={`${item.kind}-${item.id}`} item={item} onNavigate={onNavigate} />)
         )}
       </div>
       <div className="mx-4 mb-3 flex items-center justify-between gap-2 border-t border-border pt-2.5">
