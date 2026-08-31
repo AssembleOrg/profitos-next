@@ -12,6 +12,7 @@
  */
 import { prisma } from "@/lib/prisma/client";
 import { fetchCreditsRaw } from "@/lib/zonaprop/browser-publish";
+import { markSessionInvalid } from "@/lib/scraper/session";
 
 export type PlanCredit = { plan: string; label: string; available: number | null; used: number | null; total: number | null };
 
@@ -152,7 +153,11 @@ export async function refreshZonapropCredits(): Promise<PlanCredit[]> {
         continue; // IP mala (ya quedó en cooldown) → reintentar con otra
       }
       st = raw.credits?.status ?? 0;
-      if (st === 401 || st === 403) throw new Error(`Créditos: ${st} (sesión ZonaProp — reconectá el portal)`);
+      if (st === 401 || st === 403) {
+        // Sesión vencida: bajamos el flag para que la web muestre "Reconectar".
+        await markSessionInvalid("zonaprop");
+        throw new Error(`Créditos: ${st} (sesión ZonaProp — reconectá el portal)`);
+      }
       if (st >= 200 && st < 300) break; // cargó bien
       lastErr = raw.credits?.bodySnippet ?? `status ${st}`;
     }
