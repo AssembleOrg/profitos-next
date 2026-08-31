@@ -30,9 +30,13 @@ const VNC_PORT = Number(process.env.RELOGIN_VNC_PORT ?? 5900);
 const DISPLAY = process.env.DISPLAY ?? ":99";
 const SESSION_TTL_MS = Number(process.env.RELOGIN_TTL_MS ?? 8 * 60_000); // 8 min
 
-/** URL de arranque por portal (si no hay sesión, redirige al login del portal). */
+/**
+ * URL de arranque por portal (si no hay sesión, redirige al login del portal).
+ * ZonaProp: /panel (home del panel) y no una sección puntual — tras loguearse el
+ * usuario queda en el home, no en "interesados" u otra vista suelta.
+ */
 const LOGIN_URL: Record<string, string> = {
-  zonaprop: "https://www.zonaprop.com.ar/panel/interesados",
+  zonaprop: "https://www.zonaprop.com.ar/panel",
   argenprop: "https://www.argenprop.com/micuenta/mismensajes",
   "argenprop-gestion": "https://gestion.argenprop.com/",
 };
