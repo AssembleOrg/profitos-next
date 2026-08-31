@@ -18,6 +18,16 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "lh3.googleusercontent.com",
       },
+      // Fotos de propiedades migradas a Supabase Storage (bucket property-photos).
+      {
+        protocol: "https",
+        hostname: "omuepkjofhdustjajcuw.supabase.co",
+      },
+      // Fallback: alguna foto puede seguir en Tokko si su transferencia falló.
+      {
+        protocol: "https",
+        hostname: "static.tokkobroker.com",
+      },
     ],
   },
 };
