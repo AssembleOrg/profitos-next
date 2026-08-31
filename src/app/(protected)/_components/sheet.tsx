@@ -12,8 +12,9 @@
  *   </Sheet>
  */
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useIsMobile } from "./use-is-mobile";
 
 interface SheetProps {
   open: boolean;
@@ -26,21 +27,6 @@ interface SheetProps {
 }
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
-const MOBILE_MEDIA_QUERY = "(max-width: 639px)";
-
-function subscribeToMobileQuery(onStoreChange: () => void) {
-  if (!("window" in globalThis)) return () => {};
-
-  const mediaQueryList = globalThis.window.matchMedia(MOBILE_MEDIA_QUERY);
-  mediaQueryList.addEventListener("change", onStoreChange);
-
-  return () => mediaQueryList.removeEventListener("change", onStoreChange);
-}
-
-function getMobileSnapshot() {
-  if (!("window" in globalThis)) return false;
-  return globalThis.window.matchMedia(MOBILE_MEDIA_QUERY).matches;
-}
 
 export function Sheet({
   open,
@@ -51,11 +37,7 @@ export function Sheet({
   maxWidth = "sm:max-w-md",
   avatarInitial,
 }: Readonly<SheetProps>) {
-  const isMobile = useSyncExternalStore(
-    subscribeToMobileQuery,
-    getMobileSnapshot,
-    () => false
-  );
+  const isMobile = useIsMobile();
 
   // Lock body scroll cuando el sheet está abierto
   useEffect(() => {

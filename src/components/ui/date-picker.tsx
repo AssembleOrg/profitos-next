@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { DateTime, formatDate } from "@/lib/datetime";
 
 // Encabezados de la grilla, semana empezando en lunes (formato AR/ES).
@@ -49,22 +50,34 @@ export function DatePicker({
   const current = (isControlled ? value ?? "" : internal).slice(0, 10);
 
   const [open, setOpen] = useState(false);
-  const [alignRight, setAlignRight] = useState(false);
+  // Popup posicionado `fixed` para escapar del overflow de modales/scroll.
+  const [coords, setCoords] = useState<{ left: number; top: number; bottom?: number } | null>(null);
   const [viewMonth, setViewMonth] = useState<DateTime>(() =>
     (current ? DateTime.fromISO(current) : DateTime.now()).startOf("month")
   );
   const containerRef = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
 
-  const POPOVER_WIDTH = 288; // ~18rem, para decidir si abre a izquierda o derecha
+  const POPOVER_WIDTH = 288; // ~18rem
+  const POPOVER_HEIGHT = 360; // alto aprox. para decidir flip arriba/abajo
 
-  // Al abrir, posicionar el calendario en el mes del valor actual y elegir
-  // la alineación (der/izq) según el espacio disponible para no salir de pantalla.
+  // Al abrir: posicionar en el mes del valor actual y calcular coords fixed,
+  // eligiendo lado (der/izq) y flip (arriba/abajo) según el espacio disponible.
   function toggleOpen() {
     const next = !open;
     if (next) {
       setViewMonth((current ? DateTime.fromISO(current) : DateTime.now()).startOf("month"));
       const rect = containerRef.current?.getBoundingClientRect();
-      if (rect) setAlignRight(rect.left + POPOVER_WIDTH > window.innerWidth - 8);
+      if (rect) {
+        const alignRight = rect.left + POPOVER_WIDTH > window.innerWidth - 8;
+        const left = alignRight ? rect.right - POPOVER_WIDTH : rect.left;
+        const flipUp = rect.bottom + POPOVER_HEIGHT > window.innerHeight - 8;
+        setCoords(
+          flipUp
+            ? { left, top: 0, bottom: window.innerHeight - rect.top + 4 }
+            : { left, top: rect.bottom + 4 }
+        );
+      }
     }
     setOpen(next);
   }
@@ -73,7 +86,9 @@ export function DatePicker({
   useEffect(() => {
     if (!open) return;
     function onClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (containerRef.current?.contains(t) || popRef.current?.contains(t)) return;
+      setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -129,7 +144,7 @@ export function DatePicker({
         aria-label={ariaLabel}
         disabled={disabled}
         onClick={toggleOpen}
-        className={className ? `flex w-full items-center justify-between gap-2 ${className}` : DEFAULT_TRIGGER}
+        className={className ? `flex w-full items-center justify-between gap-2 transition-colors hover:border-border-strong ${className}` : DEFAULT_TRIGGER}
       >
         <span className={current ? "text-text" : "text-text-muted/60"}>
           {current ? formatDate(current) : placeholder}
@@ -142,8 +157,12 @@ export function DatePicker({
         </svg>
       </button>
 
-      {open && (
-        <div className={`absolute top-full z-50 mt-1 w-[17rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-border bg-surface p-3 shadow-2xl ${alignRight ? "right-0" : "left-0"}`}>
+      {open && coords && createPortal(
+        <div
+          ref={popRef}
+          style={{ left: coords.left, top: coords.bottom != null ? undefined : coords.top, bottom: coords.bottom }}
+          className="fixed z-[60] w-[17rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-border bg-surface p-3 shadow-2xl"
+        >
           {/* Cabecera: navegación de mes */}
           <div className="mb-2 flex items-center justify-between">
             <button
@@ -224,7 +243,8 @@ export function DatePicker({
               </button>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 const MINUTES = ["00", "15", "30", "45"];
@@ -29,9 +30,29 @@ export function TimePicker({ name, label, value, defaultValue, onChange, require
   const [internalHour, setInternalHour] = useState(() => init.split(":")[0] ?? "09");
   const [internalMinute, setInternalMinute] = useState(() => snapMinute(init.split(":")[1]));
   const [open, setOpen] = useState(false);
+  // Popup `fixed` para escapar del overflow de modales/scroll.
+  const [coords, setCoords] = useState<{ left: number; width: number; top?: number; bottom?: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
   const hourColRef = useRef<HTMLDivElement>(null);
   const minuteColRef = useRef<HTMLDivElement>(null);
+
+  const POPOVER_HEIGHT = 250;
+
+  function toggleOpen() {
+    const next = !open;
+    if (next && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const flipUp = rect.bottom + POPOVER_HEIGHT > window.innerHeight - 8;
+      setCoords(
+        flipUp
+          ? { left: rect.left, width: rect.width, bottom: window.innerHeight - rect.top + 4 }
+          : { left: rect.left, width: rect.width, top: rect.bottom + 4 }
+      );
+    }
+    setOpen(next);
+  }
 
   // En modo controlado la hora/minuto se derivan del prop; en no controlado, del estado.
   const hour = isControlled ? (value?.split(":")[0] ?? "09").padStart(2, "0") : internalHour;
@@ -49,7 +70,9 @@ export function TimePicker({ name, label, value, defaultValue, onChange, require
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (containerRef.current?.contains(t) || popRef.current?.contains(t)) return;
+      setOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -83,8 +106,9 @@ export function TimePicker({ name, label, value, defaultValue, onChange, require
       {name && <input type="hidden" name={name} value={currentValue} required={required} />}
 
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleOpen}
         className="flex h-11 w-full items-center justify-between rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text transition-colors hover:border-border-strong focus:border-border-strong focus:outline-none"
       >
         <span>{currentValue}</span>
@@ -94,8 +118,12 @@ export function TimePicker({ name, label, value, defaultValue, onChange, require
         </svg>
       </button>
 
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-full min-w-[8rem] overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+      {open && coords && createPortal(
+        <div
+          ref={popRef}
+          style={{ left: coords.left, width: coords.width, top: coords.top, bottom: coords.bottom }}
+          className="fixed z-[60] min-w-[8rem] overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+        >
           <div className="flex">
             <div ref={hourColRef} className="flex-1 overflow-y-auto border-r border-border py-1" style={{ maxHeight: 200 }}>
               {HOURS.map((h) => (
@@ -135,7 +163,8 @@ export function TimePicker({ name, label, value, defaultValue, onChange, require
               Listo
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

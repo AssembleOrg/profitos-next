@@ -121,6 +121,13 @@
   --color-dark-muted: var(--color-dark-muted);
   --font-sans: var(--font-figtree);
   --font-display: var(--font-bricolage);
+  --animate-loading-bar: loading-bar 1s ease-in-out infinite;
+}
+
+@keyframes loading-bar {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(120%); }
+  100% { transform: translateX(320%); }
 }
 
 * {
@@ -183,10 +190,20 @@ input[type="number"] {
   }
 }
 
-*:focus-visible {
+/* Outline de accesibilidad para elementos interactivos genéricos.
+   Se excluyen los form controls: manejan su propio foco con focus:border-*
+   (si no, el outline hereda el radio del padre — 0 — y sale cuadrado sobre
+   un input redondeado). */
+*:focus-visible:not(input):not(textarea):not(select) {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
   border-radius: inherit;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
 }
 
 /*

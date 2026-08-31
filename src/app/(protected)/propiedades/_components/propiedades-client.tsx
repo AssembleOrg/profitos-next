@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
+import { useIsMobile } from "../../_components/use-is-mobile";
 import { buildPropertyWhatsAppLink } from "@/lib/whatsapp";
 import { MlPublishWizard } from "./ml-publish-wizard";
 import { PortalesPanel } from "./portales-panel";
@@ -110,6 +111,244 @@ function ManualChip() {
       </svg>
       Manual
     </span>
+  );
+}
+
+const TH_CLASS =
+  "px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint";
+
+/**
+ * Header de columna con filtro embebido (estilo Airtable).
+ * Botón que abre un popover anclado; cierra por click-fuera o Escape.
+ * `active` pinta un punto para indicar filtro/orden aplicado.
+ */
+function ColumnFilter({
+  label,
+  active,
+  children,
+}: {
+  label: string;
+  active?: boolean;
+  children: (close: () => void) => React.ReactNode;
+}) {
+  // Popover posicionado `fixed` (como pdfPopup): escapa del overflow de la tabla.
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const open = coords !== null;
+
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || popRef.current?.contains(t)) return;
+      setCoords(null);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setCoords(null);
+    }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  function toggle() {
+    if (open) return setCoords(null);
+    const r = btnRef.current!.getBoundingClientRect();
+    setCoords({ top: r.bottom + 4, left: r.left });
+  }
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
+        className={`inline-flex items-center gap-1 rounded-md px-1 py-0.5 uppercase tracking-[0.12em] transition-colors hover:text-text ${active ? "text-text" : ""}`}
+      >
+        {label}
+        {active && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-60">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open && (
+        <div
+          ref={popRef}
+          style={{ top: coords.top, left: coords.left }}
+          className="fixed z-50 min-w-[180px] rounded-2xl border border-border bg-surface p-1.5 shadow-2xl"
+        >
+          {children(() => setCoords(null))}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Fila de opción dentro de un ColumnFilter (con check en la activa). */
+function FilterOption({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-[13px] normal-case tracking-normal transition-colors hover:bg-bg ${selected ? "font-bold text-text" : "font-medium text-text-muted"}`}
+    >
+      {label}
+      {selected && (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+const PANEL_INPUT =
+  "w-full rounded-xl border border-border bg-surface px-3 py-2 text-[13px] normal-case tracking-normal text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none";
+const PANEL_BTN =
+  "flex-1 rounded-xl bg-dark px-3 py-2 text-[12.5px] font-bold normal-case tracking-normal text-dark-fg transition-opacity hover:opacity-90";
+
+const PANEL_LABEL = "px-1 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint";
+
+/** Panel de precio: orden asc/desc + moneda + rango min/max. */
+function PriceFilterPanel({
+  minInit,
+  maxInit,
+  sort,
+  currency,
+  onApply,
+  onSort,
+  onCurrency,
+}: {
+  minInit: string;
+  maxInit: string;
+  sort: string;
+  currency: string;
+  onApply: (min: string, max: string) => void;
+  onSort: (dir: "price_asc" | "price_desc") => void;
+  onCurrency: (c: string) => void;
+}) {
+  const [min, setMin] = useState(minInit);
+  const [max, setMax] = useState(maxInit);
+  return (
+    <div className="flex w-[240px] flex-col gap-2.5 p-1.5">
+      {/* Orden */}
+      <div>
+        <p className={PANEL_LABEL}>Ordenar</p>
+        <div className="mt-1 flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => onSort("price_asc")}
+            className={`flex flex-1 items-center justify-center gap-1 rounded-xl px-2 py-2 text-[12px] font-bold normal-case tracking-normal transition-colors ${sort === "price_asc" ? "bg-sage-chip text-olive-light" : "bg-bg text-text-muted hover:bg-sand-chip"}`}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" /></svg>
+            Menor
+          </button>
+          <button
+            type="button"
+            onClick={() => onSort("price_desc")}
+            className={`flex flex-1 items-center justify-center gap-1 rounded-xl px-2 py-2 text-[12px] font-bold normal-case tracking-normal transition-colors ${sort === "price_desc" ? "bg-clay-chip text-terra" : "bg-bg text-text-muted hover:bg-sand-chip"}`}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" /></svg>
+            Mayor
+          </button>
+        </div>
+      </div>
+
+      {/* Moneda — segmented */}
+      <div>
+        <p className={PANEL_LABEL}>Moneda</p>
+        <div className="mt-1 flex gap-0.5 rounded-full bg-bg p-1">
+          {[
+            { v: "", label: "Todas" },
+            { v: "USD", label: "USD" },
+            { v: "ARS", label: "ARS" },
+          ].map((c) => (
+            <button
+              key={c.v || "all"}
+              type="button"
+              onClick={() => onCurrency(c.v)}
+              className={`flex-1 rounded-full py-1.5 text-[12px] font-bold normal-case tracking-normal transition-colors ${currency === c.v ? "bg-dark text-dark-fg" : "text-text-faint hover:text-text"}`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Rango */}
+      <div>
+        <p className={PANEL_LABEL}>Rango</p>
+        <div className="mt-1 flex items-center gap-2">
+          <input type="number" min={0} value={min} onChange={(e) => setMin(e.target.value)} placeholder="Mín" className={PANEL_INPUT} />
+          <span className="text-text-faint">–</span>
+          <input type="number" min={0} value={max} onChange={(e) => setMax(e.target.value)} placeholder="Máx" className={PANEL_INPUT} />
+        </div>
+      </div>
+
+      <button type="button" onClick={() => onApply(min, max)} className={PANEL_BTN}>
+        Aplicar rango
+      </button>
+    </div>
+  );
+}
+
+/** Panel de ciudad: input de texto con label + acciones. */
+function CityFilterPanel({ init, onApply }: { init: string; onApply: (city: string) => void }) {
+  const [city, setCity] = useState(init);
+  return (
+    <form
+      className="flex w-[200px] flex-col gap-2 p-1.5"
+      onSubmit={(e) => { e.preventDefault(); onApply(city.trim()); }}
+    >
+      <p className={PANEL_LABEL}>Ciudad</p>
+      <div className="relative">
+        <svg className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-faint" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          autoFocus
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          placeholder="Escribí una ciudad…"
+          className={`${PANEL_INPUT} h-9 py-0 pl-8 pr-7`}
+        />
+        {city && (
+          <button
+            type="button"
+            onClick={() => setCity("")}
+            title="Borrar"
+            className="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
+        )}
+      </div>
+      <div className="flex gap-2">
+        {init && (
+          <button
+            type="button"
+            onClick={() => onApply("")}
+            className="rounded-xl bg-bg px-3 py-1.5 text-[12.5px] font-bold normal-case tracking-normal text-text-muted transition-colors hover:bg-sand-chip"
+          >
+            Limpiar
+          </button>
+        )}
+        <button type="submit" className={`${PANEL_BTN} py-1.5`}>Aplicar</button>
+      </div>
+    </form>
   );
 }
 
@@ -232,8 +471,21 @@ export function PropiedadesClient({
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [syncingMl, setSyncingMl] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  // Re-sincroniza los filtros con la URL cuando cambia por navegación (back/forward,
+  // limpiar chip, etc.) — si no, los headers mostrarían un estado activo desfasado.
+  useEffect(() => {
+    setQuery(filters.q);
+    setStatusFilter(filters.status);
+    setOperationFilter(filters.operation);
+    setTypeFilter(filters.type);
+    setCityFilter(filters.city);
+    setCurrencyFilter(filters.currency);
+    setSortFilter(filters.sort || "created_desc");
+  }, [filters.q, filters.status, filters.operation, filters.type, filters.city, filters.currency, filters.sort]);
 
   async function handleSyncMl() {
     setSyncingMl(true);
@@ -259,11 +511,6 @@ export function PropiedadesClient({
   const [wizardProperty, setWizardProperty] = useState<Property | null>(null);
   const [ownerForm, setOwnerForm] = useState({ visitasTotales: "", visitasMes: "", quejas: "", mejoras: "" });
   const [ownerSaving, setOwnerSaving] = useState(false);
-
-  // Detecta mobile una sola vez al montar
-  useEffect(() => {
-    setIsMobile(window.innerWidth < 640);
-  }, []);
 
   // Resultado del OAuth de MercadoLibre (?ml_connected / ?ml_error)
   useEffect(() => {
@@ -321,7 +568,20 @@ export function PropiedadesClient({
     else params.set("page", String(nextPage));
 
     const qs = params.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname);
+    startTransition(() => router.push(qs ? `${pathname}?${qs}` : pathname));
+  }
+
+  // Aplica uno o más filtros al instante (para popovers de header desktop).
+  function pushFilters(changes: Record<string, string>) {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(changes)) {
+      const clean = value.trim();
+      if (clean) params.set(key, clean);
+      else params.delete(key);
+    }
+    params.delete("page");
+    const qs = params.toString();
+    startTransition(() => router.push(qs ? `${pathname}?${qs}` : pathname));
   }
 
   function resetFilters() {
@@ -332,17 +592,23 @@ export function PropiedadesClient({
     setCityFilter("");
     setCurrencyFilter("");
     setSortFilter("created_desc");
-    router.push(pathname);
+    startTransition(() => router.push(pathname));
   }
 
-  const activeFilters = [
-    query && `Búsqueda: ${query}`,
-    statusFilter && `Estado: ${getStatusLabel(statusFilter)}`,
-    operationFilter && `Operación: ${operationFilter}`,
-    typeFilter && `Tipo: ${typeFilter}`,
-    cityFilter && `Ciudad: ${cityFilter}`,
-    currencyFilter && `Moneda: ${currencyFilter}`,
-  ].filter(Boolean) as string[];
+  // Limpia un filtro individual: resetea su estado y saca su searchParam.
+  function clearFilter(key: string, reset: () => void) {
+    reset();
+    pushFilters({ [key]: "" });
+  }
+
+  const activeFilters: { key: string; label: string; reset: () => void }[] = [
+    query && { key: "q", label: `Búsqueda: ${query}`, reset: () => setQuery("") },
+    statusFilter && { key: "status", label: `Estado: ${getStatusLabel(statusFilter)}`, reset: () => setStatusFilter("") },
+    operationFilter && { key: "operation", label: `Operación: ${operationFilter}`, reset: () => setOperationFilter("") },
+    typeFilter && { key: "type", label: `Tipo: ${typeFilter}`, reset: () => setTypeFilter("") },
+    cityFilter && { key: "city", label: `Ciudad: ${cityFilter}`, reset: () => setCityFilter("") },
+    currencyFilter && { key: "currency", label: `Moneda: ${currencyFilter}`, reset: () => setCurrencyFilter("") },
+  ].filter(Boolean) as { key: string; label: string; reset: () => void }[];
 
   // Filtros "extra" (los del panel colapsable mobile, excluyendo búsqueda y estado)
   const extraActiveCount = [operationFilter, typeFilter, cityFilter, currencyFilter, sortFilter !== "created_desc" ? sortFilter : ""].filter(Boolean).length;
@@ -567,7 +833,7 @@ export function PropiedadesClient({
   const isEdit = !!editProperty;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -576,32 +842,31 @@ export function PropiedadesClient({
             Mostrando {properties.length} de {total} resultado{total !== 1 ? "s" : ""} · Total global: {totalAll}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           {isAdmin && (
             <button
               onClick={() => setAssignModalOpen(true)}
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg"
+              title="Asignar seguimiento"
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-3 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg sm:px-4"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 11l3 3L22 4" />
                 <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
               </svg>
               <span className="hidden sm:inline">Asignar seguimiento</span>
-              <span className="sm:hidden">Asignar</span>
             </button>
           )}
           <button
             onClick={handleSyncMl}
             disabled={syncingMl}
             title="Sincronizar el estado de las publicaciones de MercadoLibre"
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg disabled:opacity-50"
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-3 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg disabled:opacity-50 sm:px-4"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={syncingMl ? "animate-spin" : ""}>
               <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
               <polyline points="21 3 21 8 16 8" />
             </svg>
             <span className="hidden sm:inline">{syncingMl ? "Sincronizando..." : "Sincronizar ML"}</span>
-            <span className="sm:hidden">ML</span>
           </button>
           <div className="inline-flex h-11 items-center gap-0.5 rounded-full border border-border bg-surface p-1">
             <button
@@ -636,20 +901,20 @@ export function PropiedadesClient({
           </div>
           <button
             onClick={handleNew}
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 active:opacity-90"
+            title="Nueva propiedad"
+            className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-3.5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 active:opacity-90 sm:px-5"
           >
             <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             <span className="hidden sm:inline">Nueva propiedad</span>
-            <span className="sm:hidden">Nueva</span>
           </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="rounded-[20px] border border-border bg-surface p-4">
+      <div className="rounded-[20px] border border-border bg-surface p-4 xl:border-0 xl:bg-transparent xl:p-0">
 
         {/* Mobile: búsqueda + botón filtros siempre visibles */}
         <div className="flex gap-2 sm:hidden">
@@ -736,9 +1001,33 @@ export function PropiedadesClient({
           </div>
         )}
 
-        {/* Desktop: todos los filtros en grid */}
-        <div className="hidden sm:grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <div className="relative xl:col-span-2">
+        {/* Desktop grande (xl+): buscador + hint hacia los filtros de columna */}
+        <div className="hidden items-center gap-3 xl:flex">
+          <div className="relative w-full max-w-md">
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              placeholder="Buscar por dirección, código, título..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && applyFilters(1)}
+              className="h-10 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
+            />
+          </div>
+          <span className="flex items-center gap-1.5 text-[12.5px] font-medium text-text-faint">
+            Filtrá y ordená desde las columnas de la tabla
+            <svg className="-mb-2 self-end text-accent" width="48" height="34" viewBox="0 0 48 34" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 5c14 1 24 6 27 22" />
+              <path d="M22 24l8 4 4-8" />
+            </svg>
+          </span>
+        </div>
+
+        {/* Desktop chico (sm–lg): todos los filtros en grid (sin tabla, no hay headers) */}
+        <div className="hidden sm:grid xl:hidden grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="relative md:col-span-2">
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -802,35 +1091,47 @@ export function PropiedadesClient({
           </SelectField>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className={`mt-3 flex-wrap items-center gap-2 ${activeFilters.length > 0 ? "flex" : "flex xl:hidden"}`}>
           <button
             onClick={() => applyFilters(1)}
-            className="inline-flex h-10 items-center rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90"
+            className="inline-flex h-10 items-center rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 xl:hidden"
           >
             Aplicar filtros
           </button>
-          <button
-            onClick={resetFilters}
-            className="px-2 text-[13px] font-bold text-text-faint transition-colors hover:text-text"
-          >
-            Limpiar filtros
-          </button>
-          {activeFilters.length > 0 && (
-            <div className="ml-1 flex flex-wrap items-center gap-2">
-              {activeFilters.map((chip) => (
-                <span
-                  key={chip}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-sand-chip px-3 py-1.5 text-[12px] font-semibold text-text-muted"
-                >
-                  {chip}
-                  <span aria-hidden="true" className="text-text-faint">✕</span>
+          {activeFilters.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => clearFilter(chip.key, chip.reset)}
+                title="Quitar filtro"
+                className="group inline-flex items-center gap-1.5 rounded-full bg-sand-chip py-1.5 pl-3 pr-2 text-[12px] font-semibold text-text-muted transition-colors hover:bg-clay-chip hover:text-terra"
+              >
+                {chip.label}
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-black/5 text-[10px] leading-none text-text-faint transition-colors group-hover:bg-terra/20 group-hover:text-terra">
+                  ✕
                 </span>
-              ))}
-            </div>
-          )}
+              </button>
+            ))}
+            {activeFilters.length >= 2 && (
+              <button
+                onClick={resetFilters}
+                className="px-2 text-[12px] font-bold text-text-faint underline-offset-2 transition-colors hover:text-text hover:underline"
+              >
+                Limpiar todo
+              </button>
+            )}
         </div>
       </div>
 
+      {/* Área de resultados — barra de carga arriba + atenuado mientras carga */}
+      <div className="relative">
+        {/* Barra de carga (useTransition) — colorida, sin ocupar espacio en el flujo */}
+        {isPending && (
+          <div className="absolute -top-2 left-0 right-0 z-10 h-1 overflow-hidden rounded-full bg-accent/10">
+            <div className="h-full w-1/3 animate-loading-bar rounded-full bg-gradient-to-r from-accent via-olive-bright to-terra shadow-[0_0_8px_var(--color-accent)]" />
+          </div>
+        )}
+      <div className={`flex flex-col gap-4 transition-opacity duration-200 ${isPending ? "pointer-events-none opacity-50" : "opacity-100"}`}>
       {/* Map view */}
       {viewMode === "map" && (
         <PropertiesMap
@@ -993,13 +1294,61 @@ export function PropiedadesClient({
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Dirección</th>
-                <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Código</th>
-                <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Precio</th>
-                <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Ciudad</th>
-                <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Tipo</th>
-                <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Estado</th>
-                <th className="px-4 py-3 text-right text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Ficha</th>
+                <th className={TH_CLASS}>Dirección</th>
+                <th className={TH_CLASS}>Código</th>
+                <th className={TH_CLASS}>
+                  <ColumnFilter
+                    label="Precio"
+                    active={!!(searchParams.get("minPrice") || searchParams.get("maxPrice") || currencyFilter || sortFilter === "price_asc" || sortFilter === "price_desc")}
+                  >
+                    {(close) => (
+                      <PriceFilterPanel
+                        minInit={searchParams.get("minPrice") ?? ""}
+                        maxInit={searchParams.get("maxPrice") ?? ""}
+                        sort={sortFilter}
+                        currency={currencyFilter}
+                        onApply={(min, max) => { pushFilters({ minPrice: min, maxPrice: max }); close(); }}
+                        onSort={(dir) => { const next = sortFilter === dir ? "created_desc" : dir; setSortFilter(next); pushFilters({ sort: next === "created_desc" ? "" : next }); }}
+                        onCurrency={(c) => { const next = currencyFilter === c ? "" : c; setCurrencyFilter(next); pushFilters({ currency: next }); }}
+                      />
+                    )}
+                  </ColumnFilter>
+                </th>
+                <th className={TH_CLASS}>
+                  <ColumnFilter label="Ciudad" active={!!cityFilter}>
+                    {(close) => (
+                      <CityFilterPanel
+                        init={cityFilter}
+                        onApply={(city) => { setCityFilter(city); pushFilters({ city }); close(); }}
+                      />
+                    )}
+                  </ColumnFilter>
+                </th>
+                <th className={TH_CLASS}>
+                  <ColumnFilter label="Tipo" active={!!typeFilter}>
+                    {(close) => (
+                      <>
+                        <FilterOption label="Todos" selected={!typeFilter} onClick={() => { setTypeFilter(""); pushFilters({ type: "" }); close(); }} />
+                        {PROPERTY_TYPES.filter((t) => t.value).map((t) => (
+                          <FilterOption key={t.value} label={t.label} selected={typeFilter === t.value} onClick={() => { const next = typeFilter === t.value ? "" : t.value; setTypeFilter(next); pushFilters({ type: next }); close(); }} />
+                        ))}
+                      </>
+                    )}
+                  </ColumnFilter>
+                </th>
+                <th className={TH_CLASS}>
+                  <ColumnFilter label="Estado" active={!!statusFilter}>
+                    {(close) => (
+                      <>
+                        <FilterOption label="Todos" selected={!statusFilter} onClick={() => { setStatusFilter(""); pushFilters({ status: "" }); close(); }} />
+                        {PROPERTY_STATUSES.map((s) => (
+                          <FilterOption key={s.value} label={s.label} selected={statusFilter === s.value} onClick={() => { const next = statusFilter === s.value ? "" : s.value; setStatusFilter(next); pushFilters({ status: next }); close(); }} />
+                        ))}
+                      </>
+                    )}
+                  </ColumnFilter>
+                </th>
+                <th className={`${TH_CLASS} text-right`}>Ficha</th>
               </tr>
             </thead>
             <tbody>
@@ -1096,7 +1445,9 @@ export function PropiedadesClient({
       </div>}
 
       {/* Pagination */}
-      <Pagination page={page} totalPages={totalPages} total={total} limit={limit} />
+      <Pagination page={page} totalPages={totalPages} total={total} limit={limit} startTransition={startTransition} />
+      </div>
+      </div>
 
       {pdfPopup && (
         <div
@@ -1142,9 +1493,9 @@ export function PropiedadesClient({
               className={`fixed z-50 flex flex-col border border-border bg-surface shadow-2xl
                 /* mobile: bottom sheet */
                 bottom-0 left-0 right-0 max-h-[90dvh] rounded-t-[28px]
-                /* desktop: centered dialog — ancho amplio para respirar */
-                sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-2xl lg:max-w-4xl
-                sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-h-[88vh] sm:rounded-3xl`}
+                /* desktop: centered dialog — casi fullscreen */
+                sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[96vw] sm:max-w-[1400px]
+                sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-h-[94vh] sm:rounded-3xl`}
             >
               {/* Drag handle — solo mobile */}
               <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-border sm:hidden" />
@@ -1167,8 +1518,8 @@ export function PropiedadesClient({
               </div>
 
               {/* Body scrolleable */}
-              <form id="property-form" onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 py-4 sm:gap-5 sm:px-8 sm:py-6">
-                <div>
+              <form id="property-form" onSubmit={handleSubmit} className="grid flex-1 grid-cols-1 content-start gap-4 overflow-y-auto overscroll-contain px-5 py-4 sm:gap-5 sm:px-8 sm:py-6 lg:grid-cols-2">
+                <div className="lg:col-span-2">
                   <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Dirección *</label>
                   <input
                     name="address"
@@ -1179,7 +1530,7 @@ export function PropiedadesClient({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 lg:col-span-2">
                   <div>
                     <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Título publicación</label>
                     <input
@@ -1210,7 +1561,7 @@ export function PropiedadesClient({
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3 lg:col-span-2">
                   <div>
                     <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Provincia</label>
                     <input
@@ -1240,7 +1591,7 @@ export function PropiedadesClient({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 lg:col-span-2">
                   <div>
                     <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Tipo</label>
                     <SelectField
@@ -1265,7 +1616,7 @@ export function PropiedadesClient({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 lg:grid-cols-6">
+                <div className="grid grid-cols-3 gap-3 lg:col-span-2 lg:grid-cols-6">
                   <div>
                     <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Ambientes</label>
                     <input

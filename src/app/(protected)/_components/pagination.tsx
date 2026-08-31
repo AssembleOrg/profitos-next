@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useId } from "react";
+import { useId, type TransitionStartFunction } from "react";
 import { SelectField } from "@/components/ui/select-field";
 
 interface PaginationProps {
@@ -10,6 +10,8 @@ interface PaginationProps {
   total: number;
   limit: number;
   limitOptions?: number[];
+  /** Si el padre lo pasa, la navegación se envuelve en su transition (loading UX). */
+  startTransition?: TransitionStartFunction;
 }
 
 export function Pagination({
@@ -18,11 +20,14 @@ export function Pagination({
   total,
   limit,
   limitOptions = [10, 20, 50, 100],
+  startTransition,
 }: Readonly<PaginationProps>) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const limitSelectId = useId();
+  const navigate = (url: string) =>
+    startTransition ? startTransition(() => router.push(url)) : router.push(url);
 
   if (totalPages < 2) return null;
 
@@ -46,7 +51,7 @@ export function Pagination({
       params.set("page", String(p));
     }
     const qs = params.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname);
+    navigate(qs ? `${pathname}?${qs}` : pathname);
   }
 
   function updateLimit(nextLimit: number) {
@@ -54,7 +59,7 @@ export function Pagination({
     params.set("limit", String(nextLimit));
     params.delete("page");
     const qs = params.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname);
+    navigate(qs ? `${pathname}?${qs}` : pathname);
   }
 
   return (
