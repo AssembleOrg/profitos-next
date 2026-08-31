@@ -22,6 +22,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   loadStorageState,
+  saveStorageState,
   markSessionInvalid,
   SessionExpiredError,
   gotoPassingCloudflare,
@@ -166,6 +167,9 @@ async function withPublishPage<T>(fn: (page: Page, sessionId: string) => Promise
     }
     const out = await fn(page, sessionId);
     markProxyGood(chosen?.server); // la IP sirvió
+    // Persistir cookies refrescadas (rolling session): si ZonaProp renueva la
+    // sesión por request, así no la perdemos entre corridas.
+    await saveStorageState(PORTAL, await context.storageState()).catch(() => {});
     return out;
   } finally {
     await context.close().catch(() => {});
