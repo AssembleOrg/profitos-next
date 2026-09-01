@@ -31,18 +31,30 @@ const DISPLAY = process.env.DISPLAY ?? ":99";
 const SESSION_TTL_MS = Number(process.env.RELOGIN_TTL_MS ?? 8 * 60_000); // 8 min
 
 /**
- * URL de arranque por portal (si no hay sesión, redirige al login del portal).
- * ZonaProp: /panel (home del panel) y no una sección puntual — tras loguearse el
- * usuario queda en el home, no en "interesados" u otra vista suelta.
+ * URL de ARRANQUE por portal (donde abre el navegador del re-login).
+ * ZonaProp: el HOME público, no /panel ni /login — ir directo a la vista de
+ * login dispara la validación anti-bot de Cloudflare. El camino "humano" es
+ * home → botón Ingresar → email → contraseña, y ese es el que automatiza
+ * autoLoginZonaprop() más abajo.
  */
-const LOGIN_URL: Record<string, string> = {
+const START_URL: Record<string, string> = {
+  zonaprop: "https://www.zonaprop.com.ar/",
+  argenprop: "https://www.argenprop.com/micuenta/mismensajes",
+  "argenprop-gestion": "https://gestion.argenprop.com/",
+};
+
+/**
+ * URL de VERIFICACIÓN por portal: una vista que requiere sesión (si no está
+ * logueado redirige al login). Se usa para validar antes de guardar cookies.
+ */
+const VERIFY_URL: Record<string, string> = {
   zonaprop: "https://www.zonaprop.com.ar/panel",
   argenprop: "https://www.argenprop.com/micuenta/mismensajes",
   "argenprop-gestion": "https://gestion.argenprop.com/",
 };
 
 export function isReloginPortal(p: string): boolean {
-  return p in LOGIN_URL;
+  return p in START_URL;
 }
 
 type ReloginSession = {
@@ -148,8 +160,84 @@ async function launchInteractive(portal: string, dir: string): Promise<BrowserCo
     Object.defineProperty(navigator, "webdriver", { get: () => undefined });
   });
   const page = context.pages()[0] ?? (await context.newPage());
-  await gotoPassingCloudflare(page, LOGIN_URL[portal]).catch(() => {});
+  await gotoPassingCloudflare(page, START_URL[portal]).catch(() => {});
   return context;
+}
+
+/**
+ * Guarda las cookies de la sesión logueada en la DB y marca el portal válido.
+ */
+async function persistSessionState(portal: string, context: BrowserContext): Promise<void> {
+  const state = await context.storageState();
+  await prisma.scraperSession.upsert({
+    where: { portal },
+    create: { portal, storageState: state as object, valid: true, lastOkAt: new Date() },
+    update: { storageState: state as object, valid: true, lastOkAt: new Date() },
+  });
+}
+
+/**
+ * AUTO-LOGIN de ZonaProp: reproduce el camino humano en la pantalla del worker
+ * (visible por noVNC): home → "Ingresar" → email → "Continuar" → contraseña →
+ * "Iniciar sesión". Tipea con delays para parecer humano. Si algo se traba
+ * (captcha, cambio de layout), NO rompe nada: la sesión noVNC sigue abierta y
+ * el cliente completa a mano como siempre.
+ *
+ * Requiere ZONAPROP_EMAIL y ZONAPROP_PASSWORD en el env del worker; si faltan,
+ * no hace nada (flujo 100% manual).
+ */
+async function autoLoginZonaprop(s: ReloginSession): Promise<void> {
+  const email = process.env.ZONAPROP_EMAIL?.trim();
+  const password = process.env.ZONAPROP_PASSWORD?.trim();
+  if (!email || !password) return;
+
+  const alive = () => active?.id === s.id; // la sesión puede expirar/cancelarse
+  const page = s.context.pages()[0] ?? (await s.context.newPage());
+  try {
+    // 1) Botón "Ingresar" del header (el home ya cargó en launchInteractive).
+    const ingresar = page
+      .locator('a:has-text("Ingresar"), button:has-text("Ingresar")')
+      .first();
+    await ingresar.waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForTimeout(1500);
+    if (!alive()) return;
+    await ingresar.click();
+
+    // 2) Email + "Continuar".
+    const emailInput = page.locator('input[type="email"], input[name*="mail" i]').first();
+    await emailInput.waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForTimeout(900);
+    await emailInput.click();
+    await emailInput.pressSequentially(email, { delay: 95 });
+    await page.waitForTimeout(700);
+    if (!alive()) return;
+    await page.locator('button:has-text("Continuar")').first().click();
+
+    // 3) Contraseña + "Iniciar sesión".
+    const passInput = page.locator('input[type="password"]').first();
+    await passInput.waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForTimeout(900);
+    await passInput.click();
+    await passInput.pressSequentially(password, { delay: 110 });
+    await page.waitForTimeout(700);
+    if (!alive()) return;
+    await page.locator('button:has-text("Iniciar sesión"), button:has-text("Iniciar Sesión")').first().click();
+
+    // 4) Esperar a que cierre el login y verificar contra el panel.
+    await page.waitForTimeout(7000);
+    if (!alive()) return;
+    const { ok } = await gotoPassingCloudflare(page, VERIFY_URL[s.portal]);
+    if (!ok || /login|signin|ingresar|acceder/i.test(page.url())) {
+      console.warn("[relogin] auto-login zonaprop: no quedó logueado (¿captcha?); queda el manual por noVNC.");
+      return;
+    }
+    if (!alive()) return;
+    await persistSessionState(s.portal, s.context);
+    console.log("[relogin] auto-login zonaprop OK: sesión guardada.");
+  } catch (e) {
+    // Best-effort: el visor noVNC sigue abierto para terminar a mano.
+    console.warn("[relogin] auto-login zonaprop falló:", e instanceof Error ? e.message : e);
+  }
 }
 
 export type StartResult = { sessionId: string; portal: string; ttlMs: number };
@@ -178,6 +266,11 @@ export async function startReloginSession(portal: string): Promise<StartResult> 
   };
   session.id = newId();
   active = session;
+
+  // ZonaProp: intento de login automático en background sobre la misma pantalla
+  // (el cliente lo ve por noVNC y puede intervenir si salta un captcha).
+  if (portal === "zonaprop") void autoLoginZonaprop(session);
+
   return { sessionId: session.id, portal, ttlMs: SESSION_TTL_MS };
 }
 
@@ -195,7 +288,7 @@ export async function finishReloginSession(sessionId: string): Promise<FinishRes
   const portal = s.portal;
   try {
     const page = s.context.pages()[0] ?? (await s.context.newPage());
-    const { ok: cfOk } = await gotoPassingCloudflare(page, LOGIN_URL[portal]);
+    const { ok: cfOk } = await gotoPassingCloudflare(page, VERIFY_URL[portal]);
     const url = page.url();
     const stillLogin = /login|signin|ingresar|acceder/i.test(url);
     if (!cfOk || stillLogin) {
@@ -207,12 +300,7 @@ export async function finishReloginSession(sessionId: string): Promise<FinishRes
           : "Cloudflare no resolvió; reintentá en unos segundos.",
       };
     }
-    const state = await s.context.storageState();
-    await prisma.scraperSession.upsert({
-      where: { portal },
-      create: { portal, storageState: state as object, valid: true, lastOkAt: new Date() },
-      update: { storageState: state as object, valid: true, lastOkAt: new Date() },
-    });
+    await persistSessionState(portal, s.context);
     return { ok: true, loggedIn: true, message: `Sesión de ${portal} guardada. Conexión restablecida.` };
   } finally {
     await teardown();
