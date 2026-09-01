@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma/client";
 import { publishViaBrowser, type FullPublishInput, type PhotoSource } from "@/lib/zonaprop/browser-publish";
 import type { Feature } from "@/lib/zonaprop/publish";
 import { createFicha, type FichaInput } from "@/lib/argenprop/publish";
+import { gestionPutEstado } from "@/lib/argenprop/gestion";
 import { resolveLocation } from "@/lib/argenprop/location";
 
 /** Responsable ZonaProp (userId que recibe las consultas). Opcional. */
@@ -257,11 +258,15 @@ export async function enqueuePublish(propertyId: string, portal: PublishPortal, 
       status: "pending",
     },
   });
-  await prisma.propertyPublication.upsert({
-    where: { propertyId_portal: { propertyId, portal } },
-    create: { propertyId, portal, status: "publishing" },
-    update: { status: "publishing", lastError: null },
-  });
+  // Sólo el publish pisa el estado con "publishing"; un cambio de estado
+  // (pausar/baja/reactivar) mantiene el estado real hasta que el worker aplique.
+  if ((opts.action ?? "publish") === "publish") {
+    await prisma.propertyPublication.upsert({
+      where: { propertyId_portal: { propertyId, portal } },
+      create: { propertyId, portal, status: "publishing" },
+      update: { status: "publishing", lastError: null },
+    });
+  }
   return job.id;
 }
 
@@ -285,6 +290,36 @@ export async function processPublishJob(jobId: string): Promise<void> {
   }
 
   await prisma.publishJob.update({ where: { id: jobId }, data: { status: "running", attempts: { increment: 1 } } });
+
+  // Cambios de estado (pausar / dar de baja / reactivar) — hoy sólo ArgenProp
+  // (HTTP de Gestión). ML se hace directo desde la web; ZonaProp: pendiente.
+  if (job.action !== "publish") {
+    try {
+      if (portal !== "argenprop") throw new Error(`Acción ${job.action} no soportada para ${portal}`);
+      const pub = await prisma.propertyPublication.findUnique({
+        where: { propertyId_portal: { propertyId: job.propertyId, portal } },
+        select: { externalId: true },
+      });
+      if (!pub?.externalId) throw new Error("La propiedad no tiene aviso vinculado en ArgenProp");
+      const estado = job.action === "pause" ? "SUSPENDIDO" : job.action === "close" ? "ELIMINADO" : "VIGENTE";
+      const status = job.action === "pause" ? "paused" : job.action === "close" ? "closed" : "active";
+      await gestionPutEstado(pub.externalId, estado);
+      await prisma.propertyPublication.update({
+        where: { propertyId_portal: { propertyId: job.propertyId, portal } },
+        data: { status, lastError: null },
+      });
+      await prisma.publishJob.update({ where: { id: jobId }, data: { status: "done", error: null, processedAt: new Date() } });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // No pisar el estado real del aviso: sólo registrar el error del intento.
+      await prisma.propertyPublication
+        .update({ where: { propertyId_portal: { propertyId: job.propertyId, portal } }, data: { lastError: msg } })
+        .catch(() => {});
+      await prisma.publishJob.update({ where: { id: jobId }, data: { status: "error", error: msg, processedAt: new Date() } });
+    }
+    return;
+  }
+
   const property = await prisma.property.findUnique({ where: { id: job.propertyId }, select: PROPERTY_SELECT });
   if (!property) {
     await prisma.publishJob.update({ where: { id: jobId }, data: { status: "error", error: "propiedad no encontrada", processedAt: new Date() } });

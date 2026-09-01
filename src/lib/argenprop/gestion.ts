@@ -131,6 +131,29 @@ export async function gestionPostJson<T = unknown>(path: string, body: unknown):
   return JSON.parse(await res.text()) as T;
 }
 
+/**
+ * Cambia el estado de un aviso (endpoint del listado de Gestión):
+ *   PUT /api/avisos/PutEstadoAviso/{idAviso}/{estado}
+ * Estados válidos: VIGENTE | RESERVADO | SUSPENDIDO | VENDIDO | ALQUILADO |
+ * HISTORICO | ELIMINADO. Respuesta: { Status: 200, Result: true }.
+ */
+export async function gestionPutEstado(idAviso: string, estado: string): Promise<void> {
+  const cookie = await cookieHeader();
+  const res = await httpFetch(`${BASE}/api/avisos/PutEstadoAviso/${encodeURIComponent(idAviso)}/${encodeURIComponent(estado)}`, withProxy({
+    method: "PUT",
+    redirect: "manual",
+    headers: { ...baseHeaders(cookie), accept: "application/json" },
+  }));
+  assertNotLoginRedirect(res.headers.get("location"));
+  const text = await res.text().catch(() => "");
+  if (res.status >= 400) throw new Error(`Gestión PutEstadoAviso ${idAviso}→${estado} falló: HTTP ${res.status}`);
+  const j = JSON.parse(text || "{}") as { Status?: number; Result?: boolean };
+  if (j.Status !== 200 || !j.Result) {
+    throw new Error(`Gestión PutEstadoAviso ${idAviso}→${estado} rechazado: ${text.slice(0, 150)}`);
+  }
+  await markGestionOk();
+}
+
 /** GET (para datos de referencia: provincias, partidos, coordenadas...). */
 export async function gestionGetJson<T = unknown>(path: string): Promise<T> {
   const cookie = await cookieHeader();

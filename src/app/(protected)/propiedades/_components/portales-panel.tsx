@@ -231,6 +231,41 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
     }
   }
 
+  /**
+   * Pausar / Dar de baja / Reactivar una publicación existente.
+   * ML aplica al instante (API oficial); ArgenProp se encola al worker (segundos).
+   * ZonaProp no está soportado (su panel no expone el circuito de forma estable).
+   */
+  async function changeState(portal: PortalKey, action: "pause" | "close" | "activate") {
+    if (
+      action === "close" &&
+      !window.confirm(
+        portal === "mercadolibre"
+          ? "Dar de baja en MercadoLibre CIERRA la publicación de forma IRREVERSIBLE (para volver hay que republicar desde el wizard). ¿Confirmás?"
+          : "Dar de baja ELIMINA el aviso de ArgenProp. ¿Confirmás?"
+      )
+    )
+      return;
+    setBusy(`state:${portal}`);
+    try {
+      const res = await fetch(`/api/integrations/portales/${portal}/state`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ propertyId, action }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.message ?? "No se pudo cambiar el estado");
+      toast.success(body?.message ?? "Estado actualizado");
+      await load();
+      // ArgenProp lo aplica el worker async → refrescar de nuevo en unos segundos.
+      if (portal === "argenprop") setTimeout(() => void load(), 7000);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al cambiar el estado");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   function toggle(portal: PortalKey) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -334,6 +369,27 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                 )}
 
                 <div className="ml-auto flex items-center gap-2">
+                  {/* Pausar / Reactivar / Dar de baja — sobre avisos ya publicados (AP y ML) */}
+                  {portal !== "zonaprop" && pub?.published && (pub.status === "active" || pub.status === "paused") && (
+                    <>
+                      <button
+                        onClick={() => void changeState(portal, pub.status === "active" ? "pause" : "activate")}
+                        disabled={busy !== null}
+                        className="rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-bold text-text-muted transition-colors hover:bg-bg disabled:opacity-50"
+                        title={pub.status === "active" ? "Pausa el aviso (se puede reactivar)" : "Vuelve a poner el aviso activo"}
+                      >
+                        {busy === `state:${portal}` ? "Aplicando…" : pub.status === "active" ? "Pausar" : "Reactivar"}
+                      </button>
+                      <button
+                        onClick={() => void changeState(portal, "close")}
+                        disabled={busy !== null}
+                        className="rounded-full bg-clay-chip px-3 py-1.5 text-[12px] font-bold text-terra transition-opacity hover:opacity-80 disabled:opacity-50"
+                        title={portal === "mercadolibre" ? "Cierra la publicación (irreversible en ML)" : "Elimina el aviso de ArgenProp"}
+                      >
+                        Dar de baja
+                      </button>
+                    </>
+                  )}
                   {meta.publishable ? (
                     <>
                       <input
@@ -400,7 +456,7 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                       )}
                     </>
                   ) : (
-                    <span className="text-[11px] text-text-faint">Usá el wizard ML</span>
+                    !pub?.published && <span className="text-[11px] text-text-faint">Usá el wizard ML</span>
                   )}
                 </div>
               </div>
