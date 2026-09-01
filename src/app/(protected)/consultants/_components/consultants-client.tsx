@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -24,6 +25,14 @@ const KIND_LABEL: Record<string, string> = {
   pregunta: "Pregunta",
 };
 
+// Pestañas de estado de gestión (jp_contact_cases).
+const ESTADOS: { key: string; label: string }[] = [
+  { key: "nuevos", label: "Nuevos" },
+  { key: "espera", label: "En espera" },
+  { key: "tomados", label: "Tomados" },
+  { key: "descartados", label: "Descartados" },
+];
+
 interface Props {
   items: InboxMessage[];
   page: number;
@@ -32,7 +41,9 @@ interface Props {
   limit: number;
   totalAll: number;
   counts: Record<InboxPortal, number>;
-  filters: { q: string; portal: string; from: string; to: string };
+  filters: { q: string; portal: string; from: string; to: string; estado: string; mine: boolean };
+  viewer: { userId: string; isAdmin: boolean };
+  users: { id: string; fullName: string | null; email: string }[];
 }
 
 function formatDateTime24(value: string | null) {
@@ -50,7 +61,7 @@ function formatDateTime24(value: string | null) {
 function PortalChip({ portal, kind }: { portal: InboxPortal; kind: string }) {
   const meta = PORTAL_META[portal];
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-bg px-2.5 py-1 text-[11px] font-semibold text-text-muted">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/90 px-2.5 py-1 text-[11px] font-semibold text-text-muted">
       <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: meta.dot }} aria-hidden />
       {meta.label}
       <span className="text-text-faint">· {KIND_LABEL[kind] ?? kind}</span>
@@ -60,7 +71,7 @@ function PortalChip({ portal, kind }: { portal: InboxPortal; kind: string }) {
 
 function ContactChips({ item }: { item: InboxMessage }) {
   return (
-    <div className="mt-1 flex flex-wrap gap-1.5">
+    <div className="mt-2 flex flex-wrap gap-1.5">
       {item.email && (
         <button
           type="button"
@@ -82,45 +93,142 @@ function ContactChips({ item }: { item: InboxMessage }) {
           {firstPhone(item.phone)}
         </WhatsAppLink>
       )}
-      {!item.email && !item.phone && <span className="text-[11.5px] text-text-faint">Sin contacto</span>}
+      {!item.email && !item.phone && <span className="text-[11.5px] text-text-faint">Sin datos de contacto</span>}
     </div>
   );
 }
 
-function Property({ item }: { item: InboxMessage }) {
-  const label = item.propertyTitle || item.propertyRef;
-  if (!label) return <span className="text-[11.5px] text-text-faint">—</span>;
-  const body = (
-    <span className="block max-w-[220px] truncate text-[12.5px] text-text-muted">
-      {label}
-      {item.price ? <span className="text-text-faint"> · {item.price}</span> : null}
-    </span>
-  );
-  // Propiedad nuestra: deep-link a /propiedades con el modal abierto.
-  if (item.propertyId) {
-    const q = item.propertyAddress ? `q=${encodeURIComponent(item.propertyAddress)}&` : "";
-    return (
-      <Link href={`/propiedades?${q}open=${item.propertyId}`} className="text-accent hover:underline">
-        {body}
-      </Link>
-    );
-  }
-  return item.propertyUrl ? (
-    <a href={item.propertyUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-      {body}
-    </a>
-  ) : (
-    body
+/** Tarjeta de contacto (boceto: foto de la propiedad, título, mensaje, ✓ / ✗). */
+function ContactCard({
+  item,
+  viewer,
+  users,
+  busy,
+  onAction,
+}: {
+  item: InboxMessage;
+  viewer: Props["viewer"];
+  users: Props["users"];
+  busy: string | null;
+  onAction: (messageId: string, action: "take" | "wait" | "transfer", toUserId?: string) => void;
+}) {
+  const title = item.propertyAddress ?? item.propertyTitle ?? item.propertyRef ?? "Sin propiedad";
+  const propHref = item.propertyId
+    ? `/propiedades?${item.propertyAddress ? `q=${encodeURIComponent(item.propertyAddress)}&` : ""}open=${item.propertyId}`
+    : null;
+  const isBusy = busy === item.id;
+  const canTransfer = item.caseStatus === "tomado" && (item.takenByUserId === viewer.userId || viewer.isAdmin);
+
+  return (
+    <div className="flex flex-col overflow-hidden rounded-[18px] border border-border bg-surface">
+      {/* Foto de la propiedad */}
+      <div className="relative aspect-[16/9] bg-bg">
+        {item.coverImageUrl ? (
+          <Image src={item.coverImageUrl} alt={title} fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center text-text-faint">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9.5 12 3l9 6.5" /><path d="M5 10v10h14V10" />
+            </svg>
+          </div>
+        )}
+        <div className="absolute left-2 top-2"><PortalChip portal={item.portal} kind={item.kind} /></div>
+        <span className="absolute right-2 top-2 rounded-full bg-surface/90 px-2 py-0.5 text-[10.5px] font-semibold text-text-muted">
+          {formatDateTime24(item.date)}
+        </span>
+      </div>
+
+      <div className="flex flex-1 flex-col p-3.5">
+        {/* Título: la propiedad */}
+        {propHref ? (
+          <Link href={propHref} className="line-clamp-1 text-[14px] font-bold text-text hover:underline">
+            {title}
+          </Link>
+        ) : (
+          <p className="line-clamp-1 text-[14px] font-bold text-text">{title}</p>
+        )}
+
+        {/* Contacto + mensaje */}
+        <p className="mt-1 text-[13px] font-semibold text-text-muted">{item.name?.trim() || (item.portal === "mercadolibre" ? "Pregunta pública" : "Sin nombre")}</p>
+        {item.message && <p className="mt-1 line-clamp-3 text-[12.5px] text-text-muted">“{item.message}”</p>}
+        <ContactChips item={item} />
+
+        {/* Estado / acciones */}
+        <div className="mt-3 flex flex-1 items-end">
+          {item.caseStatus === "tomado" ? (
+            <div className="flex w-full flex-wrap items-center gap-2">
+              <span className="rounded-full bg-sage-chip px-2.5 py-1 text-[11.5px] font-bold text-olive-light">
+                Atiende: {item.takenByName ?? "—"}
+              </span>
+              {canTransfer && (
+                <select
+                  defaultValue=""
+                  disabled={isBusy}
+                  onChange={(e) => {
+                    if (e.target.value) onAction(item.id, "transfer", e.target.value);
+                    e.target.value = "";
+                  }}
+                  className="ml-auto max-w-[150px] rounded-full border border-border bg-surface px-2 py-1 text-[11.5px] font-semibold text-text-muted disabled:opacity-50"
+                  aria-label="Transferir a"
+                >
+                  <option value="">Transferir a…</option>
+                  {users
+                    .filter((u) => u.id !== item.takenByUserId)
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.fullName?.trim() || u.email}
+                      </option>
+                    ))}
+                </select>
+              )}
+            </div>
+          ) : item.caseStatus === "espera" ? (
+            <div className="flex w-full items-center gap-2">
+              <span className="rounded-full bg-sand-chip px-2.5 py-1 text-[11.5px] font-bold text-warning">En espera</span>
+              <button
+                onClick={() => onAction(item.id, "take")}
+                disabled={isBusy}
+                className="ml-auto rounded-full bg-dark px-3.5 py-1.5 text-[12px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {isBusy ? "…" : "✓ Tomar igual"}
+              </button>
+            </div>
+          ) : item.caseStatus === "descartado" ? (
+            <span className="rounded-full bg-bg px-2.5 py-1 text-[11.5px] font-bold text-text-faint">Descartado</span>
+          ) : (
+            <div className="flex w-full items-center gap-2">
+              <button
+                onClick={() => onAction(item.id, "take")}
+                disabled={isBusy}
+                title="Lo tomo yo: crea/reusa el cliente y arma un seguimiento asignado a mí"
+                className="flex-1 rounded-full bg-dark px-3.5 py-2 text-[12.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {isBusy ? "Tomando…" : "✓ Tomar"}
+              </button>
+              <button
+                onClick={() => onAction(item.id, "wait")}
+                disabled={isBusy}
+                title="Pasa a espera: si en 3 días nadie lo toma, se descarta solo"
+                className="rounded-full border border-border bg-surface px-3.5 py-2 text-[12.5px] font-bold text-text-muted transition-colors hover:bg-bg disabled:opacity-50"
+              >
+                ✗ Espera
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
-export function ConsultantsClient({ items, page, totalPages, total, limit, totalAll, counts, filters }: Readonly<Props>) {
+export function ConsultantsClient({ items, page, totalPages, total, limit, totalAll, counts, filters, viewer, users }: Readonly<Props>) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(filters.q);
   const [fromFilter, setFromFilter] = useState(filters.from);
   const [toFilter, setToFilter] = useState(filters.to);
+  const [busy, setBusy] = useState<string | null>(null);
 
   function pushParams(mutate: (p: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString());
@@ -150,6 +258,25 @@ export function ConsultantsClient({ items, page, totalPages, total, limit, total
     pushParams((params) => (portal ? params.set("portal", portal) : params.delete("portal")));
   }
 
+  async function doAction(messageId: string, action: "take" | "wait" | "transfer", toUserId?: string) {
+    setBusy(messageId);
+    try {
+      const res = await fetch("/api/consultants/action", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messageId, action, toUserId }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.message ?? "No se pudo aplicar");
+      toast.success(body?.message ?? "Listo");
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const tabs: { key: string; label: string; count: number }[] = [
     { key: "", label: "Todos", count: totalAll },
     { key: "mercadolibre", label: "MercadoLibre", count: counts.mercadolibre },
@@ -159,11 +286,48 @@ export function ConsultantsClient({ items, page, totalPages, total, limit, total
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Últimos contactos</h1>
-        <p className="text-[12.5px] text-text-faint">
-          Central de mensajes de MercadoLibre, ZonaProp y ArgenProp · Mostrando {items.length} de {total}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Últimos contactos</h1>
+          <p className="text-[12.5px] text-text-faint">
+            Central de mensajes de MercadoLibre, ZonaProp y ArgenProp · Mostrando {items.length} de {total}
+          </p>
+        </div>
+        {/* Mis contactos / Todos — para no-admin arranca en "Mis" */}
+        <div className="flex rounded-full border border-border bg-surface p-1">
+          {[
+            { mine: true, label: "Mis contactos" },
+            { mine: false, label: "Todos" },
+          ].map((t) => (
+            <button
+              key={t.label}
+              onClick={() => pushParams((p) => p.set("mine", t.mine ? "1" : "0"))}
+              className={`rounded-full px-4 py-1.5 text-[12.5px] font-bold transition-colors ${
+                filters.mine === t.mine ? "bg-dark text-dark-fg" : "text-text-muted hover:text-text"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Estado de gestión */}
+      <div className="flex flex-wrap gap-2">
+        {ESTADOS.map((e) => {
+          const active = filters.estado === e.key;
+          return (
+            <button
+              key={e.key}
+              onClick={() => pushParams((p) => p.set("estado", e.key))}
+              className={`rounded-full px-4 py-2 text-[13px] font-semibold transition-colors ${
+                active ? "bg-dark text-dark-fg" : "border border-border bg-surface text-text-muted hover:bg-bg"
+              }`}
+            >
+              {e.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Tabs por portal */}
@@ -237,86 +401,18 @@ export function ConsultantsClient({ items, page, totalPages, total, limit, total
         </div>
       </div>
 
-      {/* Cards — mobile */}
-      <div className="sm:hidden space-y-2">
-        {items.length === 0 ? (
-          <p className="py-8 text-center text-[12.5px] text-text-faint">Sin resultados</p>
-        ) : (
-          items.map((item) => (
-            <div key={item.id} className="rounded-[18px] border border-border bg-surface p-3.5">
-              <div className="flex items-center justify-between gap-2">
-                <PortalChip portal={item.portal} kind={item.kind} />
-                <span className="text-[11px] text-text-faint">{formatDateTime24(item.date)}</span>
-              </div>
-              <p className="mt-2 break-words text-[13.5px] font-bold text-text">{item.name ?? "Sin nombre"}</p>
-              {item.message && (
-                <p className="mt-1 line-clamp-3 text-[12.5px] text-text-muted">{item.message}</p>
-              )}
-              <ContactChips item={item} />
-              <div className="mt-2">
-                <Property item={item} />
-              </div>
-              {item.answered !== null && (
-                <span className={`mt-2 inline-block rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${item.answered ? "bg-sage-chip text-olive-light" : "bg-sand-chip text-text-muted"}`}>
-                  {item.answered ? "Respondida" : "Sin responder"}
-                </span>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Tabla — desktop */}
-      <div className="hidden sm:block overflow-hidden rounded-[20px] border border-border bg-surface">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
-              <th className="px-4 py-3">Contacto / Mensaje</th>
-              <th className="hidden px-4 py-3 md:table-cell">Portal</th>
-              <th className="hidden px-4 py-3 lg:table-cell">Propiedad</th>
-              <th className="hidden px-4 py-3 lg:table-cell">Fecha</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-12 text-center text-[12.5px] text-text-faint">
-                  No hay mensajes para los filtros seleccionados
-                </td>
-              </tr>
-            ) : (
-              items.map((item) => (
-                <tr key={item.id} className="border-b border-border align-top last:border-b-0 hover:bg-bg">
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-2">
-                      <p className="text-[13.5px] font-bold text-text">{item.name ?? "Sin nombre"}</p>
-                      {item.answered !== null && (
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${item.answered ? "bg-sage-chip text-olive-light" : "bg-sand-chip text-text-muted"}`}>
-                          {item.answered ? "Respondida" : "Sin responder"}
-                        </span>
-                      )}
-                    </div>
-                    {item.message && <p className="mt-0.5 line-clamp-2 max-w-[420px] text-[12px] text-text-muted">{item.message}</p>}
-                    <ContactChips item={item} />
-                    <div className="mt-1 md:hidden">
-                      <PortalChip portal={item.portal} kind={item.kind} />
-                    </div>
-                  </td>
-                  <td className="hidden px-4 py-3.5 md:table-cell">
-                    <PortalChip portal={item.portal} kind={item.kind} />
-                  </td>
-                  <td className="hidden px-4 py-3.5 lg:table-cell">
-                    <Property item={item} />
-                  </td>
-                  <td className="hidden px-4 py-3.5 text-[13px] text-text-muted lg:table-cell">
-                    {formatDateTime24(item.date)}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* Grilla de tarjetas */}
+      {items.length === 0 ? (
+        <p className="py-10 text-center text-[12.5px] text-text-faint">
+          {filters.estado === "nuevos" ? "No hay contactos nuevos 🎉" : "Sin resultados para los filtros"}
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {items.map((item) => (
+            <ContactCard key={item.id} item={item} viewer={viewer} users={users} busy={busy} onAction={doAction} />
+          ))}
+        </div>
+      )}
 
       <Pagination page={page} totalPages={totalPages} total={total} limit={limit} />
     </div>

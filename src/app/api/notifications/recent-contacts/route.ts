@@ -205,6 +205,9 @@ export const GET = withHandler(async (request) => {
         eventAt: item.messageAt ?? item.scrapedAt,
         payload: {
           id: item.id,
+          // createdAt = ingreso al sistema (scrapeo): el badge de no-leídas
+          // cuenta por esta fecha, porque messageAt puede ser horas más vieja.
+          createdAt: item.scrapedAt.toISOString(),
           portal: item.portal,
           contactName: item.contactName,
           contactEmail: item.contactEmail,
@@ -221,6 +224,7 @@ export const GET = withHandler(async (request) => {
         eventAt: item.askedAt ?? item.createdAt,
         payload: {
           id: item.id,
+          createdAt: item.createdAt.toISOString(),
           portal: "mercadolibre",
           contactName: null,
           contactEmail: null,

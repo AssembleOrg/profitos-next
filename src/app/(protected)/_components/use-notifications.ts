@@ -56,9 +56,14 @@ export function useNotifications() {
       }
       const lastSeenMs = new Date(lastSeen).getTime();
       const count = items.filter((item) => {
-        const eventAt = item.eventAt ?? item.createdAt;
-        if (!eventAt) return false;
-        return new Date(eventAt).getTime() > lastSeenMs;
+        // Un lead scrapeado tiene eventAt = fecha del mensaje EN EL PORTAL, que
+        // puede ser horas anteriores a que el scraper lo traiga. Para "no leído"
+        // vale la fecha más nueva entre el evento y su ingreso al sistema.
+        const t = Math.max(
+          item.eventAt ? new Date(item.eventAt).getTime() : 0,
+          item.createdAt ? new Date(item.createdAt).getTime() : 0
+        );
+        return t > lastSeenMs;
       }).length;
       setUnreadCount(count);
     } catch {
@@ -76,7 +81,12 @@ export function useNotifications() {
     const timerId = globalThis.setTimeout(() => {
       void loadNotifications();
     }, 0);
-    return () => globalThis.clearTimeout(timerId);
+    // Red de seguridad si realtime no entrega (canal caído, tabla sin publicar).
+    const pollId = globalThis.setInterval(() => void loadNotifications(), 120_000);
+    return () => {
+      globalThis.clearTimeout(timerId);
+      globalThis.clearInterval(pollId);
+    };
   }, []);
 
   useEffect(() => {

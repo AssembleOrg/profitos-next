@@ -37,6 +37,7 @@ model User {
   assignedFollowUps  PropertyFollowUp[] @relation("FollowUpAssignedTo")
   createdFollowUps   PropertyFollowUp[] @relation("FollowUpAssignedBy")
   propertyResponsibilities PropertyResponsible[]
+  contactCases       ContactCase[]
   followUpActions    FollowUpAction[]   @relation("FollowUpActionCreatedBy")
   tasaciones           Tasacion[]
   assignedObjectiveCards ObjectiveCard[]   @relation("ObjectiveCardAssignedTo")
@@ -174,6 +175,27 @@ model PropertyResponsible {
   @@unique([propertyId, userId])
   @@index([userId])
   @@map("jp_property_responsibles")
+}
+
+// Estado de gestión de un CONTACTO de la central de mensajes. La clave es el id
+// del mensaje unificado ("portal:rowId"). Sin fila = contacto nuevo/propuesto.
+//  - tomado: un usuario lo atiende (primero que llega gana; puede transferir).
+//  - espera: apartado con la ✗; si en 3 días nadie lo toma pasa a descartado.
+//  - descartado: cerrado sin gestión.
+model ContactCase {
+  id            String    @id // `${portal}:${rowId}` del inbox
+  portal        String
+  status        String    // tomado | espera | descartado
+  takenByUserId String?   @map("taken_by_user_id")
+  takenByUser   User?     @relation(fields: [takenByUserId], references: [id], onDelete: SetNull)
+  clientId      String?   @map("client_id")
+  followUpId    String?   @map("follow_up_id")
+  waitingAt     DateTime? @map("waiting_at") // cuándo entró en espera (para el auto-descarte)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("jp_contact_cases")
 }
 
 // Cola de trabajos de publicación. ZonaProp/ArgenProp requieren navegador+proxy

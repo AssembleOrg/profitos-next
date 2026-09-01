@@ -37,6 +37,11 @@ export type InboxMessage = {
    *  deep-link /propiedades?open=<id>. Null si el aviso no es de Profitos. */
   propertyId: string | null;
   propertyAddress: string | null;
+  coverImageUrl: string | null;
+  /** Estado de gestión (jp_contact_cases). Null = nuevo/propuesto. */
+  caseStatus: "tomado" | "espera" | "descartado" | null;
+  takenByUserId: string | null;
+  takenByName: string | null;
 };
 
 export type InboxFilters = {
@@ -46,7 +51,14 @@ export type InboxFilters = {
   to?: string; // YYYY-MM-DD
   page?: number;
   limit?: number;
+  /** Estado de gestión: nuevos (default) | espera | tomados | descartados | todos */
+  estado?: string;
+  /** true = sólo contactos "míos": propiedades donde soy responsable interno,
+   *  sin responsables/propiedad (nadie los cubre), o tomados por mí. */
+  mine?: boolean;
 };
+
+export type InboxViewer = { userId: string; isAdmin: boolean };
 
 export type InboxResult = {
   items: InboxMessage[];
@@ -104,7 +116,7 @@ function mapScraped(row: {
   propertyRef: string | null;
   propertyUrl: string | null;
   price: string | null;
-}, prop?: { id: string; address: string } | null): InboxMessage {
+}, prop?: { id: string; address: string; coverImageUrl?: string | null } | null): InboxMessage {
   const date = row.messageAt ?? row.scrapedAt;
   return {
     id: `${row.portal}:${row.id}`,
@@ -123,6 +135,10 @@ function mapScraped(row: {
     price: row.price,
     propertyId: prop?.id ?? null,
     propertyAddress: prop?.address ?? null,
+    coverImageUrl: prop?.coverImageUrl ?? null,
+    caseStatus: null,
+    takenByUserId: null,
+    takenByName: null,
   };
 }
 
@@ -133,28 +149,41 @@ function mapScraped(row: {
  */
 export async function resolveLeadProperties(
   refs: (string | null)[]
-): Promise<Map<string, { id: string; address: string }>> {
+): Promise<Map<string, { id: string; address: string; coverImageUrl: string | null }>> {
   const clean = [...new Set(refs.filter((r): r is string => Boolean(r)))];
   if (!clean.length) return new Map();
   const props = await prisma.property.findMany({
     where: { referenceCode: { in: clean } },
-    select: { id: true, address: true, referenceCode: true },
+    select: { id: true, address: true, referenceCode: true, coverImageUrl: true },
   });
-  return new Map(props.map((p) => [p.referenceCode!, { id: p.id, address: p.address }]));
+  return new Map(props.map((p) => [p.referenceCode!, { id: p.id, address: p.address, coverImageUrl: p.coverImageUrl }]));
 }
 
+// Ventana de trabajo en memoria: el filtrado por estado/responsable se hace
+// post-DB, así que traemos una ventana grande de cada fuente (volúmenes chicos).
+const FETCH_WINDOW = 600;
+// Un contacto "en espera" que nadie toma en 3 días pasa solo a "descartado".
+const WAIT_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+
 /** Devuelve la lista unificada, paginada y ordenada por fecha desc. */
-export async function getInboxMessages(filters: InboxFilters): Promise<InboxResult> {
+export async function getInboxMessages(filters: InboxFilters, viewer?: InboxViewer): Promise<InboxResult> {
   const q = (filters.q ?? "").trim();
   const page = Math.max(1, filters.page ?? 1);
   const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
   const bounds = dateBounds(filters.from, filters.to);
   const portalFilter = isInboxPortal(filters.portal) ? filters.portal : undefined;
 
+  // Auto-descarte perezoso: espera vencida → descartado (sin cron).
+  await prisma.contactCase
+    .updateMany({
+      where: { status: "espera", waitingAt: { lt: new Date(Date.now() - WAIT_TTL_MS) } },
+      data: { status: "descartado" },
+    })
+    .catch(() => {});
+
   const wantScraped = !portalFilter || portalFilter !== "mercadolibre";
   const wantMl = !portalFilter || portalFilter === "mercadolibre";
-  // Cada fuente ordenada desc: alcanza con traer page*limit para poder cortar la unión.
-  const fetchTake = page * limit;
+  const fetchTake = FETCH_WINDOW;
 
   const sw = scrapedWhere(q, bounds);
   const qw = questionWhere(q, bounds);
@@ -184,7 +213,7 @@ export async function getInboxMessages(filters: InboxFilters): Promise<InboxResu
   const properties = propertyIds.length
     ? await prisma.property.findMany({
         where: { id: { in: propertyIds } },
-        select: { id: true, address: true, publicUrl: true },
+        select: { id: true, address: true, publicUrl: true, coverImageUrl: true },
       })
     : [];
   const propMap = new Map(properties.map((p) => [p.id, p]));
@@ -211,10 +240,14 @@ export async function getInboxMessages(filters: InboxFilters): Promise<InboxResu
       price: null,
       propertyId: prop?.id ?? null,
       propertyAddress: prop?.address ?? null,
+      coverImageUrl: prop?.coverImageUrl ?? null,
+      caseStatus: null,
+      takenByUserId: null,
+      takenByName: null,
     };
   });
 
-  const merged = [
+  let merged = [
     ...scrapedRows.map((r) => mapScraped(r, r.propertyRef ? leadPropMap.get(r.propertyRef) : null)),
     ...mlMapped,
   ].sort((a, b) => {
@@ -223,13 +256,64 @@ export async function getInboxMessages(filters: InboxFilters): Promise<InboxResu
     return tb - ta;
   });
 
-  const counts: Record<InboxPortal, number> = {
-    mercadolibre: mlCount,
-    zonaprop: zpCount,
-    argenprop: apCount,
-  };
-  const total = portalFilter ? counts[portalFilter] : counts.mercadolibre + counts.zonaprop + counts.argenprop;
+  // Estado de gestión (jp_contact_cases) de la ventana.
+  const cases = merged.length
+    ? await prisma.contactCase.findMany({
+        where: { id: { in: merged.map((m) => m.id) } },
+        select: { id: true, status: true, takenByUserId: true, takenByUser: { select: { fullName: true, email: true } } },
+      })
+    : [];
+  const caseMap = new Map(cases.map((c) => [c.id, c]));
+  for (const m of merged) {
+    const c = caseMap.get(m.id);
+    if (!c) continue;
+    m.caseStatus = c.status as InboxMessage["caseStatus"];
+    m.takenByUserId = c.takenByUserId;
+    m.takenByName = c.takenByUser?.fullName?.trim() || c.takenByUser?.email || null;
+  }
+
+  // Filtro por estado de gestión. Default: "nuevos" (sin caso = propuestos).
+  const estado = (filters.estado ?? "nuevos").trim();
+  if (estado !== "todos") {
+    merged = merged.filter((m) => {
+      if (estado === "nuevos") return m.caseStatus === null;
+      if (estado === "espera") return m.caseStatus === "espera";
+      if (estado === "tomados") return m.caseStatus === "tomado";
+      if (estado === "descartados") return m.caseStatus === "descartado";
+      return true;
+    });
+  }
+
+  // Filtro "míos": propiedades donde soy responsable interno, contactos sin
+  // responsable que los cubra (para que no queden huérfanos) o tomados por mí.
+  if (filters.mine && viewer) {
+    const propIds = [...new Set(merged.map((m) => m.propertyId).filter(Boolean))] as string[];
+    const respRows = propIds.length
+      ? await prisma.propertyResponsible.findMany({
+          where: { propertyId: { in: propIds } },
+          select: { propertyId: true, userId: true },
+        })
+      : [];
+    const respByProp = new Map<string, Set<string>>();
+    for (const r of respRows) {
+      const set = respByProp.get(r.propertyId) ?? new Set<string>();
+      set.add(r.userId);
+      respByProp.set(r.propertyId, set);
+    }
+    merged = merged.filter((m) => {
+      if (m.takenByUserId === viewer.userId) return true;
+      if (!m.propertyId) return true; // sin propiedad → nadie lo cubre, se muestra
+      const set = respByProp.get(m.propertyId);
+      if (!set || set.size === 0) return true; // sin responsables → se muestra
+      return set.has(viewer.userId);
+    });
+  }
+
+  // Los counts por portal reflejan la vista filtrada (chips de la UI).
+  const counts: Record<InboxPortal, number> = { mercadolibre: 0, zonaprop: 0, argenprop: 0 };
+  for (const m of merged) counts[m.portal]++;
+  const total = merged.length;
   const items = merged.slice((page - 1) * limit, page * limit);
 
-  return { items, total, totalAll: counts.mercadolibre + counts.zonaprop + counts.argenprop, counts };
+  return { items, total, totalAll: zpCount + apCount + mlCount, counts };
 }
