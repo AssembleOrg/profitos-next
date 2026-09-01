@@ -36,6 +36,7 @@ model User {
   clients            Client[]
   assignedFollowUps  PropertyFollowUp[] @relation("FollowUpAssignedTo")
   createdFollowUps   PropertyFollowUp[] @relation("FollowUpAssignedBy")
+  propertyResponsibilities PropertyResponsible[]
   followUpActions    FollowUpAction[]   @relation("FollowUpActionCreatedBy")
   tasaciones           Tasacion[]
   assignedObjectiveCards ObjectiveCard[]   @relation("ObjectiveCardAssignedTo")
@@ -113,6 +114,7 @@ model Property {
   rentalContracts   RentalContract[]
   accountEntries    AccountEntry[]
   publications      PropertyPublication[]
+  internalResponsibles PropertyResponsible[]
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -156,6 +158,22 @@ model PropertyPublication {
   @@unique([propertyId, portal])
   @@index([portal, status])
   @@map("jp_property_publications")
+}
+
+// Responsables INTERNOS de una propiedad: usuarios de Profitos que reciben las
+// notificaciones de consultas (cualquier portal). Independiente de los
+// responsables de ZonaProp. Una propiedad puede tener varios.
+model PropertyResponsible {
+  id         String   @id @default(cuid())
+  propertyId String   @map("property_id")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([propertyId, userId])
+  @@index([userId])
+  @@map("jp_property_responsibles")
 }
 
 // Cola de trabajos de publicación. ZonaProp/ArgenProp requieren navegador+proxy

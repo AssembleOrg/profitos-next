@@ -656,6 +656,52 @@ export function PropiedadesClient({
     setModalPhotos(null);
   }
 
+  // Responsables internos de la propiedad abierta (ruteo de consultas).
+  const [respUsers, setRespUsers] = useState<{ id: string; fullName: string | null; email: string }[]>([]);
+  const [respAssigned, setRespAssigned] = useState<string[]>([]);
+  const [respSaving, setRespSaving] = useState(false);
+
+  useEffect(() => {
+    if (!modalOpen || !editProperty?.id) {
+      setRespAssigned([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/propiedades/${editProperty.id}/responsables`)
+      .then((r) => r.json())
+      .then((body) => {
+        if (cancelled) return;
+        setRespUsers(body?.data?.users ?? []);
+        setRespAssigned(body?.data?.assigned ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [modalOpen, editProperty?.id]);
+
+  async function toggleResponsible(userId: string) {
+    if (!editProperty?.id) return;
+    const next = respAssigned.includes(userId)
+      ? respAssigned.filter((u) => u !== userId)
+      : [...respAssigned, userId];
+    setRespAssigned(next); // optimista
+    setRespSaving(true);
+    try {
+      const res = await fetch(`/api/propiedades/${editProperty.id}/responsables`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userIds: next }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      toast.error("No se pudo guardar el responsable");
+      setRespAssigned(respAssigned); // rollback
+    } finally {
+      setRespSaving(false);
+    }
+  }
+
   // Deep-link: /propiedades?q=...&open=<id> abre el modal de esa propiedad
   // (lo usan las notificaciones de contactos recientes). El param se limpia
   // para que un back/refresh no reabra el modal.
@@ -1720,6 +1766,39 @@ export function PropiedadesClient({
                         </div>
                       </div>
                     </section>
+
+                    {/* Responsables internos: quiénes reciben las consultas de esta
+                        propiedad (todos los portales). Guarda al instante. */}
+                    {isEdit && respUsers.length > 0 && (
+                      <section>
+                        <h3 className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-text-faint">
+                          Responsables internos{respSaving ? " · guardando…" : ""}
+                        </h3>
+                        <p className="mb-2 text-[12px] text-text-faint">
+                          Las consultas de esta propiedad les llegan sólo a ellos. Sin responsables, notifica a todos.
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {respUsers.map((u) => {
+                            const on = respAssigned.includes(u.id);
+                            return (
+                              <button
+                                key={u.id}
+                                type="button"
+                                onClick={() => void toggleResponsible(u.id)}
+                                className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                                  on
+                                    ? "bg-dark text-dark-fg"
+                                    : "border border-border bg-surface text-text-muted hover:bg-bg"
+                                }`}
+                              >
+                                {on ? "✓ " : ""}
+                                {u.fullName?.trim() || u.email}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    )}
                   </div>
 
                   {/* ================= Pestaña UBICACIÓN ================= */}

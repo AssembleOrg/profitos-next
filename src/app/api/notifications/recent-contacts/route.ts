@@ -116,6 +116,30 @@ export const GET = withHandler(async (request) => {
     : [];
   const qPropMap = new Map(qProps.map((p) => [p.id, p]));
 
+  // Ruteo por responsables INTERNOS: si la propiedad tiene responsables
+  // asignados, sus contactos sólo le llegan a ellos (los admin ven todo;
+  // propiedades sin responsables notifican a todos, como antes).
+  const contactPropIds = [
+    ...new Set([...[...leadPropMap.values()].map((p) => p.id), ...qPropIds]),
+  ];
+  const respRows = contactPropIds.length
+    ? await prisma.propertyResponsible.findMany({
+        where: { propertyId: { in: contactPropIds } },
+        select: { propertyId: true, userId: true },
+      })
+    : [];
+  const respByProp = new Map<string, Set<string>>();
+  for (const r of respRows) {
+    const set = respByProp.get(r.propertyId) ?? new Set<string>();
+    set.add(r.userId);
+    respByProp.set(r.propertyId, set);
+  }
+  const contactVisible = (propId: string | null | undefined): boolean => {
+    if (auth.isAdmin || !propId) return true;
+    const set = respByProp.get(propId);
+    return !set || set.size === 0 || set.has(auth.userId);
+  };
+
   const merged = [
     ...followUps.map((item) => ({
       kind: "followup_assignment" as const,
@@ -174,34 +198,38 @@ export const GET = withHandler(async (request) => {
         property: item.property,
       },
     })),
-    ...leads.map((item) => ({
-      kind: "contact" as const,
-      eventAt: item.messageAt ?? item.scrapedAt,
-      payload: {
-        id: item.id,
-        portal: item.portal,
-        contactName: item.contactName,
-        contactEmail: item.contactEmail,
-        contactPhone: item.contactPhone,
-        message: item.messageText,
-        propertyTitle: item.propertyTitle,
-        property: (item.propertyRef && leadPropMap.get(item.propertyRef)) || null,
-      },
-    })),
-    ...questions.map((item) => ({
-      kind: "contact" as const,
-      eventAt: item.askedAt ?? item.createdAt,
-      payload: {
-        id: item.id,
-        portal: "mercadolibre",
-        contactName: null,
-        contactEmail: null,
-        contactPhone: null,
-        message: item.text,
-        propertyTitle: item.propertyId ? (qPropMap.get(item.propertyId)?.address ?? item.itemId) : item.itemId,
-        property: item.propertyId ? (qPropMap.get(item.propertyId) ?? null) : null,
-      },
-    })),
+    ...leads
+      .filter((item) => contactVisible(item.propertyRef ? leadPropMap.get(item.propertyRef)?.id : null))
+      .map((item) => ({
+        kind: "contact" as const,
+        eventAt: item.messageAt ?? item.scrapedAt,
+        payload: {
+          id: item.id,
+          portal: item.portal,
+          contactName: item.contactName,
+          contactEmail: item.contactEmail,
+          contactPhone: item.contactPhone,
+          message: item.messageText,
+          propertyTitle: item.propertyTitle,
+          property: (item.propertyRef && leadPropMap.get(item.propertyRef)) || null,
+        },
+      })),
+    ...questions
+      .filter((item) => contactVisible(item.propertyId))
+      .map((item) => ({
+        kind: "contact" as const,
+        eventAt: item.askedAt ?? item.createdAt,
+        payload: {
+          id: item.id,
+          portal: "mercadolibre",
+          contactName: null,
+          contactEmail: null,
+          contactPhone: null,
+          message: item.text,
+          propertyTitle: item.propertyId ? (qPropMap.get(item.propertyId)?.address ?? item.itemId) : item.itemId,
+          property: item.propertyId ? (qPropMap.get(item.propertyId) ?? null) : null,
+        },
+      })),
   ]
     .sort((a, b) => b.eventAt.getTime() - a.eventAt.getTime())
     .slice(0, limit)
