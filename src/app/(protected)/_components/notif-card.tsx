@@ -14,6 +14,7 @@ const NOTIF_BADGE_CLASS: Record<NotificationItem["kind"], string> = {
   overdue_followup: "bg-clay-chip text-terra",
   property: "bg-sage-chip text-success",
   publication_closed: "bg-clay-chip text-terra",
+  contact: "bg-info-chip text-info",
 };
 
 const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
@@ -21,6 +22,7 @@ const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
   overdue_followup: "Vencido",
   property: "Propiedad nueva",
   publication_closed: "Baja aviso",
+  contact: "Contacto",
 };
 
 const PORTAL_LABEL: Record<string, string> = {
@@ -68,6 +70,19 @@ function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
           </p>
         </>
       );
+    case "contact":
+      return (
+        <>
+          <p className="text-sm font-bold leading-tight text-text">
+            {item.contactName?.trim() || (item.portal === "mercadolibre" ? "Pregunta en ML" : "Contacto sin nombre")}
+          </p>
+          <p className="mt-0.5 truncate text-xs text-text-faint">
+            {PORTAL_LABEL[item.portal ?? ""] ?? item.portal}
+            {item.property?.address || item.propertyTitle ? ` · ${item.property?.address ?? item.propertyTitle}` : ""}
+            {item.message ? ` · “${item.message.slice(0, 60)}”` : ""}
+          </p>
+        </>
+      );
     default:
       return (
         <>
@@ -86,7 +101,10 @@ function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
  */
 function notifHref(item: NotificationItem): string | null {
   const propId = item.kind === "property" ? item.id : item.property?.id;
-  if (!propId) return null;
+  if (!propId) {
+    // Contacto sin propiedad nuestra: al menos llevar a la central de mensajes.
+    return item.kind === "contact" ? "/consultants" : null;
+  }
   const addr = item.kind === "property" ? item.address : item.property?.address;
   const q = addr ? `q=${encodeURIComponent(addr)}&` : "";
   return `/propiedades?${q}open=${propId}`;

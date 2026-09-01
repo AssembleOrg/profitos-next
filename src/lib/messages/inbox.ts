@@ -33,6 +33,10 @@ export type InboxMessage = {
   propertyRef: string | null;
   propertyUrl: string | null;
   price: string | null;
+  /** Propiedad NUESTRA resuelta (por referenceCode o id): habilita el
+   *  deep-link /propiedades?open=<id>. Null si el aviso no es de Profitos. */
+  propertyId: string | null;
+  propertyAddress: string | null;
 };
 
 export type InboxFilters = {
@@ -100,7 +104,7 @@ function mapScraped(row: {
   propertyRef: string | null;
   propertyUrl: string | null;
   price: string | null;
-}): InboxMessage {
+}, prop?: { id: string; address: string } | null): InboxMessage {
   const date = row.messageAt ?? row.scrapedAt;
   return {
     id: `${row.portal}:${row.id}`,
@@ -117,7 +121,26 @@ function mapScraped(row: {
     propertyRef: row.propertyRef,
     propertyUrl: row.propertyUrl,
     price: row.price,
+    propertyId: prop?.id ?? null,
+    propertyAddress: prop?.address ?? null,
   };
+}
+
+/**
+ * Mapa referenceCode → propiedad para vincular leads scrapeados con nuestras
+ * propiedades (el propertyRef del lead es el código interno del aviso, que en
+ * los avisos de Profitos coincide con Property.referenceCode).
+ */
+export async function resolveLeadProperties(
+  refs: (string | null)[]
+): Promise<Map<string, { id: string; address: string }>> {
+  const clean = [...new Set(refs.filter((r): r is string => Boolean(r)))];
+  if (!clean.length) return new Map();
+  const props = await prisma.property.findMany({
+    where: { referenceCode: { in: clean } },
+    select: { id: true, address: true, referenceCode: true },
+  });
+  return new Map(props.map((p) => [p.referenceCode!, { id: p.id, address: p.address }]));
 }
 
 /** Devuelve la lista unificada, paginada y ordenada por fecha desc. */
@@ -165,6 +188,8 @@ export async function getInboxMessages(filters: InboxFilters): Promise<InboxResu
       })
     : [];
   const propMap = new Map(properties.map((p) => [p.id, p]));
+  // Leads scrapeados: vincular con la propiedad nuestra vía referenceCode.
+  const leadPropMap = await resolveLeadProperties(scrapedRows.map((r) => r.propertyRef));
 
   const mlMapped: InboxMessage[] = mlRows.map((x) => {
     const prop = x.propertyId ? propMap.get(x.propertyId) : undefined;
@@ -184,10 +209,15 @@ export async function getInboxMessages(filters: InboxFilters): Promise<InboxResu
       propertyRef: x.itemId,
       propertyUrl: prop?.publicUrl ?? null,
       price: null,
+      propertyId: prop?.id ?? null,
+      propertyAddress: prop?.address ?? null,
     };
   });
 
-  const merged = [...scrapedRows.map(mapScraped), ...mlMapped].sort((a, b) => {
+  const merged = [
+    ...scrapedRows.map((r) => mapScraped(r, r.propertyRef ? leadPropMap.get(r.propertyRef) : null)),
+    ...mlMapped,
+  ].sort((a, b) => {
     const ta = a.date ? Date.parse(a.date) : 0;
     const tb = b.date ? Date.parse(b.date) : 0;
     return tb - ta;

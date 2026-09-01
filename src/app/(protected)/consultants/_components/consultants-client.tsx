@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -94,6 +95,15 @@ function Property({ item }: { item: InboxMessage }) {
       {item.price ? <span className="text-text-faint"> · {item.price}</span> : null}
     </span>
   );
+  // Propiedad nuestra: deep-link a /propiedades con el modal abierto.
+  if (item.propertyId) {
+    const q = item.propertyAddress ? `q=${encodeURIComponent(item.propertyAddress)}&` : "";
+    return (
+      <Link href={`/propiedades?${q}open=${item.propertyId}`} className="text-accent hover:underline">
+        {body}
+      </Link>
+    );
+  }
   return item.propertyUrl ? (
     <a href={item.propertyUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
       {body}

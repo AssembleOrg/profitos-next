@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
 export interface NotificationItem {
-  kind: "followup_assignment" | "property" | "overdue_followup" | "publication_closed";
+  kind: "followup_assignment" | "property" | "overdue_followup" | "publication_closed" | "contact";
   eventAt: string;
   id: string;
   createdAt?: string;
@@ -25,6 +25,12 @@ export interface NotificationItem {
   branchName?: string | null;
   portal?: string;
   permalink?: string | null;
+  // kind "contact": lead scrapeado (ZP/AP) o pregunta ML
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  message?: string | null;
+  propertyTitle?: string | null;
 }
 
 const LS_KEY = "jp_last_notifications_seen_at";
@@ -82,6 +88,8 @@ export function useNotifications() {
       .on("postgres_changes", { event: "INSERT", schema, table: "jp_property_followups" }, () => void loadNotifications())
       .on("postgres_changes", { event: "UPDATE", schema, table: "jp_property_followups" }, () => void loadNotifications())
       .on("postgres_changes", { event: "UPDATE", schema, table: "jp_property_publications" }, () => void loadNotifications())
+      .on("postgres_changes", { event: "INSERT", schema, table: "jp_scraped_leads" }, () => void loadNotifications())
+      .on("postgres_changes", { event: "INSERT", schema, table: "jp_portal_questions" }, () => void loadNotifications())
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, []);

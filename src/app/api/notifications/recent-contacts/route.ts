@@ -2,6 +2,7 @@ import { withHandler } from "@/lib/api/handler";
 import { ok } from "@/lib/api/response";
 import { getAuthContext } from "@/lib/api/auth";
 import { prisma } from "@/lib/prisma/client";
+import { resolveLeadProperties } from "@/lib/messages/inbox";
 
 export const GET = withHandler(async (request) => {
   const auth = await getAuthContext();
@@ -11,7 +12,7 @@ export const GET = withHandler(async (request) => {
 
   const followUpWhere = auth.isAdmin ? {} : { assignedToUserId: auth.userId };
 
-  const [followUps, properties, overdueFollowUps, closedPublications] = await Promise.all([
+  const [followUps, properties, overdueFollowUps, closedPublications, leads, questions] = await Promise.all([
     prisma.propertyFollowUp.findMany({
       where: followUpWhere,
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
@@ -79,7 +80,41 @@ export const GET = withHandler(async (request) => {
         property: { select: { id: true, address: true } },
       },
     }),
+    // Últimos CONTACTOS reales: leads scrapeados de ZonaProp/ArgenProp.
+    prisma.scrapedLead.findMany({
+      orderBy: [{ messageAt: "desc" }, { scrapedAt: "desc" }],
+      take: limit,
+      select: {
+        id: true,
+        portal: true,
+        section: true,
+        contactName: true,
+        contactEmail: true,
+        contactPhone: true,
+        messageText: true,
+        messageAt: true,
+        scrapedAt: true,
+        propertyRef: true,
+        propertyTitle: true,
+      },
+    }),
+    // Preguntas de MercadoLibre (también son contactos entrantes).
+    prisma.portalQuestion.findMany({
+      where: { portal: "mercadolibre" },
+      orderBy: [{ askedAt: "desc" }, { createdAt: "desc" }],
+      take: limit,
+      select: { id: true, text: true, askedAt: true, createdAt: true, propertyId: true, itemId: true },
+    }),
   ]);
+
+  // Vincular leads con nuestra propiedad (propertyRef == referenceCode) y
+  // resolver las propiedades de las preguntas ML.
+  const leadPropMap = await resolveLeadProperties(leads.map((l) => l.propertyRef));
+  const qPropIds = [...new Set(questions.map((q) => q.propertyId).filter(Boolean))] as string[];
+  const qProps = qPropIds.length
+    ? await prisma.property.findMany({ where: { id: { in: qPropIds } }, select: { id: true, address: true } })
+    : [];
+  const qPropMap = new Map(qProps.map((p) => [p.id, p]));
 
   const merged = [
     ...followUps.map((item) => ({
@@ -137,6 +172,34 @@ export const GET = withHandler(async (request) => {
         status: item.status,
         permalink: item.permalink,
         property: item.property,
+      },
+    })),
+    ...leads.map((item) => ({
+      kind: "contact" as const,
+      eventAt: item.messageAt ?? item.scrapedAt,
+      payload: {
+        id: item.id,
+        portal: item.portal,
+        contactName: item.contactName,
+        contactEmail: item.contactEmail,
+        contactPhone: item.contactPhone,
+        message: item.messageText,
+        propertyTitle: item.propertyTitle,
+        property: (item.propertyRef && leadPropMap.get(item.propertyRef)) || null,
+      },
+    })),
+    ...questions.map((item) => ({
+      kind: "contact" as const,
+      eventAt: item.askedAt ?? item.createdAt,
+      payload: {
+        id: item.id,
+        portal: "mercadolibre",
+        contactName: null,
+        contactEmail: null,
+        contactPhone: null,
+        message: item.text,
+        propertyTitle: item.propertyId ? (qPropMap.get(item.propertyId)?.address ?? item.itemId) : item.itemId,
+        property: item.propertyId ? (qPropMap.get(item.propertyId) ?? null) : null,
       },
     })),
   ]

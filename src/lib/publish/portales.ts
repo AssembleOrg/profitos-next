@@ -229,7 +229,9 @@ async function mapArgenprop(p: PropertyForPublish): Promise<FichaInput> {
 
 async function runArgenprop(p: PropertyForPublish): Promise<{ externalId: string; permalink: string; active: boolean }> {
   const id = await createFicha(await mapArgenprop(p));
-  return { externalId: id, permalink: `https://gestion.argenprop.com/avisos/editar/${id}/datosinmueble`, active: false };
+  // Permalink PÚBLICO del aviso (el chip de la lista lo abre); la edición vive
+  // en gestion.argenprop.com/avisos/editar/{id}.
+  return { externalId: id, permalink: `https://www.argenprop.com/aviso--${id}`, active: false };
 }
 
 // ─── Cola ────────────────────────────────────────────────────────────────────

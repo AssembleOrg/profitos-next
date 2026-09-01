@@ -33,7 +33,7 @@ export function buildPropertyWhatsAppLink(property: {
   }
 
   const text = encodeURIComponent(lines.join("\n"));
-  const cleanPhone = phone?.replace(/[\s\-\(\)+]/g, "") ?? "";
+  const cleanPhone = toWhatsAppNumber(phone);
 
   return cleanPhone
     ? `https://wa.me/${cleanPhone}?text=${text}`
@@ -59,10 +59,16 @@ export function buildContactWhatsAppLink(phone: string, message?: string): strin
  * - Antepone "549" (celular Argentina) cuando falta el código de país.
  *
  * Devuelve solo dígitos, sin el +. Cadena vacía si no hay número válido.
+ *
+ * Los portales a veces traen VARIOS números en un solo campo
+ * ("541159796046, 1159796046"): concatenarlos rompía wa.me — se usa el
+ * primero que parezca un teléfono real (≥8 dígitos), o el primero a secas.
  */
 export function toWhatsAppNumber(phone: string | null | undefined): string {
   if (!phone) return "";
-  let d = phone.replace(/\D/g, "");
+  const candidates = phone.split(/[,;/]|\s{2,}|\s+y\s+/i).map((c) => c.trim()).filter(Boolean);
+  const first = candidates.find((c) => c.replace(/\D/g, "").length >= 8) ?? candidates[0] ?? "";
+  let d = first.replace(/\D/g, "");
   if (!d) return "";
 
   // Ya viene con código de país de Argentina.
