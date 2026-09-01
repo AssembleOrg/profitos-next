@@ -193,35 +193,55 @@ async function autoLoginZonaprop(s: ReloginSession): Promise<void> {
 
   const alive = () => active?.id === s.id; // la sesión puede expirar/cancelarse
   const page = s.context.pages()[0] ?? (await s.context.newPage());
+  const log = (m: string) => console.log(`[relogin] auto-login zonaprop: ${m}`);
   try {
-    // 1) Botón "Ingresar" del header (el home ya cargó en launchInteractive).
-    const ingresar = page
-      .locator('a:has-text("Ingresar"), button:has-text("Ingresar")')
+    // 0) Banner de cookies: tapa la parte baja y puede interceptar clicks.
+    const cookies = page
+      .locator('#onetrust-accept-btn-handler, button:has-text("Acepto"), button:has-text("Aceptar")')
       .first();
-    await ingresar.waitFor({ state: "visible", timeout: 30_000 });
-    await page.waitForTimeout(1500);
+    if (await cookies.isVisible({ timeout: 6_000 }).catch(() => false)) {
+      await cookies.click().catch(() => {});
+      log("banner de cookies cerrado");
+    }
+
+    // 1) Disparador del login (el home ya cargó en launchInteractive). El botón
+    // "Ingresar" del header no siempre se renderiza (responsive / variante);
+    // fallback: "Mis contactos" exige sesión y abre el mismo form de login.
+    let trigger = page.locator('a:has-text("Ingresar"), button:has-text("Ingresar")').first();
+    if (await trigger.isVisible({ timeout: 12_000 }).catch(() => false)) {
+      log('click en "Ingresar"');
+    } else {
+      trigger = page.locator('a:has-text("Mis contactos"), button:has-text("Mis contactos")').first();
+      await trigger.waitFor({ state: "visible", timeout: 15_000 });
+      log('sin botón "Ingresar"; click en "Mis contactos"');
+    }
+    await page.waitForTimeout(1200);
     if (!alive()) return;
-    await ingresar.click();
+    await trigger.click();
 
     // 2) Email + "Continuar".
     const emailInput = page.locator('input[type="email"], input[name*="mail" i]').first();
     await emailInput.waitFor({ state: "visible", timeout: 30_000 });
+    log("form de email visible; tipeando");
     await page.waitForTimeout(900);
     await emailInput.click();
     await emailInput.pressSequentially(email, { delay: 95 });
     await page.waitForTimeout(700);
     if (!alive()) return;
     await page.locator('button:has-text("Continuar")').first().click();
+    log('click en "Continuar"');
 
     // 3) Contraseña + "Iniciar sesión".
     const passInput = page.locator('input[type="password"]').first();
     await passInput.waitFor({ state: "visible", timeout: 30_000 });
+    log("form de contraseña visible; tipeando");
     await page.waitForTimeout(900);
     await passInput.click();
     await passInput.pressSequentially(password, { delay: 110 });
     await page.waitForTimeout(700);
     if (!alive()) return;
     await page.locator('button:has-text("Iniciar sesión"), button:has-text("Iniciar Sesión")').first().click();
+    log('click en "Iniciar sesión"; esperando validación');
 
     // 4) Esperar a que cierre el login y verificar contra el panel.
     await page.waitForTimeout(7000);
