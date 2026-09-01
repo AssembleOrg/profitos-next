@@ -712,6 +712,10 @@ model ScraperSession {
   storageState Json      @map("storage_state") // cookies/localStorage de Playwright
   valid        Boolean   @default(true)
   lastOkAt     DateTime? @map("last_ok_at")
+  // Intentos de re-login AUTOMÁTICO consumidos desde que la sesión se cayó
+  // (los hace el worker; se resetea a 0 al loguear OK). Cuando llega al máximo
+  // la web pide reconexión manual.
+  autoAttempts Int       @default(0) @map("auto_attempts")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 

@@ -165,37 +165,42 @@ async function launchInteractive(portal: string, dir: string): Promise<BrowserCo
 }
 
 /**
- * Guarda las cookies de la sesión logueada en la DB y marca el portal válido.
+ * Guarda las cookies de la sesión logueada en la DB, marca el portal válido y
+ * resetea el contador de intentos de re-login automático.
  */
 async function persistSessionState(portal: string, context: BrowserContext): Promise<void> {
   const state = await context.storageState();
   await prisma.scraperSession.upsert({
     where: { portal },
-    create: { portal, storageState: state as object, valid: true, lastOkAt: new Date() },
-    update: { storageState: state as object, valid: true, lastOkAt: new Date() },
+    create: { portal, storageState: state as object, valid: true, lastOkAt: new Date(), autoAttempts: 0 },
+    update: { storageState: state as object, valid: true, lastOkAt: new Date(), autoAttempts: 0 },
   });
 }
 
 /**
- * AUTO-LOGIN de ZonaProp: reproduce el camino humano en la pantalla del worker
- * (visible por noVNC): home → "Ingresar" → email → "Continuar" → contraseña →
- * "Iniciar sesión". Tipea con delays para parecer humano. Si algo se traba
- * (captcha, cambio de layout), NO rompe nada: la sesión noVNC sigue abierta y
- * el cliente completa a mano como siempre.
+ * RE-LOGIN AUTOMÁTICO de ZonaProp (sin cliente): el worker abre su propio
+ * navegador y reproduce el camino humano: home → login (botón "Ingresar" o
+ * "Mis contactos") → email → "Continuar" → contraseña → "Iniciar sesión",
+ * tipeando con delays. Ir directo a /login dispara la validación anti-bot;
+ * este recorrido no. Si queda logueado guarda la sesión en la DB.
  *
- * Requiere ZONAPROP_EMAIL y ZONAPROP_PASSWORD en el env del worker; si faltan,
- * no hace nada (flujo 100% manual).
+ * Lo invoca el supervisor del worker al detectar la sesión caída (con tope de
+ * intentos); NO se usa en el flujo manual por noVNC, que sigue 100% a mano.
+ * Requiere ZONAPROP_EMAIL y ZONAPROP_PASSWORD en el env del worker.
  */
-async function autoLoginZonaprop(s: ReloginSession): Promise<void> {
+export async function autoReloginZonaprop(): Promise<{ ok: boolean; message: string }> {
   const email = process.env.ZONAPROP_EMAIL?.trim();
   const password = process.env.ZONAPROP_PASSWORD?.trim();
-  if (!email || !password) return;
+  if (!email || !password) return { ok: false, message: "faltan ZONAPROP_EMAIL/ZONAPROP_PASSWORD" };
+  if (active) return { ok: false, message: "hay un login remoto manual en curso" };
 
-  const alive = () => active?.id === s.id; // la sesión puede expirar/cancelarse
-  const page = s.context.pages()[0] ?? (await s.context.newPage());
-  const log = (m: string) => console.log(`[relogin] auto-login zonaprop: ${m}`);
+  const log = (m: string) => console.log(`[relogin] auto zonaprop: ${m}`);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "autologin-zonaprop-"));
+  const context = await launchInteractive("zonaprop", dir); // abre el home
   try {
-    // 0) Banner de cookies: tapa la parte baja y puede interceptar clicks.
+    const page = context.pages()[0] ?? (await context.newPage());
+
+    // 0) Banner de cookies: puede interceptar clicks.
     const cookies = page
       .locator('#onetrust-accept-btn-handler, button:has-text("Acepto"), button:has-text("Aceptar")')
       .first();
@@ -204,9 +209,9 @@ async function autoLoginZonaprop(s: ReloginSession): Promise<void> {
       log("banner de cookies cerrado");
     }
 
-    // 1) Disparador del login (el home ya cargó en launchInteractive). El botón
-    // "Ingresar" del header no siempre se renderiza (responsive / variante);
-    // fallback: "Mis contactos" exige sesión y abre el mismo form de login.
+    // 1) Disparador del login. El botón "Ingresar" del header no siempre se
+    // renderiza (responsive / variante); fallback: "Mis contactos" exige
+    // sesión y abre el mismo form de login.
     let trigger = page.locator('a:has-text("Ingresar"), button:has-text("Ingresar")').first();
     if (await trigger.isVisible({ timeout: 12_000 }).catch(() => false)) {
       log('click en "Ingresar"');
@@ -216,7 +221,6 @@ async function autoLoginZonaprop(s: ReloginSession): Promise<void> {
       log('sin botón "Ingresar"; click en "Mis contactos"');
     }
     await page.waitForTimeout(1200);
-    if (!alive()) return;
     await trigger.click();
 
     // 2) Email + "Continuar".
@@ -227,7 +231,6 @@ async function autoLoginZonaprop(s: ReloginSession): Promise<void> {
     await emailInput.click();
     await emailInput.pressSequentially(email, { delay: 95 });
     await page.waitForTimeout(700);
-    if (!alive()) return;
     await page.locator('button:has-text("Continuar")').first().click();
     log('click en "Continuar"');
 
@@ -239,24 +242,23 @@ async function autoLoginZonaprop(s: ReloginSession): Promise<void> {
     await passInput.click();
     await passInput.pressSequentially(password, { delay: 110 });
     await page.waitForTimeout(700);
-    if (!alive()) return;
     await page.locator('button:has-text("Iniciar sesión"), button:has-text("Iniciar Sesión")').first().click();
     log('click en "Iniciar sesión"; esperando validación');
 
     // 4) Esperar a que cierre el login y verificar contra el panel.
     await page.waitForTimeout(7000);
-    if (!alive()) return;
-    const { ok } = await gotoPassingCloudflare(page, VERIFY_URL[s.portal]);
+    const { ok } = await gotoPassingCloudflare(page, VERIFY_URL.zonaprop);
     if (!ok || /login|signin|ingresar|acceder/i.test(page.url())) {
-      console.warn("[relogin] auto-login zonaprop: no quedó logueado (¿captcha?); queda el manual por noVNC.");
-      return;
+      return { ok: false, message: "no quedó logueado (¿captcha o credenciales?)" };
     }
-    if (!alive()) return;
-    await persistSessionState(s.portal, s.context);
-    console.log("[relogin] auto-login zonaprop OK: sesión guardada.");
+    await persistSessionState("zonaprop", context);
+    log("OK: sesión guardada");
+    return { ok: true, message: "sesión de zonaprop restablecida automáticamente" };
   } catch (e) {
-    // Best-effort: el visor noVNC sigue abierto para terminar a mano.
-    console.warn("[relogin] auto-login zonaprop falló:", e instanceof Error ? e.message : e);
+    return { ok: false, message: e instanceof Error ? e.message : "error" };
+  } finally {
+    await context.close().catch(() => {});
+    fs.rmSync(dir, { recursive: true, force: true });
   }
 }
 
@@ -286,11 +288,6 @@ export async function startReloginSession(portal: string): Promise<StartResult> 
   };
   session.id = newId();
   active = session;
-
-  // ZonaProp: intento de login automático en background sobre la misma pantalla
-  // (el cliente lo ve por noVNC y puede intervenir si salta un captcha).
-  if (portal === "zonaprop") void autoLoginZonaprop(session);
-
   return { sessionId: session.id, portal, ttlMs: SESSION_TTL_MS };
 }
 

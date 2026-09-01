@@ -29,6 +29,7 @@ import {
   finishReloginSession,
   cancelReloginSession,
   isReloginActive,
+  autoReloginZonaprop,
   VNC_PORT,
 } from "@/lib/scraper/relogin";
 
@@ -78,6 +79,35 @@ async function refreshCredits(): Promise<{ ok: boolean; error?: string }> {
   }
 }
 
+// --- Auto-reconexión de ZonaProp -------------------------------------------
+// Si la sesión se cayó, el worker intenta re-loguearse solo (camino humano por
+// el home, ver autoReloginZonaprop). Tope de intentos persistido en la DB
+// (ScraperSession.autoAttempts, se resetea al loguear OK); agotados, la web
+// muestra el aviso de reconexión manual. Un intento por tick (~15 min entre
+// intentos) para no parecer bot ni martillar una IP con problemas.
+const AUTO_RELOGIN_MAX = Number(process.env.ZONAPROP_AUTO_RELOGIN_MAX ?? 2);
+
+/** Corre dentro del tick (con el mutex del navegador ya tomado). */
+async function maybeAutoRelogin(): Promise<void> {
+  const s = await prisma.scraperSession.findUnique({
+    where: { portal: "zonaprop" },
+    select: { valid: true, autoAttempts: true },
+  });
+  if (!s || s.valid) return;
+  if (s.autoAttempts >= AUTO_RELOGIN_MAX) return; // agotado: espera manual
+  const intento = s.autoAttempts + 1;
+  await prisma.scraperSession.update({ where: { portal: "zonaprop" }, data: { autoAttempts: intento } });
+  console.log(`[worker] sesión zonaprop caída: auto-relogin (intento ${intento}/${AUTO_RELOGIN_MAX})…`);
+  const r = await autoReloginZonaprop();
+  if (r.ok) {
+    console.log(`[worker] auto-relogin zonaprop OK: ${r.message}`);
+  } else if (intento >= AUTO_RELOGIN_MAX) {
+    console.warn(`[worker] auto-relogin zonaprop agotó ${AUTO_RELOGIN_MAX} intentos (${r.message}); requiere reconexión manual.`);
+  } else {
+    console.warn(`[worker] auto-relogin zonaprop falló (${r.message}); reintento en el próximo tick.`);
+  }
+}
+
 async function tick(): Promise<void> {
   if (browserBusy) return;
   // Mientras hay un login remoto abierto, no lanzamos otro navegador (chocarían
@@ -88,6 +118,9 @@ async function tick(): Promise<void> {
   }
   browserBusy = true;
   try {
+    await maybeAutoRelogin().catch((e) =>
+      console.warn("[worker] auto-relogin:", e instanceof Error ? e.message : e)
+    );
     const { processed } = await processPendingPublishJobs();
     if (processed) {
       console.log(`[worker] Publicaciones procesadas: ${processed}`);

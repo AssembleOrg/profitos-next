@@ -47,6 +47,11 @@ export async function getPortalStatuses(): Promise<PortalConnStatus[]> {
   for (const sp of SESSION_PORTALS) {
     const s = byPortal.get(sp.portal);
     const connected = Boolean(s?.valid);
+    // ZonaProp caída: el worker intenta re-loguearse solo (máx 2 intentos,
+    // ~15 min entre uno y otro). Mientras le queden intentos no pedimos acción;
+    // agotados, recién ahí aparece el aviso de reconexión manual.
+    const autoPending =
+      sp.portal === "zonaprop" && !connected && (s?.autoAttempts ?? 99) < 2;
     result.push({
       portal: sp.portal,
       label: sp.label,
@@ -54,8 +59,12 @@ export async function getPortalStatuses(): Promise<PortalConnStatus[]> {
       connected,
       lastOkAt: s?.lastOkAt?.toISOString() ?? null,
       nickname: null,
-      needsAction: !connected,
-      actionHint: connected ? null : "Sesión vencida — re-logueá",
+      needsAction: !connected && !autoPending,
+      actionHint: connected
+        ? null
+        : autoPending
+          ? "Reconectando automáticamente…"
+          : "Sesión vencida — re-logueá",
     });
   }
 
