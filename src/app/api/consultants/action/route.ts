@@ -26,7 +26,7 @@ export const POST = withHandler(async (request: NextRequest) => {
   const messageId = (body.messageId ?? "").trim();
   const action = body.action;
   if (!messageId.includes(":")) throw new AppError(400, "messageId inválido");
-  if (!["take", "wait", "transfer"].includes(action ?? "")) throw new AppError(400, "Acción inválida");
+  if (!["take", "wait", "transfer", "restore"].includes(action ?? "")) throw new AppError(400, "Acción inválida");
 
   const [portal, rowId] = [messageId.slice(0, messageId.indexOf(":")), messageId.slice(messageId.indexOf(":") + 1)];
   const existing = await prisma.contactCase.findUnique({
@@ -43,6 +43,14 @@ export const POST = withHandler(async (request: NextRequest) => {
       update: { status: "espera", waitingAt: new Date() },
     });
     return ok({ status: "espera" }, "Contacto en espera (se descarta solo en 3 días si nadie lo toma)", path);
+  }
+
+  // ───── restore ───── (espera/descartado → vuelve a "nuevo"; deshace confusiones)
+  if (action === "restore") {
+    if (!existing) return ok({ status: null }, "El contacto ya estaba como nuevo", path);
+    if (existing.status === "tomado") throw new AppError(409, "Está tomado; para liberarlo transferilo o gestioná el seguimiento");
+    await prisma.contactCase.delete({ where: { id: messageId } });
+    return ok({ status: null }, "Contacto restaurado a nuevos", path);
   }
 
   // ───── transfer ─────

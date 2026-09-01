@@ -111,7 +111,7 @@ function ContactCard({
   viewer: Props["viewer"];
   users: Props["users"];
   busy: string | null;
-  onAction: (messageId: string, action: "take" | "wait" | "transfer", toUserId?: string) => void;
+  onAction: (messageId: string, action: "take" | "wait" | "transfer" | "restore", toUserId?: string) => void;
 }) {
   const title = item.propertyAddress ?? item.propertyTitle ?? item.propertyRef ?? "Sin propiedad";
   const propHref = item.propertyId
@@ -184,18 +184,36 @@ function ContactCard({
               )}
             </div>
           ) : item.caseStatus === "espera" ? (
-            <div className="flex w-full items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2">
               <span className="rounded-full bg-sand-chip px-2.5 py-1 text-[11.5px] font-bold text-warning">En espera</span>
+              <button
+                onClick={() => onAction(item.id, "restore")}
+                disabled={isBusy}
+                title="Deshacer: vuelve a Nuevos (por si fue un error)"
+                className="ml-auto rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-bold text-text-muted transition-colors hover:bg-bg disabled:opacity-50"
+              >
+                ↩ Restaurar
+              </button>
               <button
                 onClick={() => onAction(item.id, "take")}
                 disabled={isBusy}
-                className="ml-auto rounded-full bg-dark px-3.5 py-1.5 text-[12px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="rounded-full bg-dark px-3.5 py-1.5 text-[12px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
               >
                 {isBusy ? "…" : "✓ Tomar igual"}
               </button>
             </div>
           ) : item.caseStatus === "descartado" ? (
-            <span className="rounded-full bg-bg px-2.5 py-1 text-[11.5px] font-bold text-text-faint">Descartado</span>
+            <div className="flex w-full items-center gap-2">
+              <span className="rounded-full bg-bg px-2.5 py-1 text-[11.5px] font-bold text-text-faint">Descartado</span>
+              <button
+                onClick={() => onAction(item.id, "restore")}
+                disabled={isBusy}
+                title="Vuelve a Nuevos"
+                className="ml-auto rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-bold text-text-muted transition-colors hover:bg-bg disabled:opacity-50"
+              >
+                ↩ Restaurar
+              </button>
+            </div>
           ) : (
             <div className="flex w-full items-center gap-2">
               <button
@@ -353,7 +371,7 @@ export function ConsultantsClient({ items, page, totalPages, total, limit, total
 
   async function doAction(
     messageId: string,
-    action: "take" | "wait" | "transfer",
+    action: "take" | "wait" | "transfer" | "restore",
     toUserId?: string,
     opts: { refresh?: boolean } = {}
   ): Promise<boolean> {
