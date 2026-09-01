@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import Script from "next/script";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getCurrentAccess } from "@/lib/auth/access";
 import { isPathAllowed } from "@/lib/nav/views";
@@ -54,6 +55,16 @@ export default async function ProtectedLayout({
       >
         {children}
       </ProtectedShell>
+      {/* Chat IA (rag-webchat): widget flotante. userIdentifier = email para
+          límites por cuenta. Sólo se monta si el token está configurado. */}
+      {process.env.NEXT_PUBLIC_CHAT_APP_TOKEN && (
+        <Script
+          src={`${process.env.NEXT_PUBLIC_CHAT_URL ?? "https://rag-webchat-production.up.railway.app"}/widget.js`}
+          data-app-token={process.env.NEXT_PUBLIC_CHAT_APP_TOKEN}
+          data-user-identifier={user.email}
+          strategy="lazyOnload"
+        />
+      )}
     </div>
   );
 }
