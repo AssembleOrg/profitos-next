@@ -64,11 +64,15 @@ export function buildContactWhatsAppLink(phone: string, message?: string): strin
  * ("541159796046, 1159796046"): concatenarlos rompía wa.me — se usa el
  * primero que parezca un teléfono real (≥8 dígitos), o el primero a secas.
  */
-export function toWhatsAppNumber(phone: string | null | undefined): string {
+/** Primer teléfono "real" de un campo que puede traer varios ("54115..., 1159..."). */
+export function firstPhone(phone: string | null | undefined): string {
   if (!phone) return "";
   const candidates = phone.split(/[,;/]|\s{2,}|\s+y\s+/i).map((c) => c.trim()).filter(Boolean);
-  const first = candidates.find((c) => c.replace(/\D/g, "").length >= 8) ?? candidates[0] ?? "";
-  let d = first.replace(/\D/g, "");
+  return candidates.find((c) => c.replace(/\D/g, "").length >= 8) ?? candidates[0] ?? "";
+}
+
+export function toWhatsAppNumber(phone: string | null | undefined): string {
+  let d = firstPhone(phone).replace(/\D/g, "");
   if (!d) return "";
 
   // Ya viene con código de país de Argentina.

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Pagination } from "../../_components/pagination";
 import { WhatsAppLink } from "@/components/whatsapp-link";
+import { firstPhone } from "@/lib/whatsapp";
 import type { InboxMessage, InboxPortal } from "@/lib/messages/inbox";
 
 const PORTAL_META: Record<InboxPortal, { label: string; dot: string }> = {
@@ -78,7 +79,7 @@ function ContactChips({ item }: { item: InboxMessage }) {
           phone={item.phone}
           className="inline-flex max-w-fit items-center gap-1.5 rounded-full bg-sage-chip px-2.5 py-1 text-[11px] font-semibold text-olive-light transition-opacity hover:opacity-80 active:opacity-60"
         >
-          {item.phone}
+          {firstPhone(item.phone)}
         </WhatsAppLink>
       )}
       {!item.email && !item.phone && <span className="text-[11.5px] text-text-faint">Sin contacto</span>}
