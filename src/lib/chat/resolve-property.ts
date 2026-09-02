@@ -33,7 +33,7 @@ export async function resolveProperty(input: { propertyId?: string; referencia?:
   const ref = input.referencia?.trim();
   if (ref) {
     const rows = await prisma.property.findMany({
-      where: { referenceCode: { equals: ref, mode: "insensitive" }, deletedAt: null },
+      where: { referenceCode: { equals: ref, mode: "insensitive" } },
       select: SELECT,
       take: 5,
     });
@@ -44,13 +44,25 @@ export async function resolveProperty(input: { propertyId?: string; referencia?:
 
   const dir = (input.direccion ?? ref ?? "").trim();
   if (!dir) throw new AppError(400, "Indicá la propiedad por código de referencia o dirección");
+  // Por palabras (todas deben aparecer): tolera dobles espacios, "3º" vs "3",
+  // y orden distinto ("piso 3 uriburu 1734"). Se ignoran conectores cortos.
+  const words = dir
+    .toLowerCase()
+    .replace(/[º°]/g, "")
+    .split(/[\s,.-]+/)
+    .filter((w) => w.length > 1 && !["de", "del", "la", "el", "al", "y"].includes(w));
   const rows = await prisma.property.findMany({
     where: {
-      deletedAt: null,
       OR: [
-        { address: { contains: dir, mode: "insensitive" } },
-        { realAddress: { contains: dir, mode: "insensitive" } },
         { referenceCode: { contains: dir, mode: "insensitive" } },
+        {
+          AND: words.map((w) => ({
+            OR: [
+              { address: { contains: w, mode: "insensitive" as const } },
+              { realAddress: { contains: w, mode: "insensitive" as const } },
+            ],
+          })),
+        },
       ],
     },
     select: SELECT,
