@@ -44,19 +44,18 @@ export async function resolveProperty(input: { propertyId?: string; referencia?:
 
   const dir = (input.direccion ?? ref ?? "").trim();
   if (!dir) throw new AppError(400, "Indicá la propiedad por código de referencia o dirección");
-  // Por palabras (todas deben aparecer): tolera dobles espacios, "3º" vs "3",
-  // y orden distinto ("piso 3 uriburu 1734"). Se ignoran conectores cortos.
-  const words = dir
-    .toLowerCase()
-    .replace(/[º°]/g, "")
-    .split(/[\s,.-]+/)
-    .filter((w) => w.length > 1 && !["de", "del", "la", "el", "al", "y"].includes(w));
+  // 1) Prefiltro en DB por las palabras "largas" (calle, altura): trae el
+  //    edificio entero. 2) Afinado en memoria token a token, donde los tokens
+  //    cortos ("3", "B", "PB") cuentan como palabra exacta: así "Uriburu 1734
+  //    piso 3 depto B" distingue la unidad y no empata con todo el edificio.
+  const qTokens = tokenize(dir);
+  const longWords = qTokens.filter((w) => w.length > 1);
   const rows = await prisma.property.findMany({
     where: {
       OR: [
         { referenceCode: { contains: dir, mode: "insensitive" } },
         {
-          AND: words.map((w) => ({
+          AND: (longWords.length ? longWords : qTokens).map((w) => ({
             OR: [
               { address: { contains: w, mode: "insensitive" as const } },
               { realAddress: { contains: w, mode: "insensitive" as const } },
@@ -67,11 +66,43 @@ export async function resolveProperty(input: { propertyId?: string; referencia?:
     },
     select: SELECT,
     orderBy: { updatedAt: "desc" },
-    take: 8,
+    take: 25,
   });
   if (!rows.length) throw new AppError(404, `No encontré ninguna propiedad que coincida con "${dir}"`);
-  if (rows.length > 1) throw ambiguous(rows.map(toRef));
-  return toRef(rows[0]);
+
+  const exact = rows.filter((p) => {
+    const addr = new Set([...tokenize(p.address), ...tokenize(p.realAddress ?? "")]);
+    return qTokens.every((t) => addr.has(t) || (t.length >= 3 && [...addr].some((a) => a.startsWith(t))));
+  });
+  const finalistas = exact.length ? exact : rows;
+  if (finalistas.length === 1) return toRef(finalistas[0]);
+  throw ambiguous(finalistas.slice(0, 8).map(toRef));
+}
+
+// Abreviaturas habituales al dictar direcciones → forma canónica de la DB.
+const ABBR: Record<string, string> = {
+  depto: "departamento",
+  dpto: "departamento",
+  dto: "departamento",
+  dep: "departamento",
+  dept: "departamento",
+  of: "oficina",
+  ofic: "oficina",
+  av: "avenida",
+  avda: "avenida",
+};
+const STOP = new Set(["de", "del", "la", "el", "al", "y", "en", "n", "nro", "num"]);
+
+function tokenize(s: string): string[] {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[º°]/g, "")
+    .replace(/[^a-z0-9ñ]+/g, " ")
+    .split(" ")
+    .filter((w) => w && !STOP.has(w))
+    .map((w) => ABBR[w] ?? w);
 }
 
 function ambiguous(candidatas: PropertyRef[]): AppError {
