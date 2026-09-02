@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { withHandler, AppError } from "@/lib/api/handler";
 import { ok, created } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
-import { assertChatToolsAuth } from "@/lib/api/chat-tools";
+import { assertChatToolsAuth, getChatRequester } from "@/lib/api/chat-tools";
 
 // Tools del chat IA para OBJETIVOS: consultar y crear (la única escritura
 // permitida al bot por ahora).
@@ -70,7 +70,10 @@ export const POST = withHandler(async (request: NextRequest) => {
   }
   if (start > end) throw new AppError(400, "La fecha de inicio no puede ser posterior a la de fin");
 
-  const solicitante = (body.solicitanteEmail ?? "").trim();
+  // Quién lo pide: primero la identidad real de la sesión del chat (header que
+  // manda rag-webchat); solicitanteEmail queda como fallback/override explícito.
+  const requester = await getChatRequester(request);
+  const solicitante = (body.solicitanteEmail ?? "").trim() || requester?.email || "";
   const creador = solicitante
     ? await prisma.user.findFirst({ where: { email: { equals: solicitante, mode: "insensitive" } }, select: { id: true } })
     : null;

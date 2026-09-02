@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
-import { getInboxMessages } from "@/lib/messages/inbox";
+import { getInboxMessages, getInboxMessageById } from "@/lib/messages/inbox";
 import { prisma } from "@/lib/prisma/client";
 import { ConsultantsClient } from "./_components/consultants-client";
 
@@ -16,6 +16,7 @@ interface Props {
     to?: string;
     estado?: string;
     mine?: string;
+    deck?: string;
   }>;
 }
 
@@ -35,17 +36,23 @@ export default async function ConsultantsPage({ searchParams }: Readonly<Props>)
   // Default no-admin: sus contactos (responsabilidades); admin: todos.
   const mine = sp.mine != null ? sp.mine === "1" : !isAdmin;
 
-  const [{ items, total, totalAll, counts }, users] = await Promise.all([
+  // Deep-link desde una notificación: `deck=<portal:rowId>` abre el modo repaso
+  // con esa tarjeta primero (se resuelve aparte, sin depender de filtros/página).
+  const deckId = (sp.deck ?? "").trim();
+
+  const [{ items, total, totalAll, counts }, users, deckItem] = await Promise.all([
     getInboxMessages({ portal, q, from, to, page, limit, estado, mine }, { userId: user.id, isAdmin }),
     prisma.user.findMany({
       select: { id: true, fullName: true, email: true },
       orderBy: [{ fullName: "asc" }, { email: "asc" }],
     }),
+    deckId ? getInboxMessageById(deckId) : Promise.resolve(null),
   ]);
 
   return (
     <ConsultantsClient
       items={items}
+      deckItem={deckItem}
       page={page}
       total={total}
       totalAll={totalAll}

@@ -35,6 +35,7 @@ export const GET = withHandler(async (request: NextRequest) => {
     prisma.property.findMany({
       where: { AND: and },
       select: {
+        id: true,
         address: true,
         realAddress: true,
         city: true,
@@ -55,6 +56,7 @@ export const GET = withHandler(async (request: NextRequest) => {
   ]);
 
   const propiedades = rows.map((p) => ({
+    id: p.id, // para las tools de acción (ficha, publicaciones, editar)
     direccion: p.realAddress ?? p.address,
     zona: [p.zone, p.city].filter(Boolean).join(", ") || null,
     tipo: p.type,

@@ -100,11 +100,13 @@ function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
  * `open=<id>` para que el modal se abra solo. Null si no hay propiedad.
  */
 function notifHref(item: NotificationItem): string | null {
-  const propId = item.kind === "property" ? item.id : item.property?.id;
-  if (!propId) {
-    // Contacto sin propiedad nuestra: al menos llevar a la central de mensajes.
-    return item.kind === "contact" ? "/consultants" : null;
+  // Contacto: abre la central en modo repaso (Tinder) con ESA tarjeta primero.
+  // El id de la central es `portal:rowId` (ver lib/messages/inbox.ts).
+  if (item.kind === "contact") {
+    return item.portal ? `/consultants?deck=${encodeURIComponent(`${item.portal}:${item.id}`)}` : "/consultants";
   }
+  const propId = item.kind === "property" ? item.id : item.property?.id;
+  if (!propId) return null;
   const addr = item.kind === "property" ? item.address : item.property?.address;
   const q = addr ? `q=${encodeURIComponent(addr)}&` : "";
   return `/propiedades?${q}open=${propId}`;

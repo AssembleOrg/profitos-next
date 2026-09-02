@@ -159,6 +159,70 @@ export async function resolveLeadProperties(
   return new Map(props.map((p) => [p.referenceCode!, { id: p.id, address: p.address, coverImageUrl: p.coverImageUrl }]));
 }
 
+/**
+ * Un mensaje puntual por id (`portal:rowId`), con su estado de gestión. Se usa
+ * para abrir la central directo sobre una tarjeta (deep-link desde una
+ * notificación), sin depender de filtros ni paginado. Null si no existe.
+ */
+export async function getInboxMessageById(id: string): Promise<InboxMessage | null> {
+  const sep = id.indexOf(":");
+  if (sep <= 0) return null;
+  const portal = id.slice(0, sep);
+  const rowId = id.slice(sep + 1);
+  if (!isInboxPortal(portal) || !rowId) return null;
+
+  let msg: InboxMessage | null = null;
+  if (portal === "mercadolibre") {
+    const x = await prisma.portalQuestion.findUnique({ where: { id: rowId } });
+    if (!x) return null;
+    const prop = x.propertyId
+      ? await prisma.property.findUnique({
+          where: { id: x.propertyId },
+          select: { id: true, address: true, publicUrl: true, coverImageUrl: true },
+        })
+      : null;
+    const date = x.askedAt ?? x.createdAt;
+    msg = {
+      id,
+      portal: "mercadolibre",
+      kind: "pregunta",
+      date: date ? date.toISOString() : null,
+      name: null,
+      email: null,
+      phone: null,
+      message: x.text,
+      answered: x.status === "ANSWERED",
+      answerText: x.answerText,
+      propertyTitle: prop?.address ?? null,
+      propertyRef: x.itemId,
+      propertyUrl: prop?.publicUrl ?? null,
+      price: null,
+      propertyId: prop?.id ?? null,
+      propertyAddress: prop?.address ?? null,
+      coverImageUrl: prop?.coverImageUrl ?? null,
+      caseStatus: null,
+      takenByUserId: null,
+      takenByName: null,
+    };
+  } else {
+    const r = await prisma.scrapedLead.findUnique({ where: { id: rowId } });
+    if (!r || r.portal !== portal) return null;
+    const leadPropMap = await resolveLeadProperties([r.propertyRef]);
+    msg = mapScraped(r, r.propertyRef ? leadPropMap.get(r.propertyRef) : null);
+  }
+
+  const c = await prisma.contactCase.findUnique({
+    where: { id },
+    select: { status: true, takenByUserId: true, takenByUser: { select: { fullName: true, email: true } } },
+  });
+  if (c) {
+    msg.caseStatus = c.status as InboxMessage["caseStatus"];
+    msg.takenByUserId = c.takenByUserId;
+    msg.takenByName = c.takenByUser?.fullName?.trim() || c.takenByUser?.email || null;
+  }
+  return msg;
+}
+
 // Ventana de trabajo en memoria: el filtrado por estado/responsable se hace
 // post-DB, así que traemos una ventana grande de cada fuente (volúmenes chicos).
 const FETCH_WINDOW = 600;

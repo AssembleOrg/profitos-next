@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -36,6 +36,8 @@ const ESTADOS: { key: string; label: string }[] = [
 
 interface Props {
   items: InboxMessage[];
+  /** Tarjeta a abrir primero en modo repaso (deep-link `?deck=` desde notificación). */
+  deckItem?: InboxMessage | null;
   page: number;
   totalPages: number;
   total: number;
@@ -329,7 +331,7 @@ function DeckCard({
   );
 }
 
-export function ConsultantsClient({ items, page, totalPages, total, limit, totalAll, counts, filters, viewer, users }: Readonly<Props>) {
+export function ConsultantsClient({ items, deckItem, page, totalPages, total, limit, totalAll, counts, filters, viewer, users }: Readonly<Props>) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -340,6 +342,22 @@ export function ConsultantsClient({ items, page, totalPages, total, limit, total
   // Modo repaso (Tinder): pila local de nuevos; null = cerrado.
   const [deck, setDeck] = useState<InboxMessage[] | null>(null);
   const [deckDone, setDeckDone] = useState(0);
+
+  // Deep-link desde notificación: abre el repaso con esa tarjeta al frente y el
+  // resto de los nuevos detrás. Se limpia `deck` de la URL para que un refresh
+  // o "atrás" no lo vuelva a abrir.
+  useEffect(() => {
+    if (!deckItem) return;
+    const rest = items.filter((i) => i.id !== deckItem.id && i.caseStatus === null);
+    setDeck([deckItem, ...rest]);
+    setDeckDone(0);
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("deck")) {
+      url.searchParams.delete("deck");
+      window.history.replaceState(null, "", url.pathname + (url.search ? url.search : ""));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deckItem?.id]);
 
   function pushParams(mutate: (p: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString());
