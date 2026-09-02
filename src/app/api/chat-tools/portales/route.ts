@@ -3,16 +3,17 @@ import { withHandler } from "@/lib/api/handler";
 import { ok } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
 import { assertChatToolsAuth } from "@/lib/api/chat-tools";
+import { zonapropCreditsAlert } from "@/lib/publish/credits-alert";
 
-// Tool del chat IA: estado de portales — conexiones, cupo ZonaProp y
-// publicaciones por portal (solo lectura).
+// Tool del chat IA: estado de portales — conexiones, cupo ZonaProp (con
+// alerta por umbral) y publicaciones por portal (solo lectura).
 export const GET = withHandler(async (request: NextRequest) => {
   assertChatToolsAuth(request);
 
   const [sessions, mlToken, credits, pubs] = await Promise.all([
     prisma.scraperSession.findMany({ select: { portal: true, valid: true, lastOkAt: true } }),
     prisma.portalToken.findUnique({ where: { portal: "mercadolibre" }, select: { externalUser: true, expiresAt: true } }),
-    prisma.portalCredits.findUnique({ where: { portal: "zonaprop" }, select: { plans: true, fetchedAt: true, error: true } }),
+    zonapropCreditsAlert(),
     prisma.propertyPublication.groupBy({ by: ["portal", "status"], _count: true }),
   ]);
 
@@ -30,7 +31,15 @@ export const GET = withHandler(async (request: NextRequest) => {
   return ok(
     {
       conexiones,
-      cupoZonaprop: { planes: credits?.plans ?? [], actualizado: credits?.fetchedAt ?? null, error: credits?.error ?? null },
+      cupoZonaprop: {
+        planes: credits.planes,
+        actualizado: credits.actualizado,
+        error: credits.error,
+        umbralAlerta: credits.umbral,
+        alerta: credits.enAlerta.length
+          ? `CUPO BAJO: ${credits.enAlerta.map((a) => `${a.plan} ${a.disponibles}${a.total != null ? `/${a.total}` : ""}`).join(", ")} (umbral ${credits.umbral}). Avisarle al usuario.`
+          : null,
+      },
       publicaciones,
     },
     "Estado de portales",
