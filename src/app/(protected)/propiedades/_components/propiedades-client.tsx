@@ -10,7 +10,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
-import { useIsMobile } from "../../_components/use-is-mobile";
 import { buildPropertyWhatsAppLink } from "@/lib/whatsapp";
 import { MlPublishWizard } from "./ml-publish-wizard";
 import { PortalesPanel } from "./portales-panel";
@@ -492,7 +491,6 @@ export function PropiedadesClient({
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
-  const isMobile = useIsMobile();
   const [syncingMl, setSyncingMl] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -1579,87 +1577,134 @@ export function PropiedadesClient({
         </div>
       )}
 
-      {/* Modal */}
-      <AnimatePresence>
-        {modalOpen && (
-          <>
-            {/* Overlay */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
-              onClick={handleClose}
-            />
-
-            {/* Panel — bottom sheet en mobile, dialog en desktop */}
-            <motion.div
-              initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96 }}
-              animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
-              exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-              onClick={(e) => e.stopPropagation()}
-              className={`fixed z-50 flex flex-col border border-border bg-surface shadow-2xl
-                /* mobile: bottom sheet */
-                bottom-0 left-0 right-0 max-h-[90dvh] rounded-t-[28px]
-                /* desktop: centered dialog — casi fullscreen */
-                sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[96vw] sm:max-w-[1400px]
-                sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-h-[94vh] sm:rounded-3xl`}
-            >
-              {/* Drag handle — solo mobile */}
-              <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-border sm:hidden" />
-
-              {/* Header fijo: título + pestañas */}
-              <div className="flex-shrink-0 border-b border-border px-5 pt-4 sm:px-8">
-                <div className="flex items-center justify-between">
-                  <h2 className="flex min-w-0 items-center gap-2 font-display text-[17px] font-semibold text-text">
-                    <span className="truncate">
-                      {isEdit ? (editProperty?.realAddress || editProperty?.address || "Editar propiedad") : "Nueva propiedad"}
-                    </span>
-                    {isEdit && editProperty?.source === "manual" && <ManualChip />}
-                  </h2>
+      {/* Modal Nueva/Editar propiedad */}
+      {modalOpen && (
+        <Sheet
+          open={modalOpen}
+          onClose={handleClose}
+          maxWidth="sm:max-w-[1400px]"
+          title={
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate">
+                {isEdit ? (editProperty?.realAddress || editProperty?.address || "Editar propiedad") : "Nueva propiedad"}
+              </span>
+              {isEdit && editProperty?.source === "manual" && <ManualChip />}
+            </span>
+          }
+          headerExtra={
+            <div className="scrollbar-none -mb-px flex gap-1 overflow-x-auto border-b border-border px-5 sm:px-8">
+              {(
+                [
+                  { key: "datos", label: "Datos" },
+                  { key: "ubicacion", label: "Ubicación" },
+                  ...(isEdit
+                    ? [
+                        { key: "fotos", label: `Fotos${modalPhotos ? ` (${modalPhotos.length})` : ""}` },
+                        { key: "portales", label: "Portales" },
+                      ]
+                    : []),
+                ] as { key: typeof modalTab; label: string }[]
+              ).map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setModalTab(t.key)}
+                  className={`flex-shrink-0 whitespace-nowrap rounded-t-[12px] border-b-2 px-4 py-2.5 text-[13px] font-bold transition-colors ${
+                    modalTab === t.key
+                      ? "border-dark text-text"
+                      : "border-transparent text-text-faint hover:text-text-muted"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          }
+          footer={
+            <>
+              {isEdit ? (
+                <div className="flex flex-wrap items-center gap-2">
                   <button
-                    onClick={handleClose}
-                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-text-muted transition-colors active:bg-bg"
+                    type="button"
+                    onClick={() => setConfirmAction("delete")}
+                    disabled={deleting}
+                    className="flex h-10 items-center gap-1.5 rounded-full bg-clay-chip px-4 text-[13px] font-bold text-terra transition-opacity active:opacity-80 disabled:opacity-50"
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
                     </svg>
+                    {deleting ? "Eliminando..." : "Eliminar"}
                   </button>
-                </div>
-                <div className="scrollbar-none -mb-px mt-3 flex gap-1 overflow-x-auto">
-                  {(
-                    [
-                      { key: "datos", label: "Datos" },
-                      { key: "ubicacion", label: "Ubicación" },
-                      ...(isEdit
-                        ? [
-                            { key: "fotos", label: `Fotos${modalPhotos ? ` (${modalPhotos.length})` : ""}` },
-                            { key: "portales", label: "Portales" },
-                          ]
-                        : []),
-                    ] as { key: typeof modalTab; label: string }[]
-                  ).map((t) => (
+                  {editProperty && (
                     <button
-                      key={t.key}
                       type="button"
-                      onClick={() => setModalTab(t.key)}
-                      className={`flex-shrink-0 whitespace-nowrap rounded-t-[12px] border-b-2 px-4 py-2.5 text-[13px] font-bold transition-colors ${
-                        modalTab === t.key
-                          ? "border-dark text-text"
-                          : "border-transparent text-text-faint hover:text-text-muted"
-                      }`}
+                      onClick={() => {
+                        const p = editProperty;
+                        handleClose();
+                        setWizardProperty(p);
+                      }}
+                      className="flex h-10 items-center gap-1.5 rounded-full bg-sand-chip px-4 text-[13px] font-bold text-warning transition-opacity active:opacity-80"
                     >
-                      {t.label}
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+                        <polyline points="16 6 12 2 8 6" />
+                        <line x1="12" y1="2" x2="12" y2="15" />
+                      </svg>
+                      {editProperty.mlPublication?.published ? "Gestionar en ML" : "Publicar en ML"}
                     </button>
-                  ))}
+                  )}
                 </div>
+              ) : (
+                <div />
+              )}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="px-4 py-2 text-[13px] font-semibold text-text-faint transition-colors active:text-text"
+                >
+                  Cancelar
+                </button>
+                {isEdit ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmAction("save")}
+                    disabled={loading}
+                    className="flex items-center gap-2 h-11 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity active:opacity-90 disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-dark-fg/30 border-t-dark-fg" />
+                        Guardando...
+                      </>
+                    ) : (
+                      "Guardar cambios"
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    form="property-form"
+                    disabled={loading}
+                    className="flex items-center gap-2 h-11 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity active:opacity-90 disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-dark-fg/30 border-t-dark-fg" />
+                        Guardando...
+                      </>
+                    ) : (
+                      "Crear propiedad"
+                    )}
+                  </button>
+                )}
               </div>
-
-              {/* Body scrolleable con pestañas */}
-              <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-8 sm:py-6">
+            </>
+          }
+        >
+              {/* Body con pestañas (el scroll y padding los da <Sheet>) */}
+              <div className="sm:px-3">
                 {/* El form envuelve Datos + Ubicación; las pestañas ocultas quedan
                     montadas (hidden) para que FormData conserve todos los campos. */}
                 <form
@@ -1934,95 +1979,8 @@ export function PropiedadesClient({
                   </div>
                 )}
               </div>
-
-              {/* Footer fijo con acciones */}
-              <div
-                className="flex flex-shrink-0 items-center justify-between border-t border-border px-5 py-4"
-                style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
-              >
-                {isEdit ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setConfirmAction("delete")}
-                      disabled={deleting}
-                      className="flex h-10 items-center gap-1.5 rounded-full bg-clay-chip px-4 text-[13px] font-bold text-terra transition-opacity active:opacity-80 disabled:opacity-50"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                      </svg>
-                      {deleting ? "Eliminando..." : "Eliminar"}
-                    </button>
-                    {editProperty && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const p = editProperty;
-                          handleClose();
-                          setWizardProperty(p);
-                        }}
-                        className="flex h-10 items-center gap-1.5 rounded-full bg-sand-chip px-4 text-[13px] font-bold text-warning transition-opacity active:opacity-80"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
-                          <polyline points="16 6 12 2 8 6" />
-                          <line x1="12" y1="2" x2="12" y2="15" />
-                        </svg>
-                        {editProperty.mlPublication?.published ? "Gestionar en ML" : "Publicar en ML"}
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div />
-                )}
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="px-4 py-2 text-[13px] font-semibold text-text-faint transition-colors active:text-text"
-                  >
-                    Cancelar
-                  </button>
-                  {isEdit ? (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmAction("save")}
-                      disabled={loading}
-                      className="flex items-center gap-2 h-11 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity active:opacity-90 disabled:opacity-50"
-                    >
-                      {loading ? (
-                        <>
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-dark-fg/30 border-t-dark-fg" />
-                          Guardando...
-                        </>
-                      ) : (
-                        "Guardar cambios"
-                      )}
-                    </button>
-                  ) : (
-                    <button
-                      type="submit"
-                      form="property-form"
-                      disabled={loading}
-                      className="flex items-center gap-2 h-11 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity active:opacity-90 disabled:opacity-50"
-                    >
-                      {loading ? (
-                        <>
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-dark-fg/30 border-t-dark-fg" />
-                          Guardando...
-                        </>
-                      ) : (
-                        "Crear propiedad"
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+        </Sheet>
+      )}
 
       {/* Modal de confirmación — Guardar / Eliminar */}
       <AnimatePresence>
@@ -2084,44 +2042,33 @@ export function PropiedadesClient({
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {assignModalOpen && isAdmin && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
-              onClick={() => setAssignModalOpen(false)}
-            />
-            <motion.div
-              initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96 }}
-              animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
-              exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-              onClick={(e) => e.stopPropagation()}
-              className={`fixed z-50 flex flex-col border border-border bg-surface shadow-2xl
-                bottom-0 left-0 right-0 max-h-[90dvh] rounded-t-[28px]
-                sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-lg
-                sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-h-[85vh] sm:rounded-3xl`}
-            >
-              <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-border sm:hidden" />
-
-              <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
-                <h2 className="font-display text-[17px] font-semibold text-text">Asignar seguimiento</h2>
-                <button
-                  onClick={() => setAssignModalOpen(false)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted active:bg-bg"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </div>
-
-              <form id="assign-form" onSubmit={handleAssignFollowUp} className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 py-4">
+      {assignModalOpen && isAdmin && (
+        <Sheet
+          open={assignModalOpen && isAdmin}
+          onClose={() => setAssignModalOpen(false)}
+          title="Asignar seguimiento"
+          maxWidth="sm:max-w-lg"
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => setAssignModalOpen(false)}
+                className="px-4 py-2 text-[13px] font-semibold text-text-faint transition-colors active:text-text"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                form="assign-form"
+                disabled={assigning}
+                className="h-11 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity active:opacity-90 disabled:opacity-50"
+              >
+                {assigning ? "Asignando..." : "Asignar seguimiento"}
+              </button>
+            </>
+          }
+        >
+              <form id="assign-form" onSubmit={handleAssignFollowUp} className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Propiedad *</label>
@@ -2175,31 +2122,8 @@ export function PropiedadesClient({
                   />
                 </div>
               </form>
-
-              <div
-                className="flex flex-shrink-0 items-center justify-end gap-3 border-t border-border px-5 py-4"
-                style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setAssignModalOpen(false)}
-                  className="px-4 py-2 text-[13px] font-semibold text-text-faint transition-colors active:text-text"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  form="assign-form"
-                  disabled={assigning}
-                  className="h-11 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity active:opacity-90 disabled:opacity-50"
-                >
-                  {assigning ? "Asignando..." : "Asignar seguimiento"}
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+        </Sheet>
+      )}
 
       {/* Owner report modal */}
       <Sheet

@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { TimePicker } from "@/components/ui/time-picker";
@@ -501,22 +501,13 @@ export function SeguimientosClient({
         </Sheet>
       )}
 
-      <AnimatePresence>
-        {detailOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
-            onClick={closeDetail}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              onClick={(event) => event.stopPropagation()}
-              className="fixed bottom-0 left-0 right-0 max-h-[90dvh] overflow-y-auto overscroll-contain rounded-t-[28px] border border-border bg-surface p-5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[85vh] sm:w-full sm:max-w-4xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:p-6"
-            >
+      {detailOpen && (
+        <Sheet
+          open={detailOpen}
+          onClose={closeDetail}
+          title={detail?.property.address ?? "Seguimiento"}
+          maxWidth="sm:max-w-4xl"
+        >
               {!detail || loadingDetail ? (
                 <div className="flex min-h-[260px] items-center justify-center text-[12.5px] text-text-faint">
                   Cargando detalle...
@@ -525,7 +516,6 @@ export function SeguimientosClient({
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr]">
                   <div className="flex flex-col gap-4">
                     <div>
-                      <h2 className="font-display text-[17px] font-semibold text-text">{detail.property.address}</h2>
                       <p className="text-[11.5px] text-text-faint">
                         Actualizado: {formatDateTime(detail.updatedAt)}
                       </p>
@@ -683,10 +673,8 @@ export function SeguimientosClient({
                   </div>
                 </div>
               )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </Sheet>
+      )}
 
       {/* Tabla → cards en mobile */}
     </div>

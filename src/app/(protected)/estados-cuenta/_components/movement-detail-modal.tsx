@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import * as Dialog from "@radix-ui/react-dialog";
+import { Sheet } from "../../_components/sheet";
 import { formatDate } from "@/lib/datetime";
 import { formatMoney, isWithinEditWindow, EDIT_WINDOW_HOURS, type AccountMovement } from "@/lib/account";
 import { AttachmentPreview } from "../../alquileres/_components/media-uploader";
@@ -60,43 +59,64 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
   const locked = !isRental && !isWithinEditWindow(movement.createdAt, nowMs);
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <AnimatePresence>
-        {open && (
-          <Dialog.Portal forceMount>
-            <Dialog.Overlay asChild>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm" />
-            </Dialog.Overlay>
-            <Dialog.Content asChild>
-              <motion.div
-                initial={{ opacity: 0, y: 16, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 16, scale: 0.98 }}
-                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(480px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
+    <Sheet
+      open={open}
+      onClose={() => onOpenChange(false)}
+      maxWidth="sm:max-w-[480px]"
+      title={
+        <span className="flex items-center gap-2">
+          Detalle del movimiento
+          {isRental && (
+            <span className="rounded-md bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint">
+              Auto · alquiler
+            </span>
+          )}
+          {movement.isShared && (
+            <span className="rounded-md bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint">
+              Compartido
+            </span>
+          )}
+        </span>
+      }
+      footer={
+        <>
+          <span className="text-[11px] text-text-faint">
+            {isRental
+              ? "Generado desde un pago de alquiler"
+              : locked
+                ? `No editable (pasaron ${EDIT_WINDOW_HOURS} hs)`
+                : ""}
+          </span>
+          <div className="flex items-center gap-2">
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenChange(false);
+                  onDelete(movement);
+                }}
+                className="inline-flex h-10 items-center rounded-full bg-clay-chip px-4 text-[13px] font-bold text-terra transition-opacity hover:opacity-90"
               >
-                <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-                  <Dialog.Title className="flex items-center gap-2 font-display text-[17px] font-semibold text-text">
-                    Detalle del movimiento
-                    {isRental && (
-                      <span className="rounded-md bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint">
-                        Auto · alquiler
-                      </span>
-                    )}
-                    {movement.isShared && (
-                      <span className="rounded-md bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint">
-                        Compartido
-                      </span>
-                    )}
-                  </Dialog.Title>
-                  <Dialog.Close asChild>
-                    <button type="button" aria-label="Cerrar" className="flex h-8 w-8 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                    </button>
-                  </Dialog.Close>
-                </header>
-
-                <div className="flex-1 overflow-y-auto px-5 py-5">
+                Borrar
+              </button>
+            )}
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenChange(false);
+                  onEdit(movement);
+                }}
+                className="inline-flex h-10 items-center rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90"
+              >
+                Editar
+              </button>
+            )}
+          </div>
+        </>
+      }
+    >
+                <div>
                   {/* Monto */}
                   <div className="mb-4 text-center">
                     <p className={`font-display text-3xl font-bold ${movement.type === "income" ? "text-olive-light" : "text-terra"}`}>
@@ -136,48 +156,7 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
                     </div>
                   )}
                 </div>
-
-                <footer className="flex items-center justify-between gap-2 border-t border-border px-5 py-3">
-                  <span className="text-[11px] text-text-faint">
-                    {isRental
-                      ? "Generado desde un pago de alquiler"
-                      : locked
-                        ? `No editable (pasaron ${EDIT_WINDOW_HOURS} hs)`
-                        : ""}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {canDelete && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onOpenChange(false);
-                          onDelete(movement);
-                        }}
-                        className="inline-flex h-10 items-center rounded-full bg-clay-chip px-4 text-[13px] font-bold text-terra transition-opacity hover:opacity-90"
-                      >
-                        Borrar
-                      </button>
-                    )}
-                    {canEdit && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onOpenChange(false);
-                          onEdit(movement);
-                        }}
-                        className="inline-flex h-10 items-center rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90"
-                      >
-                        Editar
-                      </button>
-                    )}
-                  </div>
-                </footer>
-              </motion.div>
-            </Dialog.Content>
-          </Dialog.Portal>
-        )}
-      </AnimatePresence>
-    </Dialog.Root>
+    </Sheet>
   );
 }
 

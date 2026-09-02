@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { Sheet } from "../../_components/sheet";
 import {
   RENTAL_FREQUENCIES,
   RENTAL_FREQUENCY_LABEL,
@@ -317,75 +317,71 @@ export function ContractWizard({
   const stepIndex = STEPS.findIndex((s) => s.key === step);
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <AnimatePresence>
-        {open && (
-          <Dialog.Portal forceMount>
-            <Dialog.Overlay asChild>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
-                className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
-              />
-            </Dialog.Overlay>
-            <Dialog.Content asChild>
-              <motion.div
-                initial={{ opacity: 0, y: 16, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 16, scale: 0.98 }}
-                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed left-1/2 top-1/2 z-50 flex max-h-[94dvh] w-[min(720px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
-              >
-                <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-                  <div>
-                    <Dialog.Title className="font-display text-[17px] font-semibold text-text">Nuevo contrato</Dialog.Title>
-                    <Dialog.Description className="mt-0.5 text-xs text-text-muted">
-                      Paso {stepIndex + 1} de {STEPS.length} · {STEPS[stepIndex].label}
-                    </Dialog.Description>
-                  </div>
-                  <Dialog.Close asChild>
-                    <button
-                      type="button"
-                      aria-label="Cerrar"
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
-                  </Dialog.Close>
-                </header>
-
-                {/* Progress bar */}
-                <div className="border-b border-border px-5 py-3">
-                  <div className="flex items-center gap-2">
-                    {STEPS.map((s, idx) => (
-                      <div key={s.key} className="flex flex-1 items-center gap-2">
-                        <span
-                          className={`flex h-7 w-7 items-center justify-center rounded-full font-display text-[11px] font-bold transition-colors ${
-                            idx < stepIndex
-                              ? "bg-dark text-accent"
-                              : idx === stepIndex
-                                ? "bg-dark text-accent"
-                                : "bg-bg text-text-faint"
-                          }`}
-                        >
-                          {idx < stepIndex ? "✓" : idx + 1}
-                        </span>
-                        {idx < STEPS.length - 1 && (
-                          <span
-                            className={`h-px flex-1 transition-colors ${idx < stepIndex ? "bg-dark" : "bg-border"}`}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-5 py-5">
+    <Sheet
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title="Nuevo contrato"
+      description={`Paso ${stepIndex + 1} de ${STEPS.length} · ${STEPS[stepIndex].label}`}
+      maxWidth="sm:max-w-[720px]"
+      headerExtra={
+        <div className="border-b border-border px-5 py-3">
+          <div className="flex items-center gap-2">
+            {STEPS.map((s, idx) => (
+              <div key={s.key} className="flex flex-1 items-center gap-2">
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-full font-display text-[11px] font-bold transition-colors ${
+                    idx < stepIndex
+                      ? "bg-dark text-accent"
+                      : idx === stepIndex
+                        ? "bg-dark text-accent"
+                        : "bg-bg text-text-faint"
+                  }`}
+                >
+                  {idx < stepIndex ? "✓" : idx + 1}
+                </span>
+                {idx < STEPS.length - 1 && (
+                  <span
+                    className={`h-px flex-1 transition-colors ${idx < stepIndex ? "bg-dark" : "bg-border"}`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      }
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={back}
+            disabled={step === "scope"}
+            className="rounded-full border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Atrás
+          </button>
+          {step !== "additionals" ? (
+            <button
+              type="button"
+              onClick={next}
+              disabled={!canAdvance()}
+              className="rounded-full bg-dark px-5 py-2 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Siguiente
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={submit}
+              disabled={submitting || previewDueDates.length === 0}
+              className="rounded-full bg-dark px-5 py-2 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? "Creando…" : `Crear contrato y generar ${previewDueDates.length} cuotas`}
+            </button>
+          )}
+        </>
+      }
+    >
+                <div>
                   <AnimatePresence mode="wait">
                     {step === "scope" && (
                       <motion.div
@@ -890,41 +886,6 @@ export function ContractWizard({
                     )}
                   </AnimatePresence>
                 </div>
-
-                <footer className="flex items-center justify-between gap-2 border-t border-border px-5 py-3">
-                  <button
-                    type="button"
-                    onClick={back}
-                    disabled={step === "scope"}
-                    className="rounded-full border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Atrás
-                  </button>
-                  {step !== "additionals" ? (
-                    <button
-                      type="button"
-                      onClick={next}
-                      disabled={!canAdvance()}
-                      className="rounded-full bg-dark px-5 py-2 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Siguiente
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={submit}
-                      disabled={submitting || previewDueDates.length === 0}
-                      className="rounded-full bg-dark px-5 py-2 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {submitting ? "Creando…" : `Crear contrato y generar ${previewDueDates.length} cuotas`}
-                    </button>
-                  )}
-                </footer>
-              </motion.div>
-            </Dialog.Content>
-          </Dialog.Portal>
-        )}
-      </AnimatePresence>
-    </Dialog.Root>
+    </Sheet>
   );
 }
