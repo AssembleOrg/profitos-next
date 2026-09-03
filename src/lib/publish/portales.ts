@@ -11,7 +11,13 @@
  * MercadoLibre NO pasa por acá (publica sync vía su wizard propio).
  */
 import { prisma } from "@/lib/prisma/client";
-import { publishViaBrowser, type FullPublishInput, type PhotoSource } from "@/lib/zonaprop/browser-publish";
+import {
+  publishViaBrowser,
+  changePostingStateViaBrowser,
+  updatePostingViaBrowser,
+  type FullPublishInput,
+  type PhotoSource,
+} from "@/lib/zonaprop/browser-publish";
 import type { Feature } from "@/lib/zonaprop/publish";
 import { createFicha, type FichaInput } from "@/lib/argenprop/publish";
 import { gestionPutEstado } from "@/lib/argenprop/gestion";
@@ -240,7 +246,10 @@ async function runArgenprop(p: PropertyForPublish): Promise<{ externalId: string
 // Plan por defecto al activar en ZonaProp: "3" = Simples (el más barato).
 const ZP_DEFAULT_PLAN = "3";
 
-export type EnqueueOpts = { activate?: boolean; plan?: string; action?: string; responsibleUserId?: string };
+/** Acciones de la cola: publish crea el aviso; el resto opera sobre uno existente. */
+export type PublishJobAction = "publish" | "pause" | "close" | "activate" | "update";
+
+export type EnqueueOpts = { activate?: boolean; plan?: string; action?: PublishJobAction; responsibleUserId?: string };
 
 /**
  * Encola una publicación y marca la publicación como "publishing". Idempotente
@@ -291,22 +300,47 @@ export async function processPublishJob(jobId: string): Promise<void> {
 
   await prisma.publishJob.update({ where: { id: jobId }, data: { status: "running", attempts: { increment: 1 } } });
 
-  // Cambios de estado (pausar / dar de baja / reactivar) — hoy sólo ArgenProp
-  // (HTTP de Gestión). ML se hace directo desde la web; ZonaProp: pendiente.
+  // Acciones sobre un aviso YA existente (pausar / dar de baja / reactivar /
+  // update). ArgenProp: HTTP de Gestión. ZonaProp: navegador logueado contra
+  // avisos-api (suspend/archive/publish) o STEP_* para el update. ML no pasa
+  // por acá (API oficial directa desde la web).
   if (job.action !== "publish") {
     try {
-      if (portal !== "argenprop") throw new Error(`Acción ${job.action} no soportada para ${portal}`);
       const pub = await prisma.propertyPublication.findUnique({
         where: { propertyId_portal: { propertyId: job.propertyId, portal } },
         select: { externalId: true },
       });
-      if (!pub?.externalId) throw new Error("La propiedad no tiene aviso vinculado en ArgenProp");
-      const estado = job.action === "pause" ? "SUSPENDIDO" : job.action === "close" ? "ELIMINADO" : "VIGENTE";
+      if (!pub?.externalId) throw new Error(`La propiedad no tiene aviso vinculado en ${portal}`);
+
+      if (job.action === "update") {
+        if (portal !== "zonaprop") throw new Error(`Re-sincronizar no está soportado para ${portal} (se edita en Gestión de ArgenProp)`);
+        const property = await prisma.property.findUnique({ where: { id: job.propertyId }, select: { ...PROPERTY_SELECT, referenceCode: true } });
+        if (!property) throw new Error("propiedad no encontrada");
+        await updatePostingViaBrowser(pub.externalId, {
+          description: { title: titleFor(property), description: descriptionFor(property), internalCode: property.referenceCode ?? undefined },
+          ...(property.operationPrice
+            ? { price: { operationType: zpOperationType(property.operationType), currency: zpCurrency(property.operationCurrency), amount: Math.round(property.operationPrice) } }
+            : {}),
+        });
+        await prisma.propertyPublication.update({
+          where: { propertyId_portal: { propertyId: job.propertyId, portal } },
+          data: { lastError: null },
+        });
+        await prisma.publishJob.update({ where: { id: jobId }, data: { status: "done", error: null, processedAt: new Date() } });
+        return;
+      }
+
       const status = job.action === "pause" ? "paused" : job.action === "close" ? "closed" : "active";
-      await gestionPutEstado(pub.externalId, estado);
+      if (portal === "argenprop") {
+        const estado = job.action === "pause" ? "SUSPENDIDO" : job.action === "close" ? "ELIMINADO" : "VIGENTE";
+        await gestionPutEstado(pub.externalId, estado);
+      } else {
+        const action = job.action === "pause" ? "pause" : job.action === "close" ? "close" : "activate";
+        await changePostingStateViaBrowser(pub.externalId, action, job.plan ?? ZP_DEFAULT_PLAN);
+      }
       await prisma.propertyPublication.update({
         where: { propertyId_portal: { propertyId: job.propertyId, portal } },
-        data: { status, lastError: null },
+        data: { status, lastError: null, ...(status === "active" ? { publishedAt: new Date() } : {}) },
       });
       await prisma.publishJob.update({ where: { id: jobId }, data: { status: "done", error: null, processedAt: new Date() } });
     } catch (err) {

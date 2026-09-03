@@ -38,6 +38,8 @@ import {
   publishHeaders,
   setMultimedia,
   selectPlan,
+  setDescription,
+  setPrice,
   type DraftInput,
   type StepResult,
   type StepRunner,
@@ -377,5 +379,123 @@ export async function publishViaBrowser(input: FullPublishInput): Promise<FullPu
       published: final.postingPublished,
       permalink: `${BASE}/panel/publicador-profesionales/edition?postingId=${postingId}`,
     };
+  });
+}
+
+// ─── Estados de un aviso existente (API del listado del panel: avisos-api) ────
+// Relevado del bundle del panel (R-PANELv6.11): la SPA usa
+//   PUT /avisos-api/panel/api/v2/posting/suspend  {postings:[id], finishReasonId, finishReasonText}  → OFFLINE
+//   PUT /avisos-api/panel/api/v2/posting/archive  {postings:[id], finishReasonId, finishReasonText}  → archivado (DELETED)
+//   PUT /avisos-api/panel/api/v2/posting/publish  {postingId, publicationPlan}                        → ONLINE (usa cupo)
+//   GET /avisos-api/panel/api/v2/postings/finishReason?publisherTypeId=2                            → motivos de baja
+const AVISOS_API = `${BASE}/avisos-api`;
+
+export type PostingStateAction = "pause" | "close" | "activate";
+
+type InPageResult = { status: number; text: string };
+
+/** PUT/GET JSON dentro de la página logueada contra avisos-api. */
+async function avisosFetch(page: Page, sessionId: string, url: string, method: "GET" | "PUT", body?: unknown): Promise<InPageResult> {
+  const headers: Record<string, string> = {
+    accept: "application/json",
+    sessionid: sessionId,
+    "x-panel-portal": "ZPAR",
+    ...(body !== undefined ? { "content-type": "application/json" } : {}),
+  };
+  const res = await page.evaluate(
+    async ({ url, method, headers, body }) => {
+      const r = await fetch(url, { method, credentials: "include", headers, body: body === undefined ? undefined : JSON.stringify(body) });
+      return { status: r.status, text: await r.text() };
+    },
+    { url, method, headers, body }
+  );
+  if (res.status === 401 || res.status === 403) {
+    await markSessionInvalid(PORTAL);
+    throw new SessionExpiredError(PORTAL);
+  }
+  return res;
+}
+
+/** Motivo de baja genérico (el panel lo exige al suspender/archivar). Best-effort. */
+async function pickFinishReason(page: Page, sessionId: string): Promise<{ id: string | null; text: string }> {
+  const text = "Gestión desde Profitos";
+  try {
+    const r = await avisosFetch(page, sessionId, `${AVISOS_API}/panel/api/v2/postings/finishReason?publisherTypeId=2`, "GET");
+    if (r.status >= 400) return { id: null, text };
+    const raw = JSON.parse(r.text) as unknown;
+    const list = (Array.isArray(raw) ? raw : ((raw as { data?: unknown[] })?.data ?? [])) as Record<string, unknown>[];
+    const norm = (v: unknown) => String(v ?? "").toLowerCase();
+    const pick =
+      list.find((x) => /other|otro/.test(norm(x.finish_reason ?? x.code ?? x.key ?? x.name ?? x.description))) ??
+      list.find((x) => /vend|alquil|sold|rent/.test(norm(x.finish_reason ?? x.code ?? x.key ?? x.name ?? x.description))) ??
+      list[0];
+    const id = pick ? (pick.id ?? pick.finish_reason_id ?? pick.finishReasonId ?? pick.code ?? null) : null;
+    return { id: id === null || id === undefined ? null : String(id), text };
+  } catch {
+    return { id: null, text };
+  }
+}
+
+export type PostingStateResult = { postingId: string; action: PostingStateAction; status: string };
+
+/**
+ * Cambia el estado de un aviso YA publicado en ZonaProp.
+ *  - pause    → suspend (el aviso queda OFFLINE; se puede republicar).
+ *  - close    → archive (se mueve a Archivados).
+ *  - activate → publish con plan (vuelve ONLINE; consume cupo del plan).
+ */
+export async function changePostingStateViaBrowser(
+  postingId: string,
+  action: PostingStateAction,
+  publicationPlan = "3"
+): Promise<PostingStateResult> {
+  return withPublishPage(async (page, sessionId) => {
+    let res: InPageResult;
+    if (action === "activate") {
+      res = await avisosFetch(page, sessionId, `${AVISOS_API}/panel/api/v2/posting/publish`, "PUT", {
+        postingId,
+        publicationPlan,
+      });
+    } else {
+      const reason = await pickFinishReason(page, sessionId);
+      const path = action === "pause" ? "suspend" : "archive";
+      res = await avisosFetch(page, sessionId, `${AVISOS_API}/panel/api/v2/posting/${path}`, "PUT", {
+        postings: [postingId],
+        finishReasonId: reason.id,
+        finishReasonText: reason.text,
+      });
+    }
+    if (res.status >= 400) {
+      throw new Error(`ZonaProp ${action} ${res.status}: ${res.text.slice(0, 200)}`);
+    }
+    let status = action === "activate" ? "ONLINE" : action === "pause" ? "OFFLINE" : "DELETED";
+    try {
+      const j = JSON.parse(res.text) as { status?: string; data?: { status?: string } };
+      status = j.data?.status ?? j.status ?? status;
+    } catch {
+      /* respuesta no JSON: nos quedamos con el estado esperado */
+    }
+    return { postingId, action, status };
+  });
+}
+
+// ─── Actualizar texto/precio de un aviso existente (mismos STEP_* del wizard) ─
+export type PostingUpdateInput = {
+  description?: { title: string; description: string; internalCode?: string };
+  price?: { operationType: string; currency: string; amount: number };
+};
+
+/**
+ * Re-sincroniza un aviso existente: corre STEP_DESCRIPTION y/o STEP_PRICE con
+ * el postingId ya creado (es lo que hace el panel al editar). No toca fotos,
+ * ubicación ni plan.
+ */
+export async function updatePostingViaBrowser(postingId: string, input: PostingUpdateInput): Promise<{ postingId: string; status: string }> {
+  return withPublishPage(async (page, sessionId) => {
+    const run = makeRunner(page, sessionId);
+    let last: StepResult = { postingId, status: "UNKNOWN", postingPublished: false };
+    if (input.description) last = await setDescription(run, postingId, input.description);
+    if (input.price) last = await setPrice(run, postingId, input.price);
+    return { postingId, status: last.status };
   });
 }

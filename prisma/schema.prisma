@@ -205,7 +205,7 @@ model PublishJob {
   id          String    @id @default(cuid())
   propertyId  String    @map("property_id")
   portal      String // zonaprop | argenprop
-  action      String    @default("publish") // publish | pause | close
+  action      String    @default("publish") // publish | pause | close | activate | update
   activate    Boolean   @default(false) // true = publicar ONLINE (gasta crédito); false = solo borrador
   plan        String? // plan de publicación (ej ZonaProp: "3"=Simples) cuando activate
   responsibleUserId String? @map("responsible_user_id") // responsable del aviso (ZonaProp userId)

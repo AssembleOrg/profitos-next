@@ -242,8 +242,8 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
       if (!res.ok) throw new Error(body?.message ?? "No se pudo cambiar el estado");
       toast.success(body?.message ?? "Estado actualizado");
       await load();
-      // ArgenProp lo aplica el worker async → refrescar de nuevo en unos segundos.
-      if (portal === "argenprop") setTimeout(() => void load(), 7000);
+      // ArgenProp y ZonaProp los aplica el worker async → refrescar de nuevo en unos segundos.
+      if (portal !== "mercadolibre") setTimeout(() => void load(), 7000);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al cambiar el estado");
     } finally {
@@ -358,8 +358,8 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
 
                 {/* Fila 2: acciones (wrap limpio, sin empujar) */}
                 <div className="mt-2 flex flex-wrap items-center gap-2 sm:mt-0 sm:justify-end">
-                  {/* Pausar / Reactivar / Dar de baja — sobre avisos ya publicados (AP y ML) */}
-                  {portal !== "zonaprop" && pub?.published && (pub.status === "active" || pub.status === "paused") && (
+                  {/* Pausar / Reactivar / Dar de baja — sobre avisos ya publicados (ZP, AP y ML) */}
+                  {pub?.published && (pub.status === "active" || pub.status === "paused") && (
                     <>
                       <button
                         onClick={() => {
@@ -367,8 +367,12 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                           setConfirm({
                             title: activate ? "¿Reactivar aviso?" : "¿Pausar aviso?",
                             body: activate
-                              ? `Vuelve a poner el aviso activo en ${meta.label}.`
-                              : `Pausa el aviso en ${meta.label} (se puede reactivar después).`,
+                              ? portal === "zonaprop"
+                                ? `Republica el aviso en ZonaProp con el plan ${zpPlan === "1" ? "Súper Destacado" : zpPlan === "2" ? "Destacado" : "Simple"} (usa cupo). Lo aplica el worker en unos minutos.`
+                                : `Vuelve a poner el aviso activo en ${meta.label}.`
+                              : portal === "zonaprop"
+                                ? "Finaliza el aviso en ZonaProp (queda OFFLINE; se puede republicar después, usando cupo). Lo aplica el worker en unos minutos."
+                                : `Pausa el aviso en ${meta.label} (se puede reactivar después).`,
                             cta: activate ? "Reactivar" : "Pausar",
                             run: () => void changeState(portal, activate ? "activate" : "pause"),
                           });
@@ -386,7 +390,9 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                             body:
                               portal === "mercadolibre"
                                 ? "Cierra la publicación en MercadoLibre de forma IRREVERSIBLE (para volver hay que republicar desde el wizard)."
-                                : "Elimina el aviso de ArgenProp.",
+                                : portal === "zonaprop"
+                                  ? "Archiva el aviso en ZonaProp (para volver hay que publicarlo de nuevo). Lo aplica el worker en unos minutos."
+                                  : "Elimina el aviso de ArgenProp.",
                             cta: "Dar de baja",
                             danger: true,
                             run: () => void changeState(portal, "close"),
