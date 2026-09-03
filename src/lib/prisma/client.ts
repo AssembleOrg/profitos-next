@@ -8,7 +8,10 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient(): AppPrismaClient {
-  const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL!;
+  // Runtime usa el pooler transaction-mode (DATABASE_URL, :6543, pgbouncer),
+  // que tolera muchos clientes. DIRECT_URL (:5432 session-mode, pool_size 15)
+  // es solo para migraciones (schema.prisma directUrl) y queda como fallback.
+  const connectionString = process.env.DATABASE_URL ?? process.env.DIRECT_URL!;
   const schemaFromUrl = (() => {
     try {
       return new URL(connectionString).searchParams.get("schema") ?? undefined;
@@ -18,7 +21,8 @@ function createPrismaClient(): AppPrismaClient {
   })();
 
   const adapter = new PrismaPg(
-    { connectionString },
+    // max: tope defensivo de conexiones por instancia del proceso.
+    { connectionString, max: 10 },
     { schema: schemaFromUrl }
   );
 
