@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { AnimatePresence, motion } from "framer-motion";
 import { Sheet } from "../../_components/sheet";
 
 type PortalKey = "mercadolibre" | "zonaprop" | "argenprop";
@@ -265,277 +266,413 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
     });
   }
 
+  const isSelectable = (portal: PortalKey) => {
+    const meta = PORTAL_META[portal];
+    const pub = pubs[portal];
+    const ready = readiness?.[portal];
+    const notReady = meta.publishable && !pub?.published && ready ? !ready.ok : false;
+    return meta.publishable && !notReady;
+  };
+  const selectableCount = ORDER.filter(isSelectable).length;
+  const selectedCount = [...selected].filter(isSelectable).length;
+  const zpPlanCredit = credits?.plans.find((pl) => pl.plan === zpPlan);
+
+  const BTN = "inline-flex h-11 w-full items-center justify-center rounded-full px-3 text-[13px] font-bold transition-opacity disabled:opacity-50";
+  const BTN_PRIMARY = `${BTN} bg-dark text-dark-fg hover:opacity-90`;
+  const BTN_SECONDARY = `${BTN} border border-border bg-surface text-text hover:bg-bg`;
+  const BTN_DANGER = `${BTN} bg-clay-chip text-terra hover:opacity-80`;
+  const FIELD_LABEL = "mb-1 block text-[10.5px] font-bold uppercase tracking-[0.08em] text-text-faint";
+  const FIELD = "h-10 w-full rounded-[12px] border border-border bg-bg px-3 text-[13px] font-semibold text-text disabled:opacity-50";
+
   return (
-    <div className="rounded-[16px] border border-border bg-surface p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-[13px] font-bold uppercase tracking-[0.1em] text-text-faint">Portales</h3>
-        <button onClick={() => void load()} className="text-[12px] font-semibold text-text-muted hover:text-text">
-          Actualizar
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[12.5px] text-text-faint">Publicá este aviso en cada portal.</p>
+        <button
+          onClick={() => void load()}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-bg"
+          aria-label="Actualizar"
+          title="Actualizar"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12a9 9 0 11-2.64-6.36" />
+            <path d="M21 3v6h-6" />
+          </svg>
         </button>
       </div>
 
-      {/* Cupo de créditos de ZonaProp (los pagos son por fuera de la app). */}
-      {credits && (
-        <div
-          className="mb-3 flex flex-wrap items-center gap-2 rounded-[12px] border border-border bg-bg px-3 py-2"
-          title={credits.fetchedAt ? `Actualizado: ${new Date(credits.fetchedAt).toLocaleString("es-AR")}` : undefined}
-        >
-          <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-faint">Cupo ZonaProp</span>
-          {credits.plans.length ? (
-            credits.plans.map((pl) => (
-              <span
-                key={pl.plan}
-                className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-[11.5px] font-semibold text-text"
-              >
-                {pl.label}:{" "}
-                <span className={pl.available === 0 ? "text-terra" : "text-olive-light"}>{pl.available ?? "—"}</span>
-              </span>
-            ))
-          ) : (
-            <span className="text-[11.5px] text-text-faint">{credits.error ? "Sin datos (error al leer)" : "Sin datos aún"}</span>
-          )}
-          <button
-            onClick={() => void refreshCredits()}
-            disabled={refreshingCredits}
-            className="ml-auto rounded-full border border-border bg-surface px-2.5 py-1 text-[11.5px] font-bold text-text-muted hover:bg-bg disabled:opacity-50"
-          >
-            {refreshingCredits ? "Actualizando…" : "Actualizar cupo"}
-          </button>
-        </div>
-      )}
-
       {loading ? (
-        <p className="py-4 text-center text-[12.5px] text-text-faint">Cargando…</p>
+        <div className="flex items-center justify-center gap-2 py-8 text-[12.5px] text-text-faint">
+          <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M21 12a9 9 0 11-6.22-8.56" />
+          </svg>
+          Cargando…
+        </div>
       ) : (
-        <div className="space-y-2">
-          {ORDER.map((portal) => {
-            const meta = PORTAL_META[portal];
-            const c = connOf(portal);
-            const pub = pubs[portal];
-            const ready = readiness?.[portal];
-            // Bloquea publicar sólo si aún no hay aviso creado y faltan campos.
-            const notReady = meta.publishable && !pub?.published && ready ? !ready.ok : false;
-            const faltanLabels = ready?.faltan.map((x) => x.label).join(", ") ?? "";
-            const chip = pub ? STATUS_CHIP[pub.status] : null;
-            return (
-              <div key={portal} className="rounded-[12px] border border-border bg-bg px-3 py-2.5">
-                {/* Fila 1: identidad + chips de estado */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="flex items-center gap-2 font-semibold text-text">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: meta.dot }} aria-hidden />
-                    {meta.label}
-                  </span>
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:items-start">
+            {ORDER.map((portal) => {
+              const meta = PORTAL_META[portal];
+              const c = connOf(portal);
+              const pub = pubs[portal];
+              const ready = readiness?.[portal];
+              // Bloquea publicar sólo si aún no hay aviso creado y faltan campos.
+              const notReady = meta.publishable && !pub?.published && ready ? !ready.ok : false;
+              const chip = pub ? STATUS_CHIP[pub.status] : null;
+              const selectable = isSelectable(portal);
+              const isSel = selectable && selected.has(portal);
+              const canToggle = selectable && busy === null;
+              const disconnected = !c?.connected && portal !== "mercadolibre";
+              const publishBusy = busy !== null || pub?.status === "publishing";
 
-                  {/* Conexión */}
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                      c?.connected ? "bg-sage-chip text-olive-light" : "bg-clay-chip text-terra"
-                    }`}
-                    title={c?.actionHint ?? undefined}
-                  >
-                    <span className={`h-1.5 w-1.5 rounded-full ${c?.connected ? "bg-olive-light" : "bg-terra"}`} aria-hidden />
-                    {c?.connected ? "Conectado" : c?.actionHint ?? "Sin conexión"}
-                  </span>
-
-                  {/* Reconectar (login remoto) — sólo ZonaProp/ArgenProp; ML usa OAuth */}
-                  {!c?.connected && portal !== "mercadolibre" && (
-                    <button
-                      onClick={() => void startRelogin(portal)}
-                      disabled={busy !== null}
-                      className="rounded-full border border-terra/40 bg-clay-chip px-2.5 py-0.5 text-[11px] font-bold text-terra transition-colors hover:bg-terra hover:text-white disabled:opacity-50"
-                      title="Abrí una ventana para loguearte de nuevo en el portal"
+              return (
+                <div
+                  key={portal}
+                  role={selectable ? "checkbox" : undefined}
+                  aria-checked={selectable ? isSel : undefined}
+                  aria-label={selectable ? `Seleccionar ${meta.label} para publicación grupal` : undefined}
+                  tabIndex={selectable ? 0 : undefined}
+                  onClick={
+                    canToggle
+                      ? (e) => {
+                          if ((e.target as Element).closest("button, select, a, label")) return;
+                          toggle(portal);
+                        }
+                      : undefined
+                  }
+                  onKeyDown={
+                    canToggle
+                      ? (e) => {
+                          if (e.target !== e.currentTarget) return;
+                          if (e.key === " " || e.key === "Enter") {
+                            e.preventDefault();
+                            toggle(portal);
+                          }
+                        }
+                      : undefined
+                  }
+                  className={`relative overflow-hidden rounded-[18px] border bg-surface transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dark ${
+                    isSel ? "border-dark ring-1 ring-dark" : "border-border"
+                  } ${canToggle ? "cursor-pointer active:bg-bg" : ""}`}
+                >
+                  {/* Identidad */}
+                  <div className="flex items-center gap-2.5 p-3 pb-2">
+                    <span
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-display text-[13px] font-bold text-white"
+                      style={{ backgroundColor: meta.dot }}
+                      aria-hidden
                     >
-                      {busy === `relogin:${portal}` ? "Abriendo…" : "Reconectar"}
-                    </button>
-                  )}
-
-                  {/* Estado publicación */}
-                  {chip ? (
-                    pub?.permalink ? (
-                      <a href={pub.permalink} target="_blank" rel="noopener noreferrer" className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold hover:underline ${chip.cls}`} title={pub.lastError ?? undefined}>
-                        {chip.label}
-                      </a>
-                    ) : (
-                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${chip.cls}`} title={pub.lastError ?? undefined}>
-                        {chip.label}
-                      </span>
-                    )
-                  ) : (
-                    <span className="rounded-full bg-bg px-2.5 py-0.5 text-[11px] font-semibold text-text-faint">Sin publicar</span>
-                  )}
-                </div>
-
-                {/* Fila 2: acciones (wrap limpio, sin empujar) */}
-                <div className="mt-2 flex flex-wrap items-center gap-2 sm:mt-0 sm:justify-end">
-                  {/* Pausar / Reactivar / Dar de baja — sobre avisos ya publicados (ZP, AP y ML) */}
-                  {pub?.published && (pub.status === "active" || pub.status === "paused") && (
-                    <>
-                      <button
-                        onClick={() => {
-                          const activate = pub.status !== "active";
-                          setConfirm({
-                            title: activate ? "¿Reactivar aviso?" : "¿Pausar aviso?",
-                            body: activate
-                              ? portal === "zonaprop"
-                                ? `Republica el aviso en ZonaProp con el plan ${zpPlan === "1" ? "Súper Destacado" : zpPlan === "2" ? "Destacado" : "Simple"} (usa cupo). Lo aplica el worker en unos minutos.`
-                                : `Vuelve a poner el aviso activo en ${meta.label}.`
-                              : portal === "zonaprop"
-                                ? "Finaliza el aviso en ZonaProp (queda OFFLINE; se puede republicar después, usando cupo). Lo aplica el worker en unos minutos."
-                                : `Pausa el aviso en ${meta.label} (se puede reactivar después).`,
-                            cta: activate ? "Reactivar" : "Pausar",
-                            run: () => void changeState(portal, activate ? "activate" : "pause"),
-                          });
-                        }}
-                        disabled={busy !== null}
-                        className="rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-bold text-text-muted transition-colors hover:bg-bg disabled:opacity-50"
-                        title={pub.status === "active" ? "Pausa el aviso (se puede reactivar)" : "Vuelve a poner el aviso activo"}
+                      {meta.label[0]}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-display text-[15px] font-semibold leading-tight text-text">{meta.label}</div>
+                      <div
+                        className={`mt-0.5 flex items-center gap-1 text-[11px] ${c?.connected ? "text-olive-light" : "text-terra"}`}
+                        title={c?.actionHint ?? undefined}
                       >
-                        {busy === `state:${portal}` ? "Aplicando…" : pub.status === "active" ? "Pausar" : "Reactivar"}
-                      </button>
-                      <button
-                        onClick={() =>
-                          setConfirm({
-                            title: "¿Dar de baja el aviso?",
-                            body:
-                              portal === "mercadolibre"
-                                ? "Cierra la publicación en MercadoLibre de forma IRREVERSIBLE (para volver hay que republicar desde el wizard)."
-                                : portal === "zonaprop"
-                                  ? "Archiva el aviso en ZonaProp (para volver hay que publicarlo de nuevo). Lo aplica el worker en unos minutos."
-                                  : "Elimina el aviso de ArgenProp.",
-                            cta: "Dar de baja",
-                            danger: true,
-                            run: () => void changeState(portal, "close"),
-                          })
-                        }
-                        disabled={busy !== null}
-                        className="rounded-full bg-clay-chip px-3 py-1.5 text-[12px] font-bold text-terra transition-opacity hover:opacity-80 disabled:opacity-50"
-                        title={portal === "mercadolibre" ? "Cierra la publicación (irreversible en ML)" : "Elimina el aviso de ArgenProp"}
-                      >
-                        Dar de baja
-                      </button>
-                    </>
-                  )}
-                  {meta.publishable ? (
-                    notReady ? (
+                        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" aria-hidden />
+                        <span className="truncate">{c?.connected ? "Conectado" : c?.actionHint ?? "Sin conexión"}</span>
+                      </div>
+                    </div>
+                    {selectable && (
                       <span
-                        className="rounded-full border border-terra/40 bg-clay-chip px-3 py-1.5 text-[11.5px] font-semibold text-terra"
-                        title={`Completá estos campos en Datos/Ubicación para poder publicar: ${faltanLabels}`}
+                        className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                          isSel ? "border-dark bg-dark text-dark-fg" : "border-border-strong bg-surface"
+                        }`}
+                        aria-hidden
                       >
-                        Faltan datos: {faltanLabels}
+                        {isSel && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 6L9 17l-5-5" />
+                          </svg>
+                        )}
                       </span>
-                    ) : (
-                    <>
-                      <input
-                        type="checkbox"
-                        checked={selected.has(portal)}
-                        onChange={() => toggle(portal)}
-                        className="h-4 w-4 accent-dark"
-                        aria-label={`Seleccionar ${meta.label} para publicación grupal`}
-                      />
+                    )}
+                  </div>
+
+                  {/* Cupo ZonaProp (los pagos son por fuera de la app). */}
+                  {portal === "zonaprop" && credits && (
+                    <div
+                      className="flex flex-wrap items-center gap-1.5 px-3 pb-2"
+                      title={credits.fetchedAt ? `Actualizado: ${new Date(credits.fetchedAt).toLocaleString("es-AR")}` : undefined}
+                    >
+                      <span className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-text-faint">Cupo</span>
+                      {credits.plans.length ? (
+                        credits.plans.map((pl) => (
+                          <span key={pl.plan} className="inline-flex items-center gap-1 rounded-full bg-bg px-2 py-0.5 text-[11px] font-semibold text-text">
+                            {pl.label}
+                            <span className={pl.available === 0 ? "text-terra" : "text-olive-light"}>{pl.available ?? "—"}</span>
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-[11px] text-text-faint">{credits.error ? "Sin datos (error al leer)" : "Sin datos aún"}</span>
+                      )}
                       <button
-                        onClick={() =>
-                          setConfirm({
-                            title: portal === "argenprop" ? "¿Publicar en ArgenProp?" : "¿Crear borrador?",
-                            body:
-                              portal === "argenprop"
-                                ? "Crea y publica el aviso en ArgenProp (no tiene borrador)."
-                                : `Crea el aviso como borrador en ${meta.label} (gratis, no consume crédito).`,
-                            cta: portal === "argenprop" ? "Publicar" : "Crear borrador",
-                            run: () => void publishOne(portal, false),
-                          })
-                        }
-                        disabled={busy !== null || pub?.status === "publishing"}
-                        className="rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-bold text-text transition-colors hover:bg-bg disabled:opacity-50"
-                        title={
-                          portal === "argenprop"
-                            ? "Crea y publica el aviso en ArgenProp (no tiene borrador)"
-                            : "Crea el aviso como borrador (gratis)"
-                        }
+                        onClick={() => void refreshCredits()}
+                        disabled={refreshingCredits}
+                        className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-text-muted hover:bg-bg disabled:opacity-50"
+                        aria-label="Actualizar cupo"
+                        title="Actualizar cupo"
                       >
-                        {portal === "argenprop" ? "Publicar" : "Borrador"}
+                        <svg className={refreshingCredits ? "animate-spin" : undefined} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 12a9 9 0 11-2.64-6.36" />
+                          <path d="M21 3v6h-6" />
+                        </svg>
                       </button>
-                      {portal === "zonaprop" && (
+                    </div>
+                  )}
+
+                  {/* Conexión caída — login remoto (ML usa OAuth) */}
+                  {disconnected && (
+                    <div className="mx-3 mb-2 flex items-center justify-between gap-2 rounded-[12px] bg-clay-chip px-3 py-2 text-[11.5px] text-terra">
+                      <span>Sesión vencida</span>
+                      <button
+                        onClick={() => void startRelogin(portal)}
+                        disabled={busy !== null}
+                        className="rounded-full border border-terra/40 bg-surface px-3 py-1 text-[11.5px] font-bold text-terra transition-colors hover:bg-terra hover:text-white disabled:opacity-50"
+                        title="Abrí una ventana para loguearte de nuevo en el portal"
+                      >
+                        {busy === `relogin:${portal}` ? "Abriendo…" : "Reconectar"}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Acciones */}
+                  <div className="space-y-2 px-3 pb-3">
+                    {/* Pausar / Reactivar / Dar de baja — sobre avisos ya publicados (ZP, AP y ML) */}
+                    {pub?.published && (pub.status === "active" || pub.status === "paused") && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => {
+                            const activate = pub.status !== "active";
+                            setConfirm({
+                              title: activate ? "¿Reactivar aviso?" : "¿Pausar aviso?",
+                              body: activate
+                                ? portal === "zonaprop"
+                                  ? `Republica el aviso en ZonaProp con el plan ${ZP_PLAN_LABEL(zpPlan)} (usa cupo). Lo aplica el worker en unos minutos.`
+                                  : `Vuelve a poner el aviso activo en ${meta.label}.`
+                                : portal === "zonaprop"
+                                  ? "Finaliza el aviso en ZonaProp (queda OFFLINE; se puede republicar después, usando cupo). Lo aplica el worker en unos minutos."
+                                  : `Pausa el aviso en ${meta.label} (se puede reactivar después).`,
+                              cta: activate ? "Reactivar" : "Pausar",
+                              run: () => void changeState(portal, activate ? "activate" : "pause"),
+                            });
+                          }}
+                          disabled={busy !== null}
+                          className={BTN_SECONDARY}
+                          title={pub.status === "active" ? "Pausa el aviso (se puede reactivar)" : "Vuelve a poner el aviso activo"}
+                        >
+                          {busy === `state:${portal}` ? "Aplicando…" : pub.status === "active" ? "Pausar" : "Reactivar"}
+                        </button>
+                        <button
+                          onClick={() =>
+                            setConfirm({
+                              title: "¿Dar de baja el aviso?",
+                              body:
+                                portal === "mercadolibre"
+                                  ? "Cierra la publicación en MercadoLibre de forma IRREVERSIBLE (para volver hay que republicar desde el wizard)."
+                                  : portal === "zonaprop"
+                                    ? "Archiva el aviso en ZonaProp (para volver hay que publicarlo de nuevo). Lo aplica el worker en unos minutos."
+                                    : "Elimina el aviso de ArgenProp.",
+                              cta: "Dar de baja",
+                              danger: true,
+                              run: () => void changeState(portal, "close"),
+                            })
+                          }
+                          disabled={busy !== null}
+                          className={BTN_DANGER}
+                          title={portal === "mercadolibre" ? "Cierra la publicación (irreversible en ML)" : "Elimina el aviso de ArgenProp"}
+                        >
+                          Dar de baja
+                        </button>
+                      </div>
+                    )}
+
+                    {meta.publishable ? (
+                      notReady ? (
+                        <div>
+                          <p className="mb-1.5 text-[11.5px] text-text-muted">Faltan datos para publicar (completalos en Datos / Ubicación):</p>
+                          <div className="flex flex-wrap gap-1">
+                            {ready?.faltan.map((x) => (
+                              <span key={x.campo} className="rounded-full bg-sand-chip px-2 py-0.5 text-[11px] font-semibold text-warning">
+                                {x.label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : portal === "zonaprop" ? (
                         <>
-                          {responsibles.length > 0 && (
+                          <div>
+                            <label className={FIELD_LABEL} htmlFor={`zp-plan-${propertyId}`}>Plan</label>
                             <select
-                              value={respUserId}
-                              onChange={(e) => setRespUserId(e.target.value)}
-                              disabled={busy !== null || pub?.status === "publishing"}
-                              className="min-w-0 max-w-[140px] flex-1 rounded-full border border-border bg-surface px-2 py-1.5 text-[11.5px] font-semibold text-text-muted disabled:opacity-50 sm:flex-none"
-                              title="Responsable del aviso (quién recibe las consultas)"
-                              aria-label="Responsable ZonaProp"
+                              id={`zp-plan-${propertyId}`}
+                              value={zpPlan}
+                              onChange={(e) => setZpPlan(e.target.value)}
+                              disabled={publishBusy}
+                              className={FIELD}
+                              title="Exposición del aviso al publicarlo activo (a más exposición, más crédito)"
                             >
-                              <option value="">Responsable: por defecto</option>
-                              {responsibles.map((r) => (
-                                <option key={r.userId} value={String(r.userId)}>
-                                  {r.name} {r.lastName}
+                              {ZP_PLANS.map((pl) => (
+                                <option key={pl.value} value={pl.value}>
+                                  {pl.label}
                                 </option>
                               ))}
                             </select>
+                            {zpPlanCredit && zpPlanCredit.available !== null && (
+                              <p className={`mt-1 text-[11px] font-semibold ${zpPlanCredit.available === 0 ? "text-terra" : "text-olive-light"}`}>
+                                {zpPlanCredit.available === 0 ? "Sin cupo en este plan" : `Cupo disponible: ${zpPlanCredit.available}`}
+                              </p>
+                            )}
+                          </div>
+                          {responsibles.length > 0 && (
+                            <div>
+                              <label className={FIELD_LABEL} htmlFor={`zp-resp-${propertyId}`}>Responsable</label>
+                              <select
+                                id={`zp-resp-${propertyId}`}
+                                value={respUserId}
+                                onChange={(e) => setRespUserId(e.target.value)}
+                                disabled={publishBusy}
+                                className={FIELD}
+                                title="Responsable del aviso (quién recibe las consultas)"
+                              >
+                                <option value="">Por defecto</option>
+                                {responsibles.map((r) => (
+                                  <option key={r.userId} value={String(r.userId)}>
+                                    {r.name} {r.lastName}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           )}
-                          <select
-                            value={zpPlan}
-                            onChange={(e) => setZpPlan(e.target.value)}
-                            disabled={busy !== null || pub?.status === "publishing"}
-                            className="rounded-full border border-border bg-surface px-2 py-1.5 text-[11.5px] font-semibold text-text-muted disabled:opacity-50"
-                            title="Exposición del aviso al publicarlo activo (a más exposición, más crédito)"
-                            aria-label="Plan de exposición ZonaProp"
-                          >
-                            {ZP_PLANS.map((pl) => (
-                              <option key={pl.value} value={pl.value}>
-                                {pl.label}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={() =>
-                              setConfirm({
-                                title: "¿Publicar activo en ZonaProp?",
-                                body: `Pone el aviso ONLINE y CONSUME 1 crédito del plan ${ZP_PLAN_LABEL(zpPlan)}.`,
-                                cta: "Publicar activo",
-                                danger: true,
-                                run: () => void publishOne(portal, true),
-                              })
-                            }
-                            disabled={busy !== null || pub?.status === "publishing"}
-                            className="rounded-full bg-dark px-3 py-1.5 text-[12px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
-                            title="Publica el aviso ONLINE — consume 1 crédito del plan elegido"
-                          >
-                            Publicar activo
-                          </button>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() =>
+                                setConfirm({
+                                  title: "¿Crear borrador?",
+                                  body: `Crea el aviso como borrador en ${meta.label} (gratis, no consume crédito).`,
+                                  cta: "Crear borrador",
+                                  run: () => void publishOne(portal, false),
+                                })
+                              }
+                              disabled={publishBusy}
+                              className={BTN_SECONDARY}
+                              title="Crea el aviso como borrador (gratis)"
+                            >
+                              Borrador
+                            </button>
+                            <button
+                              onClick={() =>
+                                setConfirm({
+                                  title: "¿Publicar activo en ZonaProp?",
+                                  body: `Pone el aviso ONLINE y CONSUME 1 crédito del plan ${ZP_PLAN_LABEL(zpPlan)}.`,
+                                  cta: "Publicar activo",
+                                  danger: true,
+                                  run: () => void publishOne(portal, true),
+                                })
+                              }
+                              disabled={publishBusy}
+                              className={BTN_PRIMARY}
+                              title="Publica el aviso ONLINE — consume 1 crédito del plan elegido"
+                            >
+                              Publicar activo
+                            </button>
+                          </div>
                         </>
+                      ) : (
+                        <button
+                          onClick={() =>
+                            setConfirm({
+                              title: "¿Publicar en ArgenProp?",
+                              body: "Crea y publica el aviso en ArgenProp (no tiene borrador).",
+                              cta: "Publicar",
+                              run: () => void publishOne(portal, false),
+                            })
+                          }
+                          disabled={publishBusy}
+                          className={BTN_PRIMARY}
+                          title="Crea y publica el aviso en ArgenProp (no tiene borrador)"
+                        >
+                          Publicar en ArgenProp
+                        </button>
+                      )
+                    ) : (
+                      !pub?.published && <p className="text-[11.5px] text-text-faint">Se publica desde el wizard de MercadoLibre.</p>
+                    )}
+                  </div>
+
+                  {/* Footer de estado = franja de color */}
+                  <div className={`border-t border-border px-3 py-1.5 text-[11.5px] font-bold ${chip ? chip.cls : "bg-bg text-text-faint"}`}>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`h-1.5 w-1.5 rounded-full bg-current opacity-70 ${pub?.status === "publishing" ? "animate-pulse" : ""}`} aria-hidden />
+                      {chip ? chip.label : "Sin publicar"}
+                      {pub?.permalink && (
+                        <a
+                          href={pub.permalink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-auto inline-flex items-center gap-0.5 underline"
+                        >
+                          Ver aviso
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M7 17L17 7" />
+                            <path d="M7 7h10v10" />
+                          </svg>
+                        </a>
                       )}
-                    </>
-                    )
-                  ) : (
-                    !pub?.published && <span className="text-[11px] text-text-faint">Usá el wizard ML</span>
-                  )}
+                    </div>
+                    {pub?.lastError && <p className="mt-0.5 line-clamp-1 font-normal opacity-80" title={pub.lastError}>{pub.lastError}</p>}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+
+          {selectedCount === 0 && selectableCount >= 2 && (
+            <p className="text-center text-[11.5px] text-text-faint">Tocá una card para publicar en varios portales a la vez.</p>
+          )}
 
           {/* Acción grupal */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-            <p className="text-[11.5px] text-text-faint">
-              {selected.size ? `${selected.size} portal(es) seleccionado(s)` : "Marcá portales para publicar en grupo"}
-            </p>
-            <button
-              onClick={() =>
-                setConfirm({
-                  title: "¿Publicar en grupo?",
-                  body: `Encola la publicación en ${selected.size} portal(es) seleccionado(s).`,
-                  cta: "Publicar",
-                  run: () => void publishSelected(),
-                })
-              }
-              disabled={!selected.size || busy !== null}
-              className="rounded-full border border-border bg-surface px-3.5 py-1.5 text-[12px] font-bold text-text transition-colors hover:bg-bg disabled:opacity-50"
-            >
-              Publicar seleccionados
-            </button>
-          </div>
-        </div>
+          <AnimatePresence>
+            {selectedCount > 0 && (
+              <motion.div
+                initial={{ y: 16, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 16, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="sticky bottom-0 z-10 -mx-5 bg-gradient-to-t from-surface via-surface to-transparent px-5 pb-1 pt-4"
+              >
+                <div className="flex items-center justify-between gap-3 rounded-full bg-dark py-2 pl-5 pr-2 text-dark-fg shadow-lg">
+                  <span className="text-[13px] font-semibold">
+                    {selectedCount} {selectedCount === 1 ? "portal seleccionado" : "portales seleccionados"}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setSelected(new Set())}
+                      disabled={busy !== null}
+                      className="px-3 text-[12.5px] font-semibold opacity-70 hover:opacity-100 disabled:opacity-40"
+                    >
+                      Quitar
+                    </button>
+                    <button
+                      onClick={() =>
+                        setConfirm({
+                          title: "¿Publicar en grupo?",
+                          body: `Encola la publicación en ${selected.size} portal(es) seleccionado(s).`,
+                          cta: "Publicar",
+                          run: () => void publishSelected(),
+                        })
+                      }
+                      disabled={!selected.size || busy !== null}
+                      className="inline-flex h-9 items-center rounded-full bg-surface px-4 text-[12.5px] font-bold text-text transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                      {busy === "bulk" ? "Publicando…" : "Publicar"}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
       )}
 
       {/* Confirmación de publicar / cambiar estado */}
