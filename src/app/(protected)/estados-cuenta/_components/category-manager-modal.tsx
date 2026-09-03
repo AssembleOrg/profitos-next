@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import * as Dialog from "@radix-ui/react-dialog";
 import type { EntryType } from "@/lib/account";
 import { SelectField } from "@/components/ui/select-field";
+import { Sheet } from "../../_components/sheet";
 import type { SerializedCategory } from "./estados-cuenta-client";
 
 interface Props {
@@ -85,37 +84,13 @@ export function CategoryManagerModal({ open, onOpenChange, categories, isAdmin }
   const expense = categories.filter((c) => c.kind === "expense");
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <AnimatePresence>
-        {open && (
-          <Dialog.Portal forceMount>
-            <Dialog.Overlay asChild>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
-                className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
-              />
-            </Dialog.Overlay>
-            <Dialog.Content asChild>
-              <motion.div
-                initial={{ opacity: 0, y: 16, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 16, scale: 0.98 }}
-                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(560px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
-              >
-                <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-                  <Dialog.Title className="font-display text-[17px] font-semibold text-text">Categorías</Dialog.Title>
-                  <Dialog.Close asChild>
-                    <button type="button" aria-label="Cerrar" className="flex h-8 w-8 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                    </button>
-                  </Dialog.Close>
-                </header>
-
-                <div className="flex-1 overflow-y-auto px-5 py-5">
+    <Sheet
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title="Categorías"
+      maxWidth="sm:max-w-[560px]"
+    >
+                <div>
                   {/* Alta */}
                   <div className="mb-5 flex flex-wrap items-end gap-2 rounded-[16px] bg-bg p-3">
                     <div className="flex-1 min-w-[140px]">
@@ -156,12 +131,7 @@ export function CategoryManagerModal({ open, onOpenChange, categories, isAdmin }
                     <CategoryColumn title="Egresos" items={expense} isAdmin={isAdmin} onRename={rename} onRemove={remove} />
                   </div>
                 </div>
-              </motion.div>
-            </Dialog.Content>
-          </Dialog.Portal>
-        )}
-      </AnimatePresence>
-    </Dialog.Root>
+    </Sheet>
   );
 }
 

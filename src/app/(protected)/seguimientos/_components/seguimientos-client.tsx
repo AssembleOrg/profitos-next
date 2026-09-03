@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { TimePicker } from "@/components/ui/time-picker";
@@ -165,19 +165,22 @@ export function SeguimientosClient({
   }, [followUps, search, statusFilter]);
 
   async function loadDetail(id: string) {
+    setSelectedId(id);
+    setDetail(null);
+    setDetailOpen(true);
     setLoadingDetail(true);
     try {
       const res = await fetch(`/api/seguimientos/${id}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.message ?? "No se pudo cargar el seguimiento");
+        setDetailOpen(false);
         return;
       }
       setDetail(data.data as FollowUpDetail);
-      setSelectedId(id);
-      setDetailOpen(true);
     } catch {
       toast.error("Error de conexión");
+      setDetailOpen(false);
     } finally {
       setLoadingDetail(false);
     }
@@ -300,8 +303,8 @@ export function SeguimientosClient({
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Seguimientos</h1>
           <p className="text-[12.5px] text-text-faint">
@@ -311,7 +314,7 @@ export function SeguimientosClient({
         {isAdmin && (
           <button
             onClick={() => setCreateOpen(true)}
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
+            className="inline-flex h-11 items-center gap-2 self-start rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 sm:self-auto"
           >
             <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19" />
@@ -322,7 +325,7 @@ export function SeguimientosClient({
         )}
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5">
         <div className="relative">
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
@@ -332,7 +335,7 @@ export function SeguimientosClient({
             placeholder="Buscar por propiedad, responsable, título..."
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="h-11 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
+            className="h-10 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
           />
         </div>
         <div className="overflow-x-auto">
@@ -356,25 +359,50 @@ export function SeguimientosClient({
       </div>
 
       {/* Cards — solo mobile */}
-      <div className="sm:hidden space-y-2">
+      <div className="sm:hidden space-y-1.5">
         {filtered.length === 0 ? (
           <p className="py-8 text-center text-sm text-text-muted">Sin resultados</p>
         ) : (
           filtered.map((item) => {
             const status = getStatusMeta(item.status);
+            const location = [item.property.zone, item.property.city].filter(Boolean).join(" · ");
             return (
               <div key={item.id} onClick={() => loadDetail(item.id)}
-                className="cursor-pointer rounded-[18px] border border-border bg-surface p-3.5 transition-colors active:bg-bg">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-[13.5px] font-bold text-text">{item.property.address}</p>
-                  <span className={`inline-flex flex-shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${status.pill}`}>
-                    {status.label}
-                  </span>
+                className="cursor-pointer overflow-hidden rounded-[18px] border border-border bg-surface transition-colors active:bg-bg">
+                <div className="p-3">
+                  <p className="text-[13.5px] font-bold leading-tight text-text">{item.property.address}</p>
+                  {location && <p className="mt-0.5 text-[11px] text-text-faint">{location}</p>}
+                  <p className="mt-1.5 line-clamp-1 text-[12px] text-text-muted">{item.title?.trim() || "Sin título"}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-text-muted">
+                    <span className="inline-flex items-center gap-1">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                      {userLabel(item.assignedToUser)}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                      </svg>
+                      {formatDate(item.dueDate)}
+                    </span>
+                    {item._count.actions > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                        {item._count.actions}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <p className="mt-1 text-[11.5px] text-text-faint">{item.title?.trim() || "Sin título"}</p>
-                <div className="mt-2 flex items-center justify-between text-xs text-text-muted">
-                  <span>{userLabel(item.assignedToUser)}</span>
-                  <span>Vence: {formatDate(item.dueDate)}</span>
+                <div className={`flex items-center gap-1.5 border-t border-border px-3 py-1.5 text-[11.5px] font-bold ${status.pill}`}>
+                  <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+                  {status.label}
                 </div>
               </div>
             );
@@ -501,31 +529,24 @@ export function SeguimientosClient({
         </Sheet>
       )}
 
-      <AnimatePresence>
-        {detailOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
-            onClick={closeDetail}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              onClick={(event) => event.stopPropagation()}
-              className="fixed bottom-0 left-0 right-0 max-h-[90dvh] overflow-y-auto overscroll-contain rounded-t-[28px] border border-border bg-surface p-5 shadow-2xl sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[85vh] sm:w-full sm:max-w-4xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:p-6"
-            >
+      {detailOpen && (
+        <Sheet
+          open={detailOpen}
+          onClose={closeDetail}
+          title={detail?.property.address ?? "Seguimiento"}
+          maxWidth="sm:max-w-4xl"
+        >
               {!detail || loadingDetail ? (
-                <div className="flex min-h-[260px] items-center justify-center text-[12.5px] text-text-faint">
+                <div className="flex min-h-[260px] flex-col items-center justify-center gap-3 text-[12.5px] text-text-faint">
+                  <svg className="animate-spin text-text-muted" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  </svg>
                   Cargando detalle...
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr]">
                   <div className="flex flex-col gap-4">
                     <div>
-                      <h2 className="font-display text-[17px] font-semibold text-text">{detail.property.address}</h2>
                       <p className="text-[11.5px] text-text-faint">
                         Actualizado: {formatDateTime(detail.updatedAt)}
                       </p>
@@ -683,10 +704,8 @@ export function SeguimientosClient({
                   </div>
                 </div>
               )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </Sheet>
+      )}
 
       {/* Tabla → cards en mobile */}
     </div>

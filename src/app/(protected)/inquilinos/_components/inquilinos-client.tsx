@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import * as Dialog from "@radix-ui/react-dialog";
+import { Sheet } from "../../_components/sheet";
 import { Pagination } from "../../_components/pagination";
 import { WhatsAppLink } from "@/components/whatsapp-link";
 import { SelectField } from "@/components/ui/select-field";
@@ -316,10 +316,18 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
   const [submitting, setSubmitting] = useState(false);
   const signedUrls = useNoteSignedUrls(attachments.map((a) => a.path));
 
-  // Sync form when opening/editing
-  if (open && editing && editing.id !== "__internal_synced__") {
-    // simple field sync — using state ref pattern via key would be cleaner, mantengo simple
-  }
+  // Reset del form al abrir (antes se hacía en onOpenChange de Radix).
+  useEffect(() => {
+    if (!open) return;
+    setFullName(editing?.fullName ?? "");
+    setIdType((editing?.idType as "dni" | "cuit") ?? "dni");
+    setIdNumber(editing?.idNumber ?? "");
+    setPhone(editing?.phone ?? "");
+    setEmail(editing?.email ?? "");
+    setNotes(editing?.notes ?? "");
+    setAttachments(editing?.attachments ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   async function submit() {
     if (!fullName.trim()) {
@@ -371,60 +379,32 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
   }
 
   return (
-    <Dialog.Root
+    <Sheet
       open={open}
-      onOpenChange={(next) => {
-        if (next) {
-          setFullName(editing?.fullName ?? "");
-          setIdType((editing?.idType as "dni" | "cuit") ?? "dni");
-          setIdNumber(editing?.idNumber ?? "");
-          setPhone(editing?.phone ?? "");
-          setEmail(editing?.email ?? "");
-          setNotes(editing?.notes ?? "");
-          setAttachments(editing?.attachments ?? []);
-        }
-        onOpenChange(next);
-      }}
+      onClose={() => onOpenChange(false)}
+      title={editing ? "Editar inquilino" : "Nuevo inquilino"}
+      maxWidth="sm:max-w-[540px]"
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="px-2 text-[13px] font-semibold text-text-faint transition-colors hover:text-text"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={submitting}
+            className="inline-flex h-11 items-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? "Guardando…" : editing ? "Guardar cambios" : "Crear"}
+          </button>
+        </>
+      }
     >
-      <AnimatePresence>
-        {open && (
-          <Dialog.Portal forceMount>
-            <Dialog.Overlay asChild>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
-                className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
-              />
-            </Dialog.Overlay>
-            <Dialog.Content asChild>
-              <motion.div
-                initial={{ opacity: 0, y: 16, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 16, scale: 0.98 }}
-                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(540px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
-              >
-                <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-                  <Dialog.Title className="font-display text-[17px] font-semibold text-text">
-                    {editing ? "Editar inquilino" : "Nuevo inquilino"}
-                  </Dialog.Title>
-                  <Dialog.Close asChild>
-                    <button
-                      type="button"
-                      aria-label="Cerrar"
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
-                  </Dialog.Close>
-                </header>
-
-                <div className="flex-1 overflow-y-auto px-5 py-5">
+                <div>
                   <div className="flex flex-col gap-4">
                     <div>
                       <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
@@ -508,30 +488,6 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
                     </div>
                   </div>
                 </div>
-
-                <footer className="flex items-center justify-end gap-3 border-t border-border px-5 py-3 pt-3">
-                  <Dialog.Close asChild>
-                    <button
-                      type="button"
-                      className="px-2 text-[13px] font-semibold text-text-faint transition-colors hover:text-text"
-                    >
-                      Cancelar
-                    </button>
-                  </Dialog.Close>
-                  <button
-                    type="button"
-                    onClick={submit}
-                    disabled={submitting}
-                    className="inline-flex h-11 items-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {submitting ? "Guardando…" : editing ? "Guardar cambios" : "Crear"}
-                  </button>
-                </footer>
-              </motion.div>
-            </Dialog.Content>
-          </Dialog.Portal>
-        )}
-      </AnimatePresence>
-    </Dialog.Root>
+    </Sheet>
   );
 }

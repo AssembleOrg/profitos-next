@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
-import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { Sheet } from "../../_components/sheet";
 import type { Attachment } from "@/lib/signatures";
 import { MediaUploader } from "./media-uploader";
 import { useSignedUrls } from "./use-signed-urls";
@@ -94,51 +93,33 @@ export function CreateFirmaModal({
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <AnimatePresence>
-        {open && (
-          <Dialog.Portal forceMount>
-            <Dialog.Overlay asChild>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
-                className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
-              />
-            </Dialog.Overlay>
-            <Dialog.Content asChild>
-              <motion.div
-                initial={{ opacity: 0, y: 16, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 16, scale: 0.98 }}
-                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed left-1/2 top-1/2 z-50 flex max-h-[92dvh] w-[min(640px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
-              >
-                <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-                  <div>
-                    <Dialog.Title className="font-display text-[17px] font-semibold text-text">
-                      Nueva propuesta
-                    </Dialog.Title>
-                    <Dialog.Description className="mt-0.5 text-[12.5px] text-text-faint">
-                      Iniciá un proceso de firma adjuntando lo necesario.
-                    </Dialog.Description>
-                  </div>
-                  <Dialog.Close asChild>
-                    <button
-                      type="button"
-                      aria-label="Cerrar"
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
-                  </Dialog.Close>
-                </header>
-
-                <div className="flex-1 overflow-y-auto px-5 py-5">
+    <Sheet
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title="Nueva propuesta"
+      description="Iniciá un proceso de firma adjuntando lo necesario."
+      maxWidth="sm:max-w-[640px]"
+      footer={
+        <div className="flex w-full items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="text-[13px] font-semibold text-text-faint transition-colors hover:text-text"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={submitting}
+            className="inline-flex h-11 items-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? "Creando…" : "Crear propuesta"}
+          </button>
+        </div>
+      }
+    >
+                <div>
                   <div className="flex flex-col gap-5">
                     <div>
                       <label className="mb-1.5 flex items-center justify-between text-[12.5px] font-semibold text-text-muted">
@@ -244,31 +225,7 @@ export function CreateFirmaModal({
                     </div>
                   </div>
                 </div>
-
-                <footer className="flex items-center justify-end gap-3 border-t border-border bg-surface px-5 py-3">
-                  <Dialog.Close asChild>
-                    <button
-                      type="button"
-                      className="text-[13px] font-semibold text-text-faint transition-colors hover:text-text"
-                    >
-                      Cancelar
-                    </button>
-                  </Dialog.Close>
-                  <button
-                    type="button"
-                    onClick={submit}
-                    disabled={submitting}
-                    className="inline-flex h-11 items-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {submitting ? "Creando…" : "Crear propuesta"}
-                  </button>
-                </footer>
-              </motion.div>
-            </Dialog.Content>
-          </Dialog.Portal>
-        )}
-      </AnimatePresence>
-    </Dialog.Root>
+    </Sheet>
   );
 }
 

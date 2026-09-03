@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
-import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { Sheet } from "../../_components/sheet";
 import { formatDate, formatRelative } from "@/lib/datetime";
 import {
   RENTAL_DUE_STATUSES_MANUAL,
@@ -50,52 +49,27 @@ export function DueDetailModal({
 }: Readonly<DueDetailModalProps>) {
   if (!due) return null;
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <AnimatePresence>
-        {open && (
-          <Dialog.Portal forceMount>
-            <Dialog.Overlay asChild>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
-                className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm"
-              />
-            </Dialog.Overlay>
-            <Dialog.Content asChild>
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 20, scale: 0.98 }}
-                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed left-1/2 top-1/2 z-50 flex max-h-[94dvh] w-[min(820px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
-              >
-                <Body
-                  due={due}
-                  contractTitle={contractTitle}
-                  propertyAddress={propertyAddress}
-                  tenantName={tenantName}
-                  gracePeriodDays={gracePeriodDays}
-                  isAdmin={isAdmin}
-                  currentUserId={currentUserId}
-                  onUpdated={onUpdated}
-                  onClose={() => onOpenChange(false)}
-                />
-              </motion.div>
-            </Dialog.Content>
-          </Dialog.Portal>
-        )}
-      </AnimatePresence>
-    </Dialog.Root>
+    <Body
+      open={open}
+      due={due}
+      contractTitle={contractTitle}
+      propertyAddress={propertyAddress}
+      tenantName={tenantName}
+      gracePeriodDays={gracePeriodDays}
+      isAdmin={isAdmin}
+      currentUserId={currentUserId}
+      onUpdated={onUpdated}
+      onClose={() => onOpenChange(false)}
+    />
   );
 }
 
-interface BodyProps extends Omit<DueDetailModalProps, "open" | "onOpenChange"> {
+interface BodyProps extends Omit<DueDetailModalProps, "onOpenChange"> {
   onClose: () => void;
 }
 
 function Body({
+  open,
   due,
   contractTitle,
   propertyAddress,
@@ -162,39 +136,40 @@ function Body({
   }
 
   return (
-    <>
-      <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
-        <div className="min-w-0">
-          <Dialog.Title className="line-clamp-1 font-display text-[17px] font-semibold text-text">
+    <Sheet
+      open={open}
+      onClose={onClose}
+      maxWidth="sm:max-w-[820px]"
+      title={
+        <span className="flex items-center gap-2">
+          <span className="line-clamp-1">
             Cuota Nº {due.position} — {formatDate(due.dueDate)}
-          </Dialog.Title>
-          <p className="mt-0.5 truncate text-xs text-text-muted">
-            {propertyAddress}
-            {contractTitle ? ` · ${contractTitle}` : ""} · {tenantName}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+          </span>
           <span
-            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${style.chip}`}
+            className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${style.chip}`}
           >
             {RENTAL_DUE_STATUS_LABEL[effective]}
           </span>
-          <Dialog.Close asChild>
-            <button
-              type="button"
-              aria-label="Cerrar"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-bg hover:text-text"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </Dialog.Close>
+        </span>
+      }
+      description={
+        <span className="truncate">
+          {propertyAddress}
+          {contractTitle ? ` · ${contractTitle}` : ""} · {tenantName}
+        </span>
+      }
+      footer={
+        <div className="flex w-full items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[13px] font-semibold text-text-faint transition-colors hover:text-text"
+          >
+            Cerrar
+          </button>
         </div>
-      </header>
-
-      <div className="flex-1 overflow-y-auto px-5 py-5">
+      }
+    >
         <div className="flex flex-col gap-5">
           {/* Resumen montos */}
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -349,18 +324,7 @@ function Body({
             }}
           />
         </div>
-      </div>
-
-      <footer className="flex items-center justify-end gap-2 border-t border-border px-5 py-3">
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-[13px] font-semibold text-text-faint transition-colors hover:text-text"
-        >
-          Cerrar
-        </button>
-      </footer>
-    </>
+    </Sheet>
   );
 }
 
