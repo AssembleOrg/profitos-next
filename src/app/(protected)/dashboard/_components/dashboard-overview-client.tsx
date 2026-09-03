@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { ExploreLink } from "./explore-link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAccess } from "../../_components/access-context";
+import { formatRelative } from "@/lib/datetime";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatDateTime as fmtDateTime } from "@/lib/datetime";
 
 const SPRING = { type: "spring" as const, stiffness: 400, damping: 30 };
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -12,12 +13,13 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 interface DashboardOverview {
   scope: "admin" | "user";
   generatedAt: string;
-  days: 1 | 7 | 30;
   kpis: {
     propertiesActive: number;
     propertiesNewPeriod: number;
     pendingPropertyFollowUps: number;
     overduePropertyFollowUps: number;
+    unansweredQuestions: number;
+    questionsSyncedAt: string | null;
   };
   lastProperties: Array<{
     id: string;
@@ -49,56 +51,127 @@ interface DashboardOverview {
   }>;
 }
 
-function formatDateTime(value: string | null) {
-  if (!value) return "—";
-  try { return fmtDateTime(value); } catch { return "—"; }
+// ─── KPI Cards ───────────────────────────────────────────────────────────────
+// 4 cards clicables, misma altura. Mobile: carousel snap. Desktop: grid.
+// Cada card navega a la lista filtrada correspondiente. Valor 0 → "✓ Al día".
+type Variant = "default" | "red" | "green" | "amber";
+
+interface Stat {
+  label: string;
+  value: number | string;
+  sub: string;
+  variant: Variant;
+  href: string;
+  icon: "home" | "alert" | "clock" | "chat";
 }
 
-// ─── KPI Cards ───────────────────────────────────────────────────────────────
-// 4 cards clicables. Mobile: carousel snap. Desktop: grid 4 cols.
-// Cada card navega a la lista filtrada correspondiente.
-function KpiStrip({
-  kpis,
-  selectedDays,
-}: {
-  kpis: DashboardOverview["kpis"];
-  selectedDays: number;
-}) {
-  const totalPending = kpis.pendingPropertyFollowUps;
-  const isOverdue = kpis.overduePropertyFollowUps > 0;
-  const isPendingZero = totalPending === 0;
+const ICONS: Record<Stat["icon"], React.ReactNode> = {
+  home: (
+    <>
+      <path d="M3 10.5L12 3l9 7.5" />
+      <path d="M5 9.5V21h14V9.5" />
+    </>
+  ),
+  alert: (
+    <>
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </>
+  ),
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </>
+  ),
+  chat: <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />,
+};
 
-  const periodLabel = selectedDays === 1 ? "hoy" : `${selectedDays}d`;
-
-  const stats: {
-    label: string;
-    value: number | string;
-    sub: string;
-    variant: "default" | "red" | "green";
-    href: string;
-  }[] = [
+function buildStats(kpis: DashboardOverview["kpis"]): Stat[] {
+  const zero = (n: number) => n === 0;
+  // La tabla local solo se actualiza por webhook o "Traer de ML": mostramos la edad de la data.
+  const synced = kpis.questionsSyncedAt ? `sync ${formatRelative(kpis.questionsSyncedAt)}` : null;
+  return [
     {
       label: "Propiedades",
       value: kpis.propertiesActive,
-      sub: `+${kpis.propertiesNewPeriod} en ${periodLabel}`,
+      sub: `+${kpis.propertiesNewPeriod} esta semana`,
       variant: "default",
       href: "/propiedades?status=activa",
-    },
-    {
-      label: "Pendientes",
-      value: isPendingZero ? "✓" : totalPending,
-      sub: isPendingZero ? "Al día" : "seguimientos",
-      variant: isPendingZero ? "green" : "default",
-      href: "/seguimientos?status=pendiente",
+      icon: "home",
     },
     {
       label: "Vencidos",
-      value: isOverdue ? kpis.overduePropertyFollowUps : "✓",
-      sub: isOverdue ? "requieren atención" : "Al día",
-      variant: isOverdue ? "red" : "green",
-      href: "/seguimientos",
+      value: zero(kpis.overduePropertyFollowUps) ? "✓" : kpis.overduePropertyFollowUps,
+      sub: zero(kpis.overduePropertyFollowUps) ? "Al día" : "requieren atención",
+      variant: zero(kpis.overduePropertyFollowUps) ? "green" : "red",
+      href: "/seguimientos?vencidos=1",
+      icon: "alert",
+    },
+    {
+      label: "Pendientes",
+      value: zero(kpis.pendingPropertyFollowUps) ? "✓" : kpis.pendingPropertyFollowUps,
+      sub: zero(kpis.pendingPropertyFollowUps) ? "Al día" : "seguimientos",
+      variant: zero(kpis.pendingPropertyFollowUps) ? "green" : "amber",
+      href: "/seguimientos?status=pendiente",
+      icon: "clock",
+    },
+    {
+      label: "Preguntas ML",
+      value: !synced ? "—" : zero(kpis.unansweredQuestions) ? "✓" : kpis.unansweredQuestions,
+      sub: !synced ? "sin sincronizar" : zero(kpis.unansweredQuestions) ? synced : `sin responder · ${synced}`,
+      variant: synced && zero(kpis.unansweredQuestions) ? "green" : "amber",
+      href: "/preguntas?status=UNANSWERED",
+      icon: "chat",
     },
   ];
+}
+
+const TINT: Record<Variant, string> = {
+  default: "bg-sand-chip",
+  red: "bg-clay-chip",
+  green: "bg-sage-chip",
+  amber: "bg-sand-chip",
+};
+const TONE: Record<Variant, string> = {
+  default: "text-text",
+  red: "text-terra",
+  green: "text-olive-light",
+  amber: "text-warning",
+};
+
+// Card 0 = hero dark; resto tintadas por variant. Mismo padding/tamaños en todas.
+function KpiCard({ s, hero, dim }: { s: Stat; hero: boolean; dim?: boolean }) {
+  const shell = hero
+    ? "rounded-3xl bg-dark text-dark-fg"
+    : `rounded-[18px] ${TINT[s.variant]}`;
+  const label = hero ? "text-dark-muted" : "text-text-faint";
+  const iconWrap = hero ? "bg-white/10 text-accent" : `bg-surface ${TONE[s.variant]}`;
+  const value = hero ? "text-dark-fg" : TONE[s.variant];
+  const sub = hero ? "text-accent" : s.variant === "default" ? "text-text-muted" : TONE[s.variant];
+  return (
+    <Link
+      href={s.href}
+      className={`flex h-full flex-col p-4 transition-opacity active:scale-[0.98] ${shell} ${dim ? "opacity-60" : "opacity-100"}`}
+    >
+      <span className="flex items-center gap-2">
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${iconWrap}`}>
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            {ICONS[s.icon]}
+          </svg>
+        </span>
+        <span className={`text-[10px] font-bold uppercase tracking-[0.12em] ${label}`}>{s.label}</span>
+      </span>
+      <span className={`mt-1.5 font-display text-2xl font-bold tabular-nums md:text-3xl ${value}`}>{s.value}</span>
+      <span className={`mt-1 truncate text-[10.5px] ${sub}`}>{s.sub}</span>
+    </Link>
+  );
+}
+
+function KpiStrip({ kpis }: { kpis: DashboardOverview["kpis"] }) {
+  const { canAccess } = useAccess();
+  const stats = buildStats(kpis).filter((s) => canAccess(s.href.split("?")[0]));
 
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -117,99 +190,22 @@ function KpiStrip({
     return () => clearInterval(interval);
   }, [paused, stats.length]);
 
-  // V4: card 0 = hero dark, cards 1-3 = tintadas (sand / sage / clay)
-  function cardClasses(variant: "default" | "red" | "green", isActive: boolean, mobile: boolean, index: number) {
-    const opacity = mobile ? (isActive ? "opacity-100" : "opacity-60") : "";
-    if (index === 0) return `flex flex-col rounded-3xl bg-dark p-4 text-dark-fg transition-opacity md:p-5 ${opacity}`;
-    const tint =
-      index === 1
-        ? "bg-sand-chip"
-        : index === 2
-          ? "bg-sage-chip"
-          : variant === "red"
-            ? "bg-clay-chip"
-            : "bg-sage-chip";
-    return `flex flex-col rounded-[18px] ${tint} p-4 transition-opacity ${opacity}`;
-  }
-
-  function labelClasses(variant: "default" | "red" | "green", index: number) {
-    if (index === 0) return "text-[10px] font-bold uppercase tracking-[0.12em] text-dark-muted";
-    return "text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint";
-  }
-
-  function valueClasses(variant: "default" | "red" | "green", index: number) {
-    if (index === 0) return "mt-2 font-display text-3xl font-bold tabular-nums text-dark-fg md:text-4xl";
-    const tone = variant === "red" ? "text-terra" : variant === "green" ? "text-olive-light" : "text-text";
-    return `mt-1.5 font-display text-2xl font-bold tabular-nums ${tone}`;
-  }
-
-  function subClasses(variant: "default" | "red" | "green", index: number) {
-    if (index === 0) return "mt-2 inline-flex w-fit items-center rounded-full bg-white/10 px-2 py-0.5 text-[10.5px] font-semibold text-accent";
-    const tone = variant === "red" ? "text-terra" : variant === "green" ? "text-olive-light" : "text-text-muted";
-    return `mt-1 text-[10.5px] ${tone}`;
-  }
-
-  function kpiIcon(variant: "default" | "red" | "green", index: number) {
-    if (index === 0) return null;
-    const tone = index === 1 ? "text-warning" : index === 3 && variant === "red" ? "text-terra" : "text-olive-light";
-    const common = {
-      width: 14,
-      height: 14,
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: 2,
-      strokeLinecap: "round" as const,
-      strokeLinejoin: "round" as const,
-    };
-    return (
-      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface ${tone}`}>
-        {index === 1 && (
-          <svg {...common}>
-            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-          </svg>
-        )}
-        {index === 2 && (
-          <svg {...common}>
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-        )}
-        {index === 3 && (
-          <svg {...common}>
-            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-          </svg>
-        )}
-      </span>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-2">
-      {/* Desktop: grid 4 cols */}
-      <div className="hidden gap-3 md:grid md:grid-cols-4">
+      {/* Desktop: grid, una columna por card (3 o 4 según acceso) */}
+      <div
+        className="hidden gap-3 md:grid"
+        style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}
+      >
         {stats.map((s, i) => (
           <motion.div
             key={s.label}
+            className="h-full"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...SPRING, delay: i * 0.04 }}
           >
-            <Link href={s.href} className={`${cardClasses(s.variant, true, false, i)} block active:scale-[0.98]`}>
-              {i === 0 ? (
-                <span className={labelClasses(s.variant, i)}>{s.label}</span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  {kpiIcon(s.variant, i)}
-                  <span className={labelClasses(s.variant, i)}>{s.label}</span>
-                </span>
-              )}
-              <span className={valueClasses(s.variant, i)}>{s.value}</span>
-              <span className={subClasses(s.variant, i)}>{s.sub}</span>
-            </Link>
+            <KpiCard s={s} hero={i === 0} />
           </motion.div>
         ))}
       </div>
@@ -235,18 +231,7 @@ function KpiStrip({
               transition={{ ...SPRING, delay: i * 0.04 }}
               className="w-[calc(50vw-28px)] min-w-[110px] max-w-[160px] shrink-0 snap-center"
             >
-              <Link href={s.href} className={`${cardClasses(s.variant, active === i, true, i)} block`}>
-                {i === 0 ? (
-                  <span className={labelClasses(s.variant, i)}>{s.label}</span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    {kpiIcon(s.variant, i)}
-                    <span className={labelClasses(s.variant, i)}>{s.label}</span>
-                  </span>
-                )}
-                <span className={valueClasses(s.variant, i)}>{s.value}</span>
-                <span className={subClasses(s.variant, i)}>{s.sub}</span>
-              </Link>
+              <KpiCard s={s} hero={i === 0} dim={active !== i} />
             </motion.div>
           ))}
         </div>
@@ -413,13 +398,12 @@ export function DashboardOverviewClient() {
   const [data, setData] = useState<DashboardOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDays, setSelectedDays] = useState<1 | 7 | 30>(7);
 
   useEffect(() => {
     let mounted = true;
     async function load() {
       try {
-        const res = await fetch(`/api/dashboard/overview?days=${selectedDays}`, { cache: "no-store" });
+        const res = await fetch("/api/dashboard/overview", { cache: "no-store" });
         const body = await res.json();
         if (!res.ok) throw new Error(body?.message ?? "No se pudo cargar dashboard");
         if (mounted) setData(body.data as DashboardOverview);
@@ -431,12 +415,7 @@ export function DashboardOverviewClient() {
     }
     void load();
     return () => { mounted = false; };
-  }, [selectedDays]);
-
-  const scopeLabel = useMemo(() => {
-    if (!data) return "";
-    return data.scope === "admin" ? "Global" : "Personal";
-  }, [data]);
+  }, []);
 
   if (loading) {
     return (
@@ -462,42 +441,8 @@ export function DashboardOverviewClient() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Header compacto */}
-      <div className="flex items-center justify-between">
-        <p className="text-[11.5px] text-text-faint">
-          {scopeLabel} · {formatDateTime(data.generatedAt)}
-        </p>
-        <div className="inline-flex items-center gap-0.5 rounded-full border border-border bg-surface p-1">
-          {([1, 7, 30] as const).map((days) => (
-            <motion.button
-              key={days}
-              onClick={() => setSelectedDays(days)}
-              whileTap={{ scale: 0.92 }}
-              className={`relative rounded-full px-3 py-1.5 text-[12.5px] transition-colors ${
-                selectedDays === days ? "font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
-              }`}
-            >
-              {selectedDays === days && (
-                <motion.div
-                  layoutId="days-pill"
-                  className="absolute inset-0 rounded-full bg-dark"
-                  transition={SPRING}
-                />
-              )}
-              <span className="relative">
-                {days === 1 ? "Hoy" : `${days}d`}
-              </span>
-            </motion.button>
-          ))}
-        </div>
-      </div>
-
-      {/* KPI horizontal scroll */}
-      <KpiStrip
-        kpis={data.kpis}
-        selectedDays={selectedDays}
-      />
+    <div className="flex flex-col gap-3">
+      <KpiStrip kpis={data.kpis} />
 
       {/* Tabbed feed */}
       <TabbedFeed data={data} />

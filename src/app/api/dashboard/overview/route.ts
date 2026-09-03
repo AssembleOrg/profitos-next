@@ -13,9 +13,7 @@ function subtractDays(days: number) {
 export const GET = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
   const auth = await getAuthContext();
-  const daysRaw = Number.parseInt(request.nextUrl.searchParams.get("days") ?? "7", 10);
-  const days = [1, 7, 30].includes(daysRaw) ? daysRaw : 7;
-  const sinceDate = subtractDays(days);
+  const sinceDate = subtractDays(7);
 
   const propertyFollowUpWhere = auth.isAdmin ? {} : { assignedToUserId: auth.userId };
 
@@ -24,6 +22,8 @@ export const GET = withHandler(async (request: NextRequest) => {
     propertiesNewPeriod,
     pendingPropertyFollowUps,
     overduePropertyFollowUps,
+    unansweredQuestions,
+    questionsAgg,
     lastPropertiesRaw,
     propertyFollowUpsRaw,
     propertyActionsRaw,
@@ -32,7 +32,7 @@ export const GET = withHandler(async (request: NextRequest) => {
       where: { status: "activa" },
     }),
     prisma.property.count({
-      where: { createdAt: { gte: sinceDate } },
+      where: { status: "activa", createdAt: { gte: sinceDate } },
     }),
     prisma.propertyFollowUp.count({
       where: {
@@ -46,6 +46,14 @@ export const GET = withHandler(async (request: NextRequest) => {
         status: { notIn: ["hecho", "cancelado"] },
         dueDate: { lt: new Date() },
       },
+    }),
+    prisma.portalQuestion.count({
+      where: { portal: "mercadolibre", status: "UNANSWERED" },
+    }),
+    // Última sync: el upsert (webhook o "Traer de ML") bumpea updatedAt.
+    prisma.portalQuestion.aggregate({
+      where: { portal: "mercadolibre" },
+      _max: { updatedAt: true },
     }),
     prisma.property.findMany({
       orderBy: [{ createdAt: "desc" }],
@@ -127,12 +135,13 @@ export const GET = withHandler(async (request: NextRequest) => {
   const payload = {
     scope: auth.isAdmin ? "admin" : "user",
     generatedAt: new Date().toISOString(),
-    days,
     kpis: {
       propertiesActive,
       propertiesNewPeriod,
       pendingPropertyFollowUps,
       overduePropertyFollowUps,
+      unansweredQuestions,
+      questionsSyncedAt: questionsAgg._max.updatedAt?.toISOString() ?? null,
     },
     lastProperties: lastPropertiesRaw.map((item) => ({
       ...item,

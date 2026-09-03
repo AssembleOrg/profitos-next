@@ -36,7 +36,7 @@ export default async function ProtectedLayout({
         Hola, {user.fullName?.split(" ")[0] ?? user.email.split("@")[0]}
       </h2>
       <span className="whitespace-nowrap text-[11.5px] text-text-faint">
-        {now().toFormat("dd/MM/yyyy")}
+        {now().toFormat("dd/MM/yyyy")} · {isAdmin ? "Global" : "Personal"}
       </span>
     </div>
   );

@@ -7,7 +7,7 @@ import { SeguimientosClient } from "./_components/seguimientos-client";
 const PAGE_SIZE = 20;
 
 interface Props {
-  searchParams: Promise<{ page?: string; limit?: string; q?: string; status?: string }>;
+  searchParams: Promise<{ page?: string; limit?: string; q?: string; status?: string; vencidos?: string }>;
 }
 
 export default async function SeguimientosPage({ searchParams }: Props) {
@@ -21,6 +21,11 @@ export default async function SeguimientosPage({ searchParams }: Props) {
   const status = sp.status?.trim() ?? "";
   const where: Prisma.PropertyFollowUpWhereInput = user.role === "admin" ? {} : { assignedToUserId: user.id };
   if (status) where.status = status;
+  // Deep-link desde el dashboard: misma definición que el KPI "vencidos" del API.
+  if (sp.vencidos === "1") {
+    where.status = { notIn: ["hecho", "cancelado"] };
+    where.dueDate = { lt: new Date() };
+  }
   if (q) {
     where.OR = [
       { title: { contains: q, mode: "insensitive" } },
