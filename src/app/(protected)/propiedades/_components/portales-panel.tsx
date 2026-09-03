@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Sheet } from "../../_components/sheet";
 
 type PortalKey = "mercadolibre" | "zonaprop" | "argenprop";
 
@@ -60,6 +61,8 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
   const [responsibles, setResponsibles] = useState<Responsible[]>([]);
   const [respUserId, setRespUserId] = useState<string>(""); // "" = responsable por defecto
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Confirmación reutilizable (reemplaza window.confirm) para publicar/cambiar estado.
+  const [confirm, setConfirm] = useState<{ title: string; body: string; cta: string; danger?: boolean; run: () => void } | null>(null);
 
   const load = useCallback(async () => {
     const [statusData, pubData, creditsData, respData] = await Promise.all([
@@ -120,15 +123,6 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
   async function publishOne(portal: PortalKey, activate = false) {
     const plan = portal === "zonaprop" && activate ? zpPlan : undefined;
     const responsibleUserId = portal === "zonaprop" && respUserId ? respUserId : undefined;
-    if (
-      activate &&
-      !window.confirm(
-        `Publicar en ${PORTAL_META[portal].label} pone el aviso ONLINE y CONSUME 1 crédito` +
-          (plan ? ` del plan ${ZP_PLAN_LABEL(plan)}` : "") +
-          `. ¿Confirmás?`
-      )
-    )
-      return;
     setBusy(portal);
     try {
       const res = await fetch(`/api/integrations/portales/${portal}/publish`, {
@@ -237,15 +231,6 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
    * ZonaProp no está soportado (su panel no expone el circuito de forma estable).
    */
   async function changeState(portal: PortalKey, action: "pause" | "close" | "activate") {
-    if (
-      action === "close" &&
-      !window.confirm(
-        portal === "mercadolibre"
-          ? "Dar de baja en MercadoLibre CIERRA la publicación de forma IRREVERSIBLE (para volver hay que republicar desde el wizard). ¿Confirmás?"
-          : "Dar de baja ELIMINA el aviso de ArgenProp. ¿Confirmás?"
-      )
-    )
-      return;
     setBusy(`state:${portal}`);
     try {
       const res = await fetch(`/api/integrations/portales/${portal}/state`, {
@@ -324,56 +309,70 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
             const pub = pubs[portal];
             const chip = pub ? STATUS_CHIP[pub.status] : null;
             return (
-              <div key={portal} className="flex flex-wrap items-center gap-2 rounded-[12px] border border-border bg-bg px-3 py-2.5">
-                <span className="flex items-center gap-2 font-semibold text-text">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: meta.dot }} aria-hidden />
-                  {meta.label}
-                </span>
+              <div key={portal} className="rounded-[12px] border border-border bg-bg px-3 py-2.5">
+                {/* Fila 1: identidad + chips de estado */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="flex items-center gap-2 font-semibold text-text">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: meta.dot }} aria-hidden />
+                    {meta.label}
+                  </span>
 
-                {/* Conexión */}
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                    c?.connected ? "bg-sage-chip text-olive-light" : "bg-clay-chip text-terra"
-                  }`}
-                  title={c?.actionHint ?? undefined}
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${c?.connected ? "bg-olive-light" : "bg-terra"}`} aria-hidden />
-                  {c?.connected ? "Conectado" : c?.actionHint ?? "Sin conexión"}
-                </span>
-
-                {/* Reconectar (login remoto) — sólo ZonaProp/ArgenProp; ML usa OAuth */}
-                {!c?.connected && portal !== "mercadolibre" && (
-                  <button
-                    onClick={() => void startRelogin(portal)}
-                    disabled={busy !== null}
-                    className="rounded-full border border-terra/40 bg-clay-chip px-2.5 py-0.5 text-[11px] font-bold text-terra transition-colors hover:bg-terra hover:text-white disabled:opacity-50"
-                    title="Abrí una ventana para loguearte de nuevo en el portal"
+                  {/* Conexión */}
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                      c?.connected ? "bg-sage-chip text-olive-light" : "bg-clay-chip text-terra"
+                    }`}
+                    title={c?.actionHint ?? undefined}
                   >
-                    {busy === `relogin:${portal}` ? "Abriendo…" : "Reconectar"}
-                  </button>
-                )}
+                    <span className={`h-1.5 w-1.5 rounded-full ${c?.connected ? "bg-olive-light" : "bg-terra"}`} aria-hidden />
+                    {c?.connected ? "Conectado" : c?.actionHint ?? "Sin conexión"}
+                  </span>
 
-                {/* Estado publicación */}
-                {chip ? (
-                  pub?.permalink ? (
-                    <a href={pub.permalink} target="_blank" rel="noopener noreferrer" className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold hover:underline ${chip.cls}`} title={pub.lastError ?? undefined}>
-                      {chip.label}
-                    </a>
+                  {/* Reconectar (login remoto) — sólo ZonaProp/ArgenProp; ML usa OAuth */}
+                  {!c?.connected && portal !== "mercadolibre" && (
+                    <button
+                      onClick={() => void startRelogin(portal)}
+                      disabled={busy !== null}
+                      className="rounded-full border border-terra/40 bg-clay-chip px-2.5 py-0.5 text-[11px] font-bold text-terra transition-colors hover:bg-terra hover:text-white disabled:opacity-50"
+                      title="Abrí una ventana para loguearte de nuevo en el portal"
+                    >
+                      {busy === `relogin:${portal}` ? "Abriendo…" : "Reconectar"}
+                    </button>
+                  )}
+
+                  {/* Estado publicación */}
+                  {chip ? (
+                    pub?.permalink ? (
+                      <a href={pub.permalink} target="_blank" rel="noopener noreferrer" className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold hover:underline ${chip.cls}`} title={pub.lastError ?? undefined}>
+                        {chip.label}
+                      </a>
+                    ) : (
+                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${chip.cls}`} title={pub.lastError ?? undefined}>
+                        {chip.label}
+                      </span>
+                    )
                   ) : (
-                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${chip.cls}`} title={pub.lastError ?? undefined}>
-                      {chip.label}
-                    </span>
-                  )
-                ) : (
-                  <span className="rounded-full bg-bg px-2.5 py-0.5 text-[11px] font-semibold text-text-faint">Sin publicar</span>
-                )}
+                    <span className="rounded-full bg-bg px-2.5 py-0.5 text-[11px] font-semibold text-text-faint">Sin publicar</span>
+                  )}
+                </div>
 
-                <div className="ml-auto flex items-center gap-2">
+                {/* Fila 2: acciones (wrap limpio, sin empujar) */}
+                <div className="mt-2 flex flex-wrap items-center gap-2 sm:mt-0 sm:justify-end">
                   {/* Pausar / Reactivar / Dar de baja — sobre avisos ya publicados (AP y ML) */}
                   {portal !== "zonaprop" && pub?.published && (pub.status === "active" || pub.status === "paused") && (
                     <>
                       <button
-                        onClick={() => void changeState(portal, pub.status === "active" ? "pause" : "activate")}
+                        onClick={() => {
+                          const activate = pub.status !== "active";
+                          setConfirm({
+                            title: activate ? "¿Reactivar aviso?" : "¿Pausar aviso?",
+                            body: activate
+                              ? `Vuelve a poner el aviso activo en ${meta.label}.`
+                              : `Pausa el aviso en ${meta.label} (se puede reactivar después).`,
+                            cta: activate ? "Reactivar" : "Pausar",
+                            run: () => void changeState(portal, activate ? "activate" : "pause"),
+                          });
+                        }}
                         disabled={busy !== null}
                         className="rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-bold text-text-muted transition-colors hover:bg-bg disabled:opacity-50"
                         title={pub.status === "active" ? "Pausa el aviso (se puede reactivar)" : "Vuelve a poner el aviso activo"}
@@ -381,7 +380,18 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                         {busy === `state:${portal}` ? "Aplicando…" : pub.status === "active" ? "Pausar" : "Reactivar"}
                       </button>
                       <button
-                        onClick={() => void changeState(portal, "close")}
+                        onClick={() =>
+                          setConfirm({
+                            title: "¿Dar de baja el aviso?",
+                            body:
+                              portal === "mercadolibre"
+                                ? "Cierra la publicación en MercadoLibre de forma IRREVERSIBLE (para volver hay que republicar desde el wizard)."
+                                : "Elimina el aviso de ArgenProp.",
+                            cta: "Dar de baja",
+                            danger: true,
+                            run: () => void changeState(portal, "close"),
+                          })
+                        }
                         disabled={busy !== null}
                         className="rounded-full bg-clay-chip px-3 py-1.5 text-[12px] font-bold text-terra transition-opacity hover:opacity-80 disabled:opacity-50"
                         title={portal === "mercadolibre" ? "Cierra la publicación (irreversible en ML)" : "Elimina el aviso de ArgenProp"}
@@ -400,7 +410,17 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                         aria-label={`Seleccionar ${meta.label} para publicación grupal`}
                       />
                       <button
-                        onClick={() => void publishOne(portal, false)}
+                        onClick={() =>
+                          setConfirm({
+                            title: portal === "argenprop" ? "¿Publicar en ArgenProp?" : "¿Crear borrador?",
+                            body:
+                              portal === "argenprop"
+                                ? "Crea y publica el aviso en ArgenProp (no tiene borrador)."
+                                : `Crea el aviso como borrador en ${meta.label} (gratis, no consume crédito).`,
+                            cta: portal === "argenprop" ? "Publicar" : "Crear borrador",
+                            run: () => void publishOne(portal, false),
+                          })
+                        }
                         disabled={busy !== null || pub?.status === "publishing"}
                         className="rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-bold text-text transition-colors hover:bg-bg disabled:opacity-50"
                         title={
@@ -418,7 +438,7 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                               value={respUserId}
                               onChange={(e) => setRespUserId(e.target.value)}
                               disabled={busy !== null || pub?.status === "publishing"}
-                              className="max-w-[140px] rounded-full border border-border bg-surface px-2 py-1.5 text-[11.5px] font-semibold text-text-muted disabled:opacity-50"
+                              className="min-w-0 max-w-[140px] flex-1 rounded-full border border-border bg-surface px-2 py-1.5 text-[11.5px] font-semibold text-text-muted disabled:opacity-50 sm:flex-none"
                               title="Responsable del aviso (quién recibe las consultas)"
                               aria-label="Responsable ZonaProp"
                             >
@@ -445,7 +465,15 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                             ))}
                           </select>
                           <button
-                            onClick={() => void publishOne(portal, true)}
+                            onClick={() =>
+                              setConfirm({
+                                title: "¿Publicar activo en ZonaProp?",
+                                body: `Pone el aviso ONLINE y CONSUME 1 crédito del plan ${ZP_PLAN_LABEL(zpPlan)}.`,
+                                cta: "Publicar activo",
+                                danger: true,
+                                run: () => void publishOne(portal, true),
+                              })
+                            }
                             disabled={busy !== null || pub?.status === "publishing"}
                             className="rounded-full bg-dark px-3 py-1.5 text-[12px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
                             title="Publica el aviso ONLINE — consume 1 crédito del plan elegido"
@@ -464,12 +492,19 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
           })}
 
           {/* Acción grupal */}
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <p className="text-[11.5px] text-text-faint">
               {selected.size ? `${selected.size} portal(es) seleccionado(s)` : "Marcá portales para publicar en grupo"}
             </p>
             <button
-              onClick={() => void publishSelected()}
+              onClick={() =>
+                setConfirm({
+                  title: "¿Publicar en grupo?",
+                  body: `Encola la publicación en ${selected.size} portal(es) seleccionado(s).`,
+                  cta: "Publicar",
+                  run: () => void publishSelected(),
+                })
+              }
               disabled={!selected.size || busy !== null}
               className="rounded-full border border-border bg-surface px-3.5 py-1.5 text-[12px] font-bold text-text transition-colors hover:bg-bg disabled:opacity-50"
             >
@@ -478,6 +513,32 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
           </div>
         </div>
       )}
+
+      {/* Confirmación de publicar / cambiar estado */}
+      <Sheet
+        open={confirm !== null}
+        onClose={() => setConfirm(null)}
+        title={confirm?.title ?? ""}
+        maxWidth="sm:max-w-sm"
+        footer={
+          <div className="flex w-full items-center justify-end gap-3">
+            <button
+              onClick={() => setConfirm(null)}
+              className="px-2 text-[13px] font-semibold text-text-faint hover:text-text"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => { confirm?.run(); setConfirm(null); }}
+              className={`inline-flex h-11 items-center justify-center rounded-full px-5 text-[13.5px] font-bold transition-opacity hover:opacity-90 ${confirm?.danger ? "bg-clay-chip text-terra" : "bg-dark text-dark-fg"}`}
+            >
+              {confirm?.cta ?? "Confirmar"}
+            </button>
+          </div>
+        }
+      >
+        <p className="text-[13.5px] text-text-muted">{confirm?.body}</p>
+      </Sheet>
 
       {/* Modal de login remoto: transmite el navegador del worker (noVNC). */}
       {relogin && (

@@ -376,21 +376,24 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                     <p className="mt-0.5 text-xs text-text-muted">
                       {ev.allDay ? "Todo el día" : `${ev.startTime} – ${ev.endTime}`}
                     </p>
-                    {(ev.client || ev.property) && (
-                      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                    {(ev.client || ev.property || ev.userName) && (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-text-muted">
                         {ev.client && (
-                          <span className="text-xs text-text-muted">
-                            <span className="text-text-muted/50">Cliente:</span> {ev.client}
+                          <span className="inline-flex items-center gap-1">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                            {ev.client}
                           </span>
                         )}
                         {ev.property && (
-                          <span className="truncate text-xs text-text-muted">
-                            <span className="text-text-muted/50">Propiedad:</span> {ev.property}
+                          <span className="inline-flex min-w-0 items-center gap-1">
+                            <svg className="shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M4 21V7l8-4 8 4v14M9 21v-6h6v6" /></svg>
+                            <span className="truncate">{ev.property}</span>
                           </span>
                         )}
                         {ev.userName && (
-                          <span className="text-xs text-text-muted">
-                            <span className="text-text-muted/50">Resp:</span> {ev.userName}
+                          <span className="inline-flex items-center gap-1">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 00-3-3.87" /></svg>
+                            {ev.userName}
                           </span>
                         )}
                       </div>

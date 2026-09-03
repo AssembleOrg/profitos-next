@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExploreLink } from "./explore-link";
 import { prisma } from "@/lib/prisma/client";
 import { formatDate, formatRelative, fromJSDate, now } from "@/lib/datetime";
 import {
@@ -53,12 +54,7 @@ export async function ProximasFirmasCard({
             Eventos pendientes en los próximos {daysAhead} días
           </p>
         </div>
-        <Link
-          href="/firmas"
-          className="shrink-0 text-[12.5px] font-bold text-terra transition-opacity hover:opacity-80"
-        >
-          Ver todas →
-        </Link>
+        <ExploreLink href="/firmas" />
       </header>
 
       <div className="mt-4 flex flex-col gap-2">

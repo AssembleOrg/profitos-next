@@ -51,6 +51,37 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
   const [newDireccion, setNewDireccion] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Mobile filters sheet (drafts diferidos)
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [draftStatus, setDraftStatus] = useState(statusFilter);
+  const [draftFrom, setDraftFrom] = useState(fromDate);
+  const [draftTo, setDraftTo] = useState(toDate);
+  const activeCount = [statusFilter, fromDate, toDate].filter(Boolean).length;
+
+  function openFilters() {
+    setDraftStatus(statusFilter);
+    setDraftFrom(fromDate);
+    setDraftTo(toDate);
+    setFiltersOpen(true);
+  }
+  function applyDraftFilters() {
+    setStatusFilter(draftStatus);
+    setFromDate(draftFrom);
+    setToDate(draftTo);
+    setFiltersOpen(false);
+    const params = new URLSearchParams(searchParams.toString());
+    if (query.trim()) params.set("q", query.trim()); else params.delete("q");
+    if (draftStatus) params.set("status", draftStatus); else params.delete("status");
+    if (draftFrom) params.set("from", draftFrom); else params.delete("from");
+    if (draftTo) params.set("to", draftTo); else params.delete("to");
+    params.delete("page");
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  }
+  function clearDraftFilters() {
+    setDraftStatus(""); setDraftFrom(""); setDraftTo("");
+  }
+
   function applyFilters(nextPage = 1) {
     const params = new URLSearchParams(searchParams.toString());
     if (query.trim()) params.set("q", query.trim());
@@ -135,8 +166,35 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+      {/* Filters — mobile: barra compacta + Sheet */}
+      <div className="flex gap-2 sm:hidden">
+        <div className="relative flex-1">
+          <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            placeholder="Buscar por dirección..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && applyFilters(1)}
+            className="h-10 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
+          />
+        </div>
+        <button
+          onClick={openFilters}
+          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text-muted active:bg-bg"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+          Filtros
+          {activeCount > 0 && (
+            <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-dark px-1 text-[11px] font-bold text-dark-fg">{activeCount}</span>
+          )}
+        </button>
+      </div>
+
+      {/* Filters — desktop: toolbar única */}
+      <div className="hidden gap-2 sm:flex sm:flex-wrap sm:items-center">
         <div className="relative flex-1 sm:min-w-[200px]">
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
@@ -150,31 +208,14 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
             className="h-11 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
           />
         </div>
-        <SelectField
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          wrapperClassName="min-w-0"
-        >
+        <SelectField value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} wrapperClassName="min-w-0">
           <option value="">Todos los estados</option>
           <option value="borrador">Borrador</option>
           <option value="completada">Completada</option>
         </SelectField>
-        <DatePicker
-          value={fromDate}
-          onChange={setFromDate}
-          aria-label="Desde"
-          className="h-11 min-w-0 rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
-        />
-        <DatePicker
-          value={toDate}
-          onChange={setToDate}
-          aria-label="Hasta"
-          className="h-11 min-w-0 rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
-        />
-        <button
-          onClick={() => applyFilters(1)}
-          className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
-        >
+        <DatePicker value={fromDate} onChange={setFromDate} aria-label="Desde" className="h-11 min-w-0 rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none" />
+        <DatePicker value={toDate} onChange={setToDate} aria-label="Hasta" className="h-11 min-w-0 rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none" />
+        <button onClick={() => applyFilters(1)} className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90">
           Buscar
         </button>
       </div>
@@ -295,6 +336,47 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
 
       {/* Pagination */}
       <Pagination page={page} totalPages={totalPages} total={total} limit={limit} />
+
+      {/* Mobile filters sheet */}
+      <Sheet
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title="Filtros"
+        footer={
+          <div className="flex w-full items-center justify-between gap-3">
+            <button onClick={clearDraftFilters} className="px-2 text-[13px] font-semibold text-text-faint hover:text-text">
+              Limpiar
+            </button>
+            <button
+              onClick={applyDraftFilters}
+              className="inline-flex h-11 items-center justify-center rounded-full bg-dark px-6 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
+            >
+              Aplicar
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Estado</label>
+            <SelectField value={draftStatus} onChange={(e) => setDraftStatus(e.target.value)} wrapperClassName="min-w-0">
+              <option value="">Todos los estados</option>
+              <option value="borrador">Borrador</option>
+              <option value="completada">Completada</option>
+            </SelectField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Desde</label>
+              <DatePicker value={draftFrom} onChange={setDraftFrom} aria-label="Desde" className="h-11 w-full min-w-0 rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Hasta</label>
+              <DatePicker value={draftTo} onChange={setDraftTo} aria-label="Hasta" className="h-11 w-full min-w-0 rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none" />
+            </div>
+          </div>
+        </div>
+      </Sheet>
 
       {/* Create modal */}
       <Sheet

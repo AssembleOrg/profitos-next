@@ -122,7 +122,7 @@ export function TimePicker({ name, label, value, defaultValue, onChange, require
         <div
           ref={popRef}
           style={{ left: coords.left, width: coords.width, top: coords.top, bottom: coords.bottom }}
-          className="fixed z-[60] min-w-[8rem] overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+          className="pointer-events-auto fixed z-[60] min-w-[8rem] overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
         >
           <div className="flex">
             <div ref={hourColRef} className="flex-1 overflow-y-auto border-r border-border py-1" style={{ maxHeight: 200 }}>

@@ -108,7 +108,7 @@ export function TasacionForm({ tasacion }: Props) {
   }, [direccion, ubicacionUnidad, superficieTotal, superficieMono, condicionVenta, mapaImageUrl, fotos, informeHtml, resultadoHtml, listaPreciosTitulo, tablas, tasacion.id, router]);
 
   return (
-    <div className="mx-auto max-w-4xl min-w-0 space-y-8 overflow-hidden">
+    <div className="mx-auto max-w-5xl min-w-0 space-y-5 overflow-hidden">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
@@ -232,30 +232,33 @@ export function TasacionForm({ tasacion }: Props) {
         <MultiImageUploader images={fotos} onChange={setFotos} />
       </div>
 
-      {/* Section 4: Informe */}
-      <div className="space-y-4 rounded-[20px] border border-border bg-surface p-4 sm:p-6">
-        <SectionHeader title="Informe" number="4" />
-        <p className="text-xs text-text-faint">
-          Descripción detallada del inmueble. Aparece como una página de texto en el PDF.
-        </p>
-        <RichTextEditor
-          content={informeHtml}
-          onChange={setInformeHtml}
-          placeholder="Las unidades se encuentran distribuidas en distintos pisos..."
-        />
-      </div>
+      {/* Sections 4 & 5: Informe + Resultado (2 columnas en desktop) */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {/* Section 4: Informe */}
+        <div className="space-y-4 rounded-[20px] border border-border bg-surface p-4 sm:p-6">
+          <SectionHeader title="Informe" number="4" />
+          <p className="text-xs text-text-faint">
+            Descripción detallada del inmueble. Aparece como una página de texto en el PDF.
+          </p>
+          <RichTextEditor
+            content={informeHtml}
+            onChange={setInformeHtml}
+            placeholder="Las unidades se encuentran distribuidas en distintos pisos..."
+          />
+        </div>
 
-      {/* Section 5: Resultado */}
-      <div className="space-y-4 rounded-[20px] border border-border bg-surface p-4 sm:p-6">
-        <SectionHeader title="Resultado" number="5" />
-        <p className="text-xs text-text-faint">
-          Conclusión y estimación de la tasación. Aparece como página de texto en el PDF.
-        </p>
-        <RichTextEditor
-          content={resultadoHtml}
-          onChange={setResultadoHtml}
-          placeholder="Es importante tener en cuenta que la tasación es un cálculo..."
-        />
+        {/* Section 5: Resultado */}
+        <div className="space-y-4 rounded-[20px] border border-border bg-surface p-4 sm:p-6">
+          <SectionHeader title="Resultado" number="5" />
+          <p className="text-xs text-text-faint">
+            Conclusión y estimación de la tasación. Aparece como página de texto en el PDF.
+          </p>
+          <RichTextEditor
+            content={resultadoHtml}
+            onChange={setResultadoHtml}
+            placeholder="Es importante tener en cuenta que la tasación es un cálculo..."
+          />
+        </div>
       </div>
 
       {/* Section 6: Lista de Precios */}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExploreLink } from "./explore-link";
 import { prisma } from "@/lib/prisma/client";
 import { formatDate, formatRelative, fromJSDate, now } from "@/lib/datetime";
 import {
@@ -88,12 +89,7 @@ export async function CobrosMesCard({
             Vencimientos pendientes en el rango {daysPast}d atrás → {daysAhead}d adelante
           </p>
         </div>
-        <Link
-          href="/alquileres?tab=cobros"
-          className="shrink-0 text-[12.5px] font-bold text-terra transition-opacity hover:opacity-80"
-        >
-          Ver todos →
-        </Link>
+        <ExploreLink href="/alquileres?tab=cobros" />
       </header>
 
       <div className="mt-4 grid grid-cols-3 gap-2">
