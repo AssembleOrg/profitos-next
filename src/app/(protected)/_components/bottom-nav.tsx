@@ -246,7 +246,13 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
         className="fixed bottom-0 left-0 right-0 z-40 md:hidden"
         style={{ paddingBottom: "calc(var(--safe-bottom, 0px) + 10px)" }}
       >
-        <nav className="mx-4 flex items-stretch rounded-full border border-border bg-surface p-1.5 shadow-2xl">
+        <nav
+          className="mx-4 flex items-stretch rounded-full border border-white/50 bg-surface/60 p-1.5 backdrop-blur-2xl"
+          style={{
+            boxShadow:
+              "0 24px 70px rgba(27,25,22,0.28), 0 4px 14px rgba(27,25,22,0.10), inset 0 1px 0 rgba(255,255,255,0.85)",
+          }}
+        >
           {/* Zona scrolleable de favoritos */}
           <div className="relative min-w-0 flex-1">
             <div className="flex items-stretch gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
