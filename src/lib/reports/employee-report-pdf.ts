@@ -201,39 +201,35 @@ function header(ctx: Ctx, r: EmployeeReport): void {
   const periodo = `Período ${fmtDate(r.range.from)} – ${fmtDate(r.range.to)}  ·  ${r.range.dias} días`;
   const pw = ctx.regular.widthOfTextAtSize(safe(periodo), 9);
   text(ctx, periodo, PAGE_W - MARGIN - pw, PAGE_H - 34, 9, ctx.regular, C.darkFg);
-  ctx.y = PAGE_H - H - 26;
+  ctx.y = PAGE_H - H - 18;
 }
 
-function kpiTiles(ctx: Ctx, r: EmployeeReport): void {
+function resumen(ctx: Ctx, r: EmployeeReport): void {
   const k = r.kpis;
   const pct = (n: number | null) => (n == null ? "—" : `${n}%`);
-  const tiles: { label: string; value: string; sub: string; color: RGB }[] = [
-    { label: "Objetivos cumplidos", value: `${k.objetivos.cumplidos}/${k.objetivos.total}`, sub: `${k.objetivos.parciales} parciales · ${k.objetivos.enCurso} en curso`, color: C.olive },
-    { label: "Cumplimiento de items", value: pct(k.items.cumplimiento), sub: `${k.items.hechos} hechos · ${k.items.fallidos} fallidos · ${k.items.pendientes} pend.`, color: C.accent },
-    { label: "Visitas", value: String(k.visitas), sub: `${r.accionesPorTipo.visita ?? 0} registradas en seguimientos`, color: C.info },
-    { label: "Seguimientos resueltos", value: `${k.seguimientos.completados}/${k.seguimientos.asignados}`, sub: `tasa ${pct(k.seguimientos.tasaResolucion)} · ${k.seguimientos.vencidos} vencidos hoy`, color: k.seguimientos.vencidos ? C.terra : C.olive },
-    { label: "Contactos tomados", value: String(k.contactosTomados), sub: "desde la central de mensajes", color: C.olive },
-    { label: "Clientes nuevos", value: String(k.clientesCreados), sub: `${k.tasaciones} tasaciones`, color: C.info },
-    { label: "Acciones de seguimiento", value: String(k.acciones), sub: Object.entries(r.accionesPorTipo).map(([t, n]) => `${n} ${t}`).join(" · ") || "sin acciones", color: C.accent },
-    { label: "Actividad por día", value: String(k.actividadPorDia), sub: `${k.propiedadesACargo} propiedades a cargo`, color: k.actividadPorDia >= 3 ? C.olive : k.actividadPorDia >= 1 ? C.warning : C.terra },
+  const rows: [string, string, string][] = [
+    ["Objetivos cumplidos", `${k.objetivos.cumplidos} / ${k.objetivos.total}`, `${k.objetivos.parciales} parciales · ${k.objetivos.enCurso} en curso`],
+    ["Cumplimiento de items", pct(k.items.cumplimiento), `${k.items.hechos} hechos · ${k.items.fallidos} fallidos · ${k.items.pendientes} pendientes`],
+    ["Visitas", String(k.visitas), `${r.accionesPorTipo.visita ?? 0} registradas en seguimientos`],
+    ["Seguimientos resueltos", `${k.seguimientos.completados} / ${k.seguimientos.asignados}`, `tasa ${pct(k.seguimientos.tasaResolucion)} · ${k.seguimientos.vencidos} vencidos hoy`],
+    ["Contactos tomados", String(k.contactosTomados), "desde la central de mensajes"],
+    ["Clientes nuevos", String(k.clientesCreados), `${k.tasaciones} tasaciones`],
+    ["Acciones de seguimiento", String(k.acciones), Object.entries(r.accionesPorTipo).map(([t, n]) => `${n} ${t}`).join(" · ") || "sin acciones"],
+    ["Actividad por día", String(k.actividadPorDia), `${k.propiedadesACargo} propiedades a cargo`],
   ];
-  const cols = 4;
-  const gap = 10;
-  const w = (CONTENT_W - gap * (cols - 1)) / cols;
-  const h = 62;
-  for (let i = 0; i < tiles.length; i += cols) {
-    ensure(ctx, h + gap);
-    const row = tiles.slice(i, i + cols);
-    row.forEach((t, j) => {
-      const x = MARGIN + j * (w + gap);
-      const y = ctx.y - h;
-      ctx.page.drawRectangle({ x, y, width: w, height: h, color: C.surface, borderColor: C.border, borderWidth: 0.6 });
-      ctx.page.drawRectangle({ x, y, width: 3, height: h, color: t.color });
-      text(ctx, t.label.toUpperCase(), x + 10, y + h - 15, 6.5, ctx.bold, C.faint);
-      text(ctx, t.value, x + 10, y + h - 38, 18, ctx.bold, C.text);
-      text(ctx, ellipsis(t.sub, ctx.regular, 7, w - 18), x + 10, y + 9, 7, ctx.regular, C.muted);
-    });
-    ctx.y -= h + gap;
+  sectionTitle(ctx, "Resumen del período", `${r.range.dias} días`);
+  const cols = [
+    { label: "Indicador", w: 170 },
+    { label: "Valor", w: 70 },
+    { label: "Detalle", w: CONTENT_W - 240 },
+  ];
+  tableHeader(ctx, cols);
+  for (const [label, value, sub] of rows) {
+    tableRow(ctx, [
+      { v: label, w: cols[0].w, bold: true },
+      { v: value, w: cols[1].w, bold: true },
+      { v: sub, w: cols[2].w },
+    ]);
   }
 }
 
@@ -243,21 +239,18 @@ function objetivos(ctx: Ctx, r: EmployeeReport): void {
   for (const o of r.objetivos) {
     const titleLines = wrap(o.titulo, ctx.bold, 10.5, CONTENT_W - 120);
     const descLines = o.descripcion ? wrap(o.descripcion, ctx.regular, 8.5, CONTENT_W - 24).slice(0, 3) : [];
-    const h = 22 + titleLines.length * 13 + descLines.length * 11 + o.items.length * 13 + 14;
+    const h = titleLines.length * 13 + 12 + descLines.length * 11 + o.items.length * 13 + 16;
     ensure(ctx, Math.min(h, 200));
-    const top = ctx.y;
-    const startPage = ctx.page;
-    // Tarjeta
-    let y = top - 14;
+    let y = ctx.y;
     const est = ESTADO_OBJ[o.estado];
-    titleLines.forEach((l, i) => text(ctx, l, MARGIN + 12, y - i * 13, 10.5, ctx.bold, C.text));
+    titleLines.forEach((l, i) => text(ctx, l, MARGIN, y - i * 13, 10.5, ctx.bold, C.text));
     const cw = ctx.bold.widthOfTextAtSize(safe(est.label), 7.5) + 12;
-    chip(ctx, est.label, MARGIN + CONTENT_W - cw - 12, y, est.fg, est.bg);
+    chip(ctx, est.label, MARGIN + CONTENT_W - cw, y, est.fg, est.bg);
     y -= titleLines.length * 13;
-    text(ctx, `${fmtDate(o.desde)} – ${fmtDate(o.hasta)}`, MARGIN + 12, y, 8, ctx.regular, C.faint);
+    text(ctx, `${fmtDate(o.desde)} – ${fmtDate(o.hasta)}`, MARGIN, y, 8, ctx.regular, C.faint);
     y -= 12;
     for (const l of descLines) {
-      text(ctx, l, MARGIN + 12, y, 8.5, ctx.regular, C.muted);
+      text(ctx, l, MARGIN, y, 8.5, ctx.regular, C.muted);
       y -= 11;
     }
     y -= 2;
@@ -267,20 +260,16 @@ function objetivos(ctx: Ctx, r: EmployeeReport): void {
         y = ctx.y - 6;
       }
       const dot = it.estado === "done" ? C.olive : it.estado === "failed" ? C.danger : C.border;
-      ctx.page.drawCircle({ x: MARGIN + 18, y: y + 3, size: 3.2, color: dot });
+      ctx.page.drawCircle({ x: MARGIN + 6, y: y + 3, size: 3.2, color: dot });
       const label = it.estado === "done" ? "hecho" : it.estado === "failed" ? "fallido" : "pendiente";
-      text(ctx, ellipsis(it.texto, ctx.regular, 8.5, CONTENT_W - 110), MARGIN + 28, y, 8.5, ctx.regular, it.estado === "failed" ? C.danger : C.text);
-      text(ctx, label, MARGIN + CONTENT_W - 60, y, 7.5, ctx.regular, C.faint);
+      text(ctx, ellipsis(it.texto, ctx.regular, 8.5, CONTENT_W - 90), MARGIN + 14, y, 8.5, ctx.regular, it.estado === "failed" ? C.danger : C.text);
+      text(ctx, label, MARGIN + CONTENT_W - 48, y, 7.5, ctx.regular, C.faint);
       y -= 13;
     }
-    const bottom = y - 4;
-    // Borde de la tarjeta (sólo si no cruzó de página; el fondo va transparente
-    // porque se dibuja después del texto).
-    if (ctx.page === startPage && top > bottom) {
-      ctx.page.drawRectangle({ x: MARGIN, y: bottom, width: CONTENT_W, height: top - bottom, borderColor: C.border, borderWidth: 0.6, opacity: 0, borderOpacity: 1 });
-      ctx.page.drawRectangle({ x: MARGIN, y: bottom, width: 3, height: top - bottom, color: est.fg });
-    }
-    ctx.y = bottom - 10;
+    // Regla separadora entre objetivos (mismo patrón que las tablas)
+    y -= 2;
+    ctx.page.drawLine({ start: { x: MARGIN, y }, end: { x: MARGIN + CONTENT_W, y }, thickness: 0.4, color: C.border });
+    ctx.y = y - 14;
   }
 }
 
@@ -352,14 +341,22 @@ function contactos(ctx: Ctx, r: EmployeeReport): void {
     }
   }
   if (r.clientes.length) {
-    ensure(ctx, 30);
-    ctx.y -= 4;
-    const line = r.clientes.slice(0, 25).map((c) => `${safe(c.nombre)} (${fmtDate(c.fecha)})`).join(" · ");
-    for (const l of wrap(`Clientes nuevos: ${line}${r.clientes.length > 25 ? " …" : ""}`, ctx.regular, 8.5, CONTENT_W)) {
-      ensure(ctx, 12);
-      text(ctx, l, MARGIN, ctx.y, 8.5, ctx.regular, C.muted);
-      ctx.y -= 12;
+    ensure(ctx, 44);
+    ctx.y -= 6;
+    text(ctx, "Clientes nuevos", MARGIN, ctx.y, 8, ctx.bold, C.muted);
+    ctx.y -= 14;
+    const cols = [
+      { label: "Fecha", w: 70 },
+      { label: "Cliente", w: CONTENT_W - 70 },
+    ];
+    tableHeader(ctx, cols);
+    for (const c of r.clientes.slice(0, 25)) {
+      tableRow(ctx, [
+        { v: fmtDate(c.fecha), w: cols[0].w, bold: true },
+        { v: c.nombre, w: cols[1].w },
+      ]);
     }
+    if (r.clientes.length > 25) emptyNote(ctx, `… y ${r.clientes.length - 25} más.`);
   }
 }
 
@@ -384,7 +381,7 @@ export async function renderEmployeeReportPdf(r: EmployeeReport): Promise<Uint8A
   const ctx: Ctx = { doc, page: null as unknown as PDFPage, y: 0, regular, bold, pages: [] };
   newPage(ctx);
   header(ctx, r);
-  kpiTiles(ctx, r);
+  resumen(ctx, r);
   objetivos(ctx, r);
   visitas(ctx, r);
   seguimientos(ctx, r);
