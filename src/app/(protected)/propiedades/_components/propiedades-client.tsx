@@ -1852,6 +1852,7 @@ export function PropiedadesClient({
                       propertyId={editProperty.id}
                       photos={modalPhotos}
                       loading={photosLoading}
+                      active={modalOpen && modalTab === "fotos"}
                       onChange={(photos, cover) => {
                         setModalPhotos(photos);
                         setEditProperty((prev) => (prev ? { ...prev, coverImageUrl: cover } : prev));

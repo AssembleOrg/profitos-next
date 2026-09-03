@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 
@@ -18,8 +18,15 @@ interface Props {
   propertyId: string;
   photos: EditorPhoto[] | null;
   loading: boolean;
+  /** true mientras la pestaña Fotos está visible: habilita soltar archivos en cualquier parte. */
+  active?: boolean;
   /** Galería actualizada tras cada cambio (subir / borrar / reordenar / portada). */
   onChange: (photos: EditorPhoto[], coverImageUrl: string | null) => void;
+}
+
+/** ¿El arrastre trae archivos del sistema (y no una tarjeta reordenándose)? */
+function hasFiles(dt: DataTransfer | null): boolean {
+  return Boolean(dt && Array.from(dt.types ?? []).includes("Files"));
 }
 
 type ApiBody = { data?: { photos?: EditorPhoto[]; coverImageUrl?: string | null }; message?: string };
@@ -29,14 +36,60 @@ type ApiBody = { data?: { photos?: EditorPhoto[]; coverImageUrl?: string | null 
  * borrar, reordenar (drag & drop o flechas) y elegir portada. Cada acción
  * pega a /api/propiedades/[id]/fotos y reemplaza la galería con la respuesta.
  */
-export function PhotosEditor({ propertyId, photos, loading, onChange }: Readonly<Props>) {
+export function PhotosEditor({ propertyId, photos, loading, active = true, onChange }: Readonly<Props>) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropHint, setDropHint] = useState(false);
+  // Arrastre de archivos desde el sistema: se cuenta enter/leave porque el
+  // navegador dispara dragleave al pasar por cada hijo.
+  const dragDepth = useRef(0);
+  const uploadRef = useRef<(files: FileList | File[]) => Promise<void>>(async () => {});
 
   const api = `/api/propiedades/${propertyId}/fotos`;
+
+  // Mientras la pestaña está visible, soltar archivos en CUALQUIER parte de la
+  // página sube las fotos (y nunca abre la imagen en el navegador).
+  useEffect(() => {
+    if (!active) return;
+    const onEnter = (e: DragEvent) => {
+      if (!hasFiles(e.dataTransfer)) return;
+      e.preventDefault();
+      dragDepth.current += 1;
+      setDropHint(true);
+    };
+    const onOver = (e: DragEvent) => {
+      if (!hasFiles(e.dataTransfer)) return;
+      e.preventDefault(); // sin esto el navegador no permite el drop
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    };
+    const onLeave = (e: DragEvent) => {
+      if (!hasFiles(e.dataTransfer)) return;
+      dragDepth.current = Math.max(0, dragDepth.current - 1);
+      if (dragDepth.current === 0) setDropHint(false);
+    };
+    const onDrop = (e: DragEvent) => {
+      if (!hasFiles(e.dataTransfer)) return;
+      e.preventDefault();
+      dragDepth.current = 0;
+      setDropHint(false);
+      const files = e.dataTransfer?.files;
+      if (files?.length) void uploadRef.current(files);
+    };
+    document.addEventListener("dragenter", onEnter);
+    document.addEventListener("dragover", onOver);
+    document.addEventListener("dragleave", onLeave);
+    document.addEventListener("drop", onDrop);
+    return () => {
+      document.removeEventListener("dragenter", onEnter);
+      document.removeEventListener("dragover", onOver);
+      document.removeEventListener("dragleave", onLeave);
+      document.removeEventListener("drop", onDrop);
+      dragDepth.current = 0;
+      setDropHint(false);
+    };
+  }, [active]);
 
   async function apply(res: Response, okMsg?: string) {
     const body = (await res.json().catch(() => ({}))) as ApiBody;
@@ -46,8 +99,15 @@ export function PhotosEditor({ propertyId, photos, loading, onChange }: Readonly
   }
 
   async function upload(files: FileList | File[]) {
+    if (uploading) {
+      toast.error("Esperá a que termine la subida anterior");
+      return;
+    }
     const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
-    if (!list.length) return toast.error("Elegí imágenes (jpg, png, webp…)");
+    if (!list.length) {
+      toast.error("Elegí imágenes (jpg, png, webp…)");
+      return;
+    }
     setUploading({ done: 0, total: list.length });
     try {
       // De a una: progreso real y un archivo malo no tira los demás.
@@ -110,23 +170,20 @@ export function PhotosEditor({ propertyId, photos, loading, onChange }: Readonly
     void reorder(next);
   }
 
+  uploadRef.current = upload;
   const list = photos ?? [];
 
   return (
-    <div className="space-y-4">
-      {/* Zona de subida */}
+    <div className="relative space-y-4">
+      {/* Overlay mientras se arrastran archivos sobre la página */}
+      {dropHint && !uploading && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[16px] border-2 border-dashed border-accent bg-sand-chip/80">
+          <p className="rounded-full bg-dark px-4 py-2 text-[13px] font-semibold text-dark-fg">Soltá para subir las fotos</p>
+        </div>
+      )}
+
+      {/* Zona de subida (el drop lo maneja el listener global; acá sólo el botón) */}
       <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          if (!dragging) setDropHint(true);
-        }}
-        onDragLeave={() => setDropHint(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDropHint(false);
-          if (dragging) return; // reordenando, no subiendo
-          if (e.dataTransfer.files?.length) void upload(e.dataTransfer.files);
-        }}
         className={`flex flex-col items-center justify-center gap-2 rounded-[16px] border-2 border-dashed px-4 py-6 text-center transition-colors ${
           dropHint ? "border-accent bg-sand-chip/60" : "border-border bg-bg"
         }`}
@@ -182,10 +239,12 @@ export function PhotosEditor({ propertyId, photos, loading, onChange }: Readonly
                   }}
                   onDragEnd={() => setDragging(null)}
                   onDragOver={(e) => {
+                    if (hasFiles(e.dataTransfer)) return; // archivos: los maneja el listener global
                     e.preventDefault();
                     e.stopPropagation();
                   }}
                   onDrop={(e) => {
+                    if (hasFiles(e.dataTransfer)) return;
                     e.preventDefault();
                     e.stopPropagation();
                     if (!dragging || dragging === ph.image) return;
