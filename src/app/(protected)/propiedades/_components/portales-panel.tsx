@@ -36,6 +36,9 @@ type Publication = { portal: string; status: string; published: boolean; permali
 type PlanCredit = { plan: string; label: string; available: number | null; used: number | null; total: number | null };
 type Credits = { plans: PlanCredit[]; fetchedAt: string | null; error: string | null };
 type Responsible = { userId: number; name: string; lastName: string; email: string };
+type MissingField = { campo: string; label: string };
+type PortalReady = { portal: PortalKey; ok: boolean; faltan: MissingField[]; recomendado: MissingField[] };
+type ReadinessMap = Record<PortalKey, PortalReady>;
 
 async function getJson<T>(url: string): Promise<T | null> {
   try {
@@ -59,6 +62,7 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
   const [credits, setCredits] = useState<Credits | null>(null);
   const [refreshingCredits, setRefreshingCredits] = useState(false);
   const [responsibles, setResponsibles] = useState<Responsible[]>([]);
+  const [readiness, setReadiness] = useState<ReadinessMap | null>(null);
   const [respUserId, setRespUserId] = useState<string>(""); // "" = responsable por defecto
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Confirmación reutilizable (reemplaza window.confirm) para publicar/cambiar estado.
@@ -67,7 +71,7 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
   const load = useCallback(async () => {
     const [statusData, pubData, creditsData, respData] = await Promise.all([
       getJson<{ portals: ConnStatus[] }>("/api/integrations/portales/status"),
-      getJson<{ publications: Publication[] }>(`/api/integrations/portales/publications/${propertyId}`),
+      getJson<{ publications: Publication[]; readiness: ReadinessMap | null }>(`/api/integrations/portales/publications/${propertyId}`),
       getJson<Credits>("/api/integrations/portales/credits"),
       getJson<{ responsibles: Responsible[] }>("/api/integrations/portales/responsibles"),
     ]);
@@ -77,6 +81,7 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
       const map: Record<string, Publication> = {};
       for (const p of pubData.publications) map[p.portal] = p;
       setPubs(map);
+      setReadiness(pubData.readiness ?? null);
     }
     if (creditsData) setCredits(creditsData);
     setLoading(false);
@@ -307,6 +312,10 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
             const meta = PORTAL_META[portal];
             const c = connOf(portal);
             const pub = pubs[portal];
+            const ready = readiness?.[portal];
+            // Bloquea publicar sólo si aún no hay aviso creado y faltan campos.
+            const notReady = meta.publishable && !pub?.published && ready ? !ready.ok : false;
+            const faltanLabels = ready?.faltan.map((x) => x.label).join(", ") ?? "";
             const chip = pub ? STATUS_CHIP[pub.status] : null;
             return (
               <div key={portal} className="rounded-[12px] border border-border bg-bg px-3 py-2.5">
@@ -407,6 +416,14 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                     </>
                   )}
                   {meta.publishable ? (
+                    notReady ? (
+                      <span
+                        className="rounded-full border border-terra/40 bg-clay-chip px-3 py-1.5 text-[11.5px] font-semibold text-terra"
+                        title={`Completá estos campos en Datos/Ubicación para poder publicar: ${faltanLabels}`}
+                      >
+                        Faltan datos: {faltanLabels}
+                      </span>
+                    ) : (
                     <>
                       <input
                         type="checkbox"
@@ -489,6 +506,7 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                         </>
                       )}
                     </>
+                    )
                   ) : (
                     !pub?.published && <span className="text-[11px] text-text-faint">Usá el wizard ML</span>
                   )}

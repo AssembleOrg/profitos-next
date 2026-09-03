@@ -14,6 +14,7 @@ import { buildPropertyWhatsAppLink } from "@/lib/whatsapp";
 import { MlPublishWizard } from "./ml-publish-wizard";
 import { PortalesPanel } from "./portales-panel";
 import { PhotosEditor } from "./photos-editor";
+import { publishReadinessAll } from "@/lib/publish/readiness";
 
 const PropertiesMap = dynamic(
   () => import("./properties-map").then((mod) => mod.PropertiesMap),
@@ -1751,6 +1752,31 @@ export function PropiedadesClient({
         >
               {/* Body con pestañas (el scroll y padding los da <Sheet>) */}
               <div className="sm:px-3">
+                {/* Aviso suave: qué falta para publicar (no bloquea el guardado). */}
+                {isEdit && editProperty && (modalTab === "datos" || modalTab === "ubicacion") && (() => {
+                  const rd = publishReadinessAll({
+                    type: editProperty.type,
+                    operationType: editProperty.operationType,
+                    operationPrice: editProperty.operationPrice,
+                    operationCurrency: editProperty.operationCurrency,
+                    publicationTitle: editProperty.publicationTitle,
+                    address: editProperty.address,
+                    province: editProperty.province,
+                    city: editProperty.city,
+                    geoLat: editProperty.geoLat,
+                    geoLong: editProperty.geoLong,
+                    photosCount: modalPhotos?.length ?? 1,
+                  });
+                  const blocked = (["zonaprop", "argenprop", "mercadolibre"] as const).filter((p) => !rd[p].ok);
+                  if (!blocked.length) return null;
+                  const union = Array.from(new Set(blocked.flatMap((p) => rd[p].faltan.map((x) => x.label))));
+                  return (
+                    <div className="mb-5 rounded-xl border border-sand-chip bg-sand-chip/40 px-3.5 py-2.5 text-[12.5px] text-text-muted">
+                      <span className="font-semibold text-text">Para publicar falta completar:</span> {union.join(", ")}.{" "}
+                      <span className="text-text-faint">Guardá los cambios y vas a poder publicar desde la pestaña Portales.</span>
+                    </div>
+                  );
+                })()}
                 {/* El form envuelve Datos + Ubicación; las pestañas ocultas quedan
                     montadas (hidden) para que FormData conserve todos los campos. */}
                 <form

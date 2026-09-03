@@ -24,6 +24,13 @@ export const POST = withHandler(async (request: NextRequest) => {
     estado?: string;
     titulo?: string;
     descripcion?: string;
+    provincia?: string;
+    ciudad?: string;
+    zona?: string;
+    tipo?: string;
+    operacion?: string;
+    lat?: number | string;
+    lng?: number | string;
   };
   const prop = await resolveProperty(body);
 
@@ -56,7 +63,39 @@ export const POST = withHandler(async (request: NextRequest) => {
     data.description = body.descripcion.trim().slice(0, 5000);
     cambios.push("descripción");
   }
-  if (!cambios.length) throw new AppError(400, "No indicaste ningún cambio (precio, moneda, estado, titulo o descripcion)");
+  if (body.provincia?.trim()) {
+    data.province = body.provincia.trim().slice(0, 120);
+    cambios.push(`provincia → ${data.province}`);
+  }
+  if (body.ciudad?.trim()) {
+    data.city = body.ciudad.trim().slice(0, 120);
+    cambios.push(`localidad → ${data.city}`);
+  }
+  if (body.zona?.trim()) {
+    data.zone = body.zona.trim().slice(0, 120);
+    cambios.push(`zona → ${data.zone}`);
+  }
+  if (body.tipo?.trim()) {
+    data.type = body.tipo.trim().slice(0, 60);
+    cambios.push(`tipo → ${data.type}`);
+  }
+  if (body.operacion?.trim()) {
+    const o = body.operacion.trim();
+    const norm = o.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const val = norm.includes("alquiler") ? "Alquiler" : norm.includes("venta") ? "Venta" : o;
+    data.operationType = val;
+    cambios.push(`operación → ${val}`);
+  }
+  const latRaw = body.lat, lngRaw = body.lng;
+  if (latRaw != null && latRaw !== "" && lngRaw != null && lngRaw !== "") {
+    const lat = typeof latRaw === "number" ? latRaw : Number(latRaw);
+    const lng = typeof lngRaw === "number" ? lngRaw : Number(lngRaw);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) throw new AppError(400, "Coordenadas inválidas");
+    data.geoLat = lat;
+    data.geoLong = lng;
+    cambios.push("coordenadas");
+  }
+  if (!cambios.length) throw new AppError(400, "No indicaste ningún cambio (precio, moneda, estado, titulo, descripcion, provincia, ciudad, zona, tipo, operacion o coordenadas)");
 
   await prisma.property.update({ where: { id: prop.id }, data });
   console.log(`[chat-tools] ${who.email} editó ${prop.id}: ${cambios.join(", ")}`);

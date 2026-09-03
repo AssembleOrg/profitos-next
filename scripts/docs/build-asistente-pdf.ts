@@ -373,7 +373,7 @@ async function main() {
     chips: [conf],
     body: "ZonaProp (con plan Simple / Destacado / Súper Destacado) y ArgenProp: encola la publicación y el worker la procesa en minutos. MercadoLibre: publica al instante infiriendo categoría, características, ubicación y fotos desde la propiedad; si le falta algo (una característica obligatoria, la ciudad, o no hay publicación gratuita) te lo pregunta antes.",
     examples: ["Publicá Mitre 1200 en ArgenProp", "Publicá JAP8721249 en ZonaProp con plan Destacado", "Publicá Alvear 1160 en MercadoLibre"],
-    note: "En MercadoLibre nunca elige una publicación paga por su cuenta: si no hay gratuita, te muestra las opciones con su costo y vos decidís.",
+    note: "En MercadoLibre nunca elige una publicación paga por su cuenta: si no hay gratuita, te muestra las opciones con su costo y vos decidís. Si a la propiedad le faltan datos obligatorios (provincia, localidad, precio, una foto), te los pide antes de publicar.",
   });
   d.card({
     title: "Sincronizar avisos",
