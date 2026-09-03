@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { getAggregateKPIs } from "@/lib/objectives";
+import { getAggregateKPIs, getCardProgress } from "@/lib/objectives";
 import { formatDate } from "@/lib/datetime";
 import { Pagination } from "../../_components/pagination";
 import { ObjetivoCard } from "./objetivo-card";
@@ -10,7 +10,6 @@ import { CreateObjetivoModal } from "./create-modal";
 import { FiltersBar } from "./filters-bar";
 import { KPIStrip } from "./kpi-strip";
 import type { SerializedCard, SerializedItem, SerializedUser } from "./types";
-import { ItemsEditorPopover } from "./items-editor";
 
 interface ObjetivosClientProps {
   initialCards: SerializedCard[];
@@ -40,6 +39,13 @@ export function ObjetivosClient({
   filters,
 }: Readonly<ObjetivosClientProps>) {
   const [cards, setCards] = useState<SerializedCard[]>(initialCards);
+  // Re-sincronizar cuando el server manda otra data (búsqueda / paginación):
+  // useState() no reinicia solo al cambiar el prop.
+  const [syncedInitial, setSyncedInitial] = useState(initialCards);
+  if (syncedInitial !== initialCards) {
+    setSyncedInitial(initialCards);
+    setCards(initialCards);
+  }
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SerializedCard | null>(null);
 
@@ -127,9 +133,12 @@ export function ObjetivosClient({
           className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
         >
           <AnimatePresence mode="popLayout">
-            {cards.map((card) => (
-              <div key={card.id} className="flex flex-col gap-2">
+            {cards
+              .map((card, i) => ({ card, i, finished: (() => { const p = getCardProgress(card); return p.total > 0 && p.pendingCount === 0; })() }))
+              .sort((a, b) => (a.finished === b.finished ? a.i - b.i : a.finished ? 1 : -1))
+              .map(({ card }) => (
                 <ObjetivoCard
+                  key={card.id}
                   card={card}
                   canEdit={isAdmin}
                   currentUserId={currentUserId}
@@ -138,10 +147,6 @@ export function ObjetivosClient({
                   onDeleted={handleCardDeleted}
                   onEdit={handleEdit}
                 />
-                {isAdmin && (
-                  <ItemsEditorPopover card={card} onChanged={handleCardChanged} />
-                )}
-              </div>
             ))}
           </AnimatePresence>
         </motion.div>

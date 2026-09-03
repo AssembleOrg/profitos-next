@@ -175,7 +175,7 @@ function DetailBody({
     }
     return paths;
   }, [firma]);
-  const signedUrls = useSignedUrls(allPaths);
+  const { urls: signedUrls, loading: urlsLoading } = useSignedUrls(allPaths);
 
   return (
       <div>
@@ -199,9 +199,13 @@ function DetailBody({
               )}
               {firma.attachments.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {firma.attachments.map((att) => (
-                    <AttachmentChip key={att.path} attachment={att} url={signedUrls[att.path]} />
-                  ))}
+                  {firma.attachments.map((att) =>
+                    urlsLoading && !signedUrls[att.path] ? (
+                      <div key={att.path} className="h-9 w-28 animate-pulse rounded-full bg-bg" />
+                    ) : (
+                      <AttachmentChip key={att.path} attachment={att} url={signedUrls[att.path]} />
+                    )
+                  )}
                 </div>
               )}
             </section>
@@ -215,6 +219,7 @@ function DetailBody({
             <Timeline
               actions={firma.actions}
               signedUrls={signedUrls}
+              urlsLoading={urlsLoading}
               currentUserId={currentUserId}
               isAdmin={isAdmin}
               onActionDeleted={(actionId) => {
@@ -339,6 +344,7 @@ function ControlPanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
 interface TimelineProps {
   actions: FirmaAction[];
   signedUrls: Record<string, string>;
+  urlsLoading: boolean;
   currentUserId: string;
   isAdmin: boolean;
   proposalId: string;
@@ -348,6 +354,7 @@ interface TimelineProps {
 function Timeline({
   actions,
   signedUrls,
+  urlsLoading,
   currentUserId,
   isAdmin,
   proposalId,
@@ -441,13 +448,17 @@ function Timeline({
               )}
               {action.attachments.length > 0 && (
                 <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {action.attachments.map((att) => (
-                    <AttachmentPreview
-                      key={att.path}
-                      attachment={att}
-                      url={signedUrls[att.path]}
-                    />
-                  ))}
+                  {action.attachments.map((att) =>
+                    urlsLoading && !signedUrls[att.path] ? (
+                      <div key={att.path} className="aspect-square animate-pulse rounded-[10px] bg-surface" />
+                    ) : (
+                      <AttachmentPreview
+                        key={att.path}
+                        attachment={att}
+                        url={signedUrls[att.path]}
+                      />
+                    )
+                  )}
                 </div>
               )}
             </div>
@@ -550,7 +561,7 @@ function AddNoteSection({ firmaId, onAdded }: Readonly<AddNoteSectionProps>) {
 
   // Resolve newly added attachments for preview
   const paths = attachments.map((a) => a.path);
-  const signedUrls = useSignedUrls(paths);
+  const { urls: signedUrls } = useSignedUrls(paths);
 
   async function submit() {
     const cleanText = text.trim();
@@ -589,7 +600,7 @@ function AddNoteSection({ firmaId, onAdded }: Readonly<AddNoteSectionProps>) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Agregar nota…"
-          className="h-[38px] min-h-[38px] flex-1 resize-none rounded-full border border-border bg-surface px-4 py-[9px] text-[13px] leading-5 text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
+          className="h-[38px] min-h-[38px] min-w-0 flex-1 resize-none rounded-full border border-border bg-surface px-4 py-[9px] text-[13px] leading-5 text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
         />
         <button
           type="button"

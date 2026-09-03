@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/session";
+import type { Prisma } from "@/generated/prisma/client";
 import { SeguimientosClient } from "./_components/seguimientos-client";
 
 const PAGE_SIZE = 20;
 
 interface Props {
-  searchParams: Promise<{ page?: string; limit?: string }>;
+  searchParams: Promise<{ page?: string; limit?: string; q?: string; status?: string }>;
 }
 
 export default async function SeguimientosPage({ searchParams }: Props) {
@@ -16,7 +17,19 @@ export default async function SeguimientosPage({ searchParams }: Props) {
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
   const limit = Math.min(100, Math.max(1, Number.parseInt(sp.limit ?? `${PAGE_SIZE}`, 10) || PAGE_SIZE));
-  const where = user.role === "admin" ? {} : { assignedToUserId: user.id };
+  const q = sp.q?.trim() ?? "";
+  const status = sp.status?.trim() ?? "";
+  const where: Prisma.PropertyFollowUpWhereInput = user.role === "admin" ? {} : { assignedToUserId: user.id };
+  if (status) where.status = status;
+  if (q) {
+    where.OR = [
+      { title: { contains: q, mode: "insensitive" } },
+      { notes: { contains: q, mode: "insensitive" } },
+      { property: { address: { contains: q, mode: "insensitive" } } },
+      { assignedToUser: { fullName: { contains: q, mode: "insensitive" } } },
+      { assignedToUser: { email: { contains: q, mode: "insensitive" } } },
+    ];
+  }
 
   const [followUps, total, users, properties] = await Promise.all([
     prisma.propertyFollowUp.findMany({
@@ -79,6 +92,8 @@ export default async function SeguimientosPage({ searchParams }: Props) {
       isAdmin={user.role === "admin"}
       assignableUsers={users}
       assignableProperties={properties}
+      filterQ={q}
+      filterStatus={status}
     />
   );
 }

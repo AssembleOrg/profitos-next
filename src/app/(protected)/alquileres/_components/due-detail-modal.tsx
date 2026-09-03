@@ -139,7 +139,7 @@ function Body({
     <Sheet
       open={open}
       onClose={onClose}
-      maxWidth="sm:max-w-[820px]"
+      maxWidth="sm:max-w-[1040px]"
       title={
         <span className="flex items-center gap-2">
           <span className="line-clamp-1">
@@ -171,14 +171,18 @@ function Body({
       }
     >
         <div className="flex flex-col gap-5">
-          {/* Resumen montos */}
-          <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {/* Resumen montos — apretado, una fila */}
+          <section className="grid grid-cols-4 gap-2">
             <SummaryCard label="Esperado" value={formatARS(due.expectedAmount)} />
             <SummaryCard label="Cobrado" value={formatARS(collectedTotal)} tone="emerald" />
             <SummaryCard label="Comisión" value={formatARS(commissionTotal)} tone="olive" />
             <SummaryCard label="Para el dueño" value={formatARS(ownerTotal)} />
           </section>
 
+          {/* Desktop: 2 columnas — accionable (izq) / historial (der) */}
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          {/* ── Columna izquierda: accionable ── */}
+          <div className="flex flex-col gap-5">
           {/* Adicionales toggle */}
           {due.additionals.length > 0 && (
             <section className="rounded-[16px] bg-bg p-4">
@@ -255,6 +259,23 @@ function Body({
             </div>
           </section>
 
+          {/* Form registrar pago */}
+          <RegisterPaymentForm
+            due={due}
+            onRegistered={(payment) => {
+              const next: SerializedDueDate = {
+                ...due,
+                transactions: [payment, ...due.transactions],
+                status:
+                  payment.isFull ? "pagado" : due.status === "pagado" ? "pagado" : "parcial",
+              };
+              onUpdated(next);
+            }}
+          />
+          </div>
+
+          {/* ── Columna derecha: historial ── */}
+          <div className="flex flex-col gap-5">
           {/* Pagos registrados */}
           {due.transactions.length > 0 && (
             <section>
@@ -281,20 +302,6 @@ function Body({
               </ol>
             </section>
           )}
-
-          {/* Form registrar pago */}
-          <RegisterPaymentForm
-            due={due}
-            onRegistered={(payment) => {
-              const next: SerializedDueDate = {
-                ...due,
-                transactions: [payment, ...due.transactions],
-                status:
-                  payment.isFull ? "pagado" : due.status === "pagado" ? "pagado" : "parcial",
-              };
-              onUpdated(next);
-            }}
-          />
 
           {/* Timeline */}
           <section>
@@ -323,6 +330,8 @@ function Body({
               onUpdated({ ...due, actions: [action, ...due.actions] });
             }}
           />
+          </div>
+          </div>
         </div>
     </Sheet>
   );
@@ -340,11 +349,11 @@ function SummaryCard({
   const valueClass =
     tone === "emerald" ? "text-olive-light" : tone === "olive" ? "text-accent" : "text-text";
   return (
-    <div className="flex flex-col gap-0.5 rounded-[14px] bg-bg p-3">
-      <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-text-faint">
+    <div className="flex flex-col gap-0.5 rounded-[12px] bg-bg p-2">
+      <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-text-faint">
         {label}
       </span>
-      <span className={`font-display text-sm font-bold ${valueClass}`}>{value}</span>
+      <span className={`truncate font-display text-[13px] font-bold ${valueClass}`}>{value}</span>
     </div>
   );
 }

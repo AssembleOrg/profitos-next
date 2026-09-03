@@ -14,6 +14,7 @@ import {
   type ItemStatus,
 } from "@/lib/objectives";
 import { formatDate, formatRelative, fromISO } from "@/lib/datetime";
+import { ItemsEditorSheet } from "./items-editor";
 import type { SerializedCard, SerializedItem } from "./types";
 
 interface ObjetivoCardProps {
@@ -72,11 +73,22 @@ export function ObjetivoCard({
   onEdit,
 }: Readonly<ObjetivoCardProps>) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [itemsOpen, setItemsOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [loadingItems, setLoadingItems] = useState<Set<string>>(new Set());
   const status = getCardStatus(card);
   const progress = getCardProgress(card);
   const statusStyle = STATUS_STYLE[status];
+  // Derivado del progreso (no de fechas): cumplido/finalizado visual, sin tocar backend.
+  const isFinished = progress.total > 0 && progress.pendingCount === 0;
+  const isAchieved = progress.total > 0 && progress.done === progress.total;
+  // Banda de estado (tope de la card). Respeta el override manual.
+  const band =
+    !card.statusOverride && isAchieved
+      ? { label: "Cumplido", cls: "bg-sage-chip text-olive-light", dot: "bg-olive-light", check: true }
+      : !card.statusOverride && isFinished
+        ? { label: "Finalizado", cls: "bg-bg text-text-muted", dot: "bg-text-faint", check: false }
+        : { label: CARD_STATUS_LABEL[status], cls: statusStyle.chip, dot: statusStyle.dot, check: false };
   const isUserAssignee = card.assignedToUser.id === currentUserId;
   const canTickItems = canEdit || isUserAssignee;
   const remaining = daysRemaining(card);
@@ -110,7 +122,13 @@ export function ObjetivoCard({
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message ?? "Error");
-      onItemChanged(card.id, serializeItem(body.data));
+      const updated = serializeItem(body.data);
+      onItemChanged(card.id, updated);
+      // Celebración solo al CRUZAR a 100% done (antes no lo estaba, ahora sí).
+      const wasAchieved = progress.total > 0 && progress.done === progress.total;
+      const nextItems = card.items.map((i) => (i.id === updated.id ? updated : i));
+      const nowAchieved = nextItems.length > 0 && nextItems.every((i) => i.status === "done");
+      if (!wasAchieved && nowAchieved) toast.success("🎉 ¡Objetivo cumplido!");
     } catch (error) {
       onItemChanged(card.id, item);
       toast.error(error instanceof Error ? error.message : "No se pudo actualizar");
@@ -158,14 +176,27 @@ export function ObjetivoCard({
   }
 
   return (
+    <>
     <motion.article
       layout
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-      className={`group flex h-full flex-col overflow-hidden rounded-[20px] border border-border bg-surface ${statusStyle.ring} transition-shadow hover:shadow-sm`}
+      className={`group flex h-full flex-col overflow-hidden rounded-[20px] border bg-surface transition-shadow hover:shadow-sm ${isAchieved ? "border-olive-light/50 ring-1 ring-olive-light/30" : "border-border"}`}
     >
+      {/* Banda de estado (tope full-width) */}
+      <div className={`flex items-center gap-1.5 px-5 py-1.5 text-[11px] font-bold ${band.cls}`}>
+        {band.check ? (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        ) : (
+          <span className={`h-1.5 w-1.5 rounded-full ${band.dot}`} />
+        )}
+        {band.label}
+      </div>
+
       <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sand-chip font-display text-[12px] font-bold uppercase text-text-muted">
@@ -186,12 +217,6 @@ export function ObjetivoCard({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${statusStyle.chip}`}
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${statusStyle.dot}`} />
-            {CARD_STATUS_LABEL[status]}
-          </span>
           {canEdit && (
             <div className="relative">
               <button
@@ -231,6 +256,16 @@ export function ObjetivoCard({
                         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text"
                       >
                         Editar objetivo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setItemsOpen(true);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text"
+                      >
+                        Editar ítems
                       </button>
                       <div className="my-1 border-t border-border" />
                       <p className="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
@@ -369,13 +404,18 @@ export function ObjetivoCard({
 
       <footer className="border-t border-border px-5 py-3">
         <div className="mb-1.5 flex items-center justify-between text-[11px]">
-          <span className="font-semibold text-text-muted">
+          <span className={`inline-flex items-center gap-1 font-semibold ${isAchieved ? "text-olive-light" : "text-text-muted"}`}>
+            {isAchieved && (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
             {progress.done}/{progress.total} cumplidos
             {progress.failed > 0 && (
               <span className="ml-1 text-terra">· {progress.failed} no</span>
             )}
           </span>
-          <span className="font-display font-bold text-accent">{progress.percent}%</span>
+          <span className={`font-display font-bold ${isAchieved ? "text-olive-light" : "text-accent"}`}>{progress.percent}%</span>
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg">
           <motion.div
@@ -387,6 +427,15 @@ export function ObjetivoCard({
         </div>
       </footer>
     </motion.article>
+    {canEdit && (
+      <ItemsEditorSheet
+        card={card}
+        open={itemsOpen}
+        onClose={() => setItemsOpen(false)}
+        onChanged={onChanged}
+      />
+    )}
+    </>
   );
 }
 
