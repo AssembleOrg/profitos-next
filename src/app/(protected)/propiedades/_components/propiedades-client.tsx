@@ -1051,17 +1051,25 @@ export function PropiedadesClient({
           </button>
         </div>
 
-        {/* Mobile: estado siempre visible */}
-        <SelectField
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          wrapperClassName="mt-2 sm:hidden"
-        >
-          <option value="">Todos los estados</option>
-          {PROPERTY_STATUSES.map((s) => (
-            <option key={s.value} value={s.value}>{s.label}</option>
-          ))}
-        </SelectField>
+        {/* Mobile: estado + aplicar en una fila */}
+        <div className="mt-2 flex gap-2 sm:hidden">
+          <SelectField
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            wrapperClassName="min-w-0 flex-1"
+          >
+            <option value="">Todos los estados</option>
+            {PROPERTY_STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </SelectField>
+          <button
+            onClick={() => applyFilters(1)}
+            className="inline-flex h-11 shrink-0 items-center rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90"
+          >
+            Aplicar
+          </button>
+        </div>
 
         {/* Mobile: panel colapsable */}
         {filtersOpen && (
@@ -1203,7 +1211,7 @@ export function PropiedadesClient({
         <div className={`mt-3 flex-wrap items-center gap-2 ${activeFilters.length > 0 ? "flex" : "flex xl:hidden"}`}>
           <button
             onClick={() => applyFilters(1)}
-            className="inline-flex h-10 items-center rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 xl:hidden"
+            className="hidden h-10 items-center rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 sm:inline-flex xl:hidden"
           >
             Aplicar filtros
           </button>
@@ -1267,48 +1275,76 @@ export function PropiedadesClient({
             <p className="text-[12.5px] text-text-faint">No hay propiedades para los filtros seleccionados</p>
           </div>
         ) : (
-          properties.map((p) => (
+          properties.map((p) => {
+            const specs = [
+              p.roomAmount ? `${p.roomAmount} amb` : null,
+              p.bedrooms ? `${p.bedrooms} dorm` : null,
+              p.bathroomAmount ? `${p.bathroomAmount} baño${p.bathroomAmount !== 1 ? "s" : ""}` : null,
+              p.totalSurface ? `${p.totalSurface} m²` : null,
+            ].filter(Boolean);
+            return (
             <div
               key={p.id}
               onClick={() => handleEdit(p)}
-              className="flex cursor-pointer flex-col rounded-[18px] border border-border bg-surface p-3.5 active:bg-bg"
+              className="cursor-pointer overflow-hidden rounded-[18px] border border-border bg-surface active:bg-bg"
             >
-              <div className="flex items-start justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <p className="truncate text-[13.5px] font-bold text-text">{p.address}</p>
-                    {p.source === "manual" && <ManualChip />}
-                    {p.mlPublication?.published && (
-                      <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
-                    )}
-                    {p.portalPublications?.map((pub) => (
-                      <PortalChip key={pub.portal} portal={pub.portal} status={pub.status} permalink={pub.permalink} />
-                    ))}
-                  </div>
-                  <p className="mt-0.5 truncate text-[11.5px] text-text-faint">
-                    {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
-                  </p>
-                  <p className="mt-0.5 text-[11.5px] text-text-faint">{p.city ?? ""}{p.type ? ` · ${p.type}` : ""}</p>
+              <div className="p-3">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <p className="truncate text-[13.5px] font-bold leading-tight text-text">{p.address}</p>
+                  {p.source === "manual" && <ManualChip />}
+                  {p.mlPublication?.published && (
+                    <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
+                  )}
+                  {p.portalPublications?.map((pub) => (
+                    <PortalChip key={pub.portal} portal={pub.portal} status={pub.status} permalink={pub.permalink} />
+                  ))}
                 </div>
-                <span className={`ml-3 mt-0.5 inline-flex flex-shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${getStatusColor(p.status)}`}>
-                  {getStatusLabel(p.status)}
-                </span>
-              </div>
-              <div className="mt-2 flex gap-2">
-                <a
-                  href={buildPropertyWhatsAppLink(p)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full bg-sage-chip px-3 text-[11px] font-bold text-olive-light"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-                    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.611.611l4.458-1.495A11.948 11.948 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.37 0-4.567-.696-6.42-1.888l-.447-.293-2.91.975.975-2.91-.293-.447A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
-                  </svg>
-                  WhatsApp
-                </a>
-                <div className="relative">
+                {(p.city || p.zone || p.type) && (
+                  <p className="mt-0.5 truncate text-[11px] text-text-faint">
+                    {[p.city, p.zone, p.type].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+                <p className="mt-0.5 truncate text-[11.5px] font-semibold text-text-muted">
+                  {p.operationType ?? "Operación"} · {p.operationCurrency ?? ""} {p.operationPrice?.toLocaleString("es-AR") ?? "s/d"}
+                </p>
+                {/* Meta con iconitos: specs · referencia · visitas */}
+                {(specs.length > 0 || p.referenceCode || (p._count?.visitas ?? 0) > 0) && (
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-text-muted">
+                    {specs.length > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M4 21V7l8-4 8 4v14M9 21v-6h6v6" /></svg>
+                        {specs.join(" · ")}
+                      </span>
+                    )}
+                    {p.referenceCode && (
+                      <span className="inline-flex items-center gap-1">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></svg>
+                        {p.referenceCode}
+                      </span>
+                    )}
+                    {(p._count?.visitas ?? 0) > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                        {p._count!.visitas} visita{p._count!.visitas !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {/* Acciones */}
+                <div className="mt-2 flex gap-2">
+                  <a
+                    href={buildPropertyWhatsAppLink(p)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full bg-sage-chip px-3 text-[11px] font-bold text-olive-light"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                      <path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.611.611l4.458-1.495A11.948 11.948 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.37 0-4.567-.696-6.42-1.888l-.447-.293-2.91.975.975-2.91-.293-.447A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+                    </svg>
+                    WhatsApp
+                  </a>
                   <button
                     onClick={(e) => handlePdfClick(e, p, "left")}
                     className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full bg-sand-chip px-3 text-[11px] font-bold text-warning"
@@ -1317,8 +1353,13 @@ export function PropiedadesClient({
                   </button>
                 </div>
               </div>
+              {/* Footer de estado = franja de color */}
+              <div className={`flex items-center gap-1.5 border-t border-border px-3 py-1.5 text-[11.5px] font-bold ${getStatusColor(p.status)}`}>
+                <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+                {getStatusLabel(p.status)}
+              </div>
             </div>
-          ))
+          );})
         )}
       </div>}
 
@@ -1624,46 +1665,50 @@ export function PropiedadesClient({
           footer={
             <>
               {isEdit ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmAction("delete")}
-                    disabled={deleting}
-                    className="flex h-10 items-center gap-1.5 rounded-full bg-clay-chip px-4 text-[13px] font-bold text-terra transition-opacity active:opacity-80 disabled:opacity-50"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <button
+                  type="button"
+                  onClick={() => setConfirmAction("delete")}
+                  disabled={deleting}
+                  title="Eliminar propiedad"
+                  aria-label="Eliminar propiedad"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-clay-chip text-terra transition-opacity active:opacity-80 disabled:opacity-50"
+                >
+                  {deleting ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-terra/30 border-t-terra" />
+                  ) : (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="3 6 5 6 21 6" />
                       <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
                     </svg>
-                    {deleting ? "Eliminando..." : "Eliminar"}
-                  </button>
-                  {editProperty && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const p = editProperty;
-                        handleClose();
-                        setWizardProperty(p);
-                      }}
-                      className="flex h-10 items-center gap-1.5 rounded-full bg-sand-chip px-4 text-[13px] font-bold text-warning transition-opacity active:opacity-80"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
-                        <polyline points="16 6 12 2 8 6" />
-                        <line x1="12" y1="2" x2="12" y2="15" />
-                      </svg>
-                      {editProperty.mlPublication?.published ? "Gestionar en ML" : "Publicar en ML"}
-                    </button>
                   )}
-                </div>
+                </button>
               ) : (
                 <div />
               )}
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                {isEdit && editProperty && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const p = editProperty;
+                      handleClose();
+                      setWizardProperty(p);
+                    }}
+                    title={editProperty.mlPublication?.published ? "Gestionar en ML" : "Publicar en ML"}
+                    className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-sand-chip px-3 text-[12.5px] font-bold text-warning transition-opacity active:opacity-80"
+                  >
+                    <svg className="shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+                      <polyline points="16 6 12 2 8 6" />
+                      <line x1="12" y1="2" x2="12" y2="15" />
+                    </svg>
+                    <span className="hidden sm:inline">{editProperty.mlPublication?.published ? "Gestionar en ML" : "Publicar en ML"}</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="px-4 py-2 text-[13px] font-semibold text-text-faint transition-colors active:text-text"
+                  className="shrink-0 px-3 py-2 text-[13px] font-semibold text-text-faint transition-colors active:text-text"
                 >
                   Cancelar
                 </button>
@@ -1672,7 +1717,7 @@ export function PropiedadesClient({
                     type="button"
                     onClick={() => setConfirmAction("save")}
                     disabled={loading}
-                    className="flex items-center gap-2 h-11 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity active:opacity-90 disabled:opacity-50"
+                    className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity active:opacity-90 disabled:opacity-50"
                   >
                     {loading ? (
                       <>

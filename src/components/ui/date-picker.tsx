@@ -162,7 +162,7 @@ export function DatePicker({
           ref={popRef}
           data-datepicker-popover=""
           style={{ left: coords.left, top: coords.bottom != null ? undefined : coords.top, bottom: coords.bottom }}
-          className="fixed z-[60] w-[17rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-border bg-surface p-3 shadow-2xl"
+          className="pointer-events-auto fixed z-[60] w-[17rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-border bg-surface p-3 shadow-2xl"
         >
           {/* Cabecera: navegación de mes */}
           <div className="mb-2 flex items-center justify-between">

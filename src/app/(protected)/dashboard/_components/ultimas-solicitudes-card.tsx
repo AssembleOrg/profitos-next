@@ -1,3 +1,5 @@
+import { ExploreLink } from "./explore-link";
+
 const solicitudes = [
   {
     nombre: "Carlos Mendez",
@@ -34,9 +36,7 @@ export function UltimasSolicitudesCard() {
             4 nuevas
           </span>
         </div>
-        <button className="text-xs text-text-muted transition-colors hover:text-text">
-          Ver todo →
-        </button>
+        <ExploreLink />
       </div>
 
       {/* List */}
