@@ -14,6 +14,7 @@ import { useIsMobile } from "../../_components/use-is-mobile";
 import { buildPropertyWhatsAppLink } from "@/lib/whatsapp";
 import { MlPublishWizard } from "./ml-publish-wizard";
 import { PortalesPanel } from "./portales-panel";
+import { PhotosEditor } from "./photos-editor";
 
 const PropertiesMap = dynamic(
   () => import("./properties-map").then((mod) => mod.PropertiesMap),
@@ -1845,41 +1846,18 @@ export function PropiedadesClient({
                 {/* ================= Pestaña FOTOS ================= */}
                 {isEdit && (
                   <div className={modalTab === "fotos" ? "" : "hidden"}>
-                    {photosLoading ? (
-                      <div className="flex items-center justify-center py-16">
-                        <span className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-text" />
-                      </div>
-                    ) : !modalPhotos?.length ? (
-                      <p className="py-16 text-center text-[13.5px] text-text-faint">Esta propiedad no tiene fotos cargadas.</p>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-                        {modalPhotos.map((ph) => (
-                          <a
-                            key={`${ph.order}-${ph.image}`}
-                            href={ph.original ?? ph.image}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="group relative block overflow-hidden rounded-[14px] border border-border bg-bg"
-                          >
-                            {/* next/image: el optimizador cachea en server + navegador
-                                (Supabase sirve no-cache; así igual cacheamos). Lazy por defecto. */}
-                            <Image
-                              src={ph.image}
-                              alt={ph.description ?? `Foto ${ph.order}`}
-                              width={400}
-                              height={300}
-                              className="aspect-[4/3] w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
-                            />
-                            {ph.isFrontCover && (
-                              <span className="absolute left-2 top-2 rounded-full bg-dark px-2 py-0.5 text-[10px] font-bold text-dark-fg">Portada</span>
-                            )}
-                            {ph.isBlueprint && (
-                              <span className="absolute right-2 top-2 rounded-full bg-info-chip px-2 py-0.5 text-[10px] font-bold text-info">Plano</span>
-                            )}
-                          </a>
-                        ))}
-                      </div>
-                    )}
+                    {/* Subir / borrar / reordenar / portada. Cada cambio devuelve la
+                        galería actualizada; la portada nueva se refleja en el listado. */}
+                    <PhotosEditor
+                      propertyId={editProperty.id}
+                      photos={modalPhotos}
+                      loading={photosLoading}
+                      onChange={(photos, cover) => {
+                        setModalPhotos(photos);
+                        setEditProperty((prev) => (prev ? { ...prev, coverImageUrl: cover } : prev));
+                        router.refresh();
+                      }}
+                    />
                   </div>
                 )}
 
