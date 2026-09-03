@@ -1153,6 +1153,7 @@ export function PropiedadesClient({
               placeholder="Buscar por dirección, código, título..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && applyFilters(1)}
               className="h-11 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
           </div>

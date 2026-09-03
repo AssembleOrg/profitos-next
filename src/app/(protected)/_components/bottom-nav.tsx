@@ -4,8 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { useNotificationsContext } from "./notifications-context";
-import { NotifPanelBody } from "./notif-card";
 import { useNavFavorites } from "./nav-favorites-context";
 import { useAccess } from "./access-context";
 import { PREFETCH_HREFS } from "@/lib/nav/views";
@@ -23,13 +21,10 @@ interface BottomNavProps {
 export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const moreDrag = useDragControls();
-  const notifDrag = useDragControls();
   const isAdmin = role === "admin";
   const { favorites, isFavorite: isFav, toggle: toggleFav } = useNavFavorites();
   const { canAccess } = useAccess();
-  const { notifications, unreadCount, markAsSeen, loadNotifications } = useNotificationsContext();
 
   const isVisible = (m: NavMeta) => {
     if (m.adminOnly && !isAdmin) return false;
@@ -63,53 +58,6 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
 
   return (
     <>
-      {/* Notifications sheet */}
-      <AnimatePresence>
-        {showNotifications && (
-          <>
-            <motion.div
-              className="fixed inset-0 z-40 bg-scrim md:hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setShowNotifications(false)}
-            />
-            <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[28px] bg-surface md:hidden"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              style={{ paddingBottom: "calc(var(--safe-bottom, 0px) + 96px)" }}
-              drag="y"
-              dragListener={false}
-              dragControls={notifDrag}
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={{ top: 0, bottom: 0.6 }}
-              onDragEnd={(_, info) => {
-                if (info.offset.y > 120 || info.velocity.y > 500) setShowNotifications(false);
-              }}
-            >
-              <div
-                onPointerDown={(e) => notifDrag.start(e)}
-                style={{ touchAction: "none" }}
-                className="cursor-grab active:cursor-grabbing"
-              >
-                <div className="mx-auto my-3 h-1 w-10 rounded-full bg-border-strong" />
-              </div>
-              <div className="max-h-[62dvh] overflow-y-auto">
-                <NotifPanelBody
-                  notifications={notifications}
-                  onMarkSeen={() => markAsSeen()}
-                  onNavigate={() => setShowNotifications(false)}
-                />
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
       {/* More sheet overlay */}
       <AnimatePresence>
         {showMore && (
@@ -152,31 +100,6 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
 
               {/* Grid of items */}
               <div className="grid max-h-[58dvh] grid-cols-3 gap-2 overflow-y-auto px-4 pb-2">
-                {/* Notifications entry */}
-                <button
-                  onClick={() => {
-                    setShowMore(false);
-                    loadNotifications().catch(() => {});
-                    setShowNotifications(true);
-                  }}
-                  className="relative flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-bg px-2 py-4 text-text-muted transition-colors active:bg-surface-elevated"
-                >
-                  <span className="relative">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                      <path d="M13.73 21a2 2 0 01-3.46 0" />
-                    </svg>
-                    {unreadCount > 0 && (
-                      <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-terra px-1 py-0.5 text-[9px] font-bold text-white">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-center text-[11px] font-semibold leading-tight text-text-muted">
-                    Notificaciones
-                  </span>
-                </button>
-
                 {sortedMoreItems.map((item) => {
                   const isActive = pathname === item.href;
                   const fav = isFav(item.href);
@@ -316,11 +239,6 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                   <circle cx="12" cy="12" r="1.5" />
                   <circle cx="19" cy="12" r="1.5" />
                 </svg>
-                {unreadCount > 0 && (
-                  <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-terra px-1 py-0.5 text-[9px] font-bold text-white">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
               </span>
               <span
                 className={`w-full truncate text-center text-[9.5px] leading-none ${

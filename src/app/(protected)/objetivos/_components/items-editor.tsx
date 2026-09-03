@@ -1,18 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Spinner } from "../../_components/spinner";
+import { Sheet } from "../../_components/sheet";
 import type { SerializedCard, SerializedItem } from "./types";
 
-interface ItemsEditorPopoverProps {
+interface ItemsEditorSheetProps {
   card: SerializedCard;
+  open: boolean;
+  onClose: () => void;
   onChanged: (next: SerializedCard) => void;
 }
 
-export function ItemsEditorPopover({ card, onChanged }: Readonly<ItemsEditorPopoverProps>) {
-  const [open, setOpen] = useState(false);
+export function ItemsEditorSheet({ card, open, onClose, onChanged }: Readonly<ItemsEditorSheetProps>) {
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -55,87 +56,74 @@ export function ItemsEditorPopover({ card, onChanged }: Readonly<ItemsEditorPopo
   }
 
   return (
-    <div className="rounded-[14px] border border-border bg-surface">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-[11px] font-semibold text-text-muted transition-colors hover:text-text"
-      >
-        <span className="inline-flex items-center gap-1.5">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 20h9" />
-            <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
-          </svg>
-          Editar ítems
-        </span>
-        <span className="text-text-faint">{open ? "▲" : "▼"}</span>
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden"
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Editar ítems"
+      description={card.title}
+      maxWidth="sm:max-w-md"
+      footer={
+        <div className="flex w-full items-center justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-2 text-[13px] font-semibold text-text-faint hover:text-text"
           >
-            <div className="flex flex-col gap-2 border-t border-border px-3 py-3">
-              {card.items.length > 0 && (
-                <ul className="flex flex-col gap-1">
-                  {card.items.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex items-center gap-2 rounded-[10px] bg-bg px-2.5 py-1.5 text-xs"
-                    >
-                      <span className="flex-1 truncate text-text-muted">{item.text}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item)}
-                        className="text-text-faint transition-colors hover:text-terra"
-                        aria-label={`Quitar ${item.text}`}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <line x1="18" y1="6" x2="6" y2="18" />
-                          <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addItem();
-                    }
-                  }}
-                  placeholder="Nuevo ítem…"
-                  className="h-9 flex-1 rounded-full border border-border bg-surface px-3.5 text-xs text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                />
+            Cerrar
+          </button>
+        </div>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        {card.items.length > 0 && (
+          <ul className="flex flex-col gap-1.5">
+            {card.items.map((item) => (
+              <li
+                key={item.id}
+                className="flex items-center gap-2 rounded-[12px] bg-bg px-3 py-2 text-[13px]"
+              >
+                <span className="flex-1 truncate text-text-muted">{item.text}</span>
                 <button
                   type="button"
-                  onClick={addItem}
-                  disabled={submitting || !text.trim()}
-                  className="h-9 flex-shrink-0 rounded-full bg-dark px-3.5 text-xs font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => removeItem(item)}
+                  className="shrink-0 text-text-faint transition-colors hover:text-terra"
+                  aria-label={`Quitar ${item.text}`}
                 >
-                  {submitting ? <Spinner size={12} /> : (
-                    <>
-                      <span className="sm:hidden">+</span>
-                      <span className="hidden sm:inline">Agregar</span>
-                    </>
-                  )}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
                 </button>
-              </div>
-            </div>
-          </motion.div>
+              </li>
+            ))}
+          </ul>
         )}
-      </AnimatePresence>
-    </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addItem();
+              }
+            }}
+            placeholder="Nuevo ítem…"
+            autoFocus
+            className="h-10 flex-1 rounded-full border border-border bg-surface px-3.5 text-[13px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={addItem}
+            disabled={submitting || !text.trim()}
+            className="h-10 shrink-0 rounded-full bg-dark px-4 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitting ? <Spinner size={12} /> : "Agregar"}
+          </button>
+        </div>
+      </div>
+    </Sheet>
   );
 }
 

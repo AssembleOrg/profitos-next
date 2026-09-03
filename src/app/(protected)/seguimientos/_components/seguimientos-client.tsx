@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useRef, useState, useTransition } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
@@ -67,6 +67,8 @@ interface Props {
   isAdmin: boolean;
   assignableUsers: UserOption[];
   assignableProperties: PropertyOption[];
+  filterQ: string;
+  filterStatus: string;
 }
 
 const STATUS_OPTIONS = [
@@ -120,10 +122,13 @@ export function SeguimientosClient({
   isAdmin,
   assignableUsers,
   assignableProperties,
+  filterQ,
+  filterStatus,
 }: Props) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [pending, startTransition] = useTransition();
   const [createOpen, setCreateOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -150,19 +155,14 @@ export function SeguimientosClient({
   }, [detail?.actions, actionAttachments]);
   const actionSignedUrls = useNoteSignedUrls(actionAttachmentPaths);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return followUps.filter((item) => {
-      if (statusFilter && item.status !== statusFilter) return false;
-      if (!q) return true;
-      return (
-        item.title?.toLowerCase().includes(q) ||
-        item.notes?.toLowerCase().includes(q) ||
-        item.property.address.toLowerCase().includes(q) ||
-        userLabel(item.assignedToUser).toLowerCase().includes(q)
-      );
-    });
-  }, [followUps, search, statusFilter]);
+  function pushFilter(key: "q" | "status", value: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) params.set(key, value);
+    else params.delete(key);
+    params.delete("page");
+    const qs = params.toString();
+    startTransition(() => router.push(qs ? `${pathname}?${qs}` : pathname));
+  }
 
   async function loadDetail(id: string) {
     setSelectedId(id);
@@ -325,7 +325,7 @@ export function SeguimientosClient({
         )}
       </div>
 
-      <div className="flex flex-col gap-2.5">
+      <div className={`flex flex-col gap-2.5 transition-opacity ${pending ? "opacity-70" : ""}`}>
         <div className="relative">
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
@@ -333,8 +333,13 @@ export function SeguimientosClient({
           </svg>
           <input
             placeholder="Buscar por propiedad, responsable, título..."
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            defaultValue={filterQ}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") pushFilter("q", (e.target as HTMLInputElement).value);
+            }}
+            onBlur={(e) => {
+              if (e.target.value !== filterQ) pushFilter("q", e.target.value);
+            }}
             className="h-10 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
           />
         </div>
@@ -344,9 +349,9 @@ export function SeguimientosClient({
               <button
                 key={option.value}
                 type="button"
-                onClick={() => setStatusFilter(option.value)}
+                onClick={() => pushFilter("status", option.value)}
                 className={
-                  statusFilter === option.value
+                  filterStatus === option.value
                     ? "whitespace-nowrap rounded-full bg-dark px-4 py-1.5 text-[12.5px] font-bold text-dark-fg"
                     : "whitespace-nowrap rounded-full px-4 py-1.5 text-[12.5px] font-medium text-text-faint transition-colors hover:text-text"
                 }
@@ -360,10 +365,12 @@ export function SeguimientosClient({
 
       {/* Cards — solo mobile */}
       <div className="sm:hidden space-y-1.5">
-        {filtered.length === 0 ? (
-          <p className="py-8 text-center text-sm text-text-muted">Sin resultados</p>
+        {followUps.length === 0 ? (
+          <p className="py-8 text-center text-[12.5px] text-text-faint">
+            {filterQ || filterStatus ? "Sin resultados para los filtros seleccionados" : "No hay seguimientos cargados"}
+          </p>
         ) : (
-          filtered.map((item) => {
+          followUps.map((item) => {
             const status = getStatusMeta(item.status);
             const location = [item.property.zone, item.property.city].filter(Boolean).join(" · ");
             return (
@@ -424,14 +431,14 @@ export function SeguimientosClient({
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {followUps.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-12 text-center text-[12.5px] text-text-faint">
-                    {search || statusFilter ? "Sin resultados para los filtros seleccionados" : "No hay seguimientos cargados"}
+                    {filterQ || filterStatus ? "Sin resultados para los filtros seleccionados" : "No hay seguimientos cargados"}
                   </td>
                 </tr>
               ) : (
-                filtered.map((item) => {
+                followUps.map((item) => {
                   const status = getStatusMeta(item.status);
                   return (
                     <tr

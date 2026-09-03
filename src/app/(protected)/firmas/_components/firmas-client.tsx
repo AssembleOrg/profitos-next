@@ -66,6 +66,13 @@ export function FirmasClient({
   const [pending, startTransition] = useTransition();
 
   const [firmas, setFirmas] = useState<SerializedFirma[]>(initialFirmas);
+  // Re-sincronizar cuando el server manda otra data (búsqueda / paginación):
+  // useState() no reinicia solo al cambiar el prop.
+  const [syncedInitial, setSyncedInitial] = useState(initialFirmas);
+  if (syncedInitial !== initialFirmas) {
+    setSyncedInitial(initialFirmas);
+    setFirmas(initialFirmas);
+  }
   const [createOpen, setCreateOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [active, setActive] = useState<SerializedFirma | null>(null);

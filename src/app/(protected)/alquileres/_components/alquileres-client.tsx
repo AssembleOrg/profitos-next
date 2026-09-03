@@ -5,6 +5,8 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
+import { Sheet } from "../../_components/sheet";
+import { WhatsAppLink } from "@/components/whatsapp-link";
 import { formatDate, formatRelative } from "@/lib/datetime";
 import {
   RENTAL_FREQUENCY_LABEL,
@@ -65,6 +67,10 @@ export function AlquileresClient({
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [contracts, setContracts] = useState(initialContracts);
+  const [detailContract, setDetailContract] = useState<SerializedContract | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SerializedContract | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
   // Re-sincronizar cuando el server manda otra data (cambio de tab / refresh):
   // useState() no reinicia solo al cambiar el prop, y la tab Cobros manda [].
   const [syncedInitial, setSyncedInitial] = useState(initialContracts);
@@ -161,15 +167,25 @@ export function AlquileresClient({
   }
 
   function handleContractDelete(contract: SerializedContract) {
-    if (!confirm(`¿Eliminar el contrato de ${contract.tenant.fullName}? Se borran las cuotas.`)) return;
-    fetch(`/api/alquileres/${contract.id}`, { method: "DELETE" })
-      .then(async (res) => {
-        const body = await res.json();
-        if (!res.ok) throw new Error(body?.message ?? "Error");
-        setContracts((prev) => prev.filter((c) => c.id !== contract.id));
-        toast.success("Contrato eliminado");
-      })
-      .catch((e) => toast.error(e instanceof Error ? e.message : "Error"));
+    setDeleteTarget(contract);
+    setDeleteConfirmText("");
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/alquileres/${deleteTarget.id}`, { method: "DELETE" });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.message ?? "Error");
+      setContracts((prev) => prev.filter((c) => c.id !== deleteTarget.id));
+      toast.success("Contrato eliminado");
+      setDeleteTarget(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -228,33 +244,44 @@ export function AlquileresClient({
         />
       </div>
 
-      {tab === "contratos" ? (
-        contracts.length === 0 ? (
-          <EmptyState onCreate={() => setWizardOpen(true)} />
-        ) : (
-          <motion.div layout className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <AnimatePresence mode="popLayout">
-              {contracts.map((c) => (
-                <ContractCard
-                  key={c.id}
-                  contract={c}
-                  onOpenDue={(due) => openDue(c, due)}
-                  onDelete={() => handleContractDelete(c)}
-                  canDelete={isAdmin || c.createdByUser.id === currentUserId}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        )
-      ) : (
-        <CobrosList
-          headers={cobrosHeaders}
-          loaded={loadedContracts}
-          loadingIds={loadingContractIds}
-          onExpand={loadContractDetail}
-          onOpenDue={openDue}
-        />
-      )}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {tab === "contratos" ? (
+            contracts.length === 0 ? (
+              <EmptyState onCreate={() => setWizardOpen(true)} />
+            ) : (
+              <motion.div layout className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <AnimatePresence mode="popLayout">
+                  {contracts.map((c) => (
+                    <ContractCard
+                      key={c.id}
+                      contract={c}
+                      onOpenContract={() => setDetailContract(c)}
+                      onOpenDue={(due) => openDue(c, due)}
+                      onDelete={() => handleContractDelete(c)}
+                      canDelete={isAdmin || c.createdByUser.id === currentUserId}
+                    />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            )
+          ) : (
+            <CobrosList
+              headers={cobrosHeaders}
+              loaded={loadedContracts}
+              loadingIds={loadingContractIds}
+              onExpand={loadContractDetail}
+              onOpenDue={openDue}
+            />
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       <Pagination page={page} totalPages={totalPages} total={total} limit={limit} />
 
@@ -281,6 +308,59 @@ export function AlquileresClient({
         currentUserId={currentUserId}
         onUpdated={handleDueUpdated}
       />
+
+      {/* Detalle de contrato (solo lectura) */}
+      <ContractDetailModal
+        contract={detailContract}
+        onClose={() => setDetailContract(null)}
+      />
+
+      {/* Borrado seguro: hay que escribir ELIMINAR */}
+      <Sheet
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title="Eliminar contrato"
+        maxWidth="sm:max-w-sm"
+        closeOnOverlay={false}
+        footer={
+          <div className="flex w-full items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(null)}
+              className="px-2 text-[13px] font-semibold text-text-faint hover:text-text"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => void confirmDelete()}
+              disabled={deleteConfirmText.trim() !== "ELIMINAR" || deleting}
+              className="inline-flex h-11 items-center justify-center rounded-full bg-clay-chip px-5 text-[13.5px] font-bold text-terra transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {deleting ? "Eliminando…" : "Eliminar contrato"}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-[13.5px] leading-relaxed text-text-muted">
+            Vas a eliminar el contrato de <strong className="text-text">{deleteTarget?.tenant.fullName}</strong>.
+            Se borran también <strong className="text-text">todas sus cuotas</strong>. Esta acción no se puede deshacer.
+          </p>
+          <div>
+            <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
+              Escribí <span className="font-bold text-terra">ELIMINAR</span> para confirmar
+            </label>
+            <input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="ELIMINAR"
+              autoFocus
+              className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
+            />
+          </div>
+        </div>
+      </Sheet>
     </div>
   );
 }
@@ -316,14 +396,126 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
+function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-1.5">
+      <span className="shrink-0 text-[11px] text-text-faint">{label}</span>
+      <span className="min-w-0 truncate text-right text-[12.5px] font-semibold text-text">{children}</span>
+    </div>
+  );
+}
+
+function ContractDetailModal({
+  contract,
+  onClose,
+}: {
+  contract: SerializedContract | null;
+  onClose: () => void;
+}) {
+  return (
+    <Sheet
+      open={contract !== null}
+      onClose={onClose}
+      title="Detalle del contrato"
+      description={contract ? contract.property.address : undefined}
+      maxWidth="sm:max-w-lg"
+      footer={
+        <div className="flex w-full items-center justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-2 text-[13px] font-semibold text-text-faint hover:text-text"
+          >
+            Cerrar
+          </button>
+        </div>
+      }
+    >
+      {contract && (
+        <div className="flex flex-col gap-4">
+          {/* Inquilino */}
+          <section className="rounded-[16px] bg-bg p-3">
+            <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Inquilino</h4>
+            <p className="text-[14px] font-bold text-text">{contract.tenant.fullName}</p>
+            <p className="mt-0.5 text-[11.5px] text-text-faint">
+              {contract.tenant.idType.toUpperCase()} {contract.tenant.idNumber}
+            </p>
+            {(contract.tenant.phone || contract.tenant.email) && (
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                {contract.tenant.phone && (
+                  <WhatsAppLink
+                    phone={contract.tenant.phone}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full bg-sage-chip px-3 text-[12px] font-bold text-olive-light transition-opacity active:opacity-80"
+                  >
+                    {contract.tenant.phone}
+                  </WhatsAppLink>
+                )}
+                {contract.tenant.email && (
+                  <button
+                    type="button"
+                    onClick={() => { navigator.clipboard.writeText(contract.tenant.email!); toast.success("Mail copiado"); }}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-[12px] font-semibold text-text-muted active:bg-bg"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" /></svg>
+                    <span className="max-w-[160px] truncate">{contract.tenant.email}</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* Contrato */}
+          <section className="rounded-[16px] border border-border bg-surface px-3 py-1.5">
+            <DetailRow label="Período">
+              {formatDate(contract.startDate)} → {formatDate(contract.endDate)}
+            </DetailRow>
+            <DetailRow label="Frecuencia">{RENTAL_FREQUENCY_LABEL[contract.frequency]}</DetailRow>
+            <DetailRow label="Base">{formatARS(contract.baseAmount)} {contract.currency}</DetailRow>
+            <DetailRow label="Primera cuota">{formatDate(contract.firstDueDate)}</DetailRow>
+            <DetailRow label="Días de gracia">{contract.gracePeriodDays}</DetailRow>
+          </section>
+
+          {/* Adicionales */}
+          {contract.additionals.length > 0 && (
+            <section className="rounded-[16px] bg-bg p-3">
+              <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Adicionales</h4>
+              <div className="flex flex-col gap-1.5">
+                {contract.additionals.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between gap-3 text-[12.5px]">
+                    <span className="min-w-0 truncate text-text">{a.additional.name}</span>
+                    <span className="shrink-0 font-display font-bold text-text-muted">{formatARS(a.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Notas */}
+          {contract.notes && (
+            <section className="rounded-[16px] bg-bg p-3">
+              <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">Notas</h4>
+              <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-text-muted">{contract.notes}</p>
+            </section>
+          )}
+
+          <p className="text-[10.5px] text-text-faint">
+            Creado por {contract.createdByUser.fullName ?? contract.createdByUser.email} · {formatRelative(contract.createdAt)}
+          </p>
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
 interface ContractCardProps {
   contract: SerializedContract;
+  onOpenContract: () => void;
   onOpenDue: (due: SerializedDueDate) => void;
   onDelete: () => void;
   canDelete: boolean;
 }
 
-function ContractCard({ contract, onOpenDue, onDelete, canDelete }: ContractCardProps) {
+function ContractCard({ contract, onOpenContract, onOpenDue, onDelete, canDelete }: ContractCardProps) {
   const summary = summarizeDueDates(contract.dueDates, contract.gracePeriodDays);
   const completion = summary.expectedTotal > 0 ? (summary.collectedTotal / summary.expectedTotal) * 100 : 0;
   const next = contract.dueDates.find((d) => {
@@ -341,13 +533,22 @@ function ContractCard({ contract, onOpenDue, onDelete, canDelete }: ContractCard
       className="flex h-full flex-col overflow-hidden rounded-[20px] border border-border bg-surface"
     >
       <header className="flex items-start gap-3 border-b border-border px-4 py-3">
-        <div className="min-w-0 flex-1">
-          <h3 className="line-clamp-1 font-display text-[15px] font-semibold text-text">{contract.property.address}</h3>
-          {contract.title && <p className="text-[11px] text-text-muted">{contract.title}</p>}
-          <p className="mt-0.5 truncate text-[11px] text-text-faint">
-            {contract.tenant.fullName} · {contract.tenant.idType.toUpperCase()} {contract.tenant.idNumber}
-          </p>
-        </div>
+        <button
+          type="button"
+          onClick={onOpenContract}
+          className="group flex min-w-0 flex-1 items-start gap-2 text-left"
+        >
+          <div className="min-w-0 flex-1">
+            <h3 className="line-clamp-1 font-display text-[15px] font-semibold text-text">{contract.property.address}</h3>
+            {contract.title && <p className="text-[11px] text-text-muted">{contract.title}</p>}
+            <p className="mt-0.5 truncate text-[11px] text-text-faint">
+              {contract.tenant.fullName} · {contract.tenant.idType.toUpperCase()} {contract.tenant.idNumber}
+            </p>
+          </div>
+          <svg className="mt-0.5 shrink-0 text-text-faint transition-colors group-hover:text-text" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
         {canDelete && (
           <button
             type="button"

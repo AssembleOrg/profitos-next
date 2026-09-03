@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Topbar } from "./topbar";
 import { CommandPalette } from "../dashboard/_components/command-palette";
 import { BottomNav } from "./bottom-nav";
+import { MobileNotifButton } from "./mobile-notif-button";
 import { RolePreviewProvider, useRolePreview, type Role } from "./role-preview-context";
 import { RolePreviewBanner } from "./role-preview-banner";
 import { NavFavoritesProvider } from "./nav-favorites-context";
@@ -37,7 +38,12 @@ function Shell({ avatarUrl, greeting, children }: Readonly<Omit<ProtectedShellPr
             trae su propio título, así que ahí queda únicamente el buscador. */}
         <header className="sticky top-0 z-30 flex flex-col gap-3 border-b border-border/70 bg-bg/80 px-5 py-4 backdrop-blur-xl md:hidden">
           {isDashboard && greeting}
-          <CommandPalette role={effectiveRole} />
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <CommandPalette role={effectiveRole} />
+            </div>
+            <MobileNotifButton />
+          </div>
         </header>
 
         {/* Desktop: saludo solo en dashboard (las demás páginas tienen su propio encabezado) */}

@@ -40,7 +40,7 @@ export function CreateFirmaModal({
   const [submitting, setSubmitting] = useState(false);
 
   const paths = attachments.map((a) => a.path);
-  const signedUrls = useSignedUrls(paths);
+  const { urls: signedUrls } = useSignedUrls(paths);
 
   useEffect(() => {
     if (!open) return;

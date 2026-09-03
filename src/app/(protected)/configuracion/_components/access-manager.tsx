@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { GRANTABLE_VIEWS } from "@/lib/nav/views";
+import { useIsMobile } from "../../_components/use-is-mobile";
 
 interface Member {
   email: string;
@@ -17,6 +18,7 @@ export function AccessManager() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const isMobile = useIsMobile();
 
   async function load() {
     try {
@@ -124,8 +126,14 @@ export function AccessManager() {
                     Acceso total (administrador).
                   </p>
                 ) : (
-                  <>
-                    <div className="mb-2 flex items-center gap-2">
+                  <details open={!isMobile} className="group">
+                    <summary className="flex cursor-pointer list-none items-center gap-2 text-[11px] text-text-faint md:hidden [&::-webkit-details-marker]:hidden">
+                      <span>
+                        {allowed.size}/{GRANTABLE_VIEWS.length} vistas
+                      </span>
+                      <span className="ml-auto transition-transform group-open:rotate-90">›</span>
+                    </summary>
+                    <div className="mb-2 flex items-center gap-2 max-md:mt-2">
                       <button
                         type="button"
                         onClick={() => setAll(m, true)}
@@ -140,7 +148,7 @@ export function AccessManager() {
                       >
                         Ninguna
                       </button>
-                      <span className="ml-auto text-[11px] text-text-faint">
+                      <span className="ml-auto hidden text-[11px] text-text-faint md:inline">
                         {allowed.size}/{GRANTABLE_VIEWS.length}
                       </span>
                     </div>
@@ -164,7 +172,7 @@ export function AccessManager() {
                         );
                       })}
                     </div>
-                  </>
+                  </details>
                 )}
               </div>
             );

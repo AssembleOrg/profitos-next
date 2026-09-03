@@ -48,8 +48,16 @@ export function InquilinosClient({
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [tenants, setTenants] = useState(initialTenants);
+  // Re-sincronizar cuando el server manda otra data (búsqueda / paginación):
+  // useState() no reinicia solo al cambiar el prop.
+  const [syncedInitial, setSyncedInitial] = useState(initialTenants);
+  if (syncedInitial !== initialTenants) {
+    setSyncedInitial(initialTenants);
+    setTenants(initialTenants);
+  }
   const [editing, setEditing] = useState<SerializedTenant | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [toDelete, setToDelete] = useState<SerializedTenant | null>(null);
 
   function updateQuery(value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -60,8 +68,8 @@ export function InquilinosClient({
     startTransition(() => router.push(qs ? `${pathname}?${qs}` : pathname));
   }
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`¿Eliminar al inquilino "${name}"? Esta acción es irreversible.`)) return;
+  async function handleDelete(id: string) {
+    setToDelete(null);
     try {
       const res = await fetch(`/api/inquilinos/${id}`, { method: "DELETE" });
       const body = await res.json();
@@ -74,12 +82,12 @@ export function InquilinosClient({
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-col gap-3">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Inquilinos</h1>
-          <p className="mt-1 text-[12.5px] text-text-faint">
-            Personas o empresas con contratos de alquiler.
+          <p className="text-[12.5px] text-text-faint">
+            {total} inquilino{total !== 1 ? "s" : ""} cargado{total !== 1 ? "s" : ""}
           </p>
         </div>
         <button
@@ -98,7 +106,11 @@ export function InquilinosClient({
         </button>
       </header>
 
-      <div className={`flex items-center transition-opacity ${pending ? "opacity-70" : ""}`}>
+      <div className={`relative transition-opacity ${pending ? "opacity-70" : ""}`}>
+        <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
         <input
           type="text"
           defaultValue={filterQ}
@@ -109,7 +121,7 @@ export function InquilinosClient({
             if (e.target.value !== filterQ) updateQuery(e.target.value);
           }}
           placeholder="Buscar por nombre, DNI/CUIT, teléfono o email…"
-          className="h-11 flex-1 rounded-full border border-border bg-surface pl-4 pr-3 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
+          className="h-10 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
         />
       </div>
 
@@ -118,79 +130,79 @@ export function InquilinosClient({
           {filterQ ? "Sin resultados" : "Todavía no hay inquilinos cargados."}
         </p>
       ) : (
-        <div className="sm:overflow-hidden sm:rounded-[20px] sm:border sm:border-border sm:bg-surface">
+        <>
           {/* Mobile cards */}
-          <div className="flex flex-col gap-2.5 sm:hidden">
+          <div className="space-y-1.5 sm:hidden">
             <AnimatePresence>
-              {tenants.map((t) => (
-                <motion.div
-                  key={t.id}
-                  layout
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex flex-col gap-2 rounded-[18px] border border-border bg-surface p-3.5"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-[13.5px] font-bold text-text">{t.fullName}</p>
-                      <p className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-bg px-2 py-1">
-                        <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-text-faint">{t.idType}</span>
-                        <span className="font-display text-[12px] font-bold text-text">{t.idNumber}</span>
+              {tenants.map((t) => {
+                const hasContracts = t.contractsCount > 0;
+                return (
+                  <motion.div
+                    key={t.id}
+                    layout
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => {
+                      setEditing(t);
+                      setCreateOpen(true);
+                    }}
+                    className="cursor-pointer overflow-hidden rounded-[18px] border border-border bg-surface transition-colors active:bg-bg"
+                  >
+                    <div className="p-3">
+                      <p className="text-[13.5px] font-bold leading-tight text-text">{t.fullName}</p>
+                      <p className="mt-0.5 text-[11px] text-text-faint">
+                        <span className="font-bold uppercase tracking-[0.12em]">{t.idType}</span> {t.idNumber}
                       </p>
-                    </div>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${t.contractsCount > 0 ? "bg-sage-chip text-olive-light" : "bg-bg text-text-faint"}`}>
-                      {t.contractsCount} contrato{t.contractsCount !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  {(t.phone || t.email) && (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {t.phone && (
-                        <WhatsAppLink
-                          phone={t.phone}
-                          className="inline-flex items-center gap-1.5 rounded-full bg-sage-chip px-2.5 py-1 text-[11px] font-bold text-olive-light transition-opacity hover:opacity-80"
-                        >
-                          {t.phone}
-                        </WhatsAppLink>
+                      {t.notes?.trim() && <p className="mt-1.5 line-clamp-1 text-[12px] text-text-muted">{t.notes}</p>}
+                      {(t.phone || t.email) && (
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-text-muted">
+                          {t.phone && (
+                            <WhatsAppLink phone={t.phone} className="inline-flex items-center gap-1 font-bold text-olive-light">
+                              {t.phone}
+                            </WhatsAppLink>
+                          )}
+                          {t.email && (
+                            <span className="inline-flex min-w-0 items-center gap-1">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="2" y="4" width="20" height="16" rx="2" />
+                                <path d="m22 7-10 7L2 7" />
+                              </svg>
+                              <span className="truncate">{t.email}</span>
+                            </span>
+                          )}
+                        </div>
                       )}
-                      {t.email && <span className="text-xs text-text-faint">{t.email}</span>}
                     </div>
-                  )}
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      type="button"
-                      aria-label="Editar"
-                      onClick={() => {
-                        setEditing(t);
-                        setCreateOpen(true);
-                      }}
-                      className="flex h-11 w-11 items-center justify-center rounded-full bg-bg text-text-muted transition-colors active:text-text"
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-                      </svg>
-                    </button>
-                    {isAdmin && t.contractsCount === 0 && (
-                      <button
-                        type="button"
-                        aria-label="Eliminar"
-                        onClick={() => handleDelete(t.id, t.fullName)}
-                        className="flex h-11 w-11 items-center justify-center rounded-full bg-clay-chip text-terra transition-opacity active:opacity-80"
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
+                    <div className={`flex items-center gap-1.5 border-t border-border px-3 py-1.5 text-[11.5px] font-bold ${hasContracts ? "bg-sage-chip text-olive-light" : "bg-bg text-text-faint"}`}>
+                      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+                      {hasContracts ? `${t.contractsCount} contrato${t.contractsCount !== 1 ? "s" : ""}` : "Sin contratos"}
+                      {isAdmin && !hasContracts && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setToDelete(t);
+                          }}
+                          className="ml-auto inline-flex items-center gap-1 text-[11px] font-bold text-terra"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                          Eliminar
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </div>
 
           {/* Desktop table */}
-          <table className="hidden w-full text-sm sm:table">
+          <div className="hidden overflow-hidden rounded-[20px] border border-border bg-surface sm:block">
+          <table className="w-full text-sm">
             <thead>
               <tr>
                 <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Nombre</th>
@@ -256,7 +268,7 @@ export function InquilinosClient({
                           <button
                             type="button"
                             aria-label="Eliminar"
-                            onClick={() => handleDelete(t.id, t.fullName)}
+                            onClick={() => setToDelete(t)}
                             className="flex h-9 w-9 items-center justify-center rounded-full bg-clay-chip text-terra transition-opacity hover:opacity-80"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -272,10 +284,59 @@ export function InquilinosClient({
               </AnimatePresence>
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       <Pagination page={page} totalPages={totalPages} total={total} limit={limit} />
+
+      {/* Modal de confirmación — Eliminar */}
+      <AnimatePresence>
+        {toDelete && (
+          <>
+            <motion.div
+              key="confirm-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[70] bg-scrim backdrop-blur-sm"
+              onClick={() => setToDelete(null)}
+            />
+            <motion.div
+              key="confirm-dialog"
+              role="alertdialog"
+              aria-modal="true"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="fixed left-1/2 top-1/2 z-[71] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border bg-surface p-6 shadow-2xl"
+            >
+              <p className="font-display text-[17px] font-semibold text-text">¿Eliminar inquilino?</p>
+              <p className="mt-1 text-[13px] text-text-muted">
+                Se eliminará a <span className="font-semibold text-text">{toDelete.fullName}</span>. Esta acción no se puede deshacer.
+              </p>
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setToDelete(null)}
+                  className="px-4 py-2 text-[13px] font-semibold text-text-faint transition-colors active:text-text"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  autoFocus
+                  onClick={() => handleDelete(toDelete.id)}
+                  className="h-10 rounded-full bg-terra px-5 text-[13px] font-bold text-white transition-opacity active:opacity-90"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       <TenantFormDialog
         open={createOpen}
@@ -385,7 +446,7 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
       title={editing ? "Editar inquilino" : "Nuevo inquilino"}
       maxWidth="sm:max-w-[540px]"
       footer={
-        <>
+        <div className="ml-auto flex items-center gap-3">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
@@ -401,93 +462,92 @@ function TenantFormDialog({ open, onOpenChange, editing, onSaved }: Readonly<Ten
           >
             {submitting ? "Guardando…" : editing ? "Guardar cambios" : "Crear"}
           </button>
-        </>
+        </div>
       }
     >
-                <div>
-                  <div className="flex flex-col gap-4">
-                    <div>
-                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
-                        Nombre completo
-                      </label>
-                      <input
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
-                      />
-                    </div>
+                  <div className="flex flex-col gap-3">
+        <div>
+          <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
+            Nombre completo
+          </label>
+          <input
+            type="text"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
+          />
+        </div>
 
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
-                          Tipo
-                        </label>
-                        <SelectField
-                          value={idType}
-                          onChange={(e) => setIdType(e.target.value as "dni" | "cuit")}
-                        >
-                          <option value="dni">DNI</option>
-                          <option value="cuit">CUIT</option>
-                        </SelectField>
-                      </div>
-                      <div className="col-span-2">
-                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
-                          Número
-                        </label>
-                        <input
-                          type="text"
-                          value={idNumber}
-                          onChange={(e) => setIdNumber(e.target.value)}
-                          className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
-                        />
-                      </div>
-                    </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
+              Tipo
+            </label>
+            <SelectField
+              wrapperClassName="w-full"
+              value={idType}
+              onChange={(e) => setIdType(e.target.value as "dni" | "cuit")}
+            >
+              <option value="dni">DNI</option>
+              <option value="cuit">CUIT</option>
+            </SelectField>
+          </div>
+          <div className="col-span-2">
+            <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
+              Número
+            </label>
+            <input
+              type="text"
+              value={idNumber}
+              onChange={(e) => setIdNumber(e.target.value)}
+              className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
+            />
+          </div>
+        </div>
 
-                    <div>
-                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
-                        Teléfono
-                      </label>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
-                      />
-                    </div>
+        <div>
+          <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
+            Teléfono
+          </label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
+          />
+        </div>
 
-                    <div>
-                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
-                        Email <span className="text-text-faint">(opcional)</span>
-                      </label>
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
-                      />
-                    </div>
+        <div>
+          <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
+            Email <span className="text-text-faint">(opcional)</span>
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none"
+          />
+        </div>
 
-                    <div>
-                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
-                        Notas <span className="text-text-faint">(opcional)</span>
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm text-text focus:border-border-strong focus:outline-none"
-                      />
-                    </div>
+        <div>
+          <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
+            Notas <span className="text-text-faint">(opcional)</span>
+          </label>
+          <textarea
+            rows={2}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="w-full resize-none rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-sm text-text focus:border-border-strong focus:outline-none"
+          />
+        </div>
 
-                    <div>
-                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
-                        Audio / adjuntos <span className="text-text-faint">(opcional)</span>
-                      </label>
-                      <MediaUploader attachments={attachments} onChange={setAttachments} signedUrls={signedUrls} />
-                    </div>
-                  </div>
-                </div>
+        <div>
+          <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">
+            Audio / adjuntos <span className="text-text-faint">(opcional)</span>
+          </label>
+          <MediaUploader attachments={attachments} onChange={setAttachments} signedUrls={signedUrls} />
+        </div>
+      </div>
     </Sheet>
   );
 }
