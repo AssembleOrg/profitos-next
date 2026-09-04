@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
         operationType: true,
         operationPrice: true,
         operationCurrency: true,
-        publications: { select: { portal: true, status: true, externalId: true } },
+        publications: { select: { portal: true, status: true, externalId: true, permalink: true } },
       },
     });
 

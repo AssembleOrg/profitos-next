@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb, type RGB } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, PDFName, PDFString, type RGB, type PDFPage } from "pdf-lib";
 import { now } from "@/lib/datetime";
 
 /**
@@ -7,7 +7,7 @@ import { now } from "@/lib/datetime";
  * Lo usa /api/reportes/portafolio/pdf (y el script de prueba de scratchpad).
  */
 
-export type PortfolioPublication = { portal: string; status: string; externalId: string | null };
+export type PortfolioPublication = { portal: string; status: string; externalId: string | null; permalink: string | null };
 export type PortfolioRow = {
   address: string;
   realAddress: string | null;
@@ -131,6 +131,25 @@ export async function buildPortfolioReportPdf(props: PortfolioRow[], filters: Po
     return s + "…";
   }
 
+  // Anota un área clicable (link a URL externa) sobre `pg`.
+  function addLink(pg: PDFPage, x: number, yBottom: number, w: number, h: number, uri: string) {
+    const annot = pdf.context.obj({
+      Type: "Annot",
+      Subtype: "Link",
+      Rect: [x, yBottom, x + w, yBottom + h],
+      Border: [0, 0, 0],
+      A: pdf.context.obj({ Type: "Action", S: "URI", URI: PDFString.of(uri) }),
+    });
+    const ref = pdf.context.register(annot);
+    const existing = pg.node.get(PDFName.of("Annots"));
+    if (existing) {
+      // @ts-expect-error PDFArray.push existe en runtime
+      existing.push(ref);
+    } else {
+      pg.node.set(PDFName.of("Annots"), pdf.context.obj([ref]));
+    }
+  }
+
   function drawTableHead() {
     page.drawRectangle({ x: M, y: y - 20, width: W - M * 2, height: 20, color: C.dark });
     const ly = y - 14;
@@ -219,13 +238,24 @@ export async function buildPortfolioReportPdf(props: PortfolioRow[], filters: Po
     const byPortal = (portal: string) => p.publications.find((x) => x.portal === portal);
     (
       [
-        [COL.zp, portalCell(byPortal("zonaprop"))],
-        [COL.ap, portalCell(byPortal("argenprop"))],
-        [COL.ml, portalCell(byPortal("mercadolibre"))],
-      ] as [number, PortalCell][]
-    ).forEach(([x, cell]) => {
+        [COL.zp, "zonaprop"],
+        [COL.ap, "argenprop"],
+        [COL.ml, "mercadolibre"],
+      ] as [number, string][]
+    ).forEach(([x, portal]) => {
+      const pub = byPortal(portal);
+      const cell = portalCell(pub);
       page.drawCircle({ x: x + 3, y: ly - 0.5, size: 2.5, color: cell.color });
-      draw(clip(cell.label, zpW - 12, 7.5), x + 9, ly - 3, 7.5, fontR, cell.color);
+      const label = clip(cell.label, zpW - 12, 7.5);
+      const tx = x + 9;
+      draw(label, tx, ly - 3, 7.5, fontR, cell.color);
+      // Link clicable al aviso en el portal (si hay permalink).
+      const permalink = pub?.permalink;
+      if (permalink) {
+        const lw = fontR.widthOfTextAtSize(label, 7.5);
+        page.drawLine({ start: { x: tx, y: ly - 5 }, end: { x: tx + lw, y: ly - 5 }, thickness: 0.4, color: cell.color });
+        addLink(page, x, y - rowH + 2, zpW - 6, rowH - 2, permalink);
+      }
     });
 
     page.drawLine({ start: { x: M, y: y - rowH }, end: { x: W - M, y: y - rowH }, thickness: 0.4, color: C.border });
