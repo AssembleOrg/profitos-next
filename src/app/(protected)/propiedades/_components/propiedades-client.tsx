@@ -741,6 +741,7 @@ export function PropiedadesClient({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setConfirmAction(null); // cierra el diálogo de confirmación (edición)
     setLoading(true);
     setError(null);
 
@@ -2097,7 +2098,6 @@ export function PropiedadesClient({
                   <button
                     type="submit"
                     form="property-form"
-                    onClick={() => setConfirmAction(null)}
                     className="h-10 rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity active:opacity-90"
                   >
                     Confirmar
