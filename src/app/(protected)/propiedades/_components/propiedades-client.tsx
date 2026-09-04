@@ -978,6 +978,22 @@ export function PropiedadesClient({
             </svg>
             <span className="hidden sm:inline">{syncingMl ? "Sincronizando..." : "Sincronizar ML"}</span>
           </button>
+          <button
+            onClick={() => {
+              const qs = searchParams.toString();
+              window.open(`/api/reportes/portafolio/pdf${qs ? `?${qs}` : ""}`, "_blank");
+            }}
+            title="Exportar el portafolio (con los filtros actuales) a PDF: cada propiedad y en qué portal está publicada"
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-3 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg sm:px-4"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="12" y1="18" x2="12" y2="12" />
+              <polyline points="9 15 12 18 15 15" />
+            </svg>
+            <span className="hidden sm:inline">Exportar PDF</span>
+          </button>
           <div className="inline-flex h-11 items-center gap-0.5 rounded-full border border-border bg-surface p-1">
             <button
               onClick={() => setViewMode("list")}
