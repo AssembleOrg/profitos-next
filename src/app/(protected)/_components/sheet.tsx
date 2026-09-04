@@ -82,12 +82,14 @@ export function Sheet({
               <Dialog.Content
                 asChild
                 onPointerDownOutside={(e) => {
-                  // No cerrar si la interacción cae dentro de un popover portaleado
-                  // (ej. el calendario del DatePicker se renderiza en document.body).
-                  if (!closeOnOverlay || (e.target as Element)?.closest?.("[data-datepicker-popover]")) e.preventDefault();
+                  // No cerrar si la interacción cae dentro de un overlay que se
+                  // renderiza fuera del contenido del Sheet: un popover portaleado
+                  // (ej. el calendario del DatePicker en document.body) o un
+                  // diálogo de confirmación montado sobre el Sheet.
+                  if (!closeOnOverlay || (e.target as Element)?.closest?.("[data-datepicker-popover],[data-keep-sheet-open]")) e.preventDefault();
                 }}
                 onInteractOutside={(e) => {
-                  if (!closeOnOverlay || (e.target as Element)?.closest?.("[data-datepicker-popover]")) e.preventDefault();
+                  if (!closeOnOverlay || (e.target as Element)?.closest?.("[data-datepicker-popover],[data-keep-sheet-open]")) e.preventDefault();
                 }}
               >
                 <motion.div

@@ -2056,19 +2056,21 @@ export function PropiedadesClient({
           <>
             <motion.div
               key="confirm-backdrop"
+              data-keep-sheet-open
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[70] bg-scrim backdrop-blur-sm"
+              className="pointer-events-auto fixed inset-0 z-[70] bg-scrim backdrop-blur-sm"
               onClick={() => setConfirmAction(null)}
             />
             <motion.div
               key="confirm-dialog"
+              data-keep-sheet-open
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="fixed left-1/2 top-1/2 z-[71] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border bg-surface p-6 shadow-2xl"
+              className="pointer-events-auto fixed left-1/2 top-1/2 z-[71] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border bg-surface p-6 shadow-2xl"
             >
               <p className="font-display text-[17px] font-semibold text-text">
                 {confirmAction === "delete" ? "¿Eliminar propiedad?" : "¿Guardar cambios?"}
