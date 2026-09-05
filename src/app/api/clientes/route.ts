@@ -13,7 +13,7 @@ export const GET = withHandler(async (request: NextRequest) => {
   const limit = Math.min(100, Math.max(1, parseInt(sp.get("limit") ?? "20", 10) || 20));
 
   const where = {
-    ...(isAdmin ? {} : { userId }),
+    ...(isAdmin ? {} : { OR: [{ userId }, { followUps: { some: { assignedToUserId: userId } } }] }),
     ...(q && {
       OR: [
         { name: { contains: q, mode: "insensitive" as const } },

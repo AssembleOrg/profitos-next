@@ -16,14 +16,15 @@ export const GET = withHandler(async (request: NextRequest, context) => {
     where: { id },
     include: {
       property: {
-        select: { id: true, address: true, city: true, zone: true, type: true, status: true },
+        select: {
+          id: true, address: true, city: true, zone: true, type: true, status: true,
+          coverImageUrl: true, operationType: true, operationPrice: true, operationCurrency: true,
+        },
       },
       assignedToUser: {
         select: { id: true, email: true, fullName: true },
       },
-      assignedByUser: {
-        select: { id: true, email: true, fullName: true },
-      },
+      client: { select: { id: true, name: true, phone: true, email: true, notes: true } },
       actions: {
         include: {
           createdByUser: {
@@ -52,13 +53,20 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
     notes,
     status,
     dueDate,
+    clientId,
   } = body as {
     assignedToUserId?: string;
     title?: string;
     notes?: string;
     status?: string;
     dueDate?: string | null;
+    clientId?: string | null;
   };
+
+  if (clientId) {
+    const c = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true } });
+    if (!c) throw new AppError(404, "Cliente no encontrado");
+  }
 
   if (!auth.isAdmin && assignedToUserId !== undefined) {
     throw new AppError(403, "Solo un administrador puede reasignar seguimientos");
@@ -113,6 +121,7 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
       ...(notes !== undefined && { notes }),
       ...(status !== undefined && { status }),
       ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
+      ...(clientId !== undefined && { clientId }),
     },
     include: {
       property: {
@@ -121,9 +130,7 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
       assignedToUser: {
         select: { id: true, email: true, fullName: true },
       },
-      assignedByUser: {
-        select: { id: true, email: true, fullName: true },
-      },
+      client: { select: { id: true, name: true, phone: true, email: true } },
       _count: {
         select: { actions: true },
       },

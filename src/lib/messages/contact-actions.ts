@@ -1,6 +1,7 @@
 import { AppError } from "@/lib/api/handler";
 import { prisma } from "@/lib/prisma/client";
 import { toWhatsAppNumber, firstPhone } from "@/lib/whatsapp";
+import { findClientByContact } from "@/lib/clients/match";
 
 /**
  * Acciones sobre un contacto de la central de mensajes. Compartido por la API
@@ -117,14 +118,7 @@ export async function applyContactAction(
 
   // Cliente: inferir por teléfono normalizado o email antes de crear (evita duplicados).
   const waPhone = toWhatsAppNumber(phone);
-  const phoneDigits = firstPhone(phone).replace(/\D/g, "");
-  const or: object[] = [];
-  if (email) or.push({ email: { equals: email, mode: "insensitive" } });
-  if (phoneDigits.length >= 8) {
-    // match flexible: el tel guardado puede tener otro formato → busca por cola de 8 dígitos
-    or.push({ phone: { contains: phoneDigits.slice(-8) } });
-  }
-  let client = or.length ? await prisma.client.findFirst({ where: { OR: or }, select: { id: true, name: true } }) : null;
+  let client: { id: string; name: string } | null = await findClientByContact(email, phone);
   let clientCreated = false;
   if (!client) {
     client = await prisma.client.create({
@@ -150,10 +144,10 @@ export async function applyContactAction(
         propertyId,
         assignedToUserId: actor.userId,
         assignedByUserId: actor.userId,
+        clientId: client.id,
         title: `Consulta ${portal}: ${name?.trim() || client.name}`,
-        notes: [message ? `Mensaje: ${message}` : null, phone ? `Tel: ${firstPhone(phone)}` : null, email ? `Email: ${email}` : null]
-          .filter(Boolean)
-          .join("\n") || null,
+        // Tel/email viven en el cliente vinculado; acá solo el mensaje.
+        notes: message ? `Mensaje: ${message}` : null,
       },
       select: { id: true },
     });

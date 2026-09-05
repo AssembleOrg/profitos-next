@@ -23,7 +23,8 @@ export default async function ContactosPage({ searchParams }: Props) {
   const limit = Math.min(100, Math.max(1, Number.parseInt(sp.limit ?? `${PAGE_SIZE}`, 10) || PAGE_SIZE));
   const q = (sp.q ?? "").trim();
 
-  const clientWhere = user.role === "admin" ? {} : { userId: user.id };
+  // Un vendedor ve los clientes que creó y los de sus seguimientos asignados.
+  const clientWhere = user.role === "admin" ? {} : { OR: [{ userId: user.id }, { followUps: { some: { assignedToUserId: user.id } } }] };
   const [clients, total] = await Promise.all([
     prisma.client.findMany({
       where: {

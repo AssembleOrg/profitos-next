@@ -252,6 +252,7 @@ model Client {
   userId    String   @map("user_id")
   user      User     @relation(fields: [userId], references: [id])
   visitas   Visit[]
+  followUps PropertyFollowUp[]
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -292,10 +293,13 @@ model PropertyFollowUp {
   assignedToUser   User             @relation("FollowUpAssignedTo", fields: [assignedToUserId], references: [id], onDelete: Cascade)
   assignedByUserId String           @map("assigned_by_user_id")
   assignedByUser   User             @relation("FollowUpAssignedBy", fields: [assignedByUserId], references: [id], onDelete: Cascade)
+  clientId         String?          @map("client_id")
+  client           Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
   actions          FollowUpAction[]
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
 
+  @@index([clientId])
   @@map("jp_property_followups")
 }
 

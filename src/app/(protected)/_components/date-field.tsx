@@ -133,14 +133,14 @@ export function DateField({
           onBlur={handleBlur}
           placeholder={placeholder}
           disabled={disabled}
-          className="h-full flex-1 rounded-l-[14px] bg-transparent px-3.5 text-sm tabular-nums text-text placeholder:text-text-faint focus:outline-none disabled:opacity-50"
+          className="h-full min-w-0 flex-1 rounded-l-[14px] bg-transparent px-3.5 text-sm tabular-nums text-text placeholder:text-text-faint focus:outline-none disabled:opacity-50"
         />
         {clearable && text && !disabled && (
           <button
             type="button"
             onClick={handleClear}
             aria-label="Limpiar fecha"
-            className="flex h-9 w-7 items-center justify-center text-text-faint transition-colors hover:text-danger"
+            className="flex h-9 w-7 shrink-0 items-center justify-center text-text-faint transition-colors hover:text-danger"
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -153,7 +153,7 @@ export function DateField({
           onClick={() => !disabled && setOpen((v) => !v)}
           disabled={disabled}
           aria-label="Abrir calendario"
-          className={`flex h-9 w-9 items-center justify-center rounded-r-[14px] text-accent transition-colors hover:text-text disabled:opacity-50 ${open ? "text-accent" : ""}`}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-r-[14px] text-accent transition-colors hover:text-text disabled:opacity-50 ${open ? "text-accent" : ""}`}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2" />
