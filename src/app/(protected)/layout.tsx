@@ -8,6 +8,7 @@ import { now } from "@/lib/datetime";
 import { SplashScreen } from "./_components/splash-screen";
 import { NativeParityProvider } from "./_components/native-parity-provider";
 import { ProtectedShell } from "./_components/protected-shell";
+import { ChatActionRefresher } from "./_components/chat-action-refresher";
 
 export default async function ProtectedLayout({
   children,
@@ -58,12 +59,15 @@ export default async function ProtectedLayout({
       {/* Chat IA (rag-webchat): widget flotante. userIdentifier = email para
           límites por cuenta. Sólo se monta si el token está configurado. */}
       {process.env.NEXT_PUBLIC_CHAT_APP_TOKEN && (
-        <Script
-          src={`${process.env.NEXT_PUBLIC_CHAT_URL ?? "https://rag-webchat-production.up.railway.app"}/widget.js`}
-          data-app-token={process.env.NEXT_PUBLIC_CHAT_APP_TOKEN}
-          data-user-identifier={user.email}
-          strategy="lazyOnload"
-        />
+        <>
+          <Script
+            src={`${process.env.NEXT_PUBLIC_CHAT_URL ?? "https://rag-webchat-production.up.railway.app"}/widget.js`}
+            data-app-token={process.env.NEXT_PUBLIC_CHAT_APP_TOKEN}
+            data-user-identifier={user.email}
+            strategy="lazyOnload"
+          />
+          <ChatActionRefresher />
+        </>
       )}
     </div>
   );
