@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { type NotificationItem } from "./use-notifications";
-import { formatDateTime } from "@/lib/datetime";
+import { formatDateOnly, formatDateTime } from "@/lib/datetime";
 
 function formatNotifDate(value: string) {
   try { return formatDateTime(value); } catch { return "—"; }
@@ -15,6 +15,7 @@ const NOTIF_BADGE_CLASS: Record<NotificationItem["kind"], string> = {
   property: "bg-sage-chip text-success",
   publication_closed: "bg-clay-chip text-terra",
   contact: "bg-info-chip text-info",
+  reservation_expiry: "bg-sand-chip text-warning",
 };
 
 const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
@@ -23,6 +24,7 @@ const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
   property: "Propiedad nueva",
   publication_closed: "Baja aviso",
   contact: "Contacto",
+  reservation_expiry: "Reserva",
 };
 
 const PORTAL_LABEL: Record<string, string> = {
@@ -83,6 +85,20 @@ function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
           </p>
         </>
       );
+    case "reservation_expiry":
+      return (
+        <>
+          <p className="line-clamp-1 text-sm font-bold leading-tight text-text">
+            {item.property?.address ?? "Reserva de propiedad"}
+          </p>
+          <p className="mt-0.5 text-xs font-semibold text-warning">
+            {item.daysBefore === 0
+              ? "La reserva vence hoy"
+              : `La reserva vence en ${item.daysBefore} días`}
+            {item.expiresAt ? ` · ${formatDateOnly(item.expiresAt)}` : ""}
+          </p>
+        </>
+      );
     default:
       return (
         <>
@@ -104,6 +120,9 @@ function notifHref(item: NotificationItem): string | null {
   // El id de la central es `portal:rowId` (ver lib/messages/inbox.ts).
   if (item.kind === "contact") {
     return item.portal ? `/consultants?deck=${encodeURIComponent(`${item.portal}:${item.id}`)}` : "/consultants";
+  }
+  if (item.kind === "reservation_expiry") {
+    return item.property?.id ? `/firmas?propertyId=${encodeURIComponent(item.property.id)}` : "/firmas";
   }
   const propId = item.kind === "property" ? item.id : item.property?.id;
   if (!propId) return null;

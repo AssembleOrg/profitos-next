@@ -15,6 +15,11 @@ import {
   type SignatureDateField,
 } from "@/lib/signatures";
 import type { Prisma } from "@/generated/prisma/client";
+import {
+  calculateReservationExpiration,
+  buildReservationReminderDates,
+  isReservationDayType,
+} from "@/lib/signatures/reservation-expiry";
 
 const DATE_FIELDS: SignatureDateField[] = ["dateProcessStarted", "dateAgreed", "dateKeysHandover"];
 
@@ -55,6 +60,48 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
   }
   if (body.attachments !== undefined) {
     data.attachments = (body.attachments as Prisma.InputJsonValue) ?? null;
+  }
+
+  // La vigencia se actualiza como una unidad y el vencimiento siempre se
+  // recalcula en backend (nunca se acepta una fecha derivada del cliente).
+  const reservationKeys = ["reservationDate", "reservationTermDays", "reservationDayType"];
+  if (reservationKeys.some((key) => key in body)) {
+    const rawDate = "reservationDate" in body ? body.reservationDate : proposal.reservationDate;
+    const rawTerm = "reservationTermDays" in body ? body.reservationTermDays : proposal.reservationTermDays;
+    const rawType = "reservationDayType" in body ? body.reservationDayType : proposal.reservationDayType;
+
+    if (!(typeof rawDate === "string" || rawDate instanceof Date)) {
+      throw new AppError(400, "La fecha de reserva es obligatoria");
+    }
+    if (!Number.isInteger(rawTerm) || (rawTerm as number) <= 0 || (rawTerm as number) > 3650) {
+      throw new AppError(400, "La vigencia debe ser un número entero entre 1 y 3650");
+    }
+    if (!isReservationDayType(rawType)) {
+      throw new AppError(400, "Tipo de días inválido");
+    }
+
+    let expiresAt: Date;
+    try {
+      expiresAt = calculateReservationExpiration(rawDate, rawTerm as number, rawType);
+    } catch (error) {
+      throw new AppError(400, error instanceof Error ? error.message : "Datos de reserva inválidos");
+    }
+
+    const parsedDate = rawDate instanceof Date
+      ? rawDate
+      : new Date(`${rawDate.slice(0, 10)}T00:00:00.000Z`);
+    data.reservationDate = parsedDate;
+    data.reservationTermDays = rawTerm as number;
+    data.reservationDayType = rawType;
+    data.reservationExpiresAt = expiresAt;
+    data.reservationReminders = {
+      deleteMany: {},
+      create: buildReservationReminderDates(expiresAt),
+    };
+    auditActions.push({
+      type: "reservation_update",
+      description: `Reserva vigente hasta ${expiresAt.toISOString().slice(0, 10)} (${rawTerm} ${rawType === "business" ? "días hábiles" : "días corridos"})`,
+    });
   }
 
   // Status change

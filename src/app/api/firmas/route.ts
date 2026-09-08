@@ -6,6 +6,11 @@ import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
 import { signatureInclude } from "@/lib/api/signatures";
 import { isSignatureStatus } from "@/lib/signatures";
+import {
+  calculateReservationExpiration,
+  buildReservationReminderDates,
+  isReservationDayType,
+} from "@/lib/signatures/reservation-expiry";
 import type { Prisma } from "@/generated/prisma/client";
 
 export const GET = withHandler(async (request: NextRequest) => {
@@ -57,15 +62,39 @@ export const POST = withHandler(async (request: NextRequest) => {
     description,
     attachments,
     status,
+    reservationDate,
+    reservationTermDays,
+    reservationDayType,
   } = body as {
     propertyId?: string;
     title?: string;
     description?: string;
     attachments?: unknown[];
     status?: string;
+    reservationDate?: string;
+    reservationTermDays?: number;
+    reservationDayType?: string;
   };
 
   if (!propertyId) throw new AppError(400, "Falta el campo 'propertyId'");
+  if (!reservationDate) throw new AppError(400, "La fecha de reserva es obligatoria");
+  if (!Number.isInteger(reservationTermDays) || reservationTermDays! <= 0 || reservationTermDays! > 3650) {
+    throw new AppError(400, "La vigencia debe ser un número entero entre 1 y 3650");
+  }
+  if (!isReservationDayType(reservationDayType)) {
+    throw new AppError(400, "Seleccioná si la vigencia se expresa en días hábiles o corridos");
+  }
+
+  let reservationExpiresAt: Date;
+  try {
+    reservationExpiresAt = calculateReservationExpiration(
+      reservationDate,
+      reservationTermDays!,
+      reservationDayType,
+    );
+  } catch (error) {
+    throw new AppError(400, error instanceof Error ? error.message : "Datos de reserva inválidos");
+  }
 
   const property = await prisma.property.findUnique({
     where: { id: propertyId },
@@ -82,6 +111,13 @@ export const POST = withHandler(async (request: NextRequest) => {
       description: description?.trim() || null,
       attachments: (attachments as Prisma.InputJsonValue) ?? undefined,
       status: initialStatus,
+      reservationDate: new Date(`${reservationDate.slice(0, 10)}T00:00:00.000Z`),
+      reservationTermDays,
+      reservationDayType,
+      reservationExpiresAt,
+      reservationReminders: {
+        create: buildReservationReminderDates(reservationExpiresAt),
+      },
       createdByUserId: auth.userId,
       actions: {
         create: {

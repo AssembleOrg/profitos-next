@@ -7,6 +7,13 @@ import type { Attachment } from "@/lib/signatures";
 import { MediaUploader } from "./media-uploader";
 import { useSignedUrls } from "./use-signed-urls";
 import type { SerializedFirma } from "./types";
+import { DateField } from "../../_components/date-field";
+import { SelectField } from "@/components/ui/select-field";
+import {
+  RESERVATION_DAY_TYPE_LABEL,
+  RESERVATION_DAY_TYPES,
+  type ReservationDayType,
+} from "@/lib/signatures/reservation-expiry";
 
 export interface PropertyOption {
   id: string;
@@ -36,6 +43,9 @@ export function CreateFirmaModal({
   const [propertyQuery, setPropertyQuery] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [reservationDate, setReservationDate] = useState("");
+  const [reservationTermDays, setReservationTermDays] = useState("");
+  const [reservationDayType, setReservationDayType] = useState<ReservationDayType>("business");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -48,6 +58,9 @@ export function CreateFirmaModal({
     setPropertyQuery("");
     setTitle("");
     setDescription("");
+    setReservationDate("");
+    setReservationTermDays("");
+    setReservationDayType("business");
     setAttachments([]);
   }, [open, initialPropertyId]);
 
@@ -68,6 +81,15 @@ export function CreateFirmaModal({
       toast.error("Seleccioná una propiedad");
       return;
     }
+    if (!reservationDate) {
+      toast.error("Ingresá la fecha de la reserva");
+      return;
+    }
+    const termDays = Number(reservationTermDays);
+    if (!Number.isInteger(termDays) || termDays <= 0 || termDays > 3650) {
+      toast.error("Ingresá una vigencia válida en días");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch("/api/firmas", {
@@ -78,6 +100,9 @@ export function CreateFirmaModal({
           title: title.trim() || null,
           description: description.trim() || null,
           attachments,
+          reservationDate,
+          reservationTermDays: termDays,
+          reservationDayType,
         }),
       });
       const body = await res.json();
@@ -185,6 +210,53 @@ export function CreateFirmaModal({
                       )}
                     </div>
 
+                    <div className="rounded-[16px] bg-bg p-4">
+                      <div className="mb-3">
+                        <p className="text-[12.5px] font-bold text-text">Vigencia de la reserva</p>
+                        <p className="mt-0.5 text-[11.5px] text-text-faint">
+                          El vencimiento se calcula automáticamente y se avisará 15 días antes, 5 días antes y el día del vencimiento.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <label className="flex flex-col gap-1.5">
+                          <span className="text-[11px] font-semibold text-text-muted">Fecha de reserva *</span>
+                          <DateField
+                            id="firma-reservation-date"
+                            value={reservationDate}
+                            onChange={setReservationDate}
+                            clearable={false}
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1.5">
+                          <span className="text-[11px] font-semibold text-text-muted">Cantidad de días *</span>
+                          <input
+                            id="firma-reservation-term"
+                            type="number"
+                            inputMode="numeric"
+                            min={1}
+                            max={3650}
+                            step={1}
+                            value={reservationTermDays}
+                            onChange={(e) => setReservationTermDays(e.target.value)}
+                            placeholder="Ej. 90"
+                            className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm tabular-nums text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1.5">
+                          <span className="text-[11px] font-semibold text-text-muted">Tipo de días *</span>
+                          <SelectField
+                            value={reservationDayType}
+                            onChange={(e) => setReservationDayType(e.target.value as ReservationDayType)}
+                            className="h-11"
+                          >
+                            {RESERVATION_DAY_TYPES.map((type) => (
+                              <option key={type} value={type}>{RESERVATION_DAY_TYPE_LABEL[type]}</option>
+                            ))}
+                          </SelectField>
+                        </label>
+                      </div>
+                    </div>
+
                     <div>
                       <label htmlFor="firma-title" className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
                         Título <span className="text-text-faint">(opcional)</span>
@@ -270,6 +342,10 @@ function serializeFromApi(raw: unknown): SerializedFirma {
     title: (r.title as string | null) ?? null,
     description: (r.description as string | null) ?? null,
     attachments: Array.isArray(r.attachments) ? (r.attachments as Attachment[]) : [],
+    reservationDate: r.reservationDate ? new Date(r.reservationDate as string).toISOString() : null,
+    reservationTermDays: (r.reservationTermDays as number | null) ?? null,
+    reservationDayType: (r.reservationDayType as SerializedFirma["reservationDayType"]) ?? null,
+    reservationExpiresAt: r.reservationExpiresAt ? new Date(r.reservationExpiresAt as string).toISOString() : null,
     dateProcessStarted: r.dateProcessStarted ? new Date(r.dateProcessStarted as string).toISOString() : null,
     dateAgreed: r.dateAgreed ? new Date(r.dateAgreed as string).toISOString() : null,
     dateKeysHandover: r.dateKeysHandover ? new Date(r.dateKeysHandover as string).toISOString() : null,

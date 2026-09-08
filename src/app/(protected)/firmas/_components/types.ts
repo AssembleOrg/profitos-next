@@ -1,4 +1,5 @@
 import type { Attachment, SignatureStatus } from "@/lib/signatures";
+import type { ReservationDayType } from "@/lib/signatures/reservation-expiry";
 
 export interface FirmaUser {
   id: string;
@@ -20,7 +21,7 @@ export interface FirmaProperty {
 
 export interface FirmaAction {
   id: string;
-  type: "creation" | "nota" | "status_change" | "date_set";
+  type: "creation" | "nota" | "status_change" | "date_set" | "reservation_update";
   fromStatus: SignatureStatus | null;
   toStatus: SignatureStatus | null;
   dateField: string | null;
@@ -37,6 +38,10 @@ export interface SerializedFirma {
   title: string | null;
   description: string | null;
   attachments: Attachment[];
+  reservationDate: string | null;
+  reservationTermDays: number | null;
+  reservationDayType: ReservationDayType | null;
+  reservationExpiresAt: string | null;
   dateProcessStarted: string | null;
   dateAgreed: string | null;
   dateKeysHandover: string | null;

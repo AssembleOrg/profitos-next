@@ -420,6 +420,13 @@ model SignatureProposal {
   description        String?
   attachments        Json?                     // [{ kind, path, name, size, mime }]
 
+  // Vigencia de la reserva. Son nullable para conservar propuestas históricas;
+  // en nuevas altas los tres datos de entrada son obligatorios por API.
+  reservationDate        DateTime? @map("reservation_date") @db.Date
+  reservationTermDays    Int?      @map("reservation_term_days")
+  reservationDayType     String?   @map("reservation_day_type") // business | calendar
+  reservationExpiresAt   DateTime? @map("reservation_expires_at") @db.Date
+
   // Fechas relevantes (todas opcionales)
   dateProcessStarted DateTime?                 @map("date_process_started") // espera_informes
   dateAgreed         DateTime?                 @map("date_agreed")          // fecha_acordada
@@ -433,13 +440,28 @@ model SignatureProposal {
   createdByUserId    String                    @map("created_by_user_id")
   createdByUser      User                      @relation("SignatureProposalCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
   actions            SignatureProposalAction[]
+  reservationReminders SignatureReservationReminder[]
   createdAt          DateTime                  @default(now()) @map("created_at")
   updatedAt          DateTime                  @updatedAt @map("updated_at")
 
   @@index([propertyId])
   @@index([status])
   @@index([createdByUserId])
+  @@index([reservationExpiresAt])
   @@map("jp_signature_proposals")
+}
+
+model SignatureReservationReminder {
+  id           String            @id @default(cuid())
+  proposalId   String            @map("proposal_id")
+  proposal     SignatureProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  offsetDays   Int               @map("offset_days") // 15 | 5 | 0
+  scheduledFor DateTime          @map("scheduled_for") @db.Date
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  @@unique([proposalId, offsetDays])
+  @@index([scheduledFor])
+  @@map("jp_signature_reservation_reminders")
 }
 
 model SignatureProposalAction {

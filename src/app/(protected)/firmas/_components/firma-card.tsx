@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { formatDate, formatRelative } from "@/lib/datetime";
+import { formatDate, formatDateOnly, formatRelative } from "@/lib/datetime";
 import {
   SIGNATURE_DATE_META,
   SIGNATURE_STATUSES,
@@ -112,6 +112,15 @@ export function FirmaCard({ firma, onOpen }: Readonly<FirmaCardProps>) {
             <span className="text-text-faint">Propuesta: </span>
             {firma.title}
           </p>
+        )}
+
+        {firma.reservationExpiresAt && (
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-sand-chip px-2.5 py-2">
+            <span className="text-[10.5px] font-semibold text-text-muted">Reserva vigente hasta</span>
+            <span className="text-[11px] font-bold tabular-nums text-warning">
+              {formatDateOnly(firma.reservationExpiresAt)}
+            </span>
+          </div>
         )}
 
         {/* Mini timeline */}

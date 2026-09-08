@@ -3,6 +3,7 @@ import { ok } from "@/lib/api/response";
 import { getAuthContext } from "@/lib/api/auth";
 import { prisma } from "@/lib/prisma/client";
 import { resolveLeadProperties } from "@/lib/messages/inbox";
+import { now } from "@/lib/datetime";
 
 export const GET = withHandler(async (request) => {
   const auth = await getAuthContext();
@@ -11,8 +12,11 @@ export const GET = withHandler(async (request) => {
   const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(100, limitRaw)) : 15;
 
   const followUpWhere = auth.isAdmin ? {} : { assignedToUserId: auth.userId };
+  const today = now().startOf("day");
+  const reminderFrom = new Date(`${today.minus({ days: 45 }).toISODate()}T00:00:00.000Z`);
+  const reminderUntil = new Date(`${today.toISODate()}T00:00:00.000Z`);
 
-  const [followUps, properties, overdueFollowUps, closedPublications, leads, questions] = await Promise.all([
+  const [followUps, properties, overdueFollowUps, closedPublications, leads, questions, reservationReminders] = await Promise.all([
     prisma.propertyFollowUp.findMany({
       where: followUpWhere,
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
@@ -105,6 +109,31 @@ export const GET = withHandler(async (request) => {
       take: limit,
       select: { id: true, text: true, askedAt: true, createdAt: true, propertyId: true, itemId: true },
     }),
+    prisma.signatureReservationReminder.findMany({
+      where: {
+        scheduledFor: { gte: reminderFrom, lte: reminderUntil },
+        proposal: {
+          status: { notIn: ["propuesta_rechazada", "entrega_llaves"] },
+          ...(auth.isAdmin ? {} : { createdByUserId: auth.userId }),
+        },
+      },
+      orderBy: [{ scheduledFor: "desc" }, { createdAt: "desc" }],
+      take: limit * 3,
+      select: {
+        id: true,
+        offsetDays: true,
+        scheduledFor: true,
+        createdAt: true,
+        proposal: {
+          select: {
+            id: true,
+            reservationExpiresAt: true,
+            property: { select: { id: true, address: true } },
+            createdByUser: { select: { id: true, fullName: true, email: true } },
+          },
+        },
+      },
+    }),
   ]);
 
   // Vincular leads con nuestra propiedad (propertyRef == referenceCode) y
@@ -196,6 +225,20 @@ export const GET = withHandler(async (request) => {
         status: item.status,
         permalink: item.permalink,
         property: item.property,
+      },
+    })),
+    ...reservationReminders.map((item) => ({
+      kind: "reservation_expiry" as const,
+      // Fecha pura a medianoche de Argentina para ordenar/mostrar sin corrimiento.
+      eventAt: new Date(`${item.scheduledFor.toISOString().slice(0, 10)}T00:00:00-03:00`),
+      payload: {
+        id: item.id,
+        createdAt: item.createdAt.toISOString(),
+        proposalId: item.proposal.id,
+        daysBefore: item.offsetDays,
+        expiresAt: item.proposal.reservationExpiresAt?.toISOString() ?? null,
+        property: item.proposal.property,
+        createdByUser: item.proposal.createdByUser,
       },
     })),
     ...leads

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
 export interface NotificationItem {
-  kind: "followup_assignment" | "property" | "overdue_followup" | "publication_closed" | "contact";
+  kind: "followup_assignment" | "property" | "overdue_followup" | "publication_closed" | "contact" | "reservation_expiry";
   eventAt: string;
   id: string;
   createdAt?: string;
@@ -31,6 +31,9 @@ export interface NotificationItem {
   contactPhone?: string | null;
   message?: string | null;
   propertyTitle?: string | null;
+  proposalId?: string;
+  daysBefore?: number;
+  expiresAt?: string | null;
 }
 
 const LS_KEY = "jp_last_notifications_seen_at";
@@ -100,6 +103,7 @@ export function useNotifications() {
       .on("postgres_changes", { event: "UPDATE", schema, table: "jp_property_publications" }, () => void loadNotifications())
       .on("postgres_changes", { event: "INSERT", schema, table: "jp_scraped_leads" }, () => void loadNotifications())
       .on("postgres_changes", { event: "INSERT", schema, table: "jp_portal_questions" }, () => void loadNotifications())
+      .on("postgres_changes", { event: "INSERT", schema, table: "jp_signature_reservation_reminders" }, () => void loadNotifications())
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, []);

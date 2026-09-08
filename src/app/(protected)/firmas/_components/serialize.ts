@@ -1,4 +1,5 @@
 import type { Attachment, SignatureStatus } from "@/lib/signatures";
+import type { ReservationDayType } from "@/lib/signatures/reservation-expiry";
 import type { FirmaAction, FirmaProperty, FirmaUser, SerializedFirma } from "./types";
 
 interface RawUser {
@@ -39,6 +40,10 @@ interface RawProposal {
   title: string | null;
   description: string | null;
   attachments: unknown;
+  reservationDate: Date | null;
+  reservationTermDays: number | null;
+  reservationDayType: string | null;
+  reservationExpiresAt: Date | null;
   dateProcessStarted: Date | null;
   dateAgreed: Date | null;
   dateKeysHandover: Date | null;
@@ -119,6 +124,10 @@ export function serializeProposal(raw: RawProposal): SerializedFirma {
     title: raw.title,
     description: raw.description,
     attachments: toAttachments(raw.attachments),
+    reservationDate: raw.reservationDate?.toISOString() ?? null,
+    reservationTermDays: raw.reservationTermDays,
+    reservationDayType: raw.reservationDayType as ReservationDayType | null,
+    reservationExpiresAt: raw.reservationExpiresAt?.toISOString() ?? null,
     dateProcessStarted: raw.dateProcessStarted?.toISOString() ?? null,
     dateAgreed: raw.dateAgreed?.toISOString() ?? null,
     dateKeysHandover: raw.dateKeysHandover?.toISOString() ?? null,
