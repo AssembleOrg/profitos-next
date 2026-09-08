@@ -104,6 +104,7 @@ export const POST = withHandler(async (request: NextRequest) => {
       category: { select: { id: true, name: true, color: true } },
       agentUser: { select: { id: true, fullName: true, email: true } },
       property: { select: { id: true, address: true } },
+      sharedAgency: { select: { id: true, name: true } },
     },
   });
 

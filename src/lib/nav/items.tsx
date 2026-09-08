@@ -199,6 +199,20 @@ export const NAV_META_LIST: NavMeta[] = [
     ),
   },
   {
+    href: "/inmobiliarias",
+    label: "Inmobiliarias",
+    shortLabel: "Inmob.",
+    group: "finanzas",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 21h18" />
+        <path d="M5 21V7l7-4 7 4v14" />
+        <path d="M9 21v-6h6v6" />
+        <path d="M9 9h.01M15 9h.01M9 13h.01M15 13h.01" />
+      </svg>
+    ),
+  },
+  {
     href: "/objetivos",
     label: "Objetivos",
     shortLabel: "Objetivos",

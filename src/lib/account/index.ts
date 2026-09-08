@@ -98,12 +98,15 @@ export interface AccountMovement {
   agentName: string | null;
   propertyId: string | null;
   propertyAddress: string | null;
-  /** Valor informativo dado al agente (solo egresos): % o monto fijo. */
+  /** Comisión del agente (obligatoria si hay agente): % o monto fijo. */
   agentPercentage: number | null;
   /** "percent" | "amount" — cómo interpretar agentPercentage. */
   agentShareType: "percent" | "amount";
   /** Marca informativa: ¿movimiento compartido? */
   isShared: boolean;
+  /** Inmobiliaria con la que se comparte (solo si isShared). */
+  sharedAgencyId: string | null;
+  sharedAgencyName: string | null;
   attachments: unknown;
   createdByUserId: string;
   createdByName: string | null;

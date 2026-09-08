@@ -688,6 +688,9 @@ model AccountEntry {
   agentShareType  String           @default("percent") @map("agent_share_type")
   // Marca informativa: ¿el movimiento es compartido?
   isShared        Boolean          @default(false) @map("is_shared")
+  // Inmobiliaria con la que se comparte el movimiento (solo si isShared).
+  sharedAgencyId  String?          @map("shared_agency_id")
+  sharedAgency    Agency?          @relation(fields: [sharedAgencyId], references: [id], onDelete: SetNull)
   attachments     Json?
   createdByUserId String           @map("created_by_user_id")
   createdByUser   User             @relation("AccountEntryCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
@@ -700,7 +703,22 @@ model AccountEntry {
   @@index([currency])
   @@index([agentUserId])
   @@index([isShared])
+  @@index([sharedAgencyId])
   @@map("jp_account_entries")
+}
+
+// Otras inmobiliarias con las que se comparten operaciones/movimientos.
+model Agency {
+  id        String         @id @default(cuid())
+  name      String
+  address   String?
+  phone     String?
+  entries   AccountEntry[]
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  @@index([name])
+  @@map("jp_agencies")
 }
 
 // ============================================================================

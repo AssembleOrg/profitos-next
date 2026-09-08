@@ -31,6 +31,7 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
       category: { select: { id: true, name: true, color: true } },
       agentUser: { select: { id: true, fullName: true, email: true } },
       property: { select: { id: true, address: true } },
+      sharedAgency: { select: { id: true, name: true } },
     },
   });
 

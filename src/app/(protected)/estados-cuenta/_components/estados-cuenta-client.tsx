@@ -450,6 +450,7 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
     formatDate(m.date),
     m.description,
     m.agentName,
+    m.sharedAgencyName ? `con ${m.sharedAgencyName}` : null,
     m.propertyAddress,
   ].filter(Boolean).join(" · ");
 

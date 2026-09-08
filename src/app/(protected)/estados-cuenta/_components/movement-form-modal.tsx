@@ -13,6 +13,7 @@ import type { RentalAttachment } from "../../alquileres/_components/voice-record
 import type { AccountMovement, Currency, EntryType } from "@/lib/account";
 import type { SerializedAgent, SerializedCategory } from "./estados-cuenta-client";
 import { PropertyPicker } from "./property-picker";
+import { AgencyPicker } from "./agency-picker";
 
 function asAttachments(value: unknown): RentalAttachment[] {
   return Array.isArray(value) ? (value as RentalAttachment[]) : [];
@@ -57,6 +58,8 @@ export function MovementFormModal({
   const [agentPercentage, setAgentPercentage] = useState<string>("");
   const [agentShareType, setAgentShareType] = useState<"percent" | "amount">("percent");
   const [isShared, setIsShared] = useState(false);
+  const [sharedAgencyId, setSharedAgencyId] = useState<string | null>(null);
+  const [sharedAgencyName, setSharedAgencyName] = useState<string | null>(null);
   const [propertyId, setPropertyId] = useState<string | null>(null);
   const [propertyLabel, setPropertyLabel] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<RentalAttachment[]>([]);
@@ -114,6 +117,8 @@ export function MovementFormModal({
       setAgentPercentage(editing.agentPercentage != null ? String(editing.agentPercentage) : "");
       setAgentShareType(editing.agentShareType ?? "percent");
       setIsShared(editing.isShared ?? false);
+      setSharedAgencyId(editing.sharedAgencyId ?? null);
+      setSharedAgencyName(editing.sharedAgencyName ?? null);
       setPropertyId(editing.propertyId ?? null);
       setPropertyLabel(editing.propertyAddress ?? null);
       setAttachments(atts);
@@ -129,6 +134,8 @@ export function MovementFormModal({
       setAgentPercentage("");
       setAgentShareType("percent");
       setIsShared(false);
+      setSharedAgencyId(null);
+      setSharedAgencyName(null);
       setPropertyId(null);
       setPropertyLabel(null);
       setAttachments([]);
@@ -264,9 +271,19 @@ export function MovementFormModal({
       toast.error("Elegí una fecha");
       return;
     }
+    const parsedPercentage = agentPercentage.trim() === "" ? null : Number(agentPercentage.replace(",", "."));
+    if (agentUserId) {
+      if (parsedPercentage === null || !Number.isFinite(parsedPercentage) || parsedPercentage < 0) {
+        toast.error("Indicá la comisión del agente (% o monto fijo)");
+        return;
+      }
+      if (agentShareType === "percent" && parsedPercentage > 100) {
+        toast.error("El porcentaje del agente debe estar entre 0 y 100");
+        return;
+      }
+    }
     setSubmitting(true);
     try {
-      const parsedPercentage = agentPercentage.trim() === "" ? null : Number(agentPercentage.replace(",", "."));
       const payload = {
         categoryId,
         amount,
@@ -275,10 +292,11 @@ export function MovementFormModal({
         description: description.trim() || null,
         agentUserId: agentUserId || null,
         propertyId: propertyId || null,
-        // Valor al agente: solo informativo y solo para egresos (% o monto fijo)
-        agentPercentage: type === "expense" ? parsedPercentage : null,
+        // Comisión del agente (% o monto fijo): obligatoria si hay agente.
+        agentPercentage: agentUserId ? parsedPercentage : null,
         agentShareType,
         isShared,
+        sharedAgencyId: isShared ? sharedAgencyId : null,
         attachments,
       };
       const res = await fetch(
@@ -306,7 +324,7 @@ export function MovementFormModal({
       open={open}
       onClose={() => onOpenChange(false)}
       title={editing ? "Editar movimiento" : "Nuevo movimiento"}
-      maxWidth="sm:max-w-[480px]"
+      maxWidth="sm:max-w-[640px]"
       footer={
         <>
           <button
@@ -462,8 +480,9 @@ export function MovementFormModal({
                       </div>
                     )}
 
-                    {/* Compartido (informativo) */}
+                    {/* Compartido (informativo) + inmobiliaria con la que se comparte */}
                     {!isCostear && (
+                    <div className="flex flex-col gap-2">
                     <button
                       type="button"
                       onClick={() => setIsShared((v) => !v)}
@@ -483,20 +502,42 @@ export function MovementFormModal({
                         <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${isShared ? "translate-x-5" : ""}`} />
                       </span>
                     </button>
+                    {isShared && (
+                      <div>
+                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
+                          Compartido con <span className="text-text-faint">(inmobiliaria, opcional)</span>
+                        </label>
+                        <AgencyPicker
+                          value={sharedAgencyId}
+                          label={sharedAgencyName}
+                          onChange={(id, lbl) => {
+                            setSharedAgencyId(id);
+                            setSharedAgencyName(lbl);
+                          }}
+                        />
+                      </div>
                     )}
-
-                    {/* Categoría (no aplica a gastos personales de Costear) */}
-                    {!isCostear && (
-                    <div>
-                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Categoría</label>
-                      <SelectField value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                        <option value="">Elegí una categoría…</option>
-                        {categories.map((c) => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </SelectField>
                     </div>
                     )}
+
+                    {/* Categoría + Fecha (la categoría no aplica a gastos personales de Costear) */}
+                    <div className={`grid grid-cols-1 gap-4 ${isCostear ? "" : "sm:grid-cols-2"}`}>
+                      {!isCostear && (
+                      <div>
+                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Categoría</label>
+                        <SelectField value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                          <option value="">Elegí una categoría…</option>
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </SelectField>
+                      </div>
+                      )}
+                      <div>
+                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Fecha</label>
+                        <DatePicker value={date} onChange={setDate} className={inputClass} />
+                      </div>
+                    </div>
 
                     {/* Monto + Moneda */}
                     <div className="grid grid-cols-[1fr_auto] gap-2">
@@ -523,70 +564,66 @@ export function MovementFormModal({
                       </div>
                     </div>
 
-                    {/* Valor al agente (solo egresos, informativo): % o monto fijo */}
-                    {type === "expense" && !isCostear && (
+                    {/* Agente + comisión (no aplican a gastos personales de Costear) */}
+                    {!isCostear && (
+                    <div className={`grid grid-cols-1 gap-4 ${agentUserId ? "sm:grid-cols-2" : ""}`}>
                       <div>
                         <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
-                          Valor al agente <span className="text-text-faint">(informativo)</span>
+                          Agente <span className="text-text-faint">(opcional)</span>
                         </label>
-                        <div className="flex items-center gap-1 rounded-[14px] border border-border bg-surface pr-1 focus-within:border-border-strong">
-                          {agentShareType === "amount" && (
-                            <span className="pl-3 text-sm text-text-faint">{currency === "USD" ? "US$" : "$"}</span>
-                          )}
-                          <input
-                            type="number"
-                            inputMode="decimal"
-                            min={0}
-                            max={agentShareType === "percent" ? 100 : undefined}
-                            step="0.01"
-                            value={agentPercentage}
-                            onChange={(e) => setAgentPercentage(e.target.value)}
-                            placeholder="0"
-                            className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-text focus:outline-none"
-                          />
-                          {/* Mini-selector dentro del input */}
-                          <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-bg p-0.5">
-                            <button
-                              type="button"
-                              onClick={() => setAgentShareType("percent")}
-                              className={`rounded-full px-2 py-1 text-xs transition-colors ${
-                                agentShareType === "percent" ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
-                              }`}
-                            >
-                              %
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setAgentShareType("amount")}
-                              className={`rounded-full px-2 py-1 text-xs transition-colors ${
-                                agentShareType === "amount" ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
-                              }`}
-                            >
-                              $ Fijo
-                            </button>
+                        <SelectField value={agentUserId} onChange={(e) => setAgentUserId(e.target.value)}>
+                          <option value="">Sin asignar</option>
+                          {agents.map((a) => (
+                            <option key={a.id} value={a.id}>{a.name}</option>
+                          ))}
+                        </SelectField>
+                      </div>
+
+                      {/* Comisión del agente: obligatoria cuando hay agente. % o monto fijo. */}
+                      {agentUserId && (
+                        <div>
+                          <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
+                            Comisión del agente <span className="text-warning">(obligatoria)</span>
+                          </label>
+                          <div className="flex h-11 items-center gap-1 rounded-[14px] border border-border bg-surface pr-1 focus-within:border-border-strong">
+                            {agentShareType === "amount" && (
+                              <span className="pl-3 text-sm text-text-faint">{currency === "USD" ? "US$" : "$"}</span>
+                            )}
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              min={0}
+                              max={agentShareType === "percent" ? 100 : undefined}
+                              step="0.01"
+                              value={agentPercentage}
+                              onChange={(e) => setAgentPercentage(e.target.value)}
+                              placeholder={agentShareType === "percent" ? "Ej. 50" : "0"}
+                              className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-text focus:outline-none"
+                            />
+                            {/* Mini-selector dentro del input */}
+                            <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-bg p-0.5">
+                              <button
+                                type="button"
+                                onClick={() => setAgentShareType("percent")}
+                                className={`rounded-full px-2 py-1 text-xs transition-colors ${
+                                  agentShareType === "percent" ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
+                                }`}
+                              >
+                                %
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setAgentShareType("amount")}
+                                className={`rounded-full px-2 py-1 text-xs transition-colors ${
+                                  agentShareType === "amount" ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
+                                }`}
+                              >
+                                $ Fijo
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Fecha */}
-                    <div>
-                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">Fecha</label>
-                      <DatePicker value={date} onChange={setDate} className={inputClass} />
-                    </div>
-
-                    {/* Agente + Propiedad (no aplican a gastos personales de Costear) */}
-                    {!isCostear && (
-                    <div>
-                      <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
-                        Agente <span className="text-text-faint">(opcional)</span>
-                      </label>
-                      <SelectField value={agentUserId} onChange={(e) => setAgentUserId(e.target.value)}>
-                        <option value="">Sin asignar</option>
-                        {agents.map((a) => (
-                          <option key={a.id} value={a.id}>{a.name}</option>
-                        ))}
-                      </SelectField>
+                      )}
                     </div>
                     )}
 
