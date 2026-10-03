@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import { Sheet } from "../../_components/sheet";
+import { changeMark } from "@/lib/motion";
 
 type PortalKey = "mercadolibre" | "zonaprop" | "argenprop";
 
@@ -328,6 +329,9 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
               return (
                 <div
                   key={portal}
+                  // Se enciende cuando el worker termina (publicando → activo/error),
+                  // no durante la carga ni por el click que lo dejó publicando.
+                  ref={loading || pub?.status === "publishing" ? undefined : changeMark(`${portal}|${pub?.status ?? "none"}|${pub?.published ? 1 : 0}`)}
                   role={selectable ? "checkbox" : undefined}
                   aria-checked={selectable ? isSel : undefined}
                   aria-label={selectable ? `Seleccionar ${meta.label} para publicación grupal` : undefined}

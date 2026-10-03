@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { noteDataRefresh } from "@/lib/motion";
 
 /**
  * Refresca la UI cuando el chat IA ejecuta una acción que modifica datos.
@@ -12,7 +13,9 @@ import { useRouter } from "next/navigation";
  * Components de la ruta actual) para que agenda, listados, seguimientos, etc. se
  * actualicen sin que el usuario recargue la página.
  *
- * Se debouncea para agrupar varias acciones seguidas en un solo refresh.
+ * Se debouncea para agrupar varias acciones seguidas en un solo refresh. Los
+ * ítems que aparecen o cambian por el refresh se encienden con la marca dorada
+ * de cambio (src/lib/motion.ts), así se ve qué hizo el chat.
  */
 export function ChatActionRefresher() {
   const router = useRouter();
@@ -21,6 +24,8 @@ export function ChatActionRefresher() {
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     const onAccion = () => {
+      // Lo que monte tras el refresh se marca en dorado (ver changeMark).
+      noteDataRefresh();
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => router.refresh(), 350);
     };

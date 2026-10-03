@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { DateTime, Info } from "luxon";
 import type { NoteAttachment } from "@/components/notes/media-uploader";
+import { changeMark } from "@/lib/motion";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -27,6 +28,10 @@ export interface CalendarEvent {
   htmlLink?: string;
   allDay?: boolean;
 }
+
+/** Marca dorada si el evento cambia o aparece por una acción del chat. */
+const evMark = (ev: CalendarEvent) =>
+  changeMark(`${ev.id}|${ev.date}|${ev.startTime}|${ev.endTime}|${ev.type}|${ev.title}`);
 
 interface CalendarProps {
   events: CalendarEvent[];
@@ -360,6 +365,7 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
               return (
                 <button
                   key={ev.id}
+                  ref={evMark(ev)}
                   onClick={() => handleEventClick(ev)}
                   className="flex items-start gap-3 rounded-[16px] border border-border bg-surface p-4 text-left transition-colors active:bg-bg hover:bg-bg"
                 >
@@ -503,6 +509,7 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                       return (
                         <div
                           key={ev.id}
+                          ref={evMark(ev)}
                           onClick={() => handleEventClick(ev)}
                           className="group flex cursor-pointer items-center gap-1.5 rounded-lg bg-bg px-1.5 py-1 transition-colors hover:bg-border/40"
                           title={`${timeLabel} · ${ev.title}${ev.source === "google" ? " · Google" : ""}${ev.client ? ` · ${ev.client}` : ""}${ev.userName ? ` · ${ev.userName}` : ""}`}
@@ -555,6 +562,7 @@ export function Calendar({ events, onEventClick }: CalendarProps) {
                             return (
                               <button
                                 key={ev.id}
+                                ref={evMark(ev)}
                                 type="button"
                                 onClick={() => {
                                   setDayPopover(null);

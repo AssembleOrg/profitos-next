@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DatePicker } from "@/components/ui/date-picker";
 import { SelectField } from "@/components/ui/select-field";
 import { motion, AnimatePresence } from "framer-motion";
+import { SPRING_SETTLE, changeMark } from "@/lib/motion";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
@@ -1304,6 +1305,9 @@ export function PropiedadesClient({
             return (
             <div
               key={p.id}
+              ref={changeMark(
+                `${p.id}|${p.address}|${p.status}|${p.operationPrice}|${p.mlPublication?.status ?? ""}|${(p.portalPublications ?? []).map((x) => `${x.portal}:${x.status}`).join(",")}`,
+              )}
               onClick={() => handleEdit(p)}
               className="cursor-pointer overflow-hidden rounded-[18px] border border-border bg-surface active:bg-bg"
             >
@@ -2069,7 +2073,7 @@ export function PropiedadesClient({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              transition={SPRING_SETTLE}
               className="pointer-events-auto fixed left-1/2 top-1/2 z-[71] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border bg-surface p-6 shadow-2xl"
             >
               <p className="font-display text-[17px] font-semibold text-text">

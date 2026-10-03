@@ -15,6 +15,7 @@ import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
 import { SelectField } from "@/components/ui/select-field";
 import { WhatsAppLink } from "@/components/whatsapp-link";
 import { firstPhone } from "@/lib/whatsapp";
+import { changeMark } from "@/lib/motion";
 
 interface UserOption {
   id: string;
@@ -50,6 +51,10 @@ interface FollowUpListItem {
   lastAction: { type: string; description: string; actionAt: string } | null;
   _count: { actions: number };
 }
+
+/** Marca dorada si el seguimiento cambia (estado, acciones) o aparece por el chat. */
+const fuMark = (it: FollowUpListItem) =>
+  changeMark(`${it.id}|${it.status}|${it.updatedAt}|${it._count.actions}`);
 
 interface FollowUpAction {
   id: string;
@@ -581,7 +586,7 @@ export function SeguimientosClient({
             const location = [item.property.zone, item.property.city].filter(Boolean).join(" · ");
             const overdue = isOverdue(item);
             return (
-              <div key={item.id} onClick={() => loadDetail(item.id)}
+              <div key={item.id} ref={fuMark(item)} onClick={() => loadDetail(item.id)}
                 className="cursor-pointer overflow-hidden rounded-[18px] border border-border bg-surface transition-colors active:bg-bg">
                 <div className="p-3">
                   <div className="flex items-start justify-between gap-2">
@@ -661,7 +666,7 @@ export function SeguimientosClient({
                   const location = [item.property.zone, item.property.city].filter(Boolean).join(" · ");
                   const overdue = isOverdue(item);
                   return (
-                    <tr key={item.id} onClick={() => loadDetail(item.id)} className="cursor-pointer border-t border-border transition-colors hover:bg-bg">
+                    <tr key={item.id} ref={fuMark(item)} onClick={() => loadDetail(item.id)} className="cursor-pointer border-t border-border transition-colors hover:bg-bg">
                       <td className="px-4 py-3">
                         {item.client ? (
                           <>

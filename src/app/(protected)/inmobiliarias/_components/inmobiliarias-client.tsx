@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { SPRING_SETTLE } from "@/lib/motion";
 import { toast } from "sonner";
 import { Sheet } from "../../_components/sheet";
 import { Pagination } from "../../_components/pagination";
@@ -278,7 +279,7 @@ export function InmobiliariasClient({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              transition={SPRING_SETTLE}
               className="fixed left-1/2 top-1/2 z-[71] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border bg-surface p-6 shadow-2xl"
             >
               <p className="font-display text-[17px] font-semibold text-text">¿Eliminar inmobiliaria?</p>

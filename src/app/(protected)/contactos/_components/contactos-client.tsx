@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { SPRING_SETTLE, staggerDelay, changeMark } from "@/lib/motion";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
 import { WhatsAppLink } from "@/components/whatsapp-link";
@@ -192,11 +193,13 @@ export function ContactosClient({
             clients.map((c, index) => (
               <motion.div
                 key={c.id}
+                // motion.div: framer congela el ref externo → sólo marca contactos nuevos.
+                ref={changeMark(c.id)}
                 layoutId={`contact-card-${c.id}`}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
-                transition={{ type: "spring", stiffness: 400, damping: 30, delay: index * 0.03 }}
+                transition={{ ...SPRING_SETTLE, delay: staggerDelay(index) }}
                 whileTap={{ scale: 0.96, opacity: 0.8 }}
                 onClick={() => handleEdit(c)}
                 className="cursor-pointer rounded-[18px] border border-border bg-surface p-3 transition-colors hover:bg-bg active:bg-bg"

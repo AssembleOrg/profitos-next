@@ -22,6 +22,7 @@
  */
 
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
+import { SPRING_SETTLE } from "@/lib/motion";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useIsMobile } from "./use-is-mobile";
 
@@ -127,7 +128,7 @@ export function Sheet({
                             layoutId={`contact-avatar-${avatarInitial}`}
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.05 }}
+                            transition={{ ...SPRING_SETTLE, delay: 0.05 }}
                             className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-sand-chip font-display text-sm font-bold text-text-muted"
                           >
                             {avatarInitial}
