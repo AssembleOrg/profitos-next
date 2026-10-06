@@ -47,20 +47,35 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/api/auth")
-  ) {
+  const path = request.nextUrl.pathname;
+  const isPortal = path === "/portal" || path.startsWith("/portal/");
+  const isPortalLogin = path === "/portal/login";
+  // Portal de inquilinos: cuenta email + contraseña marcada en app_metadata.
+  const isTenant = user?.app_metadata?.kind === "tenant";
+
+  const redirectTo = (pathname: string) => {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = pathname;
+    url.search = "";
     return NextResponse.redirect(url);
+  };
+
+  if (isPortal) {
+    if (!user && !isPortalLogin) return redirectTo("/portal/login");
+    if (user && isPortalLogin) return redirectTo(isTenant ? "/portal" : "/dashboard");
+    if (user && !isTenant) return redirectTo("/dashboard");
+    return supabaseResponse;
   }
 
-  if (user && request.nextUrl.pathname.startsWith("/login")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
+  // Un inquilino logueado nunca entra a las pantallas del staff.
+  if (isTenant) return redirectTo("/portal");
+
+  if (!user && !path.startsWith("/login") && !path.startsWith("/api/auth")) {
+    return redirectTo("/login");
+  }
+
+  if (user && path.startsWith("/login")) {
+    return redirectTo("/dashboard");
   }
 
   return supabaseResponse;

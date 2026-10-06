@@ -91,8 +91,10 @@ export async function getDueDateOrThrow(id: string) {
 }
 
 /**
- * Recalcula `expectedAmount` de un vencimiento: base + adicionales incluidos.
- * Toma en cuenta `amountOverride` si está; sino usa el `amount` del contractAdditional.
+ * Recalcula `expectedAmount` de un vencimiento: alquiler + adicionales incluidos.
+ * El alquiler es el propio de la cuota (`rentAmount`, lo fija un aumento) o el
+ * `baseAmount` del contrato. Toma en cuenta `amountOverride` si está; sino usa
+ * el `amount` del contractAdditional.
  */
 export async function recomputeDueExpectedAmount(dueDateId: string): Promise<number> {
   const due = await prisma.rentalDueDate.findUnique({
@@ -107,7 +109,7 @@ export async function recomputeDueExpectedAmount(dueDateId: string): Promise<num
     },
   });
   if (!due) throw new AppError(404, "Vencimiento no encontrado");
-  let total = due.contract.baseAmount;
+  let total = due.rentAmount ?? due.contract.baseAmount;
   for (const link of due.additionals) {
     if (!link.included) continue;
     const amount = link.amountOverride ?? link.contractAdditional.amount;

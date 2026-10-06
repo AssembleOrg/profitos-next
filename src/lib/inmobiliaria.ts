@@ -7,11 +7,13 @@
  */
 export const INMOBILIARIA = {
   name: "Profitos",
-  tagline: "Juliana Profitos · Inmobiliaria",
-  address: "—",
-  phone: "—",
-  email: "—",
-  cuit: "" as string, // opcional
+  tagline: "Juliana Profitos · Propiedades",
+  // Datos del talonario vigente (impreso 24-06-2026).
+  address: "Mitre 913 - Quilmes" as string,
+  phone: "11 5385 4029" as string,
+  email: "profitospropiedades@gmail.com" as string,
+  web: "www.jprofitospropiedades.com.ar" as string,
+  cuit: "27-38698130-8" as string,
   /** "01" = punto de venta inicial. Mantener 2 dígitos. */
   receiptPointOfSale: "01",
 } as const;

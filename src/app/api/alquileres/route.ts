@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
 import { contractInclude } from "@/lib/api/rentals";
 import { generateDueDates, isRentalFrequency } from "@/lib/rentals";
+import { parseContractConditions } from "@/lib/rentals/contract-input";
+import { addMonthsDateOnly } from "@/lib/rentals/collect";
 import type { Prisma } from "@/generated/prisma/client";
 
 export const GET = withHandler(async (request: NextRequest) => {
@@ -86,6 +88,9 @@ export const POST = withHandler(async (request: NextRequest) => {
   if (!tenantId) throw new AppError(400, "Falta el inquilino");
   if (!startDate || !endDate || !firstDueDate) throw new AppError(400, "Faltan las fechas");
   if (!isRentalFrequency(frequency)) throw new AppError(400, "Frecuencia inválida");
+  // Desde v2 solo se crean alquileres tradicionales (mensuales). Los temporales
+  // existentes se conservan como legado.
+  if (frequency !== "mensual") throw new AppError(400, "Solo se pueden crear alquileres mensuales");
   if (typeof baseAmount !== "number" || !Number.isFinite(baseAmount) || baseAmount < 0) {
     throw new AppError(400, "Monto base inválido");
   }
@@ -99,6 +104,18 @@ export const POST = withHandler(async (request: NextRequest) => {
   if (start > end) throw new AppError(400, "La fecha de inicio no puede ser posterior a la de fin");
   if (first < start || first > end) {
     throw new AppError(400, "El primer vencimiento debe estar dentro del rango del contrato");
+  }
+
+  const conditions = parseContractConditions(body as Record<string, unknown>);
+  if (conditions.ownerId) {
+    const owner = await prisma.owner.findUnique({ where: { id: conditions.ownerId }, select: { id: true } });
+    if (!owner) throw new AppError(404, "El propietario no existe");
+  }
+  if (conditions.adjustmentEveryMonths && !conditions.adjustmentNextDate) {
+    conditions.adjustmentNextDate = addMonthsDateOnly(
+      new Date(`${startDate.slice(0, 10)}T00:00:00.000Z`),
+      conditions.adjustmentEveryMonths,
+    );
   }
 
   const grace =
@@ -152,6 +169,8 @@ export const POST = withHandler(async (request: NextRequest) => {
         firstDueDate: first,
         gracePeriodDays: grace,
         notes: notes?.trim() || null,
+        kind: "tradicional",
+        ...conditions,
         ...(Array.isArray(attachments) && attachments.length > 0 && { attachments: attachments as never }),
         createdByUserId: auth.userId,
         additionals: {
