@@ -4,6 +4,7 @@ import { ok } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
 import { assertCanDeleteTransaction } from "@/lib/api/rentals";
+import { formatReceiptNo } from "@/lib/rentals/money";
 
 export const DELETE = withHandler(async (request: NextRequest, context) => {
   const path = request.nextUrl.pathname;
@@ -16,6 +17,17 @@ export const DELETE = withHandler(async (request: NextRequest, context) => {
   });
   if (!tx || tx.dueDateId !== id) throw new AppError(404, "Pago no encontrado");
   assertCanDeleteTransaction(tx, auth);
+
+  // Los recibos numerados del cobro quedan en el talonario como anulados (los
+  // números no se reutilizan).
+  const receipts = await prisma.rentalReceipt.findMany({
+    where: { transactionId: paymentId },
+    select: { bookKind: true, pointOfSale: true, number: true },
+  });
+  await prisma.rentalReceipt.updateMany({
+    where: { transactionId: paymentId, status: "emitido" },
+    data: { status: "anulado", voidReason: "Cobro eliminado", voidedAt: new Date(), voidedByUserId: auth.userId },
+  });
 
   await prisma.rentalPaymentTransaction.delete({ where: { id: paymentId } });
 
@@ -38,7 +50,9 @@ export const DELETE = withHandler(async (request: NextRequest, context) => {
     data: {
       dueDateId: id,
       type: "status_change",
-      description: `Pago eliminado (comprobante #${tx.receiptNumber ?? "?"})`,
+      description: receipts.length
+        ? `Cobro eliminado · recibos anulados: ${receipts.map((r) => formatReceiptNo(r.pointOfSale, r.number)).join(", ")}`
+        : `Pago eliminado (comprobante #${tx.receiptNumber ?? "?"})`,
       createdByUserId: auth.userId,
     },
   });

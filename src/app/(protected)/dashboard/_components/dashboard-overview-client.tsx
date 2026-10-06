@@ -6,8 +6,9 @@ import { useEffect, useRef, useState } from "react";
 import { useAccess } from "../../_components/access-context";
 import { formatRelative } from "@/lib/datetime";
 import { motion, AnimatePresence } from "framer-motion";
+import { SPRING_SETTLE } from "@/lib/motion";
 
-const SPRING = { type: "spring" as const, stiffness: 400, damping: 30 };
+const SPRING = SPRING_SETTLE;
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 interface DashboardOverview {

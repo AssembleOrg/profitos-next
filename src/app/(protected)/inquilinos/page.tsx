@@ -1,49 +1,29 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/session";
-import type { Prisma } from "@/generated/prisma/client";
-import { InquilinosClient } from "./_components/inquilinos-client";
-import type { NoteAttachment } from "@/components/notes/media-uploader";
+import { PeopleView } from "../alquileres/_ui/people-view";
 
-const PAGE_SIZE = 20;
-
-interface Props {
-  searchParams: Promise<{ page?: string; limit?: string; q?: string }>;
-}
-
-export default async function InquilinosPage({ searchParams }: Readonly<Props>) {
+export default async function InquilinosPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-
-  const sp = await searchParams;
-  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
-  const limit = Math.min(100, Math.max(1, Number.parseInt(sp.limit ?? `${PAGE_SIZE}`, 10) || PAGE_SIZE));
-  const q = sp.q?.trim() ?? "";
-
-  const where: Prisma.TenantWhereInput = {};
-  if (q) {
-    where.OR = [
-      { fullName: { contains: q, mode: "insensitive" } },
-      { idNumber: { contains: q } },
-      { phone: { contains: q } },
-      { email: { contains: q, mode: "insensitive" } },
-    ];
-  }
-
-  const [items, total] = await Promise.all([
-    prisma.tenant.findMany({
-      where,
-      include: { _count: { select: { contracts: true } } },
-      orderBy: [{ fullName: "asc" }],
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-    prisma.tenant.count({ where }),
-  ]);
-
+  const today = new Date();
+  const tenants = await prisma.tenant.findMany({
+    orderBy: { fullName: "asc" },
+    take: 2000,
+    include: {
+      _count: { select: { contracts: true } },
+      contracts: {
+        where: { endDate: { gte: today } },
+        select: { id: true, unit: true, property: { select: { address: true } } },
+        orderBy: { startDate: "desc" },
+      },
+    },
+  });
   return (
-    <InquilinosClient
-      initialTenants={items.map((t) => ({
+    <PeopleView
+      kind="inquilino"
+      isAdmin={user.role === "admin"}
+      rows={tenants.map((t) => ({
         id: t.id,
         fullName: t.fullName,
         idType: t.idType,
@@ -51,16 +31,15 @@ export default async function InquilinosPage({ searchParams }: Readonly<Props>) 
         phone: t.phone,
         email: t.email,
         notes: t.notes,
-        attachments: (t.attachments as NoteAttachment[] | null) ?? null,
         contractsCount: t._count.contracts,
-        createdAt: t.createdAt.toISOString(),
+        activeContracts: t.contracts.map((c) => ({ id: c.id, address: c.property.address, unit: c.unit })),
+        portal: {
+          enabled: t.portalEnabled,
+          hasAccount: Boolean(t.authUserId),
+          invitedAt: t.portalInvitedAt?.toISOString() ?? null,
+          lastLoginAt: t.portalLastLoginAt?.toISOString() ?? null,
+        },
       }))}
-      page={page}
-      totalPages={Math.max(1, Math.ceil(total / limit))}
-      total={total}
-      limit={limit}
-      isAdmin={user.role === "admin"}
-      filterQ={q}
     />
   );
 }

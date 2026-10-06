@@ -11,6 +11,7 @@ import { Pagination } from "../../_components/pagination";
 import { Spinner } from "../../_components/spinner";
 import { Sheet } from "../../_components/sheet";
 import { formatDate } from "@/lib/datetime";
+import { changeMark } from "@/lib/motion";
 
 interface TasacionItem {
   id: string;
@@ -21,6 +22,9 @@ interface TasacionItem {
   createdAt: string;
   updatedAt: string;
 }
+
+/** Marca dorada si la tasación cambia de estado o aparece por el chat. */
+const tasMark = (t: TasacionItem) => changeMark(`${t.id}|${t.status}|${t.updatedAt}`);
 
 interface Props {
   items: TasacionItem[];
@@ -232,6 +236,8 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
             return (
               <Link key={t.id} href={`/tasaciones/${t.id}`}>
                 <motion.div
+                  // motion.div: framer congela el ref externo → sólo marca tasaciones nuevas.
+                  ref={changeMark(t.id)}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="cursor-pointer rounded-[18px] border border-border bg-surface p-3.5 transition-colors active:bg-bg"
@@ -279,6 +285,7 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
                 return (
                   <tr
                     key={t.id}
+                    ref={tasMark(t)}
                     onClick={() => router.push(`/tasaciones/${t.id}`)}
                     className="cursor-pointer border-t border-border transition-colors hover:bg-bg"
                   >

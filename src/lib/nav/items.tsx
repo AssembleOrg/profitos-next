@@ -186,6 +186,20 @@ export const NAV_META_LIST: NavMeta[] = [
     ),
   },
   {
+    href: "/propietarios",
+    label: "Propietarios",
+    shortLabel: "Propiet.",
+    group: "alquileres",
+    adminOnly: true,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 11l9-7 9 7" />
+        <path d="M5 10v10h14V10" />
+        <circle cx="12" cy="14" r="2" />
+      </svg>
+    ),
+  },
+  {
     href: "/estados-cuenta",
     label: "Estados de cuenta",
     shortLabel: "Cuentas",

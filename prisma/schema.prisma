@@ -48,6 +48,10 @@ model User {
   createdRentalContracts        RentalContract[]            @relation("RentalContractCreatedBy")
   createdRentalPayments         RentalPaymentTransaction[]  @relation("RentalPaymentCreatedBy")
   createdRentalDueDateActions   RentalDueDateAction[]       @relation("RentalDueDateActionCreatedBy")
+  createdRentalAdjustments      RentalAdjustment[]          @relation("RentalAdjustmentCreatedBy")
+  createdRentalReceipts         RentalReceipt[]             @relation("RentalReceiptCreatedBy")
+  voidedRentalReceipts          RentalReceipt[]             @relation("RentalReceiptVoidedBy")
+  reviewedServiceProofs         RentalServiceProof[]        @relation("RentalServiceProofReviewedBy")
   createdAccountEntries         AccountEntry[]              @relation("AccountEntryCreatedBy")
   agentAccountEntries           AccountEntry[]              @relation("AccountEntryAgent")
 
@@ -499,12 +503,33 @@ model Tenant {
   email       String?
   notes       String?
   attachments Json?
+  // Portal de inquilinos (cuenta Supabase email + contraseña)
+  authUserId        String?          @unique @map("auth_user_id")
+  portalEnabled     Boolean          @default(false) @map("portal_enabled")
+  portalInvitedAt   DateTime?        @map("portal_invited_at")
+  portalLastLoginAt DateTime?        @map("portal_last_login_at")
   contracts   RentalContract[]
   createdAt   DateTime         @default(now()) @map("created_at")
   updatedAt   DateTime         @updatedAt @map("updated_at")
 
   @@index([fullName])
   @@map("jp_tenants")
+}
+
+model Owner {
+  id        String           @id @default(cuid())
+  fullName  String           @map("full_name")
+  idType    String           @default("dni") @map("id_type") // dni | cuit
+  idNumber  String?          @map("id_number")
+  phone     String?
+  email     String?
+  notes     String?
+  contracts RentalContract[]
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  @@index([fullName])
+  @@map("jp_owners")
 }
 
 model RentalAdditional {
@@ -536,15 +561,41 @@ model RentalContract {
   gracePeriodDays Int                        @default(0) @map("grace_period_days")
   notes           String?
   attachments     Json?
+  // tradicional | temporal (los temporales son legado: se ven, no se crean)
+  kind                  String               @default("tradicional")
+  ownerId               String?              @map("owner_id")
+  owner                 Owner?               @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  // Piso y depto / unidad (se imprime en el recibo)
+  unit                  String?
+  // % de honorarios de administración (default 5, editable en cada cobro)
+  feePercent            Float                @default(5) @map("fee_percent")
+  dueDay                Int?                 @map("due_day")
+  adjustmentEveryMonths Int?                 @map("adjustment_every_months")
+  // IPC | ICL | CAC | Casa Propia | Fijo | Otro (texto libre)
+  adjustmentIndex       String?              @map("adjustment_index")
+  adjustmentNextDate    DateTime?            @map("adjustment_next_date") @db.Date
+  // Servicios que paga el inquilino por su cuenta (sube comprobante)
+  tenantServices        String[]             @default([]) @map("tenant_services")
+  // propietaria | seguro_caucion | recibo_sueldo | otra | ninguna
+  guaranteeType         String?              @map("guarantee_type")
+  guaranteeDetail       String?              @map("guarantee_detail")
+  depositAmount         Float?               @map("deposit_amount")
+  advanceAmount         Float?               @map("advance_amount")
+  advanceDetail         String?              @map("advance_detail")
   createdByUserId String                     @map("created_by_user_id")
   createdByUser   User                       @relation("RentalContractCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
   additionals     RentalContractAdditional[]
   dueDates        RentalDueDate[]
+  adjustments     RentalAdjustment[]
+  receipts        RentalReceipt[]
+  serviceProofs   RentalServiceProof[]
   createdAt       DateTime                   @default(now()) @map("created_at")
   updatedAt       DateTime                   @updatedAt @map("updated_at")
 
   @@index([propertyId])
   @@index([tenantId])
+  @@index([ownerId])
+  @@index([adjustmentNextDate])
   @@index([startDate, endDate])
   @@map("jp_rental_contracts")
 }
@@ -570,12 +621,15 @@ model RentalDueDate {
   position        Int
   dueDate         DateTime                   @map("due_date") @db.Date
   expectedAmount  Float                      @map("expected_amount")
+  // Alquiler de esta cuota (null = baseAmount del contrato). Lo fija un aumento.
+  rentAmount      Float?                     @map("rent_amount")
   // null = derivado de fechas; "pagado" | "parcial" | "condonado"
   status          String?
   notes           String?
   additionals     RentalDueDateAdditional[]
   transactions    RentalPaymentTransaction[]
   actions         RentalDueDateAction[]
+  serviceProofs   RentalServiceProof[]
   createdAt       DateTime                   @default(now()) @map("created_at")
   updatedAt       DateTime                   @updatedAt @map("updated_at")
 
@@ -614,9 +668,14 @@ model RentalPaymentTransaction {
   isFull           Boolean       @default(true) @map("is_full")
   notes            String?
   attachments      Json?
+  // Legado: recibo único previo a los talonarios (v1)
   receiptNumber    Int?          @map("receipt_number")
   receiptPath      String?       @map("receipt_path")
   receiptIssuedAt  DateTime?     @map("receipt_issued_at")
+  // % de honorarios aplicado en este cobro y desglose congelado de conceptos
+  feePercent       Float?        @map("fee_percent")
+  breakdown        Json?
+  receipts         RentalReceipt[]
   createdByUserId  String        @map("created_by_user_id")
   createdByUser    User          @relation("RentalPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
   createdAt        DateTime      @default(now()) @map("created_at")
@@ -787,4 +846,94 @@ model PortalCredits {
   fetchedAt DateTime @default(now()) @map("fetched_at")
 
   @@map("jp_portal_credits")
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Alquileres v2: aumentos, talonarios, recibos, comprobantes
+// ────────────────────────────────────────────────────────────────────
+
+model RentalAdjustment {
+  id              String         @id @default(cuid())
+  contractId      String         @map("contract_id")
+  contract        RentalContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  effectiveDate   DateTime       @map("effective_date") @db.Date
+  previousAmount  Float          @map("previous_amount")
+  newAmount       Float          @map("new_amount")
+  indexLabel      String?        @map("index_label")
+  notes           String?
+  createdByUserId String         @map("created_by_user_id")
+  createdByUser   User           @relation("RentalAdjustmentCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  @@index([contractId])
+  @@map("jp_rental_adjustments")
+}
+
+model ReceiptBook {
+  id          String   @id @default(cuid())
+  // inquilino | propietario
+  kind        String   @unique
+  label       String
+  pointOfSale Int      @default(1) @map("point_of_sale")
+  nextNumber  Int      @default(1) @map("next_number")
+  configured  Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("jp_receipt_books")
+}
+
+model RentalReceipt {
+  id              String                    @id @default(cuid())
+  bookKind        String                    @map("book_kind")
+  pointOfSale     Int                       @map("point_of_sale")
+  number          Int
+  // emitido | anulado
+  status          String                    @default("emitido")
+  transactionId   String?                   @map("transaction_id")
+  transaction     RentalPaymentTransaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  contractId      String?                   @map("contract_id")
+  contract        RentalContract?           @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  amount          Float?
+  pdfPath         String?                   @map("pdf_path")
+  issuedAt        DateTime?                 @map("issued_at")
+  voidReason      String?                   @map("void_reason")
+  voidedAt        DateTime?                 @map("voided_at")
+  voidedByUserId  String?                   @map("voided_by_user_id")
+  voidedByUser    User?                     @relation("RentalReceiptVoidedBy", fields: [voidedByUserId], references: [id], onDelete: SetNull)
+  createdByUserId String?                   @map("created_by_user_id")
+  createdByUser   User?                     @relation("RentalReceiptCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime                  @default(now()) @map("created_at")
+
+  @@unique([bookKind, pointOfSale, number])
+  @@index([transactionId])
+  @@index([contractId])
+  @@index([issuedAt])
+  @@map("jp_rental_receipts")
+}
+
+model RentalServiceProof {
+  id               String         @id @default(cuid())
+  contractId       String         @map("contract_id")
+  contract         RentalContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  dueDateId        String?        @map("due_date_id")
+  dueDate          RentalDueDate? @relation(fields: [dueDateId], references: [id], onDelete: SetNull)
+  service          String
+  // YYYY-MM
+  period           String
+  amount           Float?
+  attachments      Json           @default("[]")
+  notes            String?
+  // pendiente | aprobado | rechazado
+  status           String         @default("pendiente")
+  reviewNote       String?        @map("review_note")
+  reviewedByUserId String?        @map("reviewed_by_user_id")
+  reviewedByUser   User?          @relation("RentalServiceProofReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  reviewedAt       DateTime?      @map("reviewed_at")
+  uploadedByTenant Boolean        @default(true) @map("uploaded_by_tenant")
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  @@index([contractId])
+  @@index([status])
+  @@map("jp_rental_service_proofs")
 }

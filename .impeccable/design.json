@@ -1,0 +1,392 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-03T05:38:05.977622+00:00",
+  "title": "Design System: Profitos (V4 · Cálido Expresivo)",
+  "extensions": {
+    "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Crema de Canvas",
+        "canonical": "#FAF7F2"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Hoja Blanca",
+        "canonical": "#FFFFFF"
+      },
+      "surface-elevated": {
+        "role": "neutral",
+        "displayName": "Crema Elevada",
+        "canonical": "#F5F1E9"
+      },
+      "ink": {
+        "role": "primary",
+        "displayName": "Tinta de Escritorio",
+        "canonical": "#1B1916",
+        "tonalRamp": [
+          "#1B1916",
+          "#33302B",
+          "#57534A",
+          "#6E6A60",
+          "#8E897D",
+          "#B7B2A6",
+          "#DFD8C9",
+          "#FAF7F2"
+        ]
+      },
+      "ink-hover": {
+        "role": "primary",
+        "displayName": "Tinta Hover",
+        "canonical": "#33302B"
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Tinta Media",
+        "canonical": "#57534A"
+      },
+      "ink-dim": {
+        "role": "neutral",
+        "displayName": "Tinta Tenue",
+        "canonical": "#6E6A60"
+      },
+      "ink-faint": {
+        "role": "neutral",
+        "displayName": "Tinta Débil",
+        "canonical": "#8E897D"
+      },
+      "dark-fg": {
+        "role": "neutral",
+        "displayName": "Crema sobre Oscuro",
+        "canonical": "#FAF7F2"
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "Gris sobre Oscuro",
+        "canonical": "#B7B2A6"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Borde Cálido",
+        "canonical": "#ECE6DA"
+      },
+      "border-strong": {
+        "role": "neutral",
+        "displayName": "Borde Firme",
+        "canonical": "#DFD8C9"
+      },
+      "accent-gold": {
+        "role": "primary",
+        "displayName": "Dorado de Aumento",
+        "canonical": "#C6A15B",
+        "tonalRamp": [
+          "oklch(30% 0.06 80)",
+          "oklch(40% 0.08 80)",
+          "oklch(50% 0.095 80)",
+          "oklch(60% 0.1 80)",
+          "oklch(72% 0.1 80)",
+          "oklch(82% 0.07 80)",
+          "oklch(90% 0.04 80)",
+          "oklch(95% 0.02 80)"
+        ]
+      },
+      "terra": {
+        "role": "secondary",
+        "displayName": "Terracota",
+        "canonical": "#C56A4A",
+        "tonalRamp": [
+          "oklch(30% 0.08 40)",
+          "oklch(40% 0.1 40)",
+          "oklch(50% 0.12 40)",
+          "oklch(60% 0.13 40)",
+          "oklch(70% 0.1 40)",
+          "oklch(80% 0.07 40)",
+          "oklch(90% 0.035 40)",
+          "oklch(95% 0.018 40)"
+        ]
+      },
+      "olive": {
+        "role": "secondary",
+        "displayName": "Oliva",
+        "canonical": "#6C7A5A",
+        "tonalRamp": [
+          "oklch(25% 0.04 125)",
+          "oklch(35% 0.045 125)",
+          "oklch(45% 0.05 125)",
+          "oklch(55% 0.05 125)",
+          "oklch(68% 0.045 125)",
+          "oklch(80% 0.035 125)",
+          "oklch(90% 0.02 125)",
+          "oklch(95% 0.012 125)"
+        ]
+      },
+      "warning": {
+        "role": "tertiary",
+        "displayName": "Ámbar de Espera",
+        "canonical": "#B27A34"
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Óxido",
+        "canonical": "#A94C45"
+      },
+      "info": {
+        "role": "tertiary",
+        "displayName": "Pizarra",
+        "canonical": "#5B7285"
+      },
+      "tint-sand": {
+        "role": "neutral",
+        "displayName": "Tint Arena",
+        "canonical": "#F3EAD9"
+      },
+      "tint-clay": {
+        "role": "neutral",
+        "displayName": "Tint Arcilla",
+        "canonical": "#F6E3DB"
+      },
+      "tint-sage": {
+        "role": "neutral",
+        "displayName": "Tint Salvia",
+        "canonical": "#E9EDE0"
+      },
+      "tint-info": {
+        "role": "neutral",
+        "displayName": "Tint Pizarra",
+        "canonical": "#E6EBEF"
+      },
+      "scrim": {
+        "role": "neutral",
+        "displayName": "Scrim de Hoja",
+        "canonical": "rgba(20, 19, 15, 0.55)"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Título de página; 28px desde md."
+      },
+      "figure-hero": {
+        "displayName": "Figure Hero",
+        "purpose": "Cifra protagonista dentro de una card hero oscura."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Montos de talones y KPI; siempre tabular."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Encabezado de hojas modales."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Títulos de card y sección; números de día del calendario."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Celdas, conceptos, texto de trabajo."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Labels de campo, tabs, botones chicos."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Subtítulos, hints, fechas secundarias."
+      },
+      "pill": {
+        "displayName": "Pill",
+        "purpose": "Pills de estado y chips de calendario."
+      },
+      "overline": {
+        "displayName": "Overline",
+        "purpose": "Solo cabeceras de tabla, días de semana y labels de KPI; en mayúsculas."
+      }
+    },
+    "shadows": [
+      {
+        "name": "float-low",
+        "value": "0 4px 12px rgba(27, 25, 22, 0.07)",
+        "purpose": "Popovers y menús (override de shadow-lg)."
+      },
+      {
+        "name": "float-mid",
+        "value": "0 10px 28px rgba(27, 25, 22, 0.10)",
+        "purpose": "Paneles elevados (override de shadow-xl)."
+      },
+      {
+        "name": "sheet",
+        "value": "0 18px 48px rgba(27, 25, 22, 0.18), 0 3px 10px rgba(27, 25, 22, 0.08)",
+        "purpose": "Hojas modales y diálogos (override de shadow-2xl)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Cifras que se recalculan y barra del mes."
+      },
+      {
+        "name": "duration-state",
+        "value": "150-200ms",
+        "purpose": "Hover, color y recálculo de montos."
+      },
+      {
+        "name": "duration-bar",
+        "value": "400ms",
+        "purpose": "Reparto de la barra de resumen del mes."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Única acción principal de la pantalla; ícono dorado.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg>Nuevo contrato</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; gap:8px; height:44px; padding:0 20px; border:0; border-radius:9999px; background:var(--color-dark,#1B1916); color:var(--color-dark-fg,#FAF7F2); font-family:Figtree,system-ui,sans-serif; font-size:13.5px; font-weight:700; cursor:pointer; transition:opacity .15s; } .ds-btn-primary svg { color:var(--color-accent,#C6A15B); } .ds-btn-primary:hover { opacity:.9; } .ds-btn-primary:focus-visible { outline:2px solid var(--color-accent,#C6A15B); outline-offset:2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Acciones de apoyo; blanco con borde cálido.",
+      "html": "<button class=\"ds-btn-secondary\">Ver legajo</button>",
+      "css": ".ds-btn-secondary { display:inline-flex; align-items:center; gap:8px; height:44px; padding:0 18px; border:1px solid var(--color-border,#ECE6DA); border-radius:9999px; background:var(--color-surface,#FFFFFF); color:var(--color-text-muted,#57534A); font-family:Figtree,system-ui,sans-serif; font-size:13.5px; font-weight:600; cursor:pointer; transition:background-color .15s,color .15s; } .ds-btn-secondary:hover { background:var(--color-bg,#FAF7F2); color:var(--color-text,#1B1916); } .ds-btn-secondary:focus-visible { outline:2px solid var(--color-accent,#C6A15B); outline-offset:2px; }"
+    },
+    {
+      "name": "Gold Button",
+      "kind": "button",
+      "refersTo": "button-gold",
+      "description": "Solo para aplicar un aumento.",
+      "html": "<button class=\"ds-btn-gold\">Aplicar aumento</button>",
+      "css": ".ds-btn-gold { display:inline-flex; align-items:center; height:36px; padding:0 16px; border:0; border-radius:9999px; background:var(--color-accent,#C6A15B); color:var(--color-dark,#1B1916); font-family:Figtree,system-ui,sans-serif; font-size:12.5px; font-weight:700; cursor:pointer; transition:opacity .15s; } .ds-btn-gold:hover { opacity:.9; } .ds-btn-gold:focus-visible { outline:2px solid var(--color-dark,#1B1916); outline-offset:2px; }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Campo con label arriba; el foco pinta el borde de dorado.",
+      "html": "<label class=\"ds-field\"><span>Fecha de cobro</span><input class=\"ds-input\" placeholder=\"03/10/2026\"></label>",
+      "css": ".ds-field { display:flex; flex-direction:column; gap:6px; font-family:Figtree,system-ui,sans-serif; } .ds-field span { font-size:12.5px; font-weight:600; color:var(--color-text-muted,#57534A); } .ds-input { height:44px; padding:0 14px; border:1px solid var(--color-border,#ECE6DA); border-radius:14px; background:var(--color-surface,#FFFFFF); color:var(--color-text,#1B1916); font-size:16px; outline:none; transition:border-color .15s; } .ds-input::placeholder { color:var(--color-text-faint,#8E897D); } .ds-input:hover { border-color:var(--color-border-strong,#DFD8C9); } .ds-input:focus, .ds-input:focus-visible { border-color:var(--color-accent,#C6A15B); }"
+    },
+    {
+      "name": "Segmented Tabs",
+      "kind": "nav",
+      "refersTo": "segmented-active",
+      "description": "Tabs y segmentados: pill oscura en la opción activa.",
+      "html": "<div class=\"ds-seg\" role=\"tablist\"><button class=\"ds-seg-on\">Agenda</button><button>Contratos</button><button>Recibos</button><button>Comprobantes</button></div>",
+      "css": ".ds-seg { display:inline-flex; gap:2px; padding:4px; border:1px solid var(--color-border,#ECE6DA); border-radius:9999px; background:var(--color-surface,#FFFFFF); font-family:Figtree,system-ui,sans-serif; } .ds-seg button { padding:6px 16px; border:0; border-radius:9999px; background:transparent; color:var(--color-text-faint,#8E897D); font-size:12.5px; font-weight:500; cursor:pointer; transition:color .15s,background-color .15s; } .ds-seg button:hover { color:var(--color-text,#1B1916); } .ds-seg button.ds-seg-on { background:var(--color-dark,#1B1916); color:var(--color-dark-fg,#FAF7F2); font-weight:700; } .ds-seg button:focus-visible { outline:2px solid var(--color-accent,#C6A15B); outline-offset:2px; }"
+    },
+    {
+      "name": "Status Pills",
+      "kind": "chip",
+      "refersTo": "pill-collected",
+      "description": "Mapeo de estados: tint + texto del mismo matiz.",
+      "html": "<div class=\"ds-pills\"><span class=\"ds-pill ds-ok\">Cobrado</span><span class=\"ds-pill ds-wait\">A cobrar</span><span class=\"ds-pill ds-late\">Vencido</span><span class=\"ds-pill ds-info\">Empieza pronto</span><span class=\"ds-pill ds-off\">Condonado</span><span class=\"ds-pill ds-adj\"><svg width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M5 21V3h12l-2.5 4.5L17 12H7v9z\"/></svg>Aumento sin aplicar</span></div>",
+      "css": ".ds-pills { display:flex; flex-wrap:wrap; gap:6px; } .ds-pill { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:9999px; font-family:Figtree,system-ui,sans-serif; font-size:11px; font-weight:700; white-space:nowrap; } .ds-ok { background:var(--color-sage-chip,#E9EDE0); color:var(--color-olive-light,#6C7A5A); } .ds-wait { background:var(--color-sand-chip,#F3EAD9); color:var(--color-warning,#B27A34); } .ds-late { background:var(--color-clay-chip,#F6E3DB); color:var(--color-terra,#C56A4A); } .ds-info { background:var(--color-info-chip,#E6EBEF); color:var(--color-info,#5B7285); } .ds-off { background:var(--color-bg,#FAF7F2); color:var(--color-text-faint,#8E897D); } .ds-adj { background:var(--color-dark,#1B1916); color:var(--color-accent,#C6A15B); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Contenedor base: blanco, borde cálido, sin sombra.",
+      "html": "<section class=\"ds-card\"><h2>Conceptos del mes</h2><p>Alquiler, expensas y extras del período.</p></section>",
+      "css": ".ds-card { padding:20px; border:1px solid var(--color-border,#ECE6DA); border-radius:20px; background:var(--color-surface,#FFFFFF); font-family:Figtree,system-ui,sans-serif; } .ds-card h2 { margin:0 0 12px; font-family:'Bricolage Grotesque',Figtree,sans-serif; font-size:16px; font-weight:600; color:var(--color-text,#1B1916); } .ds-card p { margin:0; font-size:13.5px; color:var(--color-text-muted,#57534A); }"
+    },
+    {
+      "name": "Receipt Stub",
+      "kind": "custom",
+      "refersTo": "receipt-stub-dark",
+      "description": "Talón de recibo con línea de corte y muescas; oscuro para el inquilino.",
+      "html": "<div class=\"ds-stub\"><div class=\"ds-stub-head\"><div><p class=\"ds-stub-t\">Recibo al inquilino</p><p class=\"ds-stub-s\">Por cuenta de terceros</p></div><span class=\"ds-stub-no\">N° 0001-<b>00000142</b></span></div><div class=\"ds-stub-cut\"><i></i><i></i></div><p class=\"ds-stub-s\">Martina Gómez</p><p class=\"ds-stub-amt\">$ 485.000</p></div>",
+      "css": ".ds-stub { position:relative; overflow:hidden; max-width:340px; padding:16px; border-radius:18px; background:var(--color-dark,#1B1916); color:var(--color-dark-fg,#FAF7F2); font-family:Figtree,system-ui,sans-serif; } .ds-stub-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; } .ds-stub-t { margin:0; font-family:'Bricolage Grotesque',Figtree,sans-serif; font-size:14px; font-weight:600; } .ds-stub-s { margin:0; font-size:11.5px; color:var(--color-dark-muted,#B7B2A6); } .ds-stub-no { padding:4px 8px; border-radius:9999px; background:rgba(255,255,255,.1); font-size:11.5px; font-weight:700; font-variant-numeric:tabular-nums; color:var(--color-dark-muted,#B7B2A6); } .ds-stub-no b { color:var(--color-dark-fg,#FAF7F2); } .ds-stub-cut { position:relative; height:0; margin:12px -16px; border-top:1px dashed rgba(255,255,255,.2); } .ds-stub-cut i { position:absolute; top:-8px; width:16px; height:16px; border-radius:9999px; background:var(--color-surface,#FFFFFF); } .ds-stub-cut i:first-child { left:-8px; } .ds-stub-cut i:last-child { right:-8px; } .ds-stub-amt { margin:0; font-family:'Bricolage Grotesque',Figtree,sans-serif; font-size:26px; font-weight:700; line-height:1.25; font-variant-numeric:tabular-nums; }"
+    },
+    {
+      "name": "Calendar Day Cell",
+      "kind": "custom",
+      "refersTo": "calendar-chip-pending",
+      "description": "Celda del calendario: número del día, chip de aumento dorado, chips por estado y final punteado.",
+      "html": "<button class=\"ds-day\"><span class=\"ds-day-n\">10</span><span class=\"ds-chip ds-chip-adj\">Belgrano 1450</span><span class=\"ds-chip ds-chip-wait\"><b>San Martín 220</b><small>$485k</small></span><span class=\"ds-chip ds-chip-ok\"><b>Mitre 88 2B</b><small>$310k</small></span><span class=\"ds-chip ds-chip-end\">Termina · Sarmiento 9</span></button>",
+      "css": ".ds-day { display:flex; flex-direction:column; gap:4px; width:150px; min-height:132px; padding:8px; border:1px solid var(--color-border,#ECE6DA); background:var(--color-surface,#FFFFFF); text-align:left; font-family:Figtree,system-ui,sans-serif; cursor:pointer; transition:background-color .15s; } .ds-day:hover { background:var(--color-bg,#FAF7F2); } .ds-day:focus-visible { outline:2px solid var(--color-accent,#C6A15B); outline-offset:-2px; } .ds-day-n { display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:9999px; box-shadow:0 0 0 1px var(--color-accent,#C6A15B); color:var(--color-accent,#C6A15B); font-family:'Bricolage Grotesque',Figtree,sans-serif; font-size:16px; font-weight:600; } .ds-chip { display:flex; flex-direction:column; padding:4px 6px; border-radius:6px; font-size:11px; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .ds-chip b { font-weight:600; } .ds-chip small { font-size:10.5px; opacity:.8; font-variant-numeric:tabular-nums; } .ds-chip-adj { background:var(--color-accent,#C6A15B); color:var(--color-dark,#1B1916); font-weight:700; } .ds-chip-wait { background:var(--color-sand-chip,#F3EAD9); color:var(--color-text,#1B1916); } .ds-chip-ok { background:var(--color-sage-chip,#E9EDE0); color:var(--color-olive-light,#6C7A5A); } .ds-chip-end { padding:2px 6px; border:1px dashed var(--color-border-strong,#DFD8C9); color:var(--color-text-faint,#8E897D); font-size:10.5px; font-weight:600; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "El escritorio de la inmobiliaria",
+    "overview": "Un escritorio de oficina bien llevado: papel crema, carpetas blancas, tinta casi negra y un único dorado que marca lo que cambia. V4 · Cálido Expresivo es denso pero respirado; el trabajo se lee en cifras grandes en Bricolage Grotesque y todo lo demás habla en Figtree pequeño y preciso. La calidez viene de la paleta (crema, arena, arcilla, salvia), nunca de gradientes ni de decoración.\n\nEl sistema es operativo: el celular pesa tanto como la compu, por eso los controles son pills de 44px, las listas son cards en mobile y tablas en desktop, y los modales son hojas que suben desde abajo. Los estados se comunican con tints de fondo y texto del mismo matiz (salvia cobrado, arena a cobrar, arcilla vencido), no con bordes de color; los puntos de estado de 6px quedan para donde no entra un pill (tira de días, leyendas).\n\nLa superficie de alquileres extiende el mundo sin cambiar paleta ni tipografía: suma el talón de recibo con línea de corte, los chips del calendario coloreados por estado y la hoja de cobro \"split\". Las fuentes de verdad siguen siendo `src/app/globals.css` (tokens) y `docs/V4-STYLE-GUIDE.md` (patrones); este archivo las registra tal como quedaron construidas.",
+    "keyCharacteristics": [
+      "Canvas crema, superficies blancas con borde cálido de 1px, sin sombras en reposo.",
+      "Un primario por pantalla: pill de tinta oscura con ícono dorado.",
+      "Bricolage Grotesque solo para títulos, días y cifras (siempre tabulares); Figtree para todo lo demás.",
+      "Estados como tint + texto del mismo matiz, en pills `rounded-full`.",
+      "Dorado reservado para lo que cambia o requiere atención: aumentos, foco, el día de hoy."
+    ],
+    "rules": [
+      {
+        "name": "The Tint-and-Hue Rule",
+        "body": "Un estado es siempre un fondo tint con texto de su mismo matiz: cobrado salvia/oliva, a cobrar arena/ámbar, vencido arcilla/terracota, info gris-azul/pizarra, neutro crema/tinta débil. Nunca un borde de color ni un fondo saturado.",
+        "section": "colors"
+      },
+      {
+        "name": "The Gold Means Change Rule",
+        "body": "El dorado marca lo que se mueve o pide atención (aumentos, foco, hoy). No es color de marca para decorar; si un elemento dorado no anuncia un cambio o un foco, sobra.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Dark Pill Rule",
+        "body": "Una sola pill oscura primaria por pantalla; el resto de las acciones son secundarias blancas con borde, texto o link terracota.",
+        "section": "colors"
+      },
+      {
+        "name": "The Figures Are Display Rule",
+        "body": "Todo monto, número de día o cifra de KPI va en Bricolage con `tabular-nums`; los números nunca bailan al animar.",
+        "section": "typography"
+      },
+      {
+        "name": "The Overline-Only-In-Grids Rule",
+        "body": "Las mayúsculas espaciadas existen solo como cabecera de una grilla (tabla, semana, KPI) y en el wordmark de marca \"JULIANA PROFITOS / Propiedades\" (identidad, no tipografía de UI). No se usan como rótulo sobre títulos.",
+        "section": "typography"
+      },
+      {
+        "name": "The Border-Not-Shadow Rule",
+        "body": "Una card en reposo se separa del canvas con su borde de 1px, no con sombra.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do usar los nombres de token de `globals.css` (`bg-surface`, `text-text-muted`, `bg-sand-chip`, `bg-dark`) en vez de hex sueltos.",
+      "Do poner toda cifra en Bricolage bold con `tabular-nums`.",
+      "Do mantener un único primario oscuro por pantalla, con su ícono en dorado.",
+      "Do expresar estados con el mapeo tint + matiz de los pills (salvia cobrado, arena a cobrar, arcilla vencido).",
+      "Do usar el anillo de foco dorado (outline 2px, offset 2px) en todo control que no sea un campo; los campos cambian el borde a dorado.",
+      "Do usar línea punteada para lo que se corta o termina (talones, finales de contrato).",
+      "Do mantener las transiciones en 150-200ms con easing de salida (`cubic-bezier(0.16, 1, 0.3, 1)`)."
+    ],
+    "donts": [
+      "Don't sumar gradientes, sombras de color ni sombras en cards en reposo.",
+      "Don't usar mayúsculas espaciadas fuera de cabeceras de tabla, días de la semana, labels de KPI y el wordmark de marca.",
+      "Don't bajar un contenedor de 12px de radio ni dar esquinas cuadradas a controles.",
+      "Don't marcar estados con bordes de color o puntos solos cuando hay espacio para un pill.",
+      "Don't usar el dorado como decoración: solo para aumentos, foco y hoy.",
+      "Don't sumar rebotes nuevos en las animaciones."
+    ]
+  }
+}

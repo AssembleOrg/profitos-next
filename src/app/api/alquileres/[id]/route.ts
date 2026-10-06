@@ -9,6 +9,7 @@ import {
   getContractOrThrow,
 } from "@/lib/api/rentals";
 import { serializeContract } from "@/app/(protected)/alquileres/_components/serialize";
+import { parseContractConditions } from "@/lib/rentals/contract-input";
 
 export const GET = withHandler(async (request: NextRequest, context) => {
   const path = request.nextUrl.pathname;
@@ -37,6 +38,13 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
   if (typeof body.gracePeriodDays === "number" && body.gracePeriodDays >= 0) {
     data.gracePeriodDays = Math.floor(body.gracePeriodDays);
   }
+  const conditions = parseContractConditions(body as Record<string, unknown>);
+  if (conditions.ownerId) {
+    const owner = await prisma.owner.findUnique({ where: { id: conditions.ownerId }, select: { id: true } });
+    if (!owner) throw new AppError(404, "El propietario no existe");
+  }
+  Object.assign(data, conditions);
+  if ("attachments" in body && Array.isArray(body.attachments)) data.attachments = body.attachments;
 
   const updated = await prisma.rentalContract.update({
     where: { id },

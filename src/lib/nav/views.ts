@@ -25,6 +25,7 @@ export const APP_VIEWS: AppView[] = [
   { href: "/firmas", label: "Estado de firmas" },
   { href: "/alquileres", label: "Alquileres" },
   { href: "/inquilinos", label: "Inquilinos" },
+  { href: "/propietarios", label: "Propietarios" },
   { href: "/estados-cuenta", label: "Estados de cuenta" },
   { href: "/inmobiliarias", label: "Inmobiliarias" },
   { href: "/objetivos", label: "Objetivos" },

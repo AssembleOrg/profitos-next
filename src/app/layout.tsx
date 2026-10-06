@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Figtree, Bricolage_Grotesque } from "next/font/google";
 import { Toaster } from "sonner";
+import { MotionProvider } from "./_components/motion-provider";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -37,7 +38,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${figtree.variable} ${bricolage.variable}`}>
       <body className="font-sans antialiased" suppressHydrationWarning>
-        {children}
+        <MotionProvider>{children}</MotionProvider>
         <Toaster
           theme="light"
           position="top-right"

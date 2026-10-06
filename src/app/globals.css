@@ -74,6 +74,13 @@
   /* Safe area */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* ── Movimiento ── DESIGN.md: 150-200ms, salida exponencial, sin rebotes.
+     Los mismos valores para framer-motion viven en src/lib/motion.ts. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-layout: 300ms;
 }
 
 @theme inline {
@@ -130,6 +137,29 @@
   100% { transform: translateX(320%); }
 }
 
+/* ── Marca de cambio ── "El dorado marca lo que cambia" (DESIGN.md).
+   Una fila o tarjeta cuyo dato cambió sin que la persona lo esté mirando (lo
+   hizo el chat, lo terminó el worker, lo guardó un modal) se enciende en
+   dorado y arena y se apaga sola. Sin desplazamiento: las cifras no bailan.
+   0% y 100% se omiten a propósito: parte y vuelve al contorno y al fondo
+   propios del elemento, sean cuales sean. Llega rápido (salida exponencial del
+   mundo), se sostiene ~360ms y se apaga con un ease-in-out para que el ojo
+   alcance a encontrarla; un ease-out también en el apagado la borraría en
+   ~200ms. Lo dispara changeMark() en src/lib/motion.ts. */
+@keyframes pf-change {
+  8%, 28% {
+    outline-color: rgb(198 161 91 / 0.9);
+    background-color: var(--color-sand-chip);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.45, 1);
+  }
+}
+
+[data-changed] {
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  animation: pf-change 1.8s var(--ease-out);
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
@@ -142,6 +172,32 @@ button, nav, [role="tab"], [role="menuitem"] {
 
 html {
   scroll-behavior: smooth;
+}
+
+/* ── Movimiento reducido ──
+   framer-motion lo resuelve con <MotionConfig reducedMotion="user"> (quita
+   traslados y escalas, conserva opacidad). Acá: sin scroll animado, sin loops
+   decorativos, y la barra de carga deja de viajar y sólo respira. Los spinners
+   se quedan (avisan que algo está cargando) y la marca de cambio también: es
+   color, no movimiento, y explica qué cambió. */
+@keyframes loading-breathe {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-pulse {
+    animation: none;
+  }
+
+  .animate-loading-bar {
+    animation: loading-breathe 1.6s ease-in-out infinite;
+    transform: none;
+  }
 }
 
 body {

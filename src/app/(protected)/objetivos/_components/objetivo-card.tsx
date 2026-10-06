@@ -16,6 +16,7 @@ import {
 import { formatDate, formatRelative, fromISO } from "@/lib/datetime";
 import { ItemsEditorSheet } from "./items-editor";
 import type { SerializedCard, SerializedItem } from "./types";
+import { changeMark } from "@/lib/motion";
 
 interface ObjetivoCardProps {
   card: SerializedCard;
@@ -178,6 +179,9 @@ export function ObjetivoCard({
   return (
     <>
     <motion.article
+      // Sólo marca tarjetas nuevas (p. ej. creadas por el chat): los checks los
+      // tilda quien está mirando, no hace falta señalarlos.
+      ref={changeMark(card.id)}
       layout
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
