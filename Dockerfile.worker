@@ -48,4 +48,5 @@ ENV SCRAPER_CHROME_PATH=/usr/bin/brave-browser
 # Arrancamos Xvfb a mano (más confiable que xvfb-run), exportamos DISPLAY, y
 # corremos el server como proceso principal (exec) para que sus logs salgan al
 # contenedor y las señales se propaguen bien.
-CMD ["sh", "-c", "Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp & export DISPLAY=:99; sleep 2; echo '[entry] Xvfb listo, arrancando worker (server)'; exec pnpm exec tsx scripts/scraper/serve-worker.ts"]
+# Xvfb + liberación de la page cache + node directo: ver scripts/scraper/entry-worker.sh.
+CMD ["sh", "scripts/scraper/entry-worker.sh"]
