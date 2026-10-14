@@ -86,6 +86,10 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
   const router = useRouter();
   const editing = Boolean(initial);
   const [saving, setSaving] = useState(false);
+  // "inmobiliaria" = cobro mensual, recibos y honorarios de administración.
+  // "propietario" = sólo legajo: no se generan cuotas, recibos ni avisos.
+  const [admin, setAdmin] = useState<"inmobiliaria" | "propietario">(initial && !initial.managed ? "propietario" : "inmobiliaria");
+  const managed = admin === "inmobiliaria";
 
   // Partes
   const [propertyId, setPropertyId] = useState<string | null>(initial?.property.id ?? null);
@@ -171,7 +175,7 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
     if (newOwner && !newOwner.fullName.trim()) return "Completá el nombre del propietario";
     if (!amount || amount <= 0) return "Indicá el monto del alquiler";
     if (!startDate || !endDate || startDate >= endDate) return "Revisá las fechas del contrato";
-    if (dueCount === 0) return "Con esas fechas no se genera ningún vencimiento";
+    if (managed && dueCount === 0) return "Con esas fechas no se genera ningún vencimiento";
     return null;
   }
 
@@ -185,6 +189,7 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
     try {
       const resolvedOwner = newOwner ? await createPerson("propietarios", newOwner) : ownerId;
       const conditions = {
+        managed,
         ownerId: resolvedOwner,
         unit: unit || null,
         feePercent: fee,
@@ -225,7 +230,7 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
           additionals: extras.map((x) => ({ additionalId: x.additionalId, amount: x.amount })),
         },
       });
-      toast.success(`Contrato cargado · ${dueCount} vencimientos generados`);
+      toast.success(managed ? `Contrato cargado · ${dueCount} vencimientos generados` : "Contrato cargado · lo administra el propietario, sin cobros mensuales");
       router.push(`/alquileres/${created.id}`);
       router.refresh();
     } catch (e) {
@@ -257,6 +262,24 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
       <div className="grid gap-4 xl:grid-cols-2">
         {/* 1. Partes */}
         <FormSection title="Propiedad y partes">
+          <Field
+            label="¿Quién administra el alquiler?"
+            hint={
+              managed
+                ? "La inmobiliaria cobra mes a mes, emite los recibos y cobra honorarios de administración."
+                : "Lo cobra el propietario. Queda el legajo (partes, fechas y condiciones) sin cuotas, recibos ni avisos de cobro o aumento. Los honorarios de la operación se cargan en Estados de cuenta."
+            }
+          >
+            <Segmented
+              ariaLabel="Quién administra el alquiler"
+              value={admin}
+              onChange={setAdmin}
+              options={[
+                { value: "inmobiliaria", label: "La inmobiliaria" },
+                { value: "propietario", label: "El propietario" },
+              ]}
+            />
+          </Field>
           {editing && initial ? (
             <Locked
               rows={[
@@ -497,7 +520,8 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
         </FormSection>
 
         {/* 6. Honorarios + notas */}
-        <FormSection title="Honorarios y notas">
+        <FormSection title={managed ? "Honorarios y notas" : "Notas y documentos"}>
+          {managed && (
           <Field label="Honorarios de administración" hint="Se descuentan del alquiler en el recibo al propietario. Se puede cambiar en cada cobro.">
             <div className="relative w-32">
               <input
@@ -514,6 +538,7 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
               <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[13px] text-text-faint">%</span>
             </div>
           </Field>
+          )}
           <Field label="Notas del contrato" hint="Acuerdos entre partes, referencias, lo que haga falta recordar.">
             <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={textareaBox} />
           </Field>
@@ -527,7 +552,9 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
       <div data-form-bar className="fixed inset-x-3 bottom-[calc(var(--safe-bottom,0px)+92px)] z-30 rounded-[20px] border border-border bg-surface px-4 py-3 shadow-[0_18px_40px_-20px_rgba(27,25,22,0.35)] md:inset-x-0 md:bottom-0 md:rounded-none md:border-x-0 md:border-b-0 md:px-6 md:shadow-none lg:px-10">
         <div className="flex items-center justify-between gap-3">
           <p className="min-w-0 text-[12.5px] text-text-muted">
-            {editing ? (
+            {!managed ? (
+              <span className="font-semibold text-text">Lo administra el propietario · sin cobros mensuales</span>
+            ) : editing ? (
               "Los cambios valen para los próximos cobros."
             ) : (
               <>

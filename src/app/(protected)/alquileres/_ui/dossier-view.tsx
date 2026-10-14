@@ -98,6 +98,7 @@ export function DossierView({ d, today }: { d: ContractDossier; today: string })
             </span>
             <ContractPill status={d.status} />
             {d.kind === "temporal" && <Pill tone="bg-info-chip text-info">Temporal</Pill>}
+            {!d.managed && <Pill tone="bg-sage-chip text-olive-light">Lo administra el propietario</Pill>}
             <AdjustPill alert={d.status === "finalizado" ? "none" : d.adjustment.alert} />
           </div>
         </div>
@@ -114,7 +115,7 @@ export function DossierView({ d, today }: { d: ContractDossier; today: string })
               Cobrar cuota {nextOpen.position}
             </button>
           )}
-          {d.status !== "finalizado" && (
+          {d.managed && d.status !== "finalizado" && (
             <button type="button" className={btnSecondary} onClick={() => setAdjust(adjustTarget)}>
               <IconTrend size={16} />
               Aplicar aumento
@@ -175,7 +176,11 @@ export function DossierView({ d, today }: { d: ContractDossier; today: string })
         <Card className="md:col-span-2 xl:col-span-1">
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
             <Cond label="Alquiler actual" value={money(d.baseAmount, d.currency)} big />
-            <Cond label="Honorarios" value={`${d.feePercent}% del alquiler`} />
+            <Cond
+              label={d.managed ? "Honorarios" : "Administración"}
+              value={d.managed ? `${d.feePercent}% del alquiler` : "La hace el propietario"}
+              sub={d.managed ? undefined : "La inmobiliaria no cobra cuotas ni emite recibos"}
+            />
             <Cond
               label="Aumentos"
               value={
@@ -206,15 +211,24 @@ export function DossierView({ d, today }: { d: ContractDossier; today: string })
         </Card>
       </div>
 
-      <Ledger d={d} today={today} onCollect={setCollectDue} onEdit={setEditDue} onChanged={refresh} />
+      {d.managed ? (
+        <>
+          <Ledger d={d} today={today} onCollect={setCollectDue} onEdit={setEditDue} onChanged={refresh} />
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <ProofsCard proofs={d.proofs} services={d.tenantServices} onAdd={() => setProofOpen(true)} onChanged={refresh} />
-        <div className="flex flex-col gap-4">
-          <AdjustmentsCard d={d} onApply={() => setAdjust(adjustTarget)} />
+          <div className="grid gap-4 xl:grid-cols-2">
+            <ProofsCard proofs={d.proofs} services={d.tenantServices} onAdd={() => setProofOpen(true)} onChanged={refresh} />
+            <div className="flex flex-col gap-4">
+              <AdjustmentsCard d={d} onApply={() => setAdjust(adjustTarget)} />
+              {(d.notes || (Array.isArray(d.attachments) && d.attachments.length > 0)) && <NotesCard d={d} />}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="grid gap-4 xl:grid-cols-2">
+          <OwnerManagedCard d={d} />
           {(d.notes || (Array.isArray(d.attachments) && d.attachments.length > 0)) && <NotesCard d={d} />}
         </div>
-      </div>
+      )}
 
       <CollectSheet dueId={collectDue} open={Boolean(collectDue)} onClose={() => setCollectDue(null)} onDone={refresh} />
       <AdjustmentSheet target={adjust} onClose={() => setAdjust(null)} onDone={refresh} />
@@ -784,6 +798,29 @@ function AdjustmentsCard({ d, onApply }: { d: ContractDossier; onApply: () => vo
           })}
         </ol>
       )}
+    </Card>
+  );
+}
+
+/**
+ * Contrato que administra el propietario: no hay cuotas ni recibos; lo único
+ * que entra a la oficina son los honorarios de la operación, que se registran
+ * en Estados de cuenta (con la propiedad ya vinculada).
+ */
+function OwnerManagedCard({ d }: { d: ContractDossier }) {
+  const detalle = `Honorarios alquiler ${propertyLine(d.property.address, d.unit)} · ${d.tenant.fullName}`;
+  const href = `/estados-cuenta?nuevo=ingreso&propiedad=${encodeURIComponent(d.property.id)}&detalle=${encodeURIComponent(detalle)}`;
+  return (
+    <Card>
+      <SectionTitle>Cobros</SectionTitle>
+      <p className="mt-2 text-[13px] leading-relaxed text-text-muted">
+        El alquiler lo cobra directamente el propietario: la inmobiliaria no genera cuotas, recibos ni avisos de cobro o
+        aumento para este contrato. Los honorarios que cobró la oficina por la operación se registran en Estados de cuenta.
+      </p>
+      <Link href={href} className={`${btnSecondary} mt-4 w-fit`}>
+        <IconReceipt size={16} />
+        Registrar honorarios de la operación
+      </Link>
     </Card>
   );
 }

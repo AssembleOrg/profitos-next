@@ -135,7 +135,7 @@ export function ContractsView({
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <p className="font-display text-[14px] font-bold tabular-nums text-text">{money(r.baseAmount, r.currency)}</p>
-                      <p className="text-[11.5px] text-text-faint">Honorarios {r.feePercent}%</p>
+                      <p className="text-[11.5px] text-text-faint">{r.managed ? `Honorarios ${r.feePercent}%` : "Lo administra el propietario"}</p>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       {r.nextDue ? (
@@ -144,7 +144,7 @@ export function ContractsView({
                           <DuePill status={r.nextDue.status} />
                         </div>
                       ) : (
-                        <span className="text-[12.5px] text-text-faint">Sin cuotas pendientes</span>
+                        <span className="text-[12.5px] text-text-faint">{r.managed ? "Sin cuotas pendientes" : "No cobra la inmobiliaria"}</span>
                       )}
                       {r.overdueCount > 0 && (
                         <p className="text-[11.5px] font-semibold text-terra">
@@ -165,6 +165,7 @@ export function ContractsView({
                       <div className="flex items-center gap-1.5">
                         <ContractPill status={r.status} />
                         {r.kind === "temporal" && <Pill tone="bg-info-chip text-info">Temporal</Pill>}
+                        {!r.managed && <Pill tone="bg-sage-chip text-olive-light">Propietario</Pill>}
                       </div>
                       <p className="mt-0.5 text-[11.5px] tabular-nums text-text-faint">
                         {dateAR(r.startDate)} → {dateAR(r.endDate)}
@@ -184,7 +185,10 @@ export function ContractsView({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-[13.5px] font-bold text-text">{propertyLine(r.property.address, r.unit)}</p>
-                      <p className="truncate text-[12px] text-text-faint">{r.tenant.fullName}</p>
+                      <p className="truncate text-[12px] text-text-faint">
+                        {r.tenant.fullName}
+                        {!r.managed && " · lo administra el propietario"}
+                      </p>
                     </div>
                     <ContractPill status={r.status} />
                   </div>

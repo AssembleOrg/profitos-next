@@ -51,16 +51,27 @@ interface Props {
   isAdmin: boolean;
   /** La dueña de los gastos Costear: ve el subtotal personal y puede cargar gastos personales. */
   isCostearOwner: boolean;
+  /** Alta precargada desde otra pantalla (?nuevo=ingreso&propiedad=…&detalle=…). */
+  prefill?: MovementPrefill | null;
+}
+
+export interface MovementPrefill {
+  type: "income" | "expense";
+  propertyId: string | null;
+  propertyLabel: string | null;
+  description: string;
 }
 
 const selectClass =
   "h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none";
 
-export function EstadosCuentaClient({ report, categories, agents, filters, isAdmin, isCostearOwner }: Readonly<Props>) {
+export function EstadosCuentaClient({ report, categories, agents, filters, isAdmin, isCostearOwner, prefill = null }: Readonly<Props>) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [formOpen, setFormOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(Boolean(prefill));
+  // La precarga vale sólo para la primera apertura; después el alta arranca vacía.
+  const [activePrefill, setActivePrefill] = useState<MovementPrefill | null>(prefill);
   const [editing, setEditing] = useState<AccountMovement | null>(null);
   const [categorysOpen, setCategoriesOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -336,7 +347,17 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
 
       <MovementFormModal
         open={formOpen}
-        onOpenChange={(v) => { setFormOpen(v); if (!v) setEditing(null); }}
+        onOpenChange={(v) => {
+          setFormOpen(v);
+          if (!v) {
+            setEditing(null);
+            if (activePrefill) {
+              setActivePrefill(null);
+              router.replace(pathname); // saca ?nuevo=… para que recargar no reabra el alta
+            }
+          }
+        }}
+        prefill={activePrefill}
         editing={editing}
         incomeCategories={incomeCategories}
         expenseCategories={expenseCategories}

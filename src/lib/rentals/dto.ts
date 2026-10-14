@@ -96,6 +96,8 @@ export type ContractStatus = "vigente" | "por_vencer" | "finalizado" | "futuro";
 export interface ContractRow {
   id: string;
   kind: string;
+  /** false = lo administra el propietario: legajo sin cuotas, recibos ni avisos. */
+  managed: boolean;
   title: string | null;
   property: PropertyRef;
   unit: string | null;

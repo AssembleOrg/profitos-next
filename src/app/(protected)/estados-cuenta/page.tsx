@@ -5,7 +5,7 @@ import { now } from "@/lib/datetime";
 import { getAccountReport, type MovementFilters } from "@/lib/account/server";
 import { isCurrency, isEntryType } from "@/lib/account";
 import { getCostearPhoneForEmail } from "@/lib/costear/client";
-import { EstadosCuentaClient, type AccountFilters } from "./_components/estados-cuenta-client";
+import { EstadosCuentaClient, type AccountFilters, type MovementPrefill } from "./_components/estados-cuenta-client";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -19,6 +19,10 @@ interface Props {
     agentUserId?: string;
     shared?: string;
     view?: string;
+    /** Atajo desde otras pantallas: abre "nuevo movimiento" precargado. */
+    nuevo?: string;
+    propiedad?: string;
+    detalle?: string;
   }>;
 }
 
@@ -60,6 +64,21 @@ export default async function EstadosCuentaPage({ searchParams }: Readonly<Props
     }),
   ]);
 
+  // Precarga del alta (p. ej. desde un contrato que administra el propietario:
+  // "Registrar honorarios de la operación").
+  let prefill: MovementPrefill | null = null;
+  if (sp.nuevo === "ingreso" || sp.nuevo === "egreso") {
+    const prop = sp.propiedad
+      ? await prisma.property.findUnique({ where: { id: sp.propiedad }, select: { id: true, address: true } })
+      : null;
+    prefill = {
+      type: sp.nuevo === "egreso" ? "expense" : "income",
+      propertyId: prop?.id ?? null,
+      propertyLabel: prop?.address ?? null,
+      description: sp.detalle?.slice(0, 300) ?? "",
+    };
+  }
+
   const appliedFilters: AccountFilters = {
     from,
     to,
@@ -85,6 +104,7 @@ export default async function EstadosCuentaPage({ searchParams }: Readonly<Props
       filters={appliedFilters}
       isAdmin={user.role === "admin"}
       isCostearOwner={isCostearUser}
+      prefill={prefill}
     />
   );
 }

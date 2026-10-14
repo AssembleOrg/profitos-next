@@ -232,7 +232,7 @@ export async function getAgendaMonth(month: string, q?: string): Promise<AgendaM
       },
     }),
     prisma.rentalContract.findMany({
-      where: { adjustmentNextDate: { gte: start, lt: end }, endDate: { gte: start }, ...search },
+      where: { managed: true, adjustmentNextDate: { gte: start, lt: end }, endDate: { gte: start }, ...search },
       select: contractSelect,
     }),
     prisma.rentalContract.findMany({
@@ -242,6 +242,7 @@ export async function getAgendaMonth(month: string, q?: string): Promise<AgendaM
     prisma.rentalServiceProof.count({ where: { status: "pendiente" } }),
     prisma.rentalContract.findMany({
       where: {
+        managed: true,
         adjustmentNextDate: { lte: DateTime.fromISO(today, { zone: "utc" }).plus({ days: 7 }).toJSDate() },
         endDate: { gte: DateTime.fromISO(today, { zone: "utc" }).toJSDate() },
       },
@@ -360,6 +361,7 @@ const rowSelect = {
   adjustmentEveryMonths: true,
   adjustmentIndex: true,
   adjustmentNextDate: true,
+  managed: true,
   property: { select: propertySelect },
   tenant: { select: partySelect },
   owner: { select: partySelect },
@@ -389,6 +391,7 @@ function toRow(c: RowSource, today: string): ContractRow {
   return {
     id: c.id,
     kind: c.kind,
+    managed: c.managed,
     title: c.title,
     property: toProperty(c.property),
     unit: c.unit,
@@ -404,7 +407,7 @@ function toRow(c: RowSource, today: string): ContractRow {
       everyMonths: c.adjustmentEveryMonths,
       index: c.adjustmentIndex,
       nextDate: c.adjustmentNextDate ? isoDate(c.adjustmentNextDate) : null,
-      alert: adjustmentAlertFor(c.adjustmentNextDate, today),
+      alert: c.managed ? adjustmentAlertFor(c.adjustmentNextDate, today) : "none",
     },
     status: contractStatus(c.startDate, c.endDate, today),
     nextDue,

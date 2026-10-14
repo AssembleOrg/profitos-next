@@ -38,6 +38,7 @@ export const GET = withHandler(async (request: NextRequest) => {
         baseAmount: true,
         currency: true,
         frequency: true,
+        managed: true,
         property: { select: { address: true } },
         tenant: { select: { fullName: true, phone: true } },
       },
@@ -57,6 +58,8 @@ export const GET = withHandler(async (request: NextRequest) => {
           diasRestantes: Math.ceil((c.endDate.getTime() - today.getTime()) / 86_400_000),
           monto: fmt(c.baseAmount, c.currency),
           frecuencia: c.frequency,
+          // "propietario" = no lo cobra la inmobiliaria (sin cuotas ni recibos).
+          administra: c.managed ? "inmobiliaria" : "propietario",
         })),
         alquileresUrl: url,
       },

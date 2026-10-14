@@ -563,6 +563,8 @@ model RentalContract {
   attachments     Json?
   // tradicional | temporal (los temporales son legado: se ven, no se crean)
   kind                  String               @default("tradicional")
+  // false = lo administra el propietario: legajo sin cuotas, recibos ni avisos
+  managed               Boolean              @default(true)
   ownerId               String?              @map("owner_id")
   owner                 Owner?               @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   // Piso y depto / unidad (se imprime en el recibo)

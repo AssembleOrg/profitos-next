@@ -5,7 +5,8 @@ import { parsePagination, buildPaginatedResult, paginationToSkip } from "@/lib/a
 import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
 import { contractInclude } from "@/lib/api/rentals";
-import { generateDueDates, isRentalFrequency } from "@/lib/rentals";
+import { isRentalFrequency } from "@/lib/rentals";
+import { createContractDueDates } from "@/lib/rentals/due-generation";
 import { parseContractConditions } from "@/lib/rentals/contract-input";
 import { addMonthsDateOnly } from "@/lib/rentals/collect";
 import type { Prisma } from "@/generated/prisma/client";
@@ -55,6 +56,7 @@ export const POST = withHandler(async (request: NextRequest) => {
   const auth = await getAuthContext();
   const body = await request.json();
   const {
+    managed: managedRaw,
     propertyId,
     tenantId,
     title,
@@ -69,6 +71,7 @@ export const POST = withHandler(async (request: NextRequest) => {
     attachments,
     additionals,
   } = body as {
+    managed?: boolean;
     propertyId?: string;
     tenantId?: string;
     title?: string;
@@ -144,15 +147,8 @@ export const POST = withHandler(async (request: NextRequest) => {
     if (missing.length > 0) throw new AppError(404, "Algún adicional no existe");
   }
 
-  // Generar la lista de cuotas
-  const generated = generateDueDates({
-    startDate: start,
-    endDate: end,
-    firstDueDate: first,
-    frequency,
-    baseAmount,
-  });
-  if (generated.length === 0) throw new AppError(400, "No se generaron vencimientos. Revisá las fechas y frecuencia.");
+  // false = lo administra el propietario: legajo sin cuotas ni recibos.
+  const managed = managedRaw !== false;
 
   // Crear todo en una transacción
   const contract = await prisma.$transaction(async (tx) => {
@@ -170,6 +166,7 @@ export const POST = withHandler(async (request: NextRequest) => {
         gracePeriodDays: grace,
         notes: notes?.trim() || null,
         kind: "tradicional",
+        managed,
         ...conditions,
         ...(Array.isArray(attachments) && attachments.length > 0 && { attachments: attachments as never }),
         createdByUserId: auth.userId,
@@ -184,42 +181,7 @@ export const POST = withHandler(async (request: NextRequest) => {
       include: { additionals: true },
     });
 
-    // Calcular expectedAmount con adicionales
-    const additionalsSum = created.additionals.reduce((acc, x) => acc + x.amount, 0);
-    const totalExpected = baseAmount + additionalsSum;
-
-    // Crear las cuotas + sus links a adicionales en lote: una query por tabla
-    // en vez de 2-3 por cuota (con muchas cuotas la transacción expiraba).
-    const dueRows = await tx.rentalDueDate.createManyAndReturn({
-      data: generated.map((due) => ({
-        contractId: created.id,
-        position: due.position,
-        dueDate: new Date(due.dueDate),
-        expectedAmount: totalExpected,
-      })),
-      select: { id: true, position: true },
-    });
-
-    if (created.additionals.length > 0) {
-      await tx.rentalDueDateAdditional.createMany({
-        data: dueRows.flatMap((row) =>
-          created.additionals.map((ca) => ({
-            dueDateId: row.id,
-            contractAdditionalId: ca.id,
-            included: true,
-          })),
-        ),
-      });
-    }
-
-    await tx.rentalDueDateAction.createMany({
-      data: dueRows.map((row) => ({
-        dueDateId: row.id,
-        type: "creation",
-        description: `Cuota ${row.position} generada al crear el contrato`,
-        createdByUserId: auth.userId,
-      })),
-    });
+    if (managed) await createContractDueDates(tx, created.id, auth.userId, "al crear el contrato");
 
     return tx.rentalContract.findUnique({
       where: { id: created.id },

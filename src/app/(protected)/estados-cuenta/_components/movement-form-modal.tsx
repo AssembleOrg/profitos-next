@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { MovementPrefill } from "./estados-cuenta-client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Sheet } from "../../_components/sheet";
@@ -29,6 +30,8 @@ interface Props {
   defaultDate: string;
   /** La dueña de Costear puede marcar un egreso como gasto personal → va a Costear. */
   isCostearOwner: boolean;
+  /** Valores iniciales para un alta nueva (no aplica al editar). */
+  prefill?: MovementPrefill | null;
 }
 
 type Destino = "inmobiliaria" | "costear";
@@ -45,6 +48,7 @@ export function MovementFormModal({
   agents,
   defaultDate,
   isCostearOwner,
+  prefill = null,
 }: Readonly<Props>) {
   const router = useRouter();
   const [type, setType] = useState<EntryType>("income");
@@ -140,6 +144,12 @@ export function MovementFormModal({
       setPropertyLabel(null);
       setAttachments([]);
       setSignedUrls({});
+      if (prefill) {
+        setType(prefill.type);
+        setDescription(prefill.description);
+        setPropertyId(prefill.propertyId);
+        setPropertyLabel(prefill.propertyLabel);
+      }
     }
   }
 
