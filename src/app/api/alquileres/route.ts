@@ -188,38 +188,44 @@ export const POST = withHandler(async (request: NextRequest) => {
     const additionalsSum = created.additionals.reduce((acc, x) => acc + x.amount, 0);
     const totalExpected = baseAmount + additionalsSum;
 
-    // Crear las cuotas + sus links a adicionales
-    for (const due of generated) {
-      const dueRow = await tx.rentalDueDate.create({
-        data: {
-          contractId: created.id,
-          position: due.position,
-          dueDate: new Date(due.dueDate),
-          expectedAmount: totalExpected,
-          additionals: {
-            create: created.additionals.map((ca) => ({
-              contractAdditionalId: ca.id,
-              included: true,
-            })),
-          },
-        },
-      });
+    // Crear las cuotas + sus links a adicionales en lote: una query por tabla
+    // en vez de 2-3 por cuota (con muchas cuotas la transacción expiraba).
+    const dueRows = await tx.rentalDueDate.createManyAndReturn({
+      data: generated.map((due) => ({
+        contractId: created.id,
+        position: due.position,
+        dueDate: new Date(due.dueDate),
+        expectedAmount: totalExpected,
+      })),
+      select: { id: true, position: true },
+    });
 
-      await tx.rentalDueDateAction.create({
-        data: {
-          dueDateId: dueRow.id,
-          type: "creation",
-          description: `Cuota ${due.position} generada al crear el contrato`,
-          createdByUserId: auth.userId,
-        },
+    if (created.additionals.length > 0) {
+      await tx.rentalDueDateAdditional.createMany({
+        data: dueRows.flatMap((row) =>
+          created.additionals.map((ca) => ({
+            dueDateId: row.id,
+            contractAdditionalId: ca.id,
+            included: true,
+          })),
+        ),
       });
     }
+
+    await tx.rentalDueDateAction.createMany({
+      data: dueRows.map((row) => ({
+        dueDateId: row.id,
+        type: "creation",
+        description: `Cuota ${row.position} generada al crear el contrato`,
+        createdByUserId: auth.userId,
+      })),
+    });
 
     return tx.rentalContract.findUnique({
       where: { id: created.id },
       include: contractInclude,
     });
-  });
+  }, { timeout: 20000 });
 
   return created(contract, "Contrato creado correctamente", path);
 });
