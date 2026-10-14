@@ -499,3 +499,7 @@ export async function updatePostingViaBrowser(postingId: string, input: PostingU
     return { postingId, status: last.status };
   });
 }
+
+
+/** Panel logueado de ZonaProp para lecturas (chequeo de avisos, relevamientos). */
+export const withZonapropPanel = withPublishPage;

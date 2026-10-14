@@ -154,6 +154,19 @@ export async function gestionPutEstado(idAviso: string, estado: string): Promise
   await markGestionOk();
 }
 
+/** GET de una página HTML del panel (listados de avisos). */
+export async function gestionGetHtml(path: string): Promise<string> {
+  const cookie = await cookieHeader();
+  const res = await httpFetch(`${BASE}${path}`, withProxy({
+    method: "GET",
+    redirect: "manual",
+    headers: { ...baseHeaders(cookie), accept: "text/html,application/xhtml+xml" },
+  }));
+  assertNotLoginRedirect(res.headers.get("location"));
+  if (res.status >= 400) throw new Error(`Gestión GET ${path} → ${res.status}`);
+  return res.text();
+}
+
 /** GET (para datos de referencia: provincias, partidos, coordenadas...). */
 export async function gestionGetJson<T = unknown>(path: string): Promise<T> {
   const cookie = await cookieHeader();

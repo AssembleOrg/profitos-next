@@ -24,6 +24,7 @@ import { processPendingPublishJobs } from "@/lib/publish/portales";
 import { verifyReloginToken } from "@/lib/scraper/relogin-token";
 import { refreshZonapropCredits } from "@/lib/publish/credits";
 import { syncMlPublications } from "@/lib/mercadolibre/sync";
+import { syncArgenpropListings, syncZonapropListings, type ListingSyncResult } from "@/lib/publish/listing-sync";
 import {
   startReloginSession,
   finishReloginSession,
@@ -138,6 +139,16 @@ function exitIfForkExhausted(message: string): void {
   process.exit(1);
 }
 
+// Chequeo de avisos de ZonaProp contra el panel (usa navegador → va dentro del
+// tick, con el mutex tomado). ArgenProp va con el sync de ML (sólo HTTP).
+const LISTING_SYNC_MS = Number(process.env.LISTING_SYNC_INTERVAL_MS ?? 2 * 60 * 60_000);
+let lastZpListingSync = 0;
+function logListingSync(r: ListingSyncResult): void {
+  const extra = r.skippedReason ? ` · ${r.skippedReason}` : "";
+  console.log(`[worker] chequeo de avisos ${r.portal}: ${r.updated} actualizados (${r.closed} cerrados) sobre ${r.seen} en el portal${extra}`);
+  for (const c of r.changes) console.log(`[worker]   ${r.portal} ${c}`);
+}
+
 async function tick(): Promise<void> {
   if (browserBusy) return;
   // Mientras hay un login remoto abierto, no lanzamos otro navegador (chocarían
@@ -155,6 +166,12 @@ async function tick(): Promise<void> {
     if (processed) {
       console.log(`[worker] Publicaciones procesadas: ${processed}`);
       await refreshZonapropCredits().catch(() => {});
+    }
+    if (Date.now() - lastZpListingSync > LISTING_SYNC_MS) {
+      lastZpListingSync = Date.now();
+      await syncZonapropListings()
+        .then(logListingSync)
+        .catch((e) => console.warn("[worker] chequeo de avisos zonaprop falló:", e instanceof Error ? e.message : e));
     }
     const result = await runScraperLeads(false);
     if (!result.ran) {
@@ -343,6 +360,9 @@ async function runMlSync(): Promise<void> {
   try {
     const { total, updated } = await syncMlPublications();
     if (updated) console.log(`[worker] ML sync: ${updated}/${total} publicaciones actualizadas`);
+    await syncArgenpropListings()
+      .then(logListingSync)
+      .catch((e) => console.warn("[worker] chequeo de avisos argenprop falló:", e instanceof Error ? e.message : e));
   } catch (e) {
     console.warn("[worker] ML sync falló:", e instanceof Error ? e.message : e);
   } finally {
