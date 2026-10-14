@@ -3,6 +3,7 @@ import { withHandler, AppError } from "@/lib/api/handler";
 import { ok } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
+import { closeActiveListings, closeSummary, isOffMarket } from "@/lib/publish/close-on-status";
 
 function numberOrNull(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -88,7 +89,15 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
 
   const property = await prisma.property.update({ where: { id }, data });
 
-  return ok(property, "Propiedad actualizada correctamente", path);
+  // Sale de oferta (suspendida/alquilada/vendida): bajar sus avisos vivos.
+  let message = "Propiedad actualizada correctamente";
+  if (isOffMarket(property.status) && !isOffMarket(existing.status)) {
+    const results = await closeActiveListings(id);
+    const summary = closeSummary(results, existing.source === "tokko");
+    if (summary) message = `Propiedad actualizada. ${summary}`;
+  }
+
+  return ok(property, message, path);
 });
 
 export const DELETE = withHandler(async (request: NextRequest, context) => {

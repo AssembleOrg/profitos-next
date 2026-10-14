@@ -4,6 +4,7 @@ import { ok } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
 import { assertChatToolsAuth, requireChatRequester } from "@/lib/api/chat-tools";
 import { resolveProperty } from "@/lib/chat/resolve-property";
+import { closeActiveListings, closeSummary, isOffMarket } from "@/lib/publish/close-on-status";
 
 // Tool del chat IA: EDITAR datos básicos de una propiedad (con confirmación del
 // lado del chat). Campos acotados a lo que se pide por chat: precio, moneda,
@@ -97,8 +98,15 @@ export const POST = withHandler(async (request: NextRequest) => {
   }
   if (!cambios.length) throw new AppError(400, "No indicaste ningún cambio (precio, moneda, estado, titulo, descripcion, provincia, ciudad, zona, tipo, operacion o coordenadas)");
 
+  const before = await prisma.property.findUnique({ where: { id: prop.id }, select: { status: true, source: true } });
   await prisma.property.update({ where: { id: prop.id }, data });
   console.log(`[chat-tools] ${who.email} editó ${prop.id}: ${cambios.join(", ")}`);
+
+  // Sale de oferta (suspendida/alquilada/vendida): bajar sus avisos vivos.
+  let bajaAvisos: string | null = null;
+  if (typeof data.status === "string" && isOffMarket(data.status) && !isOffMarket(before?.status)) {
+    bajaAvisos = closeSummary(await closeActiveListings(prop.id), before?.source === "tokko") || null;
+  }
 
   const pubs = await prisma.propertyPublication.findMany({
     where: { propertyId: prop.id, status: { in: ["active", "paused"] } },
@@ -108,7 +116,8 @@ export const POST = withHandler(async (request: NextRequest) => {
     {
       propiedad: prop,
       cambios,
-      aviso: pubs.length
+      bajaAvisos,
+      aviso: !bajaAvisos && pubs.length
         ? `La propiedad está publicada en ${pubs.map((p) => p.portal).join(", ")}: los avisos NO se actualizan solos, hay que re-sincronizarlos desde Propiedades → Portales.`
         : null,
     },

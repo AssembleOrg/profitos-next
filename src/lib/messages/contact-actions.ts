@@ -11,8 +11,10 @@ import { findClientByContact } from "@/lib/clients/match";
  *    nuestra, crea un SEGUIMIENTO asignado a mí.
  *  - wait: lo aparta a "espera" (si en 3 días nadie lo toma → descartado).
  *  - restore: espera/descartado → vuelve a "nuevo".
- *  - transfer: el que lo tomó (o un admin) lo pasa a otro usuario; el
- *    seguimiento asociado se reasigna.
+ *  - transfer: si ya está tomado, quien lo tomó (o un admin) lo pasa a otro
+ *    usuario y el seguimiento se reasigna. Si todavía no lo tomó nadie (nuevo
+ *    o en espera), cualquiera puede asignarlo: se toma EN NOMBRE del destino
+ *    (cliente + seguimiento a su nombre), sin tener que tomarlo primero.
  */
 export const CONTACT_ACTIONS = ["take", "wait", "transfer", "restore"] as const;
 export type ContactAction = (typeof CONTACT_ACTIONS)[number];
@@ -56,27 +58,35 @@ export async function applyContactAction(
   }
 
   // ───── transfer ─────
+  // Destino de la asignación: en "take" es quien actúa; en un transfer de un
+  // contacto todavía no tomado, es el usuario elegido.
+  let assignee: { id: string; label: string | null } = { id: actor.userId, label: null };
   if (action === "transfer") {
-    if (!existing || existing.status !== "tomado") throw new AppError(400, "El contacto no está tomado");
-    if (existing.takenByUserId !== actor.userId && !actor.isAdmin) {
-      throw new AppError(403, "Sólo quien lo tomó (o un admin) puede transferirlo");
-    }
     const toUserId = (input.toUserId ?? "").trim();
     const target = toUserId ? await prisma.user.findUnique({ where: { id: toUserId }, select: { id: true, fullName: true, email: true } }) : null;
     if (!target) throw new AppError(400, "Usuario destino inválido");
-    await prisma.contactCase.update({ where: { id: messageId }, data: { takenByUserId: target.id } });
-    if (existing.followUpId) {
-      await prisma.propertyFollowUp
-        .update({ where: { id: existing.followUpId }, data: { assignedToUserId: target.id, assignedByUserId: actor.userId } })
-        .catch(() => {});
+    const targetLabel = target.fullName?.trim() || target.email;
+    if (existing?.status !== "tomado") {
+      // Nuevo / en espera / descartado: asignarlo = tomarlo en nombre del destino.
+      assignee = { id: target.id, label: targetLabel };
+    } else {
+      if (existing.takenByUserId !== actor.userId && !actor.isAdmin) {
+        throw new AppError(403, "Sólo quien lo tomó (o un admin) puede transferirlo");
+      }
+      await prisma.contactCase.update({ where: { id: messageId }, data: { takenByUserId: target.id } });
+      if (existing.followUpId) {
+        await prisma.propertyFollowUp
+          .update({ where: { id: existing.followUpId }, data: { assignedToUserId: target.id, assignedByUserId: actor.userId } })
+          .catch(() => {});
+      }
+      return {
+        data: { status: "tomado", takenByUserId: target.id },
+        message: `Transferido a ${targetLabel}`,
+      };
     }
-    return {
-      data: { status: "tomado", takenByUserId: target.id },
-      message: `Transferido a ${target.fullName?.trim() || target.email}`,
-    };
   }
 
-  // ───── take ─────
+  // ───── take (propio o en nombre del destino de un transfer) ─────
   if (existing?.status === "tomado") {
     const who = existing.takenByUser?.fullName?.trim() || existing.takenByUser?.email || "otro usuario";
     throw new AppError(409, `Ya lo tomó ${who}`);
@@ -129,7 +139,7 @@ export async function applyContactAction(
         notes: [`Origen: consulta en ${portal}`, propertyAddress ? `Propiedad: ${propertyAddress}` : null, message ? `Mensaje: ${message}` : null]
           .filter(Boolean)
           .join("\n"),
-        userId: actor.userId,
+        userId: assignee.id,
       },
       select: { id: true, name: true },
     });
@@ -142,7 +152,7 @@ export async function applyContactAction(
     const fu = await prisma.propertyFollowUp.create({
       data: {
         propertyId,
-        assignedToUserId: actor.userId,
+        assignedToUserId: assignee.id,
         assignedByUserId: actor.userId,
         clientId: client.id,
         title: `Consulta ${portal}: ${name?.trim() || client.name}`,
@@ -156,14 +166,16 @@ export async function applyContactAction(
 
   await prisma.contactCase.upsert({
     where: { id: messageId },
-    create: { id: messageId, portal, status: "tomado", takenByUserId: actor.userId, clientId: client.id, followUpId },
-    update: { status: "tomado", takenByUserId: actor.userId, clientId: client.id, followUpId, waitingAt: null },
+    create: { id: messageId, portal, status: "tomado", takenByUserId: assignee.id, clientId: client.id, followUpId },
+    update: { status: "tomado", takenByUserId: assignee.id, clientId: client.id, followUpId, waitingAt: null },
   });
 
   return {
     data: { status: "tomado", clientId: client.id, clientName: client.name, clientCreated, followUpId, propertyAddress },
-    message: followUpId
-      ? `Tomado: cliente ${clientCreated ? "creado" : "existente"} + seguimiento asignado a vos`
-      : `Tomado: cliente ${clientCreated ? "creado" : "existente"} (sin propiedad vinculada, no se creó seguimiento)`,
+    message: assignee.label
+      ? `Asignado a ${assignee.label}: cliente ${clientCreated ? "creado" : "existente"}${followUpId ? " + seguimiento a su nombre" : " (sin propiedad vinculada, no se creó seguimiento)"}`
+      : followUpId
+        ? `Tomado: cliente ${clientCreated ? "creado" : "existente"} + seguimiento asignado a vos`
+        : `Tomado: cliente ${clientCreated ? "creado" : "existente"} (sin propiedad vinculada, no se creó seguimiento)`,
   };
 }

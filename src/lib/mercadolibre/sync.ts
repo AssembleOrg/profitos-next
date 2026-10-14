@@ -30,7 +30,10 @@ export async function syncMlPublications(): Promise<{ total: number; updated: nu
         });
         updated++;
       }
-    } catch {
+    } catch (e) {
+      // Sin credenciales no hay nada que sincronizar: que se vea en el log del
+      // worker (antes se tragaba y el sync quedaba muerto en silencio).
+      if (e instanceof Error && /no está configurado/i.test(e.message)) throw e;
       // item borrado/inaccesible: se ignora
     }
   }

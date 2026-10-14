@@ -123,6 +123,31 @@ function ContactCard({
   const isBusy = busy === item.id;
   const canTransfer = item.caseStatus === "tomado" && (item.takenByUserId === viewer.userId || viewer.isAdmin);
 
+  // Asignar un contacto que todavía nadie tomó: queda tomado por esa persona
+  // (cliente + seguimiento a su nombre), sin tener que tomarlo primero.
+  const assignSelect = (
+    <select
+      defaultValue=""
+      disabled={isBusy}
+      onChange={(e) => {
+        if (e.target.value) onAction(item.id, "transfer", e.target.value);
+        e.target.value = "";
+      }}
+      className="w-full rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-semibold text-text-muted transition-colors hover:bg-bg disabled:opacity-50"
+      aria-label="Asignar a otro usuario"
+      title="Lo asigna directamente: queda tomado por esa persona, con su cliente y su seguimiento"
+    >
+      <option value="">Asignar a…</option>
+      {users
+        .filter((u) => u.id !== viewer.userId)
+        .map((u) => (
+          <option key={u.id} value={u.id}>
+            {u.fullName?.trim() || u.email}
+          </option>
+        ))}
+    </select>
+  );
+
   return (
     <div className="flex flex-col overflow-hidden rounded-[18px] border border-border bg-surface">
       {/* Foto de la propiedad */}
@@ -187,23 +212,26 @@ function ContactCard({
               )}
             </div>
           ) : item.caseStatus === "espera" ? (
-            <div className="flex w-full flex-wrap items-center gap-2">
-              <span className="rounded-full bg-sand-chip px-2.5 py-1 text-[11.5px] font-bold text-warning">En espera</span>
-              <button
-                onClick={() => onAction(item.id, "restore")}
-                disabled={isBusy}
-                title="Deshacer: vuelve a Nuevos (por si fue un error)"
-                className="ml-auto rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-bold text-text-muted transition-colors hover:bg-bg disabled:opacity-50"
-              >
-                ↩ Restaurar
-              </button>
-              <button
-                onClick={() => onAction(item.id, "take")}
-                disabled={isBusy}
-                className="rounded-full bg-dark px-3.5 py-1.5 text-[12px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {isBusy ? "…" : "✓ Tomar igual"}
-              </button>
+            <div className="flex w-full flex-col gap-2">
+              <div className="flex w-full flex-wrap items-center gap-2">
+                <span className="rounded-full bg-sand-chip px-2.5 py-1 text-[11.5px] font-bold text-warning">En espera</span>
+                <button
+                  onClick={() => onAction(item.id, "restore")}
+                  disabled={isBusy}
+                  title="Deshacer: vuelve a Nuevos (por si fue un error)"
+                  className="ml-auto rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-bold text-text-muted transition-colors hover:bg-bg disabled:opacity-50"
+                >
+                  ↩ Restaurar
+                </button>
+                <button
+                  onClick={() => onAction(item.id, "take")}
+                  disabled={isBusy}
+                  className="rounded-full bg-dark px-3.5 py-1.5 text-[12px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  {isBusy ? "…" : "✓ Tomar igual"}
+                </button>
+              </div>
+              {assignSelect}
             </div>
           ) : item.caseStatus === "descartado" ? (
             <div className="flex w-full items-center gap-2">
@@ -218,23 +246,26 @@ function ContactCard({
               </button>
             </div>
           ) : (
-            <div className="flex w-full items-center gap-2">
-              <button
-                onClick={() => onAction(item.id, "take")}
-                disabled={isBusy}
-                title="Lo tomo yo: crea/reusa el cliente y arma un seguimiento asignado a mí"
-                className="flex-1 rounded-full bg-dark px-3.5 py-2 text-[12.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {isBusy ? "Tomando…" : "✓ Tomar"}
-              </button>
-              <button
-                onClick={() => onAction(item.id, "wait")}
-                disabled={isBusy}
-                title="Pasa a espera: si en 3 días nadie lo toma, se descarta solo"
-                className="rounded-full border border-border bg-surface px-3.5 py-2 text-[12.5px] font-bold text-text-muted transition-colors hover:bg-bg disabled:opacity-50"
-              >
-                ✗ Espera
-              </button>
+            <div className="flex w-full flex-col gap-2">
+              <div className="flex w-full items-center gap-2">
+                <button
+                  onClick={() => onAction(item.id, "take")}
+                  disabled={isBusy}
+                  title="Lo tomo yo: crea/reusa el cliente y arma un seguimiento asignado a mí"
+                  className="flex-1 rounded-full bg-dark px-3.5 py-2 text-[12.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  {isBusy ? "Tomando…" : "✓ Tomar"}
+                </button>
+                <button
+                  onClick={() => onAction(item.id, "wait")}
+                  disabled={isBusy}
+                  title="Pasa a espera: si en 3 días nadie lo toma, se descarta solo"
+                  className="rounded-full border border-border bg-surface px-3.5 py-2 text-[12.5px] font-bold text-text-muted transition-colors hover:bg-bg disabled:opacity-50"
+                >
+                  ✗ Espera
+                </button>
+              </div>
+              {assignSelect}
             </div>
           )}
         </div>

@@ -814,7 +814,15 @@ export function PropiedadesClient({
         return;
       }
 
-      toast.success(editProperty ? "Propiedad actualizada" : "Propiedad creada");
+      // Si la propiedad salió de oferta, el server avisa qué avisos bajó (y si
+      // hay que bajarla también en Tokko): se muestra más tiempo.
+      const msg = typeof data?.message === "string" ? data.message : "";
+      const offMarketNote = /Avisos dados de baja|No se pudo bajar|Tokko/.test(msg);
+      if (editProperty && offMarketNote) {
+        toast.success(msg, { duration: 9000 });
+      } else {
+        toast.success(editProperty ? "Propiedad actualizada" : "Propiedad creada");
+      }
       handleClose();
       router.refresh();
     } catch {
