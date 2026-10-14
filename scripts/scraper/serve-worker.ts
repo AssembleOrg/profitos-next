@@ -19,7 +19,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { WebSocketServer } from "ws";
 import { prisma } from "@/lib/prisma/client";
-import { runScraperLeads } from "@/lib/scraper/run";
+import { runScraperLeads, PORTAL_TIMEOUT_MESSAGE } from "@/lib/scraper/run";
 import { processPendingPublishJobs } from "@/lib/publish/portales";
 import { verifyReloginToken } from "@/lib/scraper/relogin-token";
 import { refreshZonapropCredits } from "@/lib/publish/credits";
@@ -129,10 +129,12 @@ function processStats(): { total: number; zombies: number } {
 // Si el contenedor se quedó sin procesos, ningún navegador va a volver a
 // arrancar: salir con error para que Railway reinicie el servicio en vez de
 // quedar vivo pero inútil (pasó en oct 2026: 6 días sin leads).
+// Lo mismo si una corrida pasó el tope: el navegador colgado sigue abierto
+// ocupando procesos, y reiniciar es la única forma limpia de soltarlo.
 const FORK_EXHAUSTED = /EAGAIN|Cannot fork|Resource temporarily unavailable/i;
 function exitIfForkExhausted(message: string): void {
-  if (!FORK_EXHAUSTED.test(message)) return;
-  console.error(`[worker] sin procesos disponibles (${message.slice(0, 120)}); salgo para que Railway reinicie.`);
+  if (!FORK_EXHAUSTED.test(message) && !message.includes(PORTAL_TIMEOUT_MESSAGE)) return;
+  console.error(`[worker] estado irrecuperable (${message.slice(0, 120)}); salgo para que Railway reinicie.`);
   process.exit(1);
 }
 

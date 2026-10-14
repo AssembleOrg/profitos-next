@@ -331,23 +331,40 @@ export async function withPortalPage<T>(
  * Hace un fetch DENTRO de la página (mismo origen → manda cookies y pasa el
  * anti-bot). Devuelve JSON parseado. Lanza SessionExpiredError ante 401/403.
  */
+const FETCH_TIMEOUT_MS = 30_000;
+
 export async function fetchJsonInPage<T = unknown>(
   page: Page,
   url: string,
   portal: Portal,
   extraHeaders: Record<string, string> = {}
 ): Promise<T> {
+  // Sin timeout, un portal o proxy que no responde dejaba la promesa colgada
+  // para siempre y el worker trabado con browserBusy=true (oct 2026).
   const res = await page.evaluate(
-    async ({ u, headers }) => {
-      const r = await fetch(u, {
-        credentials: "include",
-        headers: { accept: "application/json", ...headers },
-      });
-      const text = await r.text();
-      return { status: r.status, text };
+    async ({ u, headers, ms }) => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), ms);
+      try {
+        const r = await fetch(u, {
+          credentials: "include",
+          headers: { accept: "application/json", ...headers },
+          signal: ctrl.signal,
+        });
+        const text = await r.text();
+        return { status: r.status, text };
+      } catch {
+        return { status: 0, text: "" };
+      } finally {
+        clearTimeout(timer);
+      }
     },
-    { u: url, headers: extraHeaders }
+    { u: url, headers: extraHeaders, ms: FETCH_TIMEOUT_MS }
   );
+
+  if (res.status === 0) {
+    throw new Error(`Fetch ${url} sin respuesta en ${FETCH_TIMEOUT_MS / 1000}s`);
+  }
 
   if (res.status === 401 || res.status === 403) {
     await markSessionInvalid(portal);

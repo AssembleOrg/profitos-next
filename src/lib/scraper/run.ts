@@ -8,10 +8,22 @@ const SYNC_KEY = "scraper:leads";
 
 export type PortalResult = { portal: string; ok: boolean; result?: unknown; error?: string };
 
+/** Tope por portal: una corrida sana tarda pocos minutos. */
+const PORTAL_TIMEOUT_MS = Number(process.env.SCRAPER_PORTAL_TIMEOUT_MS ?? 10 * 60_000);
+
+/** Mensaje del error de tope; el worker lo reconoce para reiniciarse limpio. */
+export const PORTAL_TIMEOUT_MESSAGE = "corrida del portal excedió el tope";
+
 async function runPortal(name: string, fn: () => Promise<unknown>): Promise<PortalResult> {
   console.log(`[run] iniciando ${name}...`);
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const result = await fn();
+    // Red de seguridad: si algo se cuelga igual (una navegación, el navegador),
+    // la corrida no bloquea al worker para siempre.
+    const watchdog = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${PORTAL_TIMEOUT_MESSAGE} (${PORTAL_TIMEOUT_MS / 60_000} min)`)), PORTAL_TIMEOUT_MS);
+    });
+    const result = await Promise.race([fn(), watchdog]);
     console.log(`[run] ${name} terminó ok`);
     return { portal: name, ok: true, result };
   } catch (err) {
@@ -19,6 +31,8 @@ async function runPortal(name: string, fn: () => Promise<unknown>): Promise<Port
       return { portal: name, ok: false, error: "session_expired" };
     }
     return { portal: name, ok: false, error: err instanceof Error ? err.message : String(err) };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
