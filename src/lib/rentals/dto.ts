@@ -98,6 +98,12 @@ export interface ContractRow {
   kind: string;
   /** false = lo administra el propietario: legajo sin cuotas, recibos ni avisos. */
   managed: boolean;
+  /** Para saber quién puede eliminarlo (admin o quien lo creó). */
+  createdByUserId: string;
+  /** Cobros registrados (se pierden al eliminar el contrato). */
+  paymentsCount: number;
+  /** Recibos emitidos (se conservan al eliminar: numeración del talonario). */
+  receiptsCount: number;
   title: string | null;
   property: PropertyRef;
   unit: string | null;

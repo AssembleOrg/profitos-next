@@ -128,6 +128,11 @@ export const IconPencil = (p: IconProps) => (
     <path d="m13.5 6.5 4 4" />
   </Base>
 );
+export const IconTrash = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12a2 2 0 0 0 2 1.8h7a2 2 0 0 0 2-1.8l1-12M9 7V4.8A.8.8 0 0 1 9.8 4h4.4a.8.8 0 0 1 .8.8V7" />
+  </Base>
+);
 export const IconBan = (p: IconProps) => (
   <Base {...p}>
     <circle cx="12" cy="12" r="8" />

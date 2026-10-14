@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ContractRow } from "@/lib/rentals/dto";
 import type { ContractFilter } from "@/lib/rentals/views";
-import { IconFile, IconSearch } from "./icons";
-import { AdjustPill, ContractPill, DuePill, Empty, Pill, dateAR, money, propertyLine } from "./kit";
+import { IconFile, IconSearch, IconTrash } from "./icons";
+import { AdjustPill, ContractPill, DuePill, Empty, Pill, api, dateAR, money, propertyLine } from "./kit";
+import { useReasonSheet } from "./reason-sheet";
 
 const FILTERS: Array<{ value: ContractFilter; label: string }> = [
   { value: "vigentes", label: "Vigentes" },
@@ -29,13 +31,69 @@ export function ContractsView({
   counts,
   filter,
   q,
+  currentUserId,
+  isAdmin,
 }: {
   rows: ContractRow[];
   counts: Record<ContractFilter, number>;
   filter: ContractFilter;
   q: string;
+  currentUserId: string;
+  isAdmin: boolean;
 }) {
   const router = useRouter();
+  const [dialog, ask] = useReasonSheet();
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  // Mismo criterio que el server (assertCanDeleteContract): admin o quien lo cargó.
+  const canDelete = (r: ContractRow) => isAdmin || r.createdByUserId === currentUserId;
+
+  async function remove(r: ContractRow) {
+    const lost =
+      r.paymentsCount > 0
+        ? `Se borran sus ${r.paymentsCount} ${r.paymentsCount === 1 ? "cobro registrado" : "cobros registrados"} y todas las cuotas.`
+        : "Se borran todas sus cuotas.";
+    const kept =
+      r.receiptsCount > 0
+        ? ` Los ${r.receiptsCount} recibos emitidos se conservan en Recibos (la numeración del talonario no se pierde).`
+        : "";
+    const ok = await ask({
+      title: `Eliminar el contrato de ${propertyLine(r.property.address, r.unit)}`,
+      description: `${r.tenant.fullName}. ${lost}${kept} No se puede deshacer.`,
+      confirmLabel: "Eliminar contrato",
+      reason: "none",
+      danger: true,
+    });
+    if (ok === null) return;
+    setDeleting(r.id);
+    try {
+      await api(`/api/alquileres/${r.id}`, { method: "DELETE" });
+      toast.success("Contrato eliminado");
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo eliminar");
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  function deleteButton(r: ContractRow) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          void remove(r);
+        }}
+        disabled={deleting === r.id}
+        aria-label={`Eliminar el contrato de ${propertyLine(r.property.address, r.unit)}`}
+        title="Eliminar contrato"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-faint transition-colors hover:bg-clay-chip hover:text-terra disabled:opacity-50"
+      >
+        <IconTrash size={17} />
+      </button>
+    );
+  }
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
@@ -53,6 +111,7 @@ export function ContractsView({
 
   return (
     <div className="flex flex-col gap-4">
+      {dialog}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div role="radiogroup" aria-label="Filtrar contratos" className="-mx-5 flex gap-1.5 overflow-x-auto px-5 lg:mx-0 lg:px-0">
           {FILTERS.filter((f) => f.value !== "temporales" || counts.temporales > 0).map((f) => {
@@ -115,6 +174,9 @@ export function ContractsView({
                       {h}
                     </th>
                   ))}
+                  <th scope="col" className="w-12 px-2 py-3">
+                    <span className="sr-only">Acciones</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -171,6 +233,7 @@ export function ContractsView({
                         {dateAR(r.startDate)} → {dateAR(r.endDate)}
                       </p>
                     </td>
+                    <td className="px-2 py-3 text-right">{canDelete(r) && deleteButton(r)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -180,8 +243,8 @@ export function ContractsView({
           {/* Mobile: tarjetas */}
           <ul className="flex flex-col gap-2.5 md:hidden">
             {rows.map((r) => (
-              <li key={r.id}>
-                <Link href={`/alquileres/${r.id}`} className="block rounded-[18px] border border-border bg-surface p-3.5 active:bg-bg">
+              <li key={r.id} className="overflow-hidden rounded-[18px] border border-border bg-surface">
+                <Link href={`/alquileres/${r.id}`} className="block p-3.5 active:bg-bg">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-[13.5px] font-bold text-text">{propertyLine(r.property.address, r.unit)}</p>
@@ -213,6 +276,11 @@ export function ContractsView({
                     </div>
                   )}
                 </Link>
+                {canDelete(r) && (
+                  <div className="flex justify-end border-t border-border px-1.5 py-1">
+                    {deleteButton(r)}
+                  </div>
+                )}
               </li>
             ))}
           </ul>

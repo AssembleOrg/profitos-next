@@ -29,7 +29,7 @@ export default async function ContratosPage({ searchParams }: Readonly<Props>) {
         pendingProofs={pendingProofs}
         subtitle={`${counts.vigentes} ${counts.vigentes === 1 ? "contrato vigente" : "contratos vigentes"}${counts.con_deuda ? ` · ${counts.con_deuda} con deuda` : ""}`}
       />
-      <ContractsView rows={rows} counts={counts} filter={filter} q={q} />
+      <ContractsView rows={rows} counts={counts} filter={filter} q={q} currentUserId={user.id} isAdmin={user.role === "admin"} />
     </div>
   );
 }
