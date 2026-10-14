@@ -108,6 +108,34 @@ async function maybeAutoRelogin(): Promise<void> {
   }
 }
 
+// --- Salud de procesos ---
+// Brave deja procesos huérfanos al cerrar. tini (PID 1, ver Dockerfile.worker)
+// los reapea; esto deja constancia por corrida para detectar una fuga a tiempo.
+function processStats(): { total: number; zombies: number } {
+  let total = 0;
+  let zombies = 0;
+  for (const d of fs.readdirSync("/proc")) {
+    if (!/^\d+$/.test(d)) continue;
+    total++;
+    try {
+      if (/^State:\s*Z/m.test(fs.readFileSync(`/proc/${d}/status`, "utf8"))) zombies++;
+    } catch {
+      /* el proceso terminó entre readdir y read */
+    }
+  }
+  return { total, zombies };
+}
+
+// Si el contenedor se quedó sin procesos, ningún navegador va a volver a
+// arrancar: salir con error para que Railway reinicie el servicio en vez de
+// quedar vivo pero inútil (pasó en oct 2026: 6 días sin leads).
+const FORK_EXHAUSTED = /EAGAIN|Cannot fork|Resource temporarily unavailable/i;
+function exitIfForkExhausted(message: string): void {
+  if (!FORK_EXHAUSTED.test(message)) return;
+  console.error(`[worker] sin procesos disponibles (${message.slice(0, 120)}); salgo para que Railway reinicie.`);
+  process.exit(1);
+}
+
 async function tick(): Promise<void> {
   if (browserBusy) return;
   // Mientras hay un login remoto abierto, no lanzamos otro navegador (chocarían
@@ -134,9 +162,13 @@ async function tick(): Promise<void> {
         if (p.ok) console.log(`[worker] ${p.portal} OK:`, JSON.stringify(p.result));
         else console.warn(`[worker] ${p.portal} FALLÓ: ${p.error}`);
       }
+      const ps = processStats();
+      console.log(`[worker] procesos tras la corrida: ${ps.total} (zombis ${ps.zombies})`);
+      for (const p of result.portals) if (!p.ok) exitIfForkExhausted(String(p.error));
     }
   } catch (e) {
     console.warn("[worker] Error en tick:", e instanceof Error ? e.message : e);
+    exitIfForkExhausted(e instanceof Error ? e.message : String(e));
   } finally {
     browserBusy = false;
   }

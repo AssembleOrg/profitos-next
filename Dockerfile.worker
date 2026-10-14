@@ -28,7 +28,7 @@ RUN curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg \
  && echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg arch=amd64] https://brave-browser-apt-release.s3.brave.com/ stable main" \
       > /etc/apt/sources.list.d/brave-browser-release.list \
  && apt-get update \
- && apt-get install -y --no-install-recommends brave-browser x11vnc \
+ && apt-get install -y --no-install-recommends brave-browser x11vnc tini \
  && rm -rf /var/lib/apt/lists/*
 RUN pnpm exec playwright install chrome
 
@@ -49,4 +49,9 @@ ENV SCRAPER_CHROME_PATH=/usr/bin/brave-browser
 # corremos el server como proceso principal (exec) para que sus logs salgan al
 # contenedor y las señales se propaguen bien.
 # Xvfb + liberación de la page cache + node directo: ver scripts/scraper/entry-worker.sh.
+# tini como PID 1: adopta los procesos que Brave deja huérfanos y los reapea.
+# Sin init, node quedaba como PID 1 y nunca recogía esos zombis: se acumulaban
+# hasta agotar el límite de procesos del contenedor (spawn EAGAIN, oct 2026).
+# -g reenvía las señales a todo el grupo (Xvfb y el loop de caché incluidos).
+ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
 CMD ["sh", "scripts/scraper/entry-worker.sh"]
