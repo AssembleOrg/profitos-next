@@ -5,6 +5,7 @@ import { getAuthContext } from "@/lib/api/auth";
 import { prisma } from "@/lib/prisma/client";
 import { enqueuePublish, isPublishPortal } from "@/lib/publish/portales";
 import { triggerWorkerProcess } from "@/lib/publish/worker-trigger";
+import { assertReadyToPublish } from "@/lib/publish/ready-guard";
 
 // Encola la publicación de una propiedad en un portal (ZonaProp/ArgenProp).
 // El worker de Railway procesa la cola (necesita navegador+proxy).
@@ -25,6 +26,7 @@ export const POST = withHandler(async (request: NextRequest, context) => {
 
   const property = await prisma.property.findUnique({ where: { id: body.propertyId }, select: { id: true } });
   if (!property) throw new AppError(404, "Propiedad no encontrada");
+  await assertReadyToPublish(body.propertyId, [portal]);
 
   // activate:true PUBLICA (gasta 1 crédito del plan); false = solo borrador.
   const jobId = await enqueuePublish(body.propertyId, portal, {

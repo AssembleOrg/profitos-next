@@ -10,6 +10,7 @@ import { triggerWorkerProcess } from "@/lib/publish/worker-trigger";
 import { buildMlInputFromProperty, publishPropertyToMl, MlNeedsInputError, type MlBuildOpts } from "@/lib/mercadolibre/publish-property";
 import { syncPublications } from "@/lib/publish/sync";
 import { publishReadiness, faltanTexto, type ReadinessPortal } from "@/lib/publish/readiness";
+import { READINESS_SELECT } from "@/lib/publish/ready-guard";
 
 // Tool del chat IA: GESTIÓN de publicaciones en portales (con confirmación del
 // lado del chat). Acciones:
@@ -89,7 +90,7 @@ export const POST = withHandler(async (request: NextRequest) => {
     // Si faltan, 409 con la lista para que el bot los pida y complete con editar_propiedad.
     const full = await prisma.property.findUnique({
       where: { id: prop.id },
-      select: { type: true, operationType: true, operationPrice: true, operationCurrency: true, publicationTitle: true, address: true, province: true, city: true, geoLat: true, geoLong: true, photos: true, coverImageUrl: true },
+      select: READINESS_SELECT,
     });
     if (full) {
       const r = publishReadiness(full, portal as ReadinessPortal);

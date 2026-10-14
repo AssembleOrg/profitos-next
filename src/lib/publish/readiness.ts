@@ -19,6 +19,7 @@ export type ReadinessInput = {
   operationCurrency?: string | null;
   publicationTitle?: string | null;
   address?: string | null;
+  description?: string | null;
   province?: string | null;
   city?: string | null;
   geoLat?: number | null;
@@ -28,6 +29,13 @@ export type ReadinessInput = {
   photos?: unknown;
   coverImageUrl?: string | null;
 };
+
+/**
+ * Largo mínimo de la descripción. ZonaProp rechaza menos de 50 caracteres; se
+ * usa el mismo piso para los tres portales. Sin descripción NO se publica: antes
+ * se rellenaba con un texto genérico que quedaba visible en el aviso.
+ */
+export const DESCRIPTION_MIN = 50;
 
 export type MissingField = { campo: string; label: string };
 export type PortalReadiness = { portal: ReadinessPortal; ok: boolean; faltan: MissingField[]; recomendado: MissingField[] };
@@ -39,6 +47,7 @@ const F = {
   currency: { campo: "operationCurrency", label: "Moneda" },
   title: { campo: "publicationTitle", label: "Título o dirección" },
   photos: { campo: "photos", label: "Al menos una foto" },
+  description: { campo: "description", label: "Descripción (mínimo 50 caracteres)" },
   province: { campo: "province", label: "Provincia" },
   city: { campo: "city", label: "Localidad / ciudad" },
   geo: { campo: "geo", label: "Coordenadas (para ubicar el aviso en el mapa)" },
@@ -74,6 +83,7 @@ function baseMissing(p: ReadinessInput): MissingField[] {
   if (!has(p.operationCurrency)) m.push(F.currency);
   if (!has(p.publicationTitle) && !has(p.address)) m.push(F.title);
   if (countPhotos(p) < 1) m.push(F.photos);
+  if ((p.description ?? "").trim().length < DESCRIPTION_MIN) m.push(F.description);
   return m;
 }
 

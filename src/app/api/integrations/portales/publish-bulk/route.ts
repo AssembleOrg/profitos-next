@@ -5,6 +5,7 @@ import { getAuthContext } from "@/lib/api/auth";
 import { prisma } from "@/lib/prisma/client";
 import { enqueuePublish, isPublishPortal } from "@/lib/publish/portales";
 import { triggerWorkerProcess } from "@/lib/publish/worker-trigger";
+import { assertReadyToPublish } from "@/lib/publish/ready-guard";
 
 // Publicación GRUPAL: encola una propiedad en varios portales a la vez.
 // Body: { propertyId, portals: ["zonaprop","argenprop"] }
@@ -25,6 +26,7 @@ export const POST = withHandler(async (request: NextRequest) => {
 
   const property = await prisma.property.findUnique({ where: { id: body.propertyId }, select: { id: true } });
   if (!property) throw new AppError(404, "Propiedad no encontrada");
+  await assertReadyToPublish(body.propertyId, portals);
 
   const queued: { portal: string; jobId: string }[] = [];
   for (const portal of portals) {

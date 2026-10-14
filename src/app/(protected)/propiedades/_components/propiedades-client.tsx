@@ -15,7 +15,7 @@ import { buildPropertyWhatsAppLink } from "@/lib/whatsapp";
 import { MlPublishWizard } from "./ml-publish-wizard";
 import { PortalesPanel } from "./portales-panel";
 import { PhotosEditor } from "./photos-editor";
-import { publishReadinessAll } from "@/lib/publish/readiness";
+import { publishReadinessAll, DESCRIPTION_MIN } from "@/lib/publish/readiness";
 
 const PropertiesMap = dynamic(
   () => import("./properties-map").then((mod) => mod.PropertiesMap),
@@ -487,6 +487,9 @@ export function PropiedadesClient({
   const [modalTab, setModalTab] = useState<"datos" | "ubicacion" | "fotos" | "portales">("datos");
   const [modalPhotos, setModalPhotos] = useState<ModalPhoto[] | null>(null);
   const [photosLoading, setPhotosLoading] = useState(false);
+  // Descripción del aviso: no viene en la paginación (es larga), se pide al
+  // abrir la propiedad. `id` ata el texto a la propiedad abierta ("new" = alta).
+  const [desc, setDesc] = useState<{ id: string; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -655,6 +658,7 @@ export function PropiedadesClient({
     setError(null);
     setModalTab("datos");
     setModalPhotos(null);
+    setDesc(null);
   }
 
   // Responsables internos de la propiedad abierta (ruteo de consultas).
@@ -718,6 +722,24 @@ export function PropiedadesClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, properties]);
 
+  // Descripción bajo demanda (igual que las fotos).
+  useEffect(() => {
+    if (!modalOpen || !editProperty?.id) return;
+    const id = editProperty.id;
+    let cancelled = false;
+    fetch(`/api/propiedades/${id}`)
+      .then((r) => r.json())
+      .then((body) => {
+        if (!cancelled) setDesc({ id, text: (body?.data?.description as string | null) ?? "" });
+      })
+      .catch(() => {
+        /* sin descripción cargada el campo queda deshabilitado: no se pisa al guardar */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [modalOpen, editProperty?.id]);
+
   // Fotos bajo demanda: se piden al abrir una propiedad (no en la paginación).
   useEffect(() => {
     if (!modalOpen || !editProperty?.id) return;
@@ -751,6 +773,9 @@ export function PropiedadesClient({
       address: form.get("address") as string,
       realAddress: (form.get("realAddress") as string) || null,
       publicationTitle: (form.get("publicationTitle") as string) || null,
+      // Si la descripción no terminó de cargar, el textarea está deshabilitado y
+      // no viaja: undefined → la API no la toca.
+      description: form.get("description") === null ? undefined : (form.get("description") as string),
       referenceCode: (form.get("referenceCode") as string) || null,
       publicUrl: (form.get("publicUrl") as string) || null,
       city: (form.get("city") as string) || null,
@@ -943,6 +968,10 @@ export function PropiedadesClient({
   }
 
   const isEdit = !!editProperty;
+  // Texto de la descripción para la propiedad abierta. null = todavía cargando
+  // (edición); en un alta arranca vacío.
+  const descId = editProperty?.id ?? "new";
+  const descValue: string | null = desc?.id === descId ? desc.text : isEdit ? null : "";
 
   return (
     <div className="flex flex-col gap-4">
@@ -1788,6 +1817,8 @@ export function PropiedadesClient({
                     geoLat: editProperty.geoLat,
                     geoLong: editProperty.geoLong,
                     photosCount: modalPhotos?.length ?? 1,
+                    // Mientras carga, no avisar "falta" de algo que quizás está.
+                    description: descValue ?? "x".repeat(DESCRIPTION_MIN),
                   });
                   const blocked = (["zonaprop", "argenprop", "mercadolibre"] as const).filter((p) => !rd[p].ok);
                   if (!blocked.length) return null;
@@ -1827,6 +1858,32 @@ export function PropiedadesClient({
                           <label className={MODAL_LABEL}>Código referencia</label>
                           <input name="referenceCode" defaultValue={editProperty?.referenceCode ?? ""} placeholder="Ej: ZP-M-51545814" className={MODAL_FIELD} />
                         </div>
+                      </div>
+                      <div className="mt-3">
+                        <div className="mb-1 flex items-baseline justify-between gap-3">
+                          <label htmlFor="property-description" className="text-[12.5px] font-semibold text-text-muted">
+                            Descripción del aviso
+                          </label>
+                          {descValue !== null && (
+                            <span
+                              className={`text-[11.5px] tabular-nums ${descValue.trim().length < DESCRIPTION_MIN ? "text-terra" : "text-text-faint"}`}
+                            >
+                              {descValue.trim().length < DESCRIPTION_MIN
+                                ? `${descValue.trim().length}/${DESCRIPTION_MIN} mínimo para publicar`
+                                : `${descValue.trim().length} caracteres`}
+                            </span>
+                          )}
+                        </div>
+                        <textarea
+                          id="property-description"
+                          name="description"
+                          rows={6}
+                          value={descValue ?? ""}
+                          disabled={descValue === null}
+                          onChange={(e) => setDesc({ id: descId, text: e.target.value })}
+                          placeholder={descValue === null ? "Cargando descripción…" : "Lo que se publica en ZonaProp, ArgenProp y MercadoLibre: ambientes, estado, orientación, amenities, cercanías."}
+                          className={`${MODAL_FIELD} resize-y leading-relaxed disabled:opacity-60`}
+                        />
                       </div>
                     </section>
 

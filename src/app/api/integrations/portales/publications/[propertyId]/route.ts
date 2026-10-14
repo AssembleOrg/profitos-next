@@ -4,6 +4,7 @@ import { ok } from "@/lib/api/response";
 import { getAuthContext } from "@/lib/api/auth";
 import { prisma } from "@/lib/prisma/client";
 import { publishReadinessAll } from "@/lib/publish/readiness";
+import { READINESS_SELECT } from "@/lib/publish/ready-guard";
 
 // Todas las publicaciones de una propiedad (ML + ZonaProp + ArgenProp) para la UI.
 export const GET = withHandler(async (request: NextRequest, context) => {
@@ -17,7 +18,7 @@ export const GET = withHandler(async (request: NextRequest, context) => {
     }),
     prisma.property.findUnique({
       where: { id: propertyId },
-      select: { type: true, operationType: true, operationPrice: true, operationCurrency: true, publicationTitle: true, address: true, province: true, city: true, geoLat: true, geoLong: true, photos: true, coverImageUrl: true },
+      select: READINESS_SELECT,
     }),
   ]);
   const readiness = property ? publishReadinessAll(property) : null;

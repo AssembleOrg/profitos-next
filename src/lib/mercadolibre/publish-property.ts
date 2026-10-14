@@ -13,7 +13,8 @@ import {
   type MlAttribute,
   type MlChildCategory,
 } from "@/lib/mercadolibre/catalog";
-import { getConnectionStatus } from "@/lib/mercadolibre/oauth";
+import { getConnectionStatus } from "@/lib/mercadolibre/oauth";import { DESCRIPTION_MIN } from "@/lib/publish/readiness";
+
 
 /**
  * Publicación de una propiedad en MercadoLibre, compartida por el wizard de la
@@ -45,6 +46,9 @@ export async function publishPropertyToMl(propertyId: string, input: MlPublishIn
   const existing = await prisma.propertyPublication.findUnique({
     where: { propertyId_portal: { propertyId, portal: ML_PORTAL } },
   });
+  if (!existing?.externalId && (input.description ?? "").trim().length < DESCRIPTION_MIN) {
+    throw new AppError(409, `Falta la descripción del aviso (mínimo ${DESCRIPTION_MIN} caracteres).`);
+  }
 
   await prisma.propertyPublication.upsert({
     where: { propertyId_portal: { propertyId, portal: ML_PORTAL } },

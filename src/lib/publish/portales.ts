@@ -21,7 +21,8 @@ import {
 import type { Feature } from "@/lib/zonaprop/publish";
 import { createFicha, type FichaInput } from "@/lib/argenprop/publish";
 import { gestionPutEstado } from "@/lib/argenprop/gestion";
-import { resolveLocation } from "@/lib/argenprop/location";
+import { resolveLocation } from "@/lib/argenprop/location";import { DESCRIPTION_MIN } from "./readiness";
+
 
 /** Responsable ZonaProp (userId que recibe las consultas). Opcional. */
 const ZP_RESPONSIBLE_USER_ID = process.env.ZONAPROP_RESPONSIBLE_USER_ID?.trim() || undefined;
@@ -105,10 +106,15 @@ function titleFor(p: PropertyForPublish): string {
 }
 
 function descriptionFor(p: PropertyForPublish): string {
-  const base = (p.description || p.publicationTitle || p.address || "").trim();
-  const filler =
-    " Consultá por este inmueble. Publicación generada automáticamente; revisá y completá los datos en el portal.";
-  return (base + filler).length >= 50 ? base + filler : (base + filler).padEnd(50, ".");
+  // Sin relleno: antes se completaba con "Publicación generada automáticamente…"
+  // y ese texto quedaba visible en el aviso. La validación de publicar exige
+  // DESCRIPTION_MIN; si igual llega corta (p. ej. sincronizar un aviso viejo),
+  // el job falla con un mensaje claro en vez de publicar texto inventado.
+  const desc = (p.description ?? "").trim();
+  if (desc.length < DESCRIPTION_MIN) {
+    throw new Error(`La propiedad no tiene descripción (mínimo ${DESCRIPTION_MIN} caracteres). Completala en Propiedades → Datos y reintentá.`);
+  }
+  return desc;
 }
 
 // ─── ZonaProp ────────────────────────────────────────────────────────────────

@@ -37,6 +37,7 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
     address,
     realAddress,
     publicationTitle,
+    description,
     referenceCode,
     publicUrl,
     city,
@@ -62,6 +63,7 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
   if (address !== undefined) data.address = address;
   if (realAddress !== undefined) data.realAddress = realAddress || null;
   if (publicationTitle !== undefined) data.publicationTitle = publicationTitle || null;
+  if (description !== undefined) data.description = description.trim().slice(0, 10000) || null;
   if (referenceCode !== undefined) data.referenceCode = referenceCode || null;
   if (publicUrl !== undefined) data.publicUrl = publicUrl || null;
   if (city !== undefined) data.city = city;
