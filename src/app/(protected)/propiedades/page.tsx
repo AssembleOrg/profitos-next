@@ -47,7 +47,9 @@ export default async function PropiedadesPage({ searchParams }: Props) {
   const maxPrice = parseOptionalNumber(sp.maxPrice);
   const sort = (sp.sort ?? "created_desc").trim();
 
-  const andFilters: Prisma.PropertyWhereInput[] = [];
+  // Las fichas mínimas de traspasos de administración (sólo dirección) viven
+  // en Alquileres, no en el catálogo.
+  const andFilters: Prisma.PropertyWhereInput[] = [{ source: { not: "traspaso" } }];
 
   if (q) {
     andFilters.push({
@@ -120,7 +122,7 @@ export default async function PropiedadesPage({ searchParams }: Props) {
       take: limit,
     }),
     prisma.property.count({ where }),
-    prisma.property.count(),
+    prisma.property.count({ where: { source: { not: "traspaso" } } }),
     user.role === "admin"
       ? prisma.user.findMany({
           select: { id: true, fullName: true, email: true },

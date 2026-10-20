@@ -78,6 +78,13 @@ function countDues(first: string, end: string) {
   return n;
 }
 
+/** Próximo aumento posterior a hoy, contando desde el inicio del contrato. */
+function nextAdjustFrom(start: string, every: number, today: string) {
+  let d = addMonths(start, every);
+  for (let i = 0; d < today && i < 120; i++) d = addMonths(d, every);
+  return d;
+}
+
 function todayISO() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
 }
@@ -93,6 +100,8 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
 
   // Partes
   const [propertyId, setPropertyId] = useState<string | null>(initial?.property.id ?? null);
+  // Traspaso: la propiedad no está cargada; se escribe sólo la dirección.
+  const [quickAddress, setQuickAddress] = useState<string | null>(null);
   const [unit, setUnit] = useState(initial?.unit ?? "");
   const [tenantId, setTenantId] = useState<string | null>(initial?.tenant.id ?? null);
   const [newTenant, setNewTenant] = useState<PersonDraft | null>(null);
@@ -107,6 +116,10 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
   const [amount, setAmount] = useState<number | null>(initial?.baseAmount ?? null);
   const [currency, setCurrency] = useState<"ARS" | "USD">((initial?.currency as "ARS" | "USD") ?? "ARS");
   const [grace, setGrace] = useState<number>(initial?.gracePeriodDays ?? 0);
+  // Contrato que ya venía corriendo (traspaso de otra inmobiliaria o del
+  // propietario): las cuotas arrancan en el primer mes que cobramos nosotros.
+  const [ongoing, setOngoing] = useState(false);
+  const [firstOverride, setFirstOverride] = useState("");
 
   // Aumentos
   const [every, setEvery] = useState(initial?.adjustment.everyMonths ? String(initial.adjustment.everyMonths) : "3");
@@ -134,9 +147,10 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
   const urls = useSignedUrls(attachments.map((a) => a.path));
 
   const everyMonths = every === "otro" ? Number.parseInt(customEvery, 10) || null : every ? Number(every) : null;
-  const first = firstDue(startDate, dueDay);
+  const first = ongoing ? firstOverride || firstDue(start0, dueDay) : firstDue(startDate, dueDay);
   const dueCount = countDues(first, endDate);
-  const autoNextAdjust = everyMonths && startDate ? addMonths(startDate, everyMonths) : "";
+  const autoNextAdjust =
+    everyMonths && startDate ? (ongoing ? nextAdjustFrom(startDate, everyMonths, todayISO()) : addMonths(startDate, everyMonths)) : "";
   const preview = splitCharges(
     [{ kind: "rent", label: "Alquiler", amount: amount ?? 0 }, ...extras.map((x) => ({ kind: "additional" as const, label: x.name, amount: x.amount }))],
     fee,
@@ -155,6 +169,12 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
     [options.owners],
   );
 
+  function startQuick() {
+    setPropertyId(null);
+    setQuickAddress("");
+    setOngoing(true);
+  }
+
   function toggleService(s: string) {
     setServices((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
   }
@@ -169,12 +189,14 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
 
   function validate(): string | null {
     if (editing) return null;
-    if (!propertyId) return "Elegí la propiedad";
+    if (quickAddress !== null ? !quickAddress.trim() : !propertyId) return quickAddress !== null ? "Escribí la dirección" : "Elegí la propiedad";
     if (!tenantId && !newTenant) return "Elegí o cargá el inquilino";
-    if (newTenant && (!newTenant.fullName.trim() || !newTenant.idNumber.trim())) return "Completá nombre y DNI/CUIT del inquilino";
+    if (newTenant && !newTenant.fullName.trim()) return "Completá el nombre del inquilino";
+    if (newTenant && !ongoing && !newTenant.idNumber.trim()) return "Completá el DNI/CUIT del inquilino";
     if (newOwner && !newOwner.fullName.trim()) return "Completá el nombre del propietario";
     if (!amount || amount <= 0) return "Indicá el monto del alquiler";
     if (!startDate || !endDate || startDate >= endDate) return "Revisá las fechas del contrato";
+    if (managed && (first < startDate || first > endDate)) return "El primer vencimiento tiene que estar dentro del contrato";
     if (managed && dueCount === 0) return "Con esas fechas no se genera ningún vencimiento";
     return null;
   }
@@ -218,7 +240,7 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
         method: "POST",
         json: {
           ...conditions,
-          propertyId,
+          ...(quickAddress !== null ? { newPropertyAddress: quickAddress.trim() } : { propertyId }),
           tenantId: resolvedTenant,
           startDate,
           endDate,
@@ -289,16 +311,35 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
             />
           ) : (
             <>
-              <Field label="Propiedad">
-                <SearchPicker
-                  items={propertyItems}
-                  value={propertyId}
-                  onChange={setPropertyId}
-                  placeholder="Buscá por dirección"
-                  ariaLabel="Propiedad"
-                  emptyText="No hay propiedades con esa dirección. Cargala primero en Propiedades."
-                />
-              </Field>
+              {quickAddress !== null ? (
+                <Field label="Dirección" hint="Para traspasos: queda sólo en Alquileres, no se publica ni aparece en Propiedades.">
+                  <input value={quickAddress} onChange={(e) => setQuickAddress(e.target.value)} className={inputBox} placeholder="Ej.: Brown 1080, Quilmes" autoFocus />
+                  <button type="button" onClick={() => setQuickAddress(null)} className="mt-1 w-fit text-[12px] font-semibold text-terra hover:underline">
+                    Elegir una propiedad cargada
+                  </button>
+                </Field>
+              ) : (
+                <Field label="Propiedad">
+                  <SearchPicker
+                    items={propertyItems}
+                    value={propertyId}
+                    onChange={setPropertyId}
+                    placeholder="Buscá por dirección"
+                    ariaLabel="Propiedad"
+                    emptyText="No hay propiedades con esa dirección."
+                    footer={
+                      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={startQuick} className="flex w-full items-center gap-1.5 rounded-[10px] px-2 py-2 text-left text-[12.5px] font-semibold text-terra hover:bg-bg">
+                        <IconPlus size={14} /> No está cargada: escribir la dirección
+                      </button>
+                    }
+                  />
+                  {!propertyId && (
+                    <button type="button" onClick={startQuick} className="mt-1 w-fit text-[12px] font-semibold text-terra hover:underline">
+                      + No está cargada (traspaso): escribir la dirección
+                    </button>
+                  )}
+                </Field>
+              )}
             </>
           )}
           <Field label="Piso y depto / unidad" hint="Se imprime en el recibo. Ej.: Piso 4 · Dto B">
@@ -312,7 +353,7 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
               onChange={setTenantId}
               draft={newTenant}
               onDraft={setNewTenant}
-              requireId
+              requireId={!ongoing}
             />
           )}
           <PersonPicker label="Propietario" items={ownerItems} value={ownerId} onChange={setOwnerId} draft={newOwner} onDraft={setNewOwner} />
@@ -330,6 +371,16 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
             />
           ) : (
             <>
+              <Field
+                label="¿El contrato ya venía corriendo?"
+                hint={
+                  ongoing
+                    ? "Traspaso: poné las fechas reales del contrato y el alquiler que paga hoy. Las cuotas arrancan en el primer mes que cobran ustedes."
+                    : "Marcalo si lo administraba otra inmobiliaria o el propietario."
+                }
+              >
+                <Check checked={ongoing} onChange={setOngoing} label="Sí, lo tomamos en curso" />
+              </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Inicio">
                   <DateField value={startDate} onChange={setStartDate} clearable={false} />
@@ -346,7 +397,7 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
                 ))}
               </div>
               <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
-                <Field label="Alquiler mensual">
+                <Field label={ongoing ? "Alquiler que paga hoy" : "Alquiler mensual"}>
                   <CurrencyInput value={amount} onChange={setAmount} placeholder="900.000" />
                 </Field>
                 <Field label="Moneda">
@@ -356,7 +407,7 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
             </>
           )}
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Vence el día" hint={!editing && first ? `Primer vencimiento: ${dateAR(first)}` : undefined}>
+            <Field label="Vence el día" hint={!editing && first && !ongoing ? `Primer vencimiento: ${dateAR(first)}` : undefined}>
               <input
                 type="number"
                 min={1}
@@ -371,6 +422,11 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
               <input type="number" min={0} max={30} value={grace} onChange={(e) => setGrace(Math.max(0, Number(e.target.value) || 0))} className={`${inputBox} tabular-nums`} />
             </Field>
           </div>
+          {!editing && ongoing && (
+            <Field label="Primer mes que cobran ustedes" hint="Los meses anteriores no se cargan.">
+              <DateField value={first} onChange={setFirstOverride} clearable={false} />
+            </Field>
+          )}
         </FormSection>
 
         {/* 3. Aumentos */}

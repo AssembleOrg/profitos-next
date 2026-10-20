@@ -58,6 +58,7 @@ export const POST = withHandler(async (request: NextRequest) => {
   const {
     managed: managedRaw,
     propertyId,
+    newPropertyAddress,
     tenantId,
     title,
     startDate,
@@ -73,6 +74,7 @@ export const POST = withHandler(async (request: NextRequest) => {
   } = body as {
     managed?: boolean;
     propertyId?: string;
+    newPropertyAddress?: string;
     tenantId?: string;
     title?: string;
     startDate?: string;
@@ -87,7 +89,11 @@ export const POST = withHandler(async (request: NextRequest) => {
     additionals?: AdditionalInput[];
   };
 
-  if (!propertyId) throw new AppError(400, "Falta la propiedad");
+  // Traspasos de administración: la propiedad no está cargada ni se va a
+  // publicar. Se crea una ficha mínima (sólo dirección) que no aparece en el
+  // catálogo de Propiedades.
+  const quickAddress = typeof newPropertyAddress === "string" ? newPropertyAddress.trim().slice(0, 300) : "";
+  if (!propertyId && !quickAddress) throw new AppError(400, "Falta la propiedad");
   if (!tenantId) throw new AppError(400, "Falta el inquilino");
   if (!startDate || !endDate || !firstDueDate) throw new AppError(400, "Faltan las fechas");
   if (!isRentalFrequency(frequency)) throw new AppError(400, "Frecuencia inválida");
@@ -152,9 +158,17 @@ export const POST = withHandler(async (request: NextRequest) => {
 
   // Crear todo en una transacción
   const contract = await prisma.$transaction(async (tx) => {
+    const resolvedPropertyId =
+      propertyId ||
+      (
+        await tx.property.create({
+          data: { address: quickAddress, source: "traspaso", status: "alquilada", operationType: "Alquiler" },
+          select: { id: true },
+        })
+      ).id;
     const created = await tx.rentalContract.create({
       data: {
-        propertyId,
+        propertyId: resolvedPropertyId,
         tenantId,
         title: title?.trim() || null,
         startDate: start,

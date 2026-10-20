@@ -160,7 +160,7 @@ export async function renderReceiptPdf(input: ReceiptPdfInput): Promise<Uint8Arr
   const half = width / 2;
   const ownerName = input.owner?.fullName ?? "—";
   const ownerId = input.owner?.idNumber ? `${(input.owner.idType ?? "dni").toUpperCase()} ${input.owner.idNumber}` : "—";
-  const tenantId = `${input.tenant.idType.toUpperCase()} ${input.tenant.idNumber}`;
+  const tenantId = input.tenant.idNumber ? `${input.tenant.idType.toUpperCase()} ${input.tenant.idNumber}` : "—";
   text(page, "Locador:", m, y, bold, 7.5);
   text(page, fit(ownerName, regular, 8.5, half - m - 46), m + 36, y, regular, 8.5);
   text(page, "DNI/CUIT:", m, y - 14, bold, 7.5);

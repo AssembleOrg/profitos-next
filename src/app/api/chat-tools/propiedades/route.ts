@@ -14,7 +14,7 @@ export const GET = withHandler(async (request: NextRequest) => {
   const type = (sp.get("tipo") ?? "").trim().toLowerCase();
   const limit = Math.min(25, Math.max(1, Number.parseInt(sp.get("limite") ?? "10", 10) || 10));
 
-  const and: object[] = [];
+  const and: object[] = [{ source: { not: "traspaso" } }];
   if (q)
     and.push({
       OR: [

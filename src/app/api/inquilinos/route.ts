@@ -61,13 +61,12 @@ export const POST = withHandler(async (request: NextRequest) => {
 
   if (!fullName?.trim()) throw new AppError(400, "El nombre completo es obligatorio");
   if (idType !== "dni" && idType !== "cuit") throw new AppError(400, "Tipo de documento inválido");
-  if (!idNumber?.trim()) throw new AppError(400, "El número de documento es obligatorio");
 
   const tenant = await prisma.tenant.create({
     data: {
       fullName: fullName.trim(),
       idType,
-      idNumber: idNumber.trim(),
+      idNumber: idNumber?.trim() ?? "",
       phone: phone?.trim() || null,
       email: email?.trim() || null,
       notes: notes?.trim() || null,
