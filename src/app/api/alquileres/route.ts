@@ -59,6 +59,7 @@ export const POST = withHandler(async (request: NextRequest) => {
     managed: managedRaw,
     propertyId,
     newPropertyAddress,
+    newPropertyCity,
     tenantId,
     title,
     startDate,
@@ -75,6 +76,7 @@ export const POST = withHandler(async (request: NextRequest) => {
     managed?: boolean;
     propertyId?: string;
     newPropertyAddress?: string;
+    newPropertyCity?: string | null;
     tenantId?: string;
     title?: string;
     startDate?: string;
@@ -162,7 +164,13 @@ export const POST = withHandler(async (request: NextRequest) => {
       propertyId ||
       (
         await tx.property.create({
-          data: { address: quickAddress, source: "traspaso", status: "alquilada", operationType: "Alquiler" },
+          data: {
+            address: quickAddress,
+            city: typeof newPropertyCity === "string" ? newPropertyCity.trim().slice(0, 120) || null : null,
+            source: "traspaso",
+            status: "alquilada",
+            operationType: "Alquiler",
+          },
           select: { id: true },
         })
       ).id;

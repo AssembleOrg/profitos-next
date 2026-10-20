@@ -1,4 +1,13 @@
-import { DateTime, fromISO, fromJSDate, now } from "@/lib/datetime";
+import { DateTime, fromISO, now } from "@/lib/datetime";
+
+/**
+ * Columnas @db.Date: Prisma las devuelve como medianoche UTC. Leerlas en hora
+ * argentina las corre al día anterior (21:00), así que se toma el día
+ * calendario en UTC y se lo ubica en Buenos Aires.
+ */
+function fromDateOnly(date: Date | string) {
+  return fromISO((typeof date === "string" ? date : date.toISOString()).slice(0, 10));
+}
 
 // ──────────────────────────────────────────────────────────────────
 // Frequencies
@@ -137,10 +146,7 @@ export function getDueEffectiveStatus(input: DueStatusInput): RentalDueEffective
   }
 
   const today = now().startOf("day");
-  const dt =
-    typeof input.dueDate === "string"
-      ? fromISO(input.dueDate)
-      : fromJSDate(input.dueDate);
+  const dt = fromDateOnly(input.dueDate);
   const cutoff = dt.startOf("day").plus({ days: input.gracePeriodDays });
   if (today > cutoff) return "vencido";
   return "esperando";
@@ -174,14 +180,9 @@ export interface GeneratedDueDate {
  */
 export function generateDueDates(input: GenerateDueDatesInput): GeneratedDueDate[] {
   const { frequency, baseAmount, maxCount = 240 } = input;
-  const start =
-    typeof input.startDate === "string" ? fromISO(input.startDate) : fromJSDate(input.startDate);
-  const end =
-    typeof input.endDate === "string" ? fromISO(input.endDate) : fromJSDate(input.endDate);
-  const first =
-    typeof input.firstDueDate === "string"
-      ? fromISO(input.firstDueDate)
-      : fromJSDate(input.firstDueDate);
+  const start = fromDateOnly(input.startDate);
+  const end = fromDateOnly(input.endDate);
+  const first = fromDateOnly(input.firstDueDate);
 
   if (!start.isValid || !end.isValid || !first.isValid) return [];
   if (start > end) return [];

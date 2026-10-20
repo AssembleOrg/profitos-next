@@ -102,6 +102,7 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
   const [propertyId, setPropertyId] = useState<string | null>(initial?.property.id ?? null);
   // Traspaso: la propiedad no está cargada; se escribe sólo la dirección.
   const [quickAddress, setQuickAddress] = useState<string | null>(null);
+  const [quickCity, setQuickCity] = useState("Quilmes");
   const [unit, setUnit] = useState(initial?.unit ?? "");
   const [tenantId, setTenantId] = useState<string | null>(initial?.tenant.id ?? null);
   const [newTenant, setNewTenant] = useState<PersonDraft | null>(null);
@@ -240,7 +241,7 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
         method: "POST",
         json: {
           ...conditions,
-          ...(quickAddress !== null ? { newPropertyAddress: quickAddress.trim() } : { propertyId }),
+          ...(quickAddress !== null ? { newPropertyAddress: quickAddress.trim(), newPropertyCity: quickCity.trim() || null } : { propertyId }),
           tenantId: resolvedTenant,
           startDate,
           endDate,
@@ -313,7 +314,10 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
             <>
               {quickAddress !== null ? (
                 <Field label="Dirección" hint="Para traspasos: queda sólo en Alquileres, no se publica ni aparece en Propiedades.">
-                  <input value={quickAddress} onChange={(e) => setQuickAddress(e.target.value)} className={inputBox} placeholder="Ej.: Brown 1080, Quilmes" autoFocus />
+                  <div className="grid gap-2 sm:grid-cols-[2fr_1fr]">
+                    <input value={quickAddress} onChange={(e) => setQuickAddress(e.target.value)} className={inputBox} placeholder="Calle y número. Ej.: Brown 1080" aria-label="Calle y número" autoFocus />
+                    <input value={quickCity} onChange={(e) => setQuickCity(e.target.value)} className={inputBox} placeholder="Localidad" aria-label="Localidad" />
+                  </div>
                   <button type="button" onClick={() => setQuickAddress(null)} className="mt-1 w-fit text-[12px] font-semibold text-terra hover:underline">
                     Elegir una propiedad cargada
                   </button>
