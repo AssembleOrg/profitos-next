@@ -24,10 +24,15 @@ interface Props {
   onChange: (photos: EditorPhoto[], coverImageUrl: string | null) => void;
 }
 
-/** ¿El arrastre trae archivos del sistema (y no una tarjeta reordenándose)? */
+/** ¿El arrastre trae archivos del sistema? */
 function hasFiles(dt: DataTransfer | null): boolean {
   return Boolean(dt && Array.from(dt.types ?? []).includes("Files"));
 }
+
+/** Píxeles que hay que mover el mouse para que un clic pase a ser arrastre. */
+const DRAG_THRESHOLD = 6;
+
+type CardDrag = { image: string; from: number; startX: number; startY: number; x: number; y: number; active: boolean };
 
 type ApiBody = { data?: { photos?: EditorPhoto[]; coverImageUrl?: string | null }; message?: string };
 
@@ -40,7 +45,15 @@ export function PhotosEditor({ propertyId, photos, loading, active = true, onCha
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [dragging, setDragging] = useState<string | null>(null);
+  // Reordenar con el mouse: arrastre propio con pointer events (el drag nativo
+  // de HTML5 se lo comía el <a>/<img> de la tarjeta y lo tomaba como archivo).
+  // En touch se usan las flechas, así que sólo se activa con mouse.
+  const [drag, setDrag] = useState<CardDrag | null>(null);
+  const [over, setOver] = useState<number | null>(null);
+  const suppressClick = useRef(false);
+  // Si el optimizador falla (pasa de a ratos), se pide directo al bucket; si
+  // tampoco carga, se avisa en la tarjeta.
+  const [failed, setFailed] = useState<Record<string, 1 | 2>>({});
   const [dropHint, setDropHint] = useState(false);
   // Arrastre de archivos desde el sistema: se cuenta enter/leave porque el
   // navegador dispara dragleave al pasar por cada hijo.
@@ -173,6 +186,43 @@ export function PhotosEditor({ propertyId, photos, loading, active = true, onCha
   uploadRef.current = upload;
   const list = photos ?? [];
 
+  /** Índice de la tarjeta bajo el puntero (o null). */
+  function cardAt(x: number, y: number): number | null {
+    const el = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-photo-idx]");
+    return el ? Number(el.dataset.photoIdx) : null;
+  }
+
+  function onCardPointerDown(e: React.PointerEvent<HTMLDivElement>, ph: EditorPhoto, idx: number) {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    if ((e.target as HTMLElement).closest("button")) return; // acciones de la tarjeta
+    e.preventDefault(); // sin selección de texto ni drag nativo de la imagen
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDrag({ image: ph.image, from: idx, startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY, active: false });
+  }
+
+  function onCardPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!drag) return;
+    const active = drag.active || Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > DRAG_THRESHOLD;
+    setDrag({ ...drag, x: e.clientX, y: e.clientY, active });
+    if (active) setOver(cardAt(e.clientX, e.clientY));
+  }
+
+  function onCardPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!drag) return;
+    if (drag.active) {
+      suppressClick.current = true; // que soltar no abra la foto
+      const to = cardAt(e.clientX, e.clientY);
+      if (to !== null) move(drag.from, to);
+    }
+    setDrag(null);
+    setOver(null);
+  }
+
+  function cancelDrag() {
+    setDrag(null);
+    setOver(null);
+  }
+
   return (
     <div className="relative space-y-4">
       {/* Overlay mientras se arrastran archivos sobre la página */}
@@ -229,41 +279,46 @@ export function PhotosEditor({ propertyId, photos, loading, active = true, onCha
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
             {list.map((ph, idx) => {
               const isBusy = busy === ph.image;
+              const isDragged = Boolean(drag?.active && drag.image === ph.image);
+              const isTarget = Boolean(drag?.active && over === idx && drag.from !== idx);
               return (
                 <div
                   key={ph.image}
-                  draggable
-                  onDragStart={(e) => {
-                    setDragging(ph.image);
-                    e.dataTransfer.effectAllowed = "move";
-                  }}
-                  onDragEnd={() => setDragging(null)}
-                  onDragOver={(e) => {
-                    if (hasFiles(e.dataTransfer)) return; // archivos: los maneja el listener global
+                  data-photo-idx={idx}
+                  onPointerDown={(e) => onCardPointerDown(e, ph, idx)}
+                  onPointerMove={onCardPointerMove}
+                  onPointerUp={onCardPointerUp}
+                  onPointerCancel={cancelDrag}
+                  onLostPointerCapture={() => drag && !drag.active && cancelDrag()}
+                  onClickCapture={(e) => {
+                    if (!suppressClick.current) return;
+                    suppressClick.current = false;
                     e.preventDefault();
                     e.stopPropagation();
                   }}
-                  onDrop={(e) => {
-                    if (hasFiles(e.dataTransfer)) return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (!dragging || dragging === ph.image) return;
-                    const from = list.findIndex((p) => p.image === dragging);
-                    setDragging(null);
-                    move(from, idx);
-                  }}
-                  className={`group relative overflow-hidden rounded-[14px] border bg-bg ${
-                    dragging === ph.image ? "border-accent opacity-50" : "border-border"
-                  } ${isBusy ? "opacity-60" : ""}`}
+                  className={`group relative select-none overflow-hidden rounded-[14px] border bg-bg transition-shadow sm:cursor-grab ${
+                    isDragged ? "border-accent opacity-40" : "border-border"
+                  } ${isTarget ? "ring-2 ring-accent ring-offset-2" : ""} ${isBusy ? "opacity-60" : ""}`}
                 >
-                  <a href={ph.original ?? ph.image} target="_blank" rel="noopener noreferrer" className="block">
-                    <Image
-                      src={ph.thumb ?? ph.image}
-                      alt={ph.description ?? `Foto ${idx + 1}`}
-                      width={400}
-                      height={300}
-                      className="aspect-[4/3] w-full object-cover"
-                    />
+                  {/* draggable=false: si no, el navegador arrastra el link/imagen en vez de la tarjeta */}
+                  <a href={ph.original ?? ph.image} target="_blank" rel="noopener noreferrer" className="block" draggable={false}>
+                    {failed[ph.image] === 2 ? (
+                      <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-1 bg-sand-chip px-2 text-center">
+                        <span className="text-[12px] font-semibold text-text-muted">No se pudo cargar</span>
+                        <span className="text-[11px] text-text-faint">Borrala y volvé a subirla</span>
+                      </div>
+                    ) : (
+                      <Image
+                        src={ph.thumb ?? ph.image}
+                        alt={ph.description ?? `Foto ${idx + 1}`}
+                        width={400}
+                        height={300}
+                        unoptimized={failed[ph.image] === 1}
+                        draggable={false}
+                        onError={() => setFailed((f) => ({ ...f, [ph.image]: f[ph.image] ? 2 : 1 }))}
+                        className="aspect-[4/3] w-full object-cover"
+                      />
+                    )}
                   </a>
                   {ph.isFrontCover && (
                     <span className="absolute left-2 top-2 rounded-full bg-dark px-2 py-0.5 text-[10px] font-bold text-dark-fg">Portada</span>
@@ -294,6 +349,17 @@ export function PhotosEditor({ propertyId, photos, loading, active = true, onCha
               );
             })}
           </div>
+
+          {/* Miniatura que sigue al mouse mientras se arrastra */}
+          {drag?.active && (
+            <div
+              className="pointer-events-none fixed z-50 w-32 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[12px] border-2 border-accent shadow-xl"
+              style={{ left: drag.x, top: drag.y, cursor: "grabbing" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- copia efímera de la miniatura ya cargada */}
+              <img src={list[drag.from]?.thumb ?? drag.image} alt="" className="aspect-[4/3] w-full object-cover" draggable={false} />
+            </div>
+          )}
         </>
       )}
     </div>
