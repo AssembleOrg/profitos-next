@@ -7,6 +7,8 @@ import type { Attachment } from "@/lib/signatures";
 import { MediaUploader } from "./media-uploader";
 import { useSignedUrls } from "./use-signed-urls";
 import type { SerializedFirma } from "./types";
+import { serializeFromApi } from "./serialize";
+import { ColleagueFields, colleaguePayload, EMPTY_COLLEAGUE, type ColleagueDraft } from "./colleague-fields";
 import { DateField } from "../../_components/date-field";
 import { SelectField } from "@/components/ui/select-field";
 import {
@@ -41,6 +43,9 @@ export function CreateFirmaModal({
 }: Readonly<CreateFirmaModalProps>) {
   const [propertyId, setPropertyId] = useState("");
   const [propertyQuery, setPropertyQuery] = useState("");
+  // Inmueble no publicado (cartera de un colega): solo se escribe la dirección.
+  const [manualAddress, setManualAddress] = useState<string | null>(null);
+  const [colleague, setColleague] = useState<ColleagueDraft>(EMPTY_COLLEAGUE);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [reservationDate, setReservationDate] = useState("");
@@ -56,6 +61,8 @@ export function CreateFirmaModal({
     if (!open) return;
     setPropertyId(initialPropertyId ?? "");
     setPropertyQuery("");
+    setManualAddress(null);
+    setColleague(EMPTY_COLLEAGUE);
     setTitle("");
     setDescription("");
     setReservationDate("");
@@ -77,8 +84,18 @@ export function CreateFirmaModal({
   const selectedProperty = properties.find((p) => p.id === propertyId);
 
   async function submit() {
-    if (!propertyId) {
+    const isManual = manualAddress !== null;
+    if (!isManual && !propertyId) {
       toast.error("Seleccioná una propiedad");
+      return;
+    }
+    if (isManual && !manualAddress.trim()) {
+      toast.error("Escribí la dirección del inmueble");
+      return;
+    }
+    const colleagueData = colleaguePayload(colleague);
+    if (typeof colleagueData === "string") {
+      toast.error(colleagueData);
       return;
     }
     if (!reservationDate) {
@@ -96,7 +113,8 @@ export function CreateFirmaModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          propertyId,
+          ...(isManual ? { newPropertyAddress: manualAddress.trim() } : { propertyId }),
+          ...colleagueData,
           title: title.trim() || null,
           description: description.trim() || null,
           attachments,
@@ -149,7 +167,16 @@ export function CreateFirmaModal({
                     <div>
                       <label className="mb-1.5 flex items-center justify-between text-[12.5px] font-semibold text-text-muted">
                         <span>Propiedad</span>
-                        {selectedProperty && (
+                        {manualAddress !== null && (
+                          <button
+                            type="button"
+                            onClick={() => setManualAddress(null)}
+                            className="text-[12.5px] font-bold text-terra transition-opacity hover:opacity-80"
+                          >
+                            Elegir una publicada
+                          </button>
+                        )}
+                        {selectedProperty && manualAddress === null && (
                           <button
                             type="button"
                             onClick={() => setPropertyId("")}
@@ -159,7 +186,22 @@ export function CreateFirmaModal({
                           </button>
                         )}
                       </label>
-                      {selectedProperty ? (
+                      {manualAddress !== null ? (
+                        <div className="flex flex-col gap-1.5">
+                          <input
+                            type="text"
+                            value={manualAddress}
+                            onChange={(e) => setManualAddress(e.target.value)}
+                            placeholder="Calle y número, piso/depto"
+                            aria-label="Dirección del inmueble"
+                            autoFocus
+                            className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
+                          />
+                          <p className="text-[11.5px] text-text-faint">
+                            No se publica ni aparece en Propiedades: queda solo para esta firma.
+                          </p>
+                        </div>
+                      ) : selectedProperty ? (
                         <div className="flex items-center justify-between rounded-[14px] bg-sand-chip px-3.5 py-2.5">
                           <div className="min-w-0">
                             <p className="truncate text-[13.5px] font-bold text-text">{selectedProperty.address}</p>
@@ -206,8 +248,30 @@ export function CreateFirmaModal({
                               ))
                             )}
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setManualAddress(propertyQuery.trim());
+                              setPropertyId("");
+                              // Si no está publicada, casi siempre la tiene un colega.
+                              setColleague((c) => ({ ...c, withColleague: true }));
+                            }}
+                            className="mt-2 text-[12.5px] font-bold text-olive-light transition-opacity hover:opacity-80"
+                          >
+                            + No está publicada (la tiene un colega): escribir la dirección
+                          </button>
                         </>
                       )}
+                    </div>
+
+                    <div className="rounded-[16px] bg-bg p-4">
+                      <div className="mb-3">
+                        <p className="text-[12.5px] font-bold text-text">¿Trabajamos con colega?</p>
+                        <p className="mt-0.5 text-[11.5px] text-text-faint">
+                          Si la operación es compartida, indicá con quién y qué % de nuestros honorarios le corresponde.
+                        </p>
+                      </div>
+                      <ColleagueFields value={colleague} onChange={setColleague} />
                     </div>
 
                     <div className="rounded-[16px] bg-bg p-4">
@@ -301,65 +365,3 @@ export function CreateFirmaModal({
   );
 }
 
-function serializeFromApi(raw: unknown): SerializedFirma {
-  // Reuse pattern from detail-modal — separated to avoid circular import.
-  const r = raw as Record<string, unknown>;
-  const property = r.property as Record<string, unknown>;
-  const createdBy = r.createdByUser as Record<string, unknown>;
-  const actions = ((r.actions as unknown[]) ?? []).map((a) => {
-    const ar = a as Record<string, unknown>;
-    const u = ar.createdByUser as Record<string, unknown>;
-    return {
-      id: ar.id as string,
-      type: ar.type as SerializedFirma["actions"][number]["type"],
-      fromStatus: (ar.fromStatus as SerializedFirma["status"] | null) ?? null,
-      toStatus: (ar.toStatus as SerializedFirma["status"] | null) ?? null,
-      dateField: (ar.dateField as string | null) ?? null,
-      description: (ar.description as string | null) ?? null,
-      attachments: Array.isArray(ar.attachments) ? (ar.attachments as Attachment[]) : [],
-      createdByUser: {
-        id: u.id as string,
-        email: u.email as string,
-        fullName: (u.fullName as string | null) ?? null,
-        avatarUrl: (u.avatarUrl as string | null | undefined) ?? null,
-      },
-      createdAt: new Date(ar.createdAt as string).toISOString(),
-    };
-  });
-  return {
-    id: r.id as string,
-    property: {
-      id: property.id as string,
-      address: property.address as string,
-      city: (property.city as string | null) ?? null,
-      zone: (property.zone as string | null) ?? null,
-      type: (property.type as string | null) ?? null,
-      status: property.status as string,
-      operationType: (property.operationType as string | null) ?? null,
-      coverImageUrl: (property.coverImageUrl as string | null) ?? null,
-    },
-    status: r.status as SerializedFirma["status"],
-    title: (r.title as string | null) ?? null,
-    description: (r.description as string | null) ?? null,
-    attachments: Array.isArray(r.attachments) ? (r.attachments as Attachment[]) : [],
-    reservationDate: r.reservationDate ? new Date(r.reservationDate as string).toISOString() : null,
-    reservationTermDays: (r.reservationTermDays as number | null) ?? null,
-    reservationDayType: (r.reservationDayType as SerializedFirma["reservationDayType"]) ?? null,
-    reservationExpiresAt: r.reservationExpiresAt ? new Date(r.reservationExpiresAt as string).toISOString() : null,
-    dateProcessStarted: r.dateProcessStarted ? new Date(r.dateProcessStarted as string).toISOString() : null,
-    dateAgreed: r.dateAgreed ? new Date(r.dateAgreed as string).toISOString() : null,
-    dateKeysHandover: r.dateKeysHandover ? new Date(r.dateKeysHandover as string).toISOString() : null,
-    visitInformesId: (r.visitInformesId as string | null) ?? null,
-    visitAcordadaId: (r.visitAcordadaId as string | null) ?? null,
-    visitEntregaId: (r.visitEntregaId as string | null) ?? null,
-    createdByUser: {
-      id: createdBy.id as string,
-      email: createdBy.email as string,
-      fullName: (createdBy.fullName as string | null) ?? null,
-      avatarUrl: (createdBy.avatarUrl as string | null | undefined) ?? null,
-    },
-    actions,
-    createdAt: new Date(r.createdAt as string).toISOString(),
-    updatedAt: new Date(r.updatedAt as string).toISOString(),
-  };
-}

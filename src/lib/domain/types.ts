@@ -108,3 +108,11 @@ export const AUTH_ERRORS = {
   OAUTH_ERROR: "Error al iniciar sesión con Google. Intentá de nuevo.",
   UNKNOWN: "Ocurrió un error inesperado. Intentá de nuevo.",
 } as const;
+
+/**
+ * Orígenes de fichas mínimas (solo dirección) que no forman parte del catálogo:
+ * - "traspaso": administración de alquiler tomada en curso.
+ * - "colega": inmueble en cartera de un colega donde llevamos al comprador.
+ * No aparecen en Propiedades ni en la búsqueda del chat.
+ */
+export const HIDDEN_PROPERTY_SOURCES = ["traspaso", "colega"];

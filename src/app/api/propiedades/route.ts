@@ -3,6 +3,7 @@ import { withHandler, AppError } from "@/lib/api/handler";
 import { created, paginated } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
+import { HIDDEN_PROPERTY_SOURCES } from "@/lib/domain/types";
 
 function numberOrNull(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -22,7 +23,7 @@ export const GET = withHandler(async (request: NextRequest) => {
   const limit = Math.min(100, Math.max(1, parseInt(sp.get("limit") ?? "20", 10) || 20));
 
   const where = {
-    source: { not: "traspaso" },
+    source: { notIn: HIDDEN_PROPERTY_SOURCES },
     ...(q && {
       OR: [
         { address: { contains: q, mode: "insensitive" as const } },

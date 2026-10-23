@@ -11,13 +11,14 @@ import {
   SIGNATURE_STATUS_STYLE,
   type Attachment,
   type SignatureDateField,
-  type SignatureStatus,
 } from "@/lib/signatures";
 import { SelectField } from "@/components/ui/select-field";
 import { AttachmentPreview, MediaUploader } from "./media-uploader";
 import { useSignedUrls } from "./use-signed-urls";
 import { DateField } from "../../_components/date-field";
 import type { FirmaAction, SerializedFirma } from "./types";
+import { serializeActionFromApi, serializeFromApi } from "./serialize";
+import { ColleagueFields, colleaguePayload, draftFromColleague, type ColleagueDraft } from "./colleague-fields";
 import {
   RESERVATION_DAY_TYPE_LABEL,
   RESERVATION_DAY_TYPES,
@@ -119,6 +120,11 @@ function FirmaDetailSheet({
               {firma.property.operationType}
             </span>
           )}
+          {firma.property.source === "colega" && (
+            <span className="rounded-full bg-bg px-2 py-0.5 text-[10px] font-semibold text-text-muted">
+              No publicada · cartera de colega
+            </span>
+          )}
         </span>
       }
       footer={
@@ -186,6 +192,8 @@ function DetailBody({
       <div>
         <div className="flex flex-col gap-6">
           <ReservationPanel firma={firma} onUpdated={onUpdated} />
+
+          <ColleaguePanel firma={firma} onUpdated={onUpdated} />
 
           {/* Status & dates control panel */}
           <ControlPanel firma={firma} onUpdated={onUpdated} />
@@ -345,6 +353,57 @@ function ReservationPanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
         </button>
       </div>
       <p className="mt-2 text-[10.5px] text-text-faint">Los días hábiles excluyen fines de semana, feriados nacionales y el 14 de agosto (Día de Quilmes).</p>
+    </section>
+  );
+}
+
+function ColleaguePanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
+  const [draft, setDraft] = useState<ColleagueDraft>(() => draftFromColleague(firma.colleague));
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setDraft(draftFromColleague(firma.colleague));
+  }, [firma.id, firma.colleague]);
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify(draftFromColleague(firma.colleague));
+
+  async function save() {
+    const payload = colleaguePayload(draft);
+    if (typeof payload === "string") return toast.error(payload);
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/firmas/${firma.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.message ?? "Error");
+      onUpdated(serializeFromApi(body.data));
+      toast.success("Datos del colega guardados");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo guardar");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="rounded-[16px] border border-border bg-surface p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h4 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Colega</h4>
+        {dirty && (
+          <button
+            type="button"
+            onClick={save}
+            disabled={busy}
+            className="h-9 rounded-full bg-dark px-4 text-[12.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-60"
+          >
+            {busy ? "Guardando…" : "Guardar"}
+          </button>
+        )}
+      </div>
+      <ColleagueFields value={draft} onChange={setDraft} disabled={busy} />
     </section>
   );
 }
@@ -592,6 +651,13 @@ function ActionBadge({ action }: { action: FirmaAction }) {
       </span>
     );
   }
+  if (action.type === "colleague_update") {
+    return (
+      <span className="rounded-full bg-info-chip px-2 py-0.5 text-[10px] font-semibold text-info">
+        Colega
+      </span>
+    );
+  }
   if (action.type === "reservation_update") {
     return (
       <span className="rounded-full bg-sand-chip px-2 py-0.5 text-[10px] font-semibold text-warning">
@@ -685,7 +751,7 @@ function AddNoteSection({ firmaId, onAdded }: Readonly<AddNoteSectionProps>) {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message ?? "Error");
-      onAdded(serializeAction(body.data));
+      onAdded(serializeActionFromApi(body.data));
       setText("");
       setAttachments([]);
       toast.success("Nota agregada");
@@ -733,68 +799,5 @@ function AddNoteSection({ firmaId, onAdded }: Readonly<AddNoteSectionProps>) {
 // ──────────────────────────────────────────────────────────────────
 // Local serializers (API response → UI shape)
 // ──────────────────────────────────────────────────────────────────
-
-function serializeAction(raw: unknown): FirmaAction {
-  const r = raw as Record<string, unknown>;
-  const u = r.createdByUser as Record<string, unknown>;
-  return {
-    id: r.id as string,
-    type: r.type as FirmaAction["type"],
-    fromStatus: (r.fromStatus as SignatureStatus | null) ?? null,
-    toStatus: (r.toStatus as SignatureStatus | null) ?? null,
-    dateField: (r.dateField as string | null) ?? null,
-    description: (r.description as string | null) ?? null,
-    attachments: Array.isArray(r.attachments) ? (r.attachments as Attachment[]) : [],
-    createdByUser: {
-      id: u.id as string,
-      email: u.email as string,
-      fullName: (u.fullName as string | null) ?? null,
-      avatarUrl: (u.avatarUrl as string | null | undefined) ?? null,
-    },
-    createdAt: new Date(r.createdAt as string).toISOString(),
-  };
-}
-
-function serializeFromApi(raw: unknown): SerializedFirma {
-  const r = raw as Record<string, unknown>;
-  const property = r.property as Record<string, unknown>;
-  const createdBy = r.createdByUser as Record<string, unknown>;
-  return {
-    id: r.id as string,
-    property: {
-      id: property.id as string,
-      address: property.address as string,
-      city: (property.city as string | null) ?? null,
-      zone: (property.zone as string | null) ?? null,
-      type: (property.type as string | null) ?? null,
-      status: property.status as string,
-      operationType: (property.operationType as string | null) ?? null,
-      coverImageUrl: (property.coverImageUrl as string | null) ?? null,
-    },
-    status: r.status as SignatureStatus,
-    title: (r.title as string | null) ?? null,
-    description: (r.description as string | null) ?? null,
-    attachments: Array.isArray(r.attachments) ? (r.attachments as Attachment[]) : [],
-    reservationDate: r.reservationDate ? new Date(r.reservationDate as string).toISOString() : null,
-    reservationTermDays: (r.reservationTermDays as number | null) ?? null,
-    reservationDayType: (r.reservationDayType as SerializedFirma["reservationDayType"]) ?? null,
-    reservationExpiresAt: r.reservationExpiresAt ? new Date(r.reservationExpiresAt as string).toISOString() : null,
-    dateProcessStarted: r.dateProcessStarted ? new Date(r.dateProcessStarted as string).toISOString() : null,
-    dateAgreed: r.dateAgreed ? new Date(r.dateAgreed as string).toISOString() : null,
-    dateKeysHandover: r.dateKeysHandover ? new Date(r.dateKeysHandover as string).toISOString() : null,
-    visitInformesId: (r.visitInformesId as string | null) ?? null,
-    visitAcordadaId: (r.visitAcordadaId as string | null) ?? null,
-    visitEntregaId: (r.visitEntregaId as string | null) ?? null,
-    createdByUser: {
-      id: createdBy.id as string,
-      email: createdBy.email as string,
-      fullName: (createdBy.fullName as string | null) ?? null,
-      avatarUrl: (createdBy.avatarUrl as string | null | undefined) ?? null,
-    },
-    actions: ((r.actions as unknown[]) ?? []).map(serializeAction),
-    createdAt: new Date(r.createdAt as string).toISOString(),
-    updatedAt: new Date(r.updatedAt as string).toISOString(),
-  };
-}
 
 void formatDate; // future use in headers

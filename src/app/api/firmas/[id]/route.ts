@@ -5,7 +5,9 @@ import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
 import {
   assertCanDeleteProposal,
+  describeColleague,
   getProposalOrThrow,
+  parseColleague,
   signatureInclude,
   syncDateVisit,
 } from "@/lib/api/signatures";
@@ -102,6 +104,28 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
       type: "reservation_update",
       description: `Reserva vigente hasta ${expiresAt.toISOString().slice(0, 10)} (${rawTerm} ${rawType === "business" ? "días hábiles" : "días corridos"})`,
     });
+  }
+
+  // Operación con colega: se actualiza como una unidad.
+  if ("withColleague" in body) {
+    const colleague = await parseColleague(body);
+    const changed =
+      colleague.withColleague !== proposal.withColleague ||
+      colleague.colleagueAgencyId !== proposal.colleagueAgencyId ||
+      colleague.colleagueName !== proposal.colleagueName ||
+      colleague.colleagueSharePercent !== proposal.colleagueSharePercent;
+    if (changed) {
+      data.withColleague = colleague.withColleague;
+      data.colleagueAgency = colleague.colleagueAgencyId
+        ? { connect: { id: colleague.colleagueAgencyId } }
+        : { disconnect: true };
+      data.colleagueName = colleague.colleagueName;
+      data.colleagueSharePercent = colleague.colleagueSharePercent;
+      const agencyName = colleague.colleagueAgencyId
+        ? (await prisma.agency.findUnique({ where: { id: colleague.colleagueAgencyId }, select: { name: true } }))?.name ?? null
+        : null;
+      auditActions.push({ type: "colleague_update", description: describeColleague(colleague, agencyName) });
+    }
   }
 
   // Status change

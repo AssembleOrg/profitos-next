@@ -16,8 +16,10 @@ export const signatureInclude = {
       operationType: true,
       coverImageUrl: true,
       photos: true,
+      source: true,
     },
   },
+  colleagueAgency: { select: { id: true, name: true } },
   createdByUser: { select: { id: true, email: true, fullName: true, avatarUrl: true } },
   actions: {
     orderBy: [{ createdAt: "desc" }],
@@ -26,6 +28,42 @@ export const signatureInclude = {
     },
   },
 } satisfies Prisma.SignatureProposalInclude;
+
+export interface ColleagueData {
+  withColleague: boolean;
+  colleagueAgencyId: string | null;
+  colleagueName: string | null;
+  colleagueSharePercent: number | null;
+}
+
+/**
+ * Valida los datos de "operación con colega". Sin colega se limpian los demás
+ * campos. Con colega: inmobiliaria o nombre (al menos uno) y % compartido 0–100.
+ */
+export async function parseColleague(body: Record<string, unknown>): Promise<ColleagueData> {
+  if (body.withColleague !== true) {
+    return { withColleague: false, colleagueAgencyId: null, colleagueName: null, colleagueSharePercent: null };
+  }
+  const agencyId = typeof body.colleagueAgencyId === "string" && body.colleagueAgencyId ? body.colleagueAgencyId : null;
+  const name = typeof body.colleagueName === "string" ? body.colleagueName.trim().slice(0, 200) || null : null;
+  if (!agencyId && !name) throw new AppError(400, "Indicá la inmobiliaria o el nombre del colega");
+  if (agencyId) {
+    const exists = await prisma.agency.count({ where: { id: agencyId } });
+    if (!exists) throw new AppError(400, "La inmobiliaria del colega no existe");
+  }
+  const share = body.colleagueSharePercent;
+  if (typeof share !== "number" || !Number.isFinite(share) || share < 0 || share > 100) {
+    throw new AppError(400, "Indicá el % de honorarios que se comparte con el colega (0 a 100)");
+  }
+  return { withColleague: true, colleagueAgencyId: agencyId, colleagueName: name, colleagueSharePercent: share };
+}
+
+/** Texto para la línea de tiempo cuando cambia el colega. */
+export function describeColleague(data: ColleagueData, agencyName: string | null): string {
+  if (!data.withColleague) return "Operación 100% propia (sin colega)";
+  const who = [data.colleagueName, agencyName].filter(Boolean).join(" · ");
+  return `Con colega: ${who} — se comparte el ${data.colleagueSharePercent}% de los honorarios`;
+}
 
 export async function getProposalOrThrow(id: string) {
   const proposal = await prisma.signatureProposal.findUnique({

@@ -3,6 +3,7 @@ import { withHandler } from "@/lib/api/handler";
 import { ok } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
 import { assertChatToolsAuth } from "@/lib/api/chat-tools";
+import { HIDDEN_PROPERTY_SOURCES } from "@/lib/domain/types";
 
 // Tool del chat IA: busca propiedades (solo lectura, respuesta compacta).
 export const GET = withHandler(async (request: NextRequest) => {
@@ -14,7 +15,7 @@ export const GET = withHandler(async (request: NextRequest) => {
   const type = (sp.get("tipo") ?? "").trim().toLowerCase();
   const limit = Math.min(25, Math.max(1, Number.parseInt(sp.get("limite") ?? "10", 10) || 10));
 
-  const and: object[] = [{ source: { not: "traspaso" } }];
+  const and: object[] = [{ source: { notIn: HIDDEN_PROPERTY_SOURCES } }];
   if (q)
     and.push({
       OR: [

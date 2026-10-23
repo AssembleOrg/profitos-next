@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export interface AgencyResult {
   id: string;
@@ -28,6 +29,7 @@ export function AgencyPicker({ value, label, onChange }: Readonly<Props>) {
   const [results, setResults] = useState<AgencyResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -61,6 +63,28 @@ export function AgencyPicker({ value, label, onChange }: Readonly<Props>) {
       clearTimeout(timer);
     };
   }, [query, value, open]);
+
+  /** Alta rápida: crea la inmobiliaria con el texto buscado y la deja elegida. */
+  async function createFromQuery() {
+    const name = query.trim();
+    if (!name) return;
+    setCreating(true);
+    try {
+      const res = await fetch("/api/inmobiliarias", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.message ?? "Error");
+      onChange(body.data.id, body.data.name);
+      setOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo crear la inmobiliaria");
+    } finally {
+      setCreating(false);
+    }
+  }
 
   if (value) {
     return (
@@ -130,6 +154,16 @@ export function AgencyPicker({ value, label, onChange }: Readonly<Props>) {
                 </span>
               </button>
             ))
+          )}
+          {!loading && query.trim() && !results.some((a) => a.name.toLowerCase() === query.trim().toLowerCase()) && (
+            <button
+              type="button"
+              onClick={createFromQuery}
+              disabled={creating}
+              className="block w-full border-t border-border px-3.5 py-2.5 text-left text-[12.5px] font-bold text-olive-light transition-colors hover:bg-bg disabled:opacity-60"
+            >
+              {creating ? "Creando…" : `+ Agregar «${query.trim()}»`}
+            </button>
           )}
         </div>
       )}

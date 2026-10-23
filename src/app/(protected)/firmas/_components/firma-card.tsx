@@ -105,6 +105,20 @@ export function FirmaCard({ firma, onOpen }: Readonly<FirmaCardProps>) {
               {[firma.property.zone, firma.property.city].filter(Boolean).join(" · ")}
             </p>
           )}
+          {(firma.colleague.withColleague || firma.property.source === "colega") && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {firma.colleague.withColleague && (
+                <span className="rounded-full bg-info-chip px-2 py-0.5 text-[10px] font-bold text-info">
+                  Con colega · {firma.colleague.sharePercent}%
+                </span>
+              )}
+              {firma.property.source === "colega" && (
+                <span className="rounded-full bg-bg px-2 py-0.5 text-[10px] font-semibold text-text-muted">
+                  No publicada
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {firma.title && (

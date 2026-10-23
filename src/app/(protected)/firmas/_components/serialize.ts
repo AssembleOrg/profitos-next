@@ -1,6 +1,6 @@
 import type { Attachment, SignatureStatus } from "@/lib/signatures";
 import type { ReservationDayType } from "@/lib/signatures/reservation-expiry";
-import type { FirmaAction, FirmaProperty, FirmaUser, SerializedFirma } from "./types";
+import type { FirmaAction, FirmaColleague, FirmaProperty, FirmaUser, SerializedFirma } from "./types";
 
 interface RawUser {
   id: string;
@@ -31,6 +31,7 @@ interface RawProperty {
   operationType: string | null;
   coverImageUrl: string | null;
   photos: unknown;
+  source?: string | null;
 }
 
 interface RawProposal {
@@ -50,6 +51,10 @@ interface RawProposal {
   visitInformesId: string | null;
   visitAcordadaId: string | null;
   visitEntregaId: string | null;
+  withColleague: boolean;
+  colleagueAgency: { id: string; name: string } | null;
+  colleagueName: string | null;
+  colleagueSharePercent: number | null;
   createdByUser: RawUser;
   actions: RawAction[];
   createdAt: Date;
@@ -99,6 +104,17 @@ function toProperty(raw: RawProperty): FirmaProperty {
     status: raw.status,
     operationType: raw.operationType,
     coverImageUrl: cover,
+    source: raw.source ?? null,
+  };
+}
+
+function toColleague(raw: Pick<RawProposal, "withColleague" | "colleagueAgency" | "colleagueName" | "colleagueSharePercent">): FirmaColleague {
+  return {
+    withColleague: raw.withColleague,
+    agencyId: raw.colleagueAgency?.id ?? null,
+    agencyName: raw.colleagueAgency?.name ?? null,
+    name: raw.colleagueName,
+    sharePercent: raw.colleagueSharePercent,
   };
 }
 
@@ -134,9 +150,44 @@ export function serializeProposal(raw: RawProposal): SerializedFirma {
     visitInformesId: raw.visitInformesId,
     visitAcordadaId: raw.visitAcordadaId,
     visitEntregaId: raw.visitEntregaId,
+    colleague: toColleague(raw),
     createdByUser: toUser(raw.createdByUser),
     actions: raw.actions.map(toAction),
     createdAt: raw.createdAt.toISOString(),
     updatedAt: raw.updatedAt.toISOString(),
   };
+}
+
+/**
+ * Lo mismo que serializeProposal pero desde la respuesta JSON de la API
+ * (fechas como string). Lo usan los modales de alta y detalle.
+ */
+export function serializeFromApi(raw: unknown): SerializedFirma {
+  const r = raw as Record<string, unknown>;
+  const iso = (v: unknown) => (v ? new Date(v as string) : null);
+  const actions = ((r.actions as Record<string, unknown>[]) ?? []).map((a) => ({
+    ...(a as unknown as RawAction),
+    createdAt: new Date(a.createdAt as string),
+  }));
+  return serializeProposal({
+    ...(r as unknown as RawProposal),
+    colleagueAgency: (r.colleagueAgency as RawProposal["colleagueAgency"]) ?? null,
+    withColleague: r.withColleague === true,
+    colleagueName: (r.colleagueName as string | null) ?? null,
+    colleagueSharePercent: (r.colleagueSharePercent as number | null) ?? null,
+    reservationDate: iso(r.reservationDate),
+    reservationExpiresAt: iso(r.reservationExpiresAt),
+    dateProcessStarted: iso(r.dateProcessStarted),
+    dateAgreed: iso(r.dateAgreed),
+    dateKeysHandover: iso(r.dateKeysHandover),
+    actions,
+    createdAt: new Date(r.createdAt as string),
+    updatedAt: new Date(r.updatedAt as string),
+  });
+}
+
+/** Acción de la línea de tiempo desde la respuesta JSON de la API. */
+export function serializeActionFromApi(raw: unknown): FirmaAction {
+  const r = raw as Record<string, unknown>;
+  return toAction({ ...(r as unknown as RawAction), createdAt: new Date(r.createdAt as string) });
 }

@@ -4,7 +4,7 @@ import { created, paginated } from "@/lib/api/response";
 import { parsePagination, buildPaginatedResult, paginationToSkip } from "@/lib/api/pagination";
 import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
-import { signatureInclude } from "@/lib/api/signatures";
+import { describeColleague, parseColleague, signatureInclude } from "@/lib/api/signatures";
 import { isSignatureStatus } from "@/lib/signatures";
 import {
   calculateReservationExpiration,
@@ -58,6 +58,7 @@ export const POST = withHandler(async (request: NextRequest) => {
   const body = await request.json();
   const {
     propertyId,
+    newPropertyAddress,
     title,
     description,
     attachments,
@@ -67,6 +68,8 @@ export const POST = withHandler(async (request: NextRequest) => {
     reservationDayType,
   } = body as {
     propertyId?: string;
+    /** Inmueble en cartera de un colega (no publicado): solo la dirección. */
+    newPropertyAddress?: string;
     title?: string;
     description?: string;
     attachments?: unknown[];
@@ -76,7 +79,11 @@ export const POST = withHandler(async (request: NextRequest) => {
     reservationDayType?: string;
   };
 
-  if (!propertyId) throw new AppError(400, "Falta el campo 'propertyId'");
+  // Si el inmueble lo tiene en cartera un colega no está publicado: se crea una
+  // ficha mínima (sólo dirección, source "colega") fuera del catálogo.
+  const quickAddress = typeof newPropertyAddress === "string" ? newPropertyAddress.trim().slice(0, 300) : "";
+  if (!propertyId && !quickAddress) throw new AppError(400, "Falta la propiedad");
+  const colleague = await parseColleague(body as Record<string, unknown>);
   if (!reservationDate) throw new AppError(400, "La fecha de reserva es obligatoria");
   if (!Number.isInteger(reservationTermDays) || reservationTermDays! <= 0 || reservationTermDays! > 3650) {
     throw new AppError(400, "La vigencia debe ser un número entero entre 1 y 3650");
@@ -96,40 +103,60 @@ export const POST = withHandler(async (request: NextRequest) => {
     throw new AppError(400, error instanceof Error ? error.message : "Datos de reserva inválidos");
   }
 
-  const property = await prisma.property.findUnique({
-    where: { id: propertyId },
-    select: { id: true, address: true },
-  });
-  if (!property) throw new AppError(404, "Propiedad no encontrada");
+  if (propertyId) {
+    const property = await prisma.property.findUnique({ where: { id: propertyId }, select: { id: true } });
+    if (!property) throw new AppError(404, "Propiedad no encontrada");
+  }
 
   const initialStatus = status && isSignatureStatus(status) ? status : "propuesta_enviada";
 
-  const proposal = await prisma.signatureProposal.create({
-    data: {
-      propertyId,
-      title: title?.trim() || null,
-      description: description?.trim() || null,
-      attachments: (attachments as Prisma.InputJsonValue) ?? undefined,
-      status: initialStatus,
-      reservationDate: new Date(`${reservationDate.slice(0, 10)}T00:00:00.000Z`),
-      reservationTermDays,
-      reservationDayType,
-      reservationExpiresAt,
-      reservationReminders: {
-        create: buildReservationReminderDates(reservationExpiresAt),
-      },
-      createdByUserId: auth.userId,
-      actions: {
-        create: {
-          type: "creation",
-          toStatus: initialStatus,
-          description: title?.trim() || "Propuesta creada",
-          attachments: (attachments as Prisma.InputJsonValue) ?? undefined,
-          createdByUserId: auth.userId,
+  const colleagueAgencyName = colleague.colleagueAgencyId
+    ? (await prisma.agency.findUnique({ where: { id: colleague.colleagueAgencyId }, select: { name: true } }))?.name ?? null
+    : null;
+
+  const creationNote = [
+    title?.trim() || "Propuesta creada",
+    colleague.withColleague ? describeColleague(colleague, colleagueAgencyName) : null,
+  ].filter(Boolean).join(" · ");
+
+  const proposal = await prisma.$transaction(async (tx) => {
+    const resolvedPropertyId =
+      propertyId ||
+      (
+        await tx.property.create({
+          data: { address: quickAddress, source: "colega", status: "activa", operationType: "Venta" },
+          select: { id: true },
+        })
+      ).id;
+
+    return tx.signatureProposal.create({
+      data: {
+        propertyId: resolvedPropertyId,
+        ...colleague,
+        title: title?.trim() || null,
+        description: description?.trim() || null,
+        attachments: (attachments as Prisma.InputJsonValue) ?? undefined,
+        status: initialStatus,
+        reservationDate: new Date(`${reservationDate.slice(0, 10)}T00:00:00.000Z`),
+        reservationTermDays,
+        reservationDayType,
+        reservationExpiresAt,
+        reservationReminders: {
+          create: buildReservationReminderDates(reservationExpiresAt),
+        },
+        createdByUserId: auth.userId,
+        actions: {
+          create: {
+            type: "creation",
+            toStatus: initialStatus,
+            description: creationNote,
+            attachments: (attachments as Prisma.InputJsonValue) ?? undefined,
+            createdByUserId: auth.userId,
+          },
         },
       },
-    },
-    include: signatureInclude,
+      include: signatureInclude,
+    });
   });
 
   return created(proposal, "Propuesta creada correctamente", path);

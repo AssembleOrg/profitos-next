@@ -17,11 +17,21 @@ export interface FirmaProperty {
   status: string;
   operationType: string | null;
   coverImageUrl: string | null;
+  /** "colega" = ficha mínima de un inmueble en cartera de un colega (no publicado). */
+  source: string | null;
+}
+
+export interface FirmaColleague {
+  withColleague: boolean;
+  agencyId: string | null;
+  agencyName: string | null;
+  name: string | null;
+  sharePercent: number | null;
 }
 
 export interface FirmaAction {
   id: string;
-  type: "creation" | "nota" | "status_change" | "date_set" | "reservation_update";
+  type: "creation" | "nota" | "status_change" | "date_set" | "reservation_update" | "colleague_update";
   fromStatus: SignatureStatus | null;
   toStatus: SignatureStatus | null;
   dateField: string | null;
@@ -48,6 +58,7 @@ export interface SerializedFirma {
   visitInformesId: string | null;
   visitAcordadaId: string | null;
   visitEntregaId: string | null;
+  colleague: FirmaColleague;
   createdByUser: FirmaUser;
   actions: FirmaAction[];
   createdAt: string;

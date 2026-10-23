@@ -5,6 +5,8 @@ import { isSignatureStatus } from "@/lib/signatures";
 import type { Prisma } from "@/generated/prisma/client";
 import { FirmasClient } from "./_components/firmas-client";
 import { serializeProposal } from "./_components/serialize";
+import { signatureInclude } from "@/lib/api/signatures";
+import { HIDDEN_PROPERTY_SOURCES } from "@/lib/domain/types";
 
 const PAGE_SIZE = 20;
 
@@ -43,33 +45,11 @@ export default async function FirmasPage({ searchParams }: Readonly<Props>) {
     ];
   }
 
-  const include = {
-    property: {
-      select: {
-        id: true,
-        address: true,
-        city: true,
-        zone: true,
-        type: true,
-        status: true,
-        operationType: true,
-        coverImageUrl: true,
-        photos: true,
-      },
-    },
-    createdByUser: { select: { id: true, email: true, fullName: true, avatarUrl: true } },
-    actions: {
-      orderBy: [{ createdAt: "desc" }],
-      include: {
-        createdByUser: { select: { id: true, email: true, fullName: true, avatarUrl: true } },
-      },
-    },
-  } satisfies Prisma.SignatureProposalInclude;
 
   const [items, total, kpiBuckets, properties] = await Promise.all([
     prisma.signatureProposal.findMany({
       where,
-      include,
+      include: signatureInclude,
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
       skip: (page - 1) * limit,
       take: limit,
@@ -80,6 +60,7 @@ export default async function FirmasPage({ searchParams }: Readonly<Props>) {
       _count: { _all: true },
     }),
     prisma.property.findMany({
+      where: { source: { notIn: HIDDEN_PROPERTY_SOURCES } },
       select: { id: true, address: true, city: true, zone: true, operationType: true },
       orderBy: [{ address: "asc" }],
       take: 500,

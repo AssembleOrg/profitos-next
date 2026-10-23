@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { PropiedadesClient } from "./_components/propiedades-client";
 import { Prisma } from "@/generated/prisma/client";
+import { HIDDEN_PROPERTY_SOURCES } from "@/lib/domain/types";
 
 const PAGE_SIZE = 20;
 
@@ -49,7 +50,7 @@ export default async function PropiedadesPage({ searchParams }: Props) {
 
   // Las fichas mínimas de traspasos de administración (sólo dirección) viven
   // en Alquileres, no en el catálogo.
-  const andFilters: Prisma.PropertyWhereInput[] = [{ source: { not: "traspaso" } }];
+  const andFilters: Prisma.PropertyWhereInput[] = [{ source: { notIn: HIDDEN_PROPERTY_SOURCES } }];
 
   if (q) {
     andFilters.push({
@@ -122,7 +123,7 @@ export default async function PropiedadesPage({ searchParams }: Props) {
       take: limit,
     }),
     prisma.property.count({ where }),
-    prisma.property.count({ where: { source: { not: "traspaso" } } }),
+    prisma.property.count({ where: { source: { notIn: HIDDEN_PROPERTY_SOURCES } } }),
     user.role === "admin"
       ? prisma.user.findMany({
           select: { id: true, fullName: true, email: true },

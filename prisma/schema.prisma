@@ -441,6 +441,14 @@ model SignatureProposal {
   visitAcordadaId    String?                   @map("visit_acordada_id")
   visitEntregaId     String?                   @map("visit_entrega_id")
 
+  // Operación con colega: otra inmobiliaria (y su agente) con la que se
+  // comparten los honorarios. sharePercent = % de NUESTROS honorarios que se le da.
+  withColleague         Boolean  @default(false) @map("with_colleague")
+  colleagueAgencyId     String?  @map("colleague_agency_id")
+  colleagueAgency       Agency?  @relation(fields: [colleagueAgencyId], references: [id], onDelete: SetNull)
+  colleagueName         String?  @map("colleague_name")
+  colleagueSharePercent Float?   @map("colleague_share_percent")
+
   createdByUserId    String                    @map("created_by_user_id")
   createdByUser      User                      @relation("SignatureProposalCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
   actions            SignatureProposalAction[]
@@ -452,6 +460,7 @@ model SignatureProposal {
   @@index([status])
   @@index([createdByUserId])
   @@index([reservationExpiresAt])
+  @@index([withColleague])
   @@map("jp_signature_proposals")
 }
 
@@ -779,6 +788,7 @@ model Agency {
   address   String?
   phone     String?
   entries   AccountEntry[]
+  signatures SignatureProposal[]
   createdAt DateTime       @default(now()) @map("created_at")
   updatedAt DateTime       @updatedAt @map("updated_at")
 
