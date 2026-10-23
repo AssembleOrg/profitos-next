@@ -9,10 +9,14 @@ import { fromISO, fromJSDate } from "@/lib/datetime";
 import type { Prisma } from "@/generated/prisma/client";
 import { fetchCostearExpenses, type CostearExpense } from "@/lib/costear/client";
 import {
+  agentCommissionAmount,
   buildReport,
   CURRENCIES,
+  deriveAgentCommission,
+  isAccountArea,
   isCurrency,
   RENTAL_COMMISSION_CATEGORY_ID,
+  type AccountArea,
   type AccountMovement,
   type AccountReport,
   type Currency,
@@ -30,6 +34,8 @@ export interface MovementFilters {
   agentUserId?: string;
   isShared?: boolean;
   source?: MovementSource;
+  /** Vista por área: solo movimientos de categorías de esa área. Sin área = General. */
+  area?: AccountArea;
 }
 
 export interface ReportOptions {
@@ -60,7 +66,23 @@ function manualWhere(filters: MovementFilters, beforeRange = false): Prisma.Acco
   if (filters.currency) where.currency = filters.currency;
   if (filters.agentUserId) where.agentUserId = filters.agentUserId;
   if (filters.isShared !== undefined) where.isShared = filters.isShared;
+  if (filters.area) where.category = { is: { area: filters.area } };
   return where;
+}
+
+/** Ingresos con agente y comisión cargada: originan el egreso "Comisión de agente". */
+function commissionParentsWhere(filters: MovementFilters, beforeRange = false): Prisma.AccountEntryWhereInput {
+  return {
+    ...manualWhere({ ...filters, type: "income" }, beforeRange),
+    agentUserId: filters.agentUserId ?? { not: null },
+    agentPercentage: { gt: 0 },
+  };
+}
+
+/** ¿Corresponde sumar las comisiones de agente derivadas con estos filtros? */
+function shouldIncludeAgentCommissions(filters: MovementFilters): boolean {
+  if (filters.source && filters.source !== "manual" && filters.source !== "agent_commission") return false;
+  return filters.type !== "income";
 }
 
 function shouldIncludeRental(filters: MovementFilters): boolean {
@@ -69,6 +91,8 @@ function shouldIncludeRental(filters: MovementFilters): boolean {
   if (filters.categoryId && filters.categoryId !== RENTAL_COMMISSION_CATEGORY_ID) return false;
   // Las comisiones de alquiler nunca son "compartidas".
   if (filters.isShared === true) return false;
+  // Las comisiones de alquiler son del área Administración.
+  if (filters.area && filters.area !== "administracion") return false;
   return true;
 }
 
@@ -91,7 +115,7 @@ function rentalWhere(filters: MovementFilters, beforeRange = false): Prisma.Rent
 }
 
 const manualInclude = {
-  category: { select: { id: true, name: true, color: true } },
+  category: { select: { id: true, name: true, color: true, area: true } },
   agentUser: { select: { id: true, fullName: true, email: true } },
   property: { select: { id: true, address: true } },
   sharedAgency: { select: { id: true, name: true } },
@@ -120,6 +144,7 @@ function mapManual(entry: Prisma.AccountEntryGetPayload<{ include: typeof manual
     categoryId: entry.categoryId,
     categoryName: entry.category?.name ?? null,
     categoryColor: entry.category?.color ?? null,
+    area: isAccountArea(entry.category?.area) ? entry.category.area : null,
     amount: entry.amount,
     currency: entry.currency as Currency,
     date: entry.date.toISOString().slice(0, 10),
@@ -128,6 +153,7 @@ function mapManual(entry: Prisma.AccountEntryGetPayload<{ include: typeof manual
     agentName: userName(entry.agentUser),
     propertyId: entry.propertyId,
     propertyAddress: entry.property?.address ?? null,
+    feePercentage: entry.feePercentage,
     agentPercentage: entry.agentPercentage,
     agentShareType: (entry.agentShareType as "percent" | "amount") ?? "percent",
     isShared: entry.isShared,
@@ -149,6 +175,7 @@ function mapRental(tx: Prisma.RentalPaymentTransactionGetPayload<{ include: type
     categoryId: RENTAL_COMMISSION_CATEGORY_ID,
     categoryName: "Comisión de alquiler",
     categoryColor: "#10b981",
+    area: "administracion",
     amount: tx.commissionAmount,
     currency: (contract.currency as Currency) ?? "ARS",
     date: fromJSDate(tx.paidAt).toISODate() ?? tx.paidAt.toISOString().slice(0, 10),
@@ -157,6 +184,7 @@ function mapRental(tx: Prisma.RentalPaymentTransactionGetPayload<{ include: type
     agentName: userName(tx.createdByUser),
     propertyId: contract.property?.id ?? null,
     propertyAddress: contract.property?.address ?? null,
+    feePercentage: null,
     agentPercentage: null,
     agentShareType: "percent",
     isShared: false,
@@ -178,6 +206,7 @@ function mapCostear(e: CostearExpense): AccountMovement {
     categoryId: null,
     categoryName: e.title?.trim() || e.merchant?.trim() || "Gasto personal",
     categoryColor: null,
+    area: null,
     amount: e.amountMinor / 100,
     currency: e.currency as Currency,
     date: e.spentAt.slice(0, 10),
@@ -186,6 +215,7 @@ function mapCostear(e: CostearExpense): AccountMovement {
     agentName: null,
     propertyId: null,
     propertyAddress: null,
+    feePercentage: null,
     agentPercentage: null,
     agentShareType: "percent",
     isShared: false,
@@ -209,6 +239,8 @@ function shouldIncludeCostear(filters: MovementFilters, includeCostear: boolean)
   if (filters.categoryId) return false; // categorías de negocio no aplican
   if (filters.agentUserId) return false;
   if (filters.isShared === true) return false;
+  // Los gastos personales no son de ningún área: solo en la vista General.
+  if (filters.area) return false;
   return true;
 }
 
@@ -240,16 +272,20 @@ export async function getMovements(
   const includeRental = shouldIncludeRental(filters);
   const includeCostear = Boolean(phone) && shouldIncludeCostear(filters, true);
   const onlyCostear = filters.source === "costear";
+  const onlyAgent = filters.source === "agent_commission";
+  const includeAgent = shouldIncludeAgentCommissions(filters);
+  // Si el filtro de tipo deja afuera los ingresos, los que originan comisiones se traen aparte.
+  const needParents = includeAgent && (filters.type === "expense" || onlyAgent);
 
-  const [manual, rental, costear] = await Promise.all([
-    filters.source === "rental_commission" || onlyCostear
+  const [manual, rental, costear, parents] = await Promise.all([
+    filters.source === "rental_commission" || onlyCostear || onlyAgent
       ? Promise.resolve([])
       : prisma.accountEntry.findMany({
           where: manualWhere(filters),
           include: manualInclude,
           orderBy: [{ date: "desc" }, { createdAt: "desc" }],
         }),
-    includeRental && !onlyCostear
+    includeRental && !onlyCostear && !onlyAgent
       ? prisma.rentalPaymentTransaction.findMany({
           where: rentalWhere(filters),
           include: rentalInclude,
@@ -257,9 +293,21 @@ export async function getMovements(
         })
       : Promise.resolve([]),
     includeCostear && phone ? loadCostear(phone, filters) : Promise.resolve([]),
+    needParents
+      ? prisma.accountEntry.findMany({ where: commissionParentsWhere(filters), include: manualInclude })
+      : Promise.resolve([]),
   ]);
 
-  return [...manual.map(mapManual), ...rental.map(mapRental), ...costear];
+  const manualMovements = manual.map(mapManual);
+  const commissionSource = needParents ? parents.map(mapManual) : manualMovements;
+  const commissions = includeAgent
+    ? commissionSource
+        .filter((m) => !filters.agentUserId || m.agentUserId === filters.agentUserId)
+        .map(deriveAgentCommission)
+        .filter((m): m is AccountMovement => m !== null)
+    : [];
+
+  return [...manualMovements, ...rental.map(mapRental), ...costear, ...commissions];
 }
 
 /**
@@ -276,7 +324,26 @@ async function getOpeningBalances(filters: MovementFilters): Promise<OpeningByCu
 
   const tasks: Promise<void>[] = [];
 
-  if (filters.source !== "rental_commission") {
+  if (shouldIncludeAgentCommissions(filters)) {
+    tasks.push(
+      prisma.accountEntry
+        .findMany({
+          where: commissionParentsWhere(filters, true),
+          select: { amount: true, currency: true, agentUserId: true, agentPercentage: true, agentShareType: true },
+        })
+        .then((rows) => {
+          for (const row of rows) {
+            const commission = agentCommissionAmount({
+              ...row,
+              agentShareType: row.agentShareType === "amount" ? "amount" : "percent",
+            });
+            add(row.currency as Currency, -commission); // comisión de agente = egreso
+          }
+        })
+    );
+  }
+
+  if (filters.source !== "rental_commission" && filters.source !== "agent_commission" && filters.source !== "costear") {
     tasks.push(
       prisma.accountEntry
         .groupBy({

@@ -8,6 +8,7 @@ import {
   formatMoney,
   monthKey,
   monthLabel,
+  type AccountArea,
   type AccountMovement,
   type AccountReport,
   type Currency,
@@ -25,6 +26,7 @@ export interface SerializedCategory {
   kind: EntryType;
   color: string | null;
   isSystem: boolean;
+  area: AccountArea | null;
 }
 
 export interface SerializedAgent {
@@ -41,6 +43,8 @@ export interface AccountFilters {
   categoryId?: string;
   agentUserId?: string;
   isShared?: boolean;
+  /** Vista por área; undefined = General. */
+  area?: AccountArea;
 }
 
 interface Props {
@@ -94,6 +98,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
     if (merged.categoryId) qs.set("categoryId", merged.categoryId);
     if (merged.agentUserId) qs.set("agentUserId", merged.agentUserId);
     if (merged.isShared !== undefined) qs.set("shared", merged.isShared ? "1" : "0");
+    if (merged.area) qs.set("area", merged.area);
     router.push(`${pathname}?${qs.toString()}`);
   }
 
@@ -132,6 +137,8 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
     return [...map.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1));
   }, [report.movements]);
 
+  // En una vista por área, el filtro de categorías muestra solo las de esa área.
+  const filterCategories = filters.area ? categories.filter((c) => c.area === filters.area) : categories;
   const incomeCategories = categories.filter((c) => c.kind === "income" && !c.isSystem);
   const expenseCategories = categories.filter((c) => c.kind === "expense");
 
@@ -141,9 +148,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Estados de cuenta</h1>
-          <p className="mt-1 text-[12.5px] text-text-faint">
-            Caja de la inmobiliaria: ingresos (incluidas comisiones de alquiler) y egresos, por periodo y moneda.
-          </p>
+          <p className="mt-1 text-[12.5px] text-text-faint">{AREA_SUBTITLE[filters.area ?? "general"]}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -169,6 +174,32 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
           </button>
         </div>
       </header>
+
+      {/* Área: Administración / Ventas / General */}
+      <nav aria-label="Área" className="flex w-full items-center gap-1 rounded-full border border-border bg-surface p-1 sm:w-fit">
+        {AREA_TABS.map((tab) => {
+          const active = (filters.area ?? "general") === tab.value;
+          return (
+            <button
+              key={tab.value}
+              type="button"
+              aria-pressed={active}
+              onClick={() =>
+                apply({
+                  area: tab.value === "general" ? undefined : tab.value,
+                  // La categoría elegida puede no pertenecer a la nueva área.
+                  categoryId: undefined,
+                })
+              }
+              className={`flex-1 rounded-full px-5 py-2 text-[13.5px] transition-colors sm:flex-none ${
+                active ? "bg-dark font-bold text-dark-fg" : "font-semibold text-text-muted hover:text-text"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </nav>
 
       {/* Filtros */}
       <section className="flex flex-col gap-3 rounded-[20px] border border-border bg-surface p-4">
@@ -221,12 +252,12 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
             >
               <option value="">Todas</option>
               <optgroup label="Ingresos">
-                {categories.filter((c) => c.kind === "income").map((c) => (
+                {filterCategories.filter((c) => c.kind === "income").map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </optgroup>
               <optgroup label="Egresos">
-                {categories.filter((c) => c.kind === "expense").map((c) => (
+                {filterCategories.filter((c) => c.kind === "expense").map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </optgroup>
@@ -386,6 +417,18 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
   );
 }
 
+const AREA_TABS: { value: AccountArea | "general"; label: string }[] = [
+  { value: "general", label: "General" },
+  { value: "administracion", label: "Administración" },
+  { value: "ventas", label: "Ventas" },
+];
+
+const AREA_SUBTITLE: Record<AccountArea | "general", string> = {
+  general: "Movimiento general de la inmobiliaria: ingresos y egresos de todas las áreas, por periodo y moneda.",
+  administracion: "Administración: comisiones de alquiler y movimientos de categorías de administración.",
+  ventas: "Ventas: comisiones de venta y lo que se llevan los agentes, por periodo y moneda.",
+};
+
 // ── Subcomponentes ──────────────────────────────────────────────────
 
 function Field({ label, children }: Readonly<{ label: string; children: React.ReactNode }>) {
@@ -466,6 +509,7 @@ function MonthGroupHeader({ monthKeyStr, items }: Readonly<{ monthKeyStr: string
 function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: AccountMovement) => void }>) {
   const isRental = m.source === "rental_commission";
   const isCostear = m.source === "costear";
+  const isAgent = m.source === "agent_commission";
   const attachmentCount = Array.isArray(m.attachments) ? m.attachments.length : 0;
   const meta = [
     formatDate(m.date),
@@ -506,13 +550,18 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
               Auto · alquiler
             </span>
           )}
-          {m.isShared && (
+          {isAgent && (
+            <span className="hidden shrink-0 rounded-md bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint sm:inline">
+              Auto · agente
+            </span>
+          )}
+          {m.isShared && !isAgent && (
             <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint">
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>
               Compartido
             </span>
           )}
-          {attachmentCount > 0 && (
+          {attachmentCount > 0 && !isAgent && (
             <span className="inline-flex shrink-0 items-center gap-0.5 text-[10px] text-text-faint">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" /></svg>
               {attachmentCount}

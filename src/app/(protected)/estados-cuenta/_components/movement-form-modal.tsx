@@ -11,7 +11,7 @@ import { SelectField } from "@/components/ui/select-field";
 import { CurrencyInput } from "../../alquileres/_components/currency-input";
 import { MediaUploader } from "../../alquileres/_components/media-uploader";
 import type { RentalAttachment } from "../../alquileres/_components/voice-recorder";
-import type { AccountMovement, Currency, EntryType } from "@/lib/account";
+import { agentCommissionAmount, formatMoney, type AccountMovement, type Currency, type EntryType } from "@/lib/account";
 import type { SerializedAgent, SerializedCategory } from "./estados-cuenta-client";
 import { PropertyPicker } from "./property-picker";
 import { AgencyPicker } from "./agency-picker";
@@ -60,6 +60,7 @@ export function MovementFormModal({
   const [description, setDescription] = useState("");
   const [agentUserId, setAgentUserId] = useState("");
   const [agentPercentage, setAgentPercentage] = useState<string>("");
+  const [feePercentage, setFeePercentage] = useState<string>("");
   const [agentShareType, setAgentShareType] = useState<"percent" | "amount">("percent");
   const [isShared, setIsShared] = useState(false);
   const [sharedAgencyId, setSharedAgencyId] = useState<string | null>(null);
@@ -119,6 +120,7 @@ export function MovementFormModal({
       setDescription(editing.description ?? "");
       setAgentUserId(editing.agentUserId ?? "");
       setAgentPercentage(editing.agentPercentage != null ? String(editing.agentPercentage) : "");
+      setFeePercentage(editing.feePercentage != null ? String(editing.feePercentage) : "");
       setAgentShareType(editing.agentShareType ?? "percent");
       setIsShared(editing.isShared ?? false);
       setSharedAgencyId(editing.sharedAgencyId ?? null);
@@ -136,6 +138,7 @@ export function MovementFormModal({
       setDescription("");
       setAgentUserId("");
       setAgentPercentage("");
+      setFeePercentage("");
       setAgentShareType("percent");
       setIsShared(false);
       setSharedAgencyId(null);
@@ -226,6 +229,17 @@ export function MovementFormModal({
     }
   }
 
+  // Vista previa: cuánto se lleva el agente en un ingreso (se descuenta como egreso).
+  const previewAgentAmount =
+    type === "income" && amount
+      ? agentCommissionAmount({
+          amount,
+          agentUserId: agentUserId || null,
+          agentPercentage: agentPercentage.trim() === "" ? null : Number(agentPercentage.replace(",", ".")),
+          agentShareType,
+        })
+      : 0;
+
   async function submit() {
     // El gasto personal (Costear) no necesita categoría; sí descripción.
     if (isCostear) {
@@ -292,6 +306,11 @@ export function MovementFormModal({
         return;
       }
     }
+    const parsedFee = feePercentage.trim() === "" ? null : Number(feePercentage.replace(",", "."));
+    if (type === "income" && parsedFee !== null && (!Number.isFinite(parsedFee) || parsedFee < 0 || parsedFee > 100)) {
+      toast.error("Los honorarios de la inmobiliaria deben ser un % entre 0 y 100");
+      return;
+    }
     setSubmitting(true);
     try {
       const payload = {
@@ -302,6 +321,8 @@ export function MovementFormModal({
         description: description.trim() || null,
         agentUserId: agentUserId || null,
         propertyId: propertyId || null,
+        // Honorarios de la inmobiliaria: % sobre el valor de la operación (solo ingresos).
+        feePercentage: type === "income" ? parsedFee : null,
         // Comisión del agente (% o monto fijo): obligatoria si hay agente.
         agentPercentage: agentUserId ? parsedPercentage : null,
         agentShareType,
@@ -574,6 +595,29 @@ export function MovementFormModal({
                       </div>
                     </div>
 
+                    {/* Honorarios de la inmobiliaria (solo ingresos): % sobre el valor de la operación */}
+                    {!isCostear && type === "income" && (
+                      <div>
+                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
+                          Honorarios de la inmobiliaria <span className="text-text-faint">(% de la operación, opcional)</span>
+                        </label>
+                        <div className="flex h-11 items-center rounded-[14px] border border-border bg-surface pr-3.5 focus-within:border-border-strong">
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            min={0}
+                            max={100}
+                            step="0.01"
+                            value={feePercentage}
+                            onChange={(e) => setFeePercentage(e.target.value)}
+                            placeholder="Ej. 3"
+                            className="min-w-0 flex-1 bg-transparent px-3.5 py-2 text-sm text-text focus:outline-none"
+                          />
+                          <span className="text-sm text-text-faint">%</span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Agente + comisión (no aplican a gastos personales de Costear) */}
                     {!isCostear && (
                     <div className={`grid grid-cols-1 gap-4 ${agentUserId ? "sm:grid-cols-2" : ""}`}>
@@ -593,7 +637,9 @@ export function MovementFormModal({
                       {agentUserId && (
                         <div>
                           <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
-                            Comisión del agente <span className="text-warning">(obligatoria)</span>
+                            Comisión del agente{" "}
+                            <span className="text-text-faint">{type === "income" ? "(% de este ingreso)" : ""}</span>{" "}
+                            <span className="text-warning">(obligatoria)</span>
                           </label>
                           <div className="flex h-11 items-center gap-1 rounded-[14px] border border-border bg-surface pr-1 focus-within:border-border-strong">
                             {agentShareType === "amount" && (
@@ -607,7 +653,7 @@ export function MovementFormModal({
                               step="0.01"
                               value={agentPercentage}
                               onChange={(e) => setAgentPercentage(e.target.value)}
-                              placeholder={agentShareType === "percent" ? "Ej. 50" : "0"}
+                              placeholder={agentShareType === "percent" ? "Ej. 20" : "0"}
                               className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-text focus:outline-none"
                             />
                             {/* Mini-selector dentro del input */}
@@ -635,6 +681,16 @@ export function MovementFormModal({
                         </div>
                       )}
                     </div>
+                    )}
+
+                    {!isCostear && previewAgentAmount > 0 && amount && (
+                      <p className="-mt-2 rounded-[12px] bg-bg px-3.5 py-2 text-[12px] text-text-muted">
+                        El agente se lleva{" "}
+                        <span className="font-semibold text-terra">{formatMoney(previewAgentAmount, currency)}</span>
+                        {" "}· queda para la inmobiliaria{" "}
+                        <span className="font-semibold text-olive-light">{formatMoney(amount - previewAgentAmount, currency)}</span>.
+                        {" "}El ingreso se registra completo y la comisión baja por egresos.
+                      </p>
                     )}
 
                     {!isCostear && (

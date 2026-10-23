@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { Sheet } from "../../_components/sheet";
 import { formatDate } from "@/lib/datetime";
-import { formatMoney, isWithinEditWindow, EDIT_WINDOW_HOURS, type AccountMovement } from "@/lib/account";
+import {
+  agentCommissionAmount,
+  formatMoney,
+  isWithinEditWindow,
+  EDIT_WINDOW_HOURS,
+  type AccountMovement,
+} from "@/lib/account";
 import { AttachmentPreview } from "../../alquileres/_components/media-uploader";
 import type { RentalAttachment } from "../../alquileres/_components/voice-recorder";
 
@@ -54,9 +60,13 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
   if (!movement) return null;
 
   const isRental = movement.source === "rental_commission";
-  const canEdit = !isRental && isWithinEditWindow(movement.createdAt, nowMs);
-  const canDelete = !isRental && isAdmin;
-  const locked = !isRental && !isWithinEditWindow(movement.createdAt, nowMs);
+  const isAgent = movement.source === "agent_commission";
+  const isAuto = isRental || isAgent;
+  const canEdit = !isAuto && isWithinEditWindow(movement.createdAt, nowMs);
+  const canDelete = !isAuto && isAdmin;
+  const locked = !isAuto && !isWithinEditWindow(movement.createdAt, nowMs);
+  // En un ingreso con agente: cuánto se lleva el agente y cuánto queda para la inmobiliaria.
+  const agentAmount = movement.type === "income" ? agentCommissionAmount(movement) : 0;
 
   return (
     <Sheet
@@ -71,7 +81,12 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
               Auto · alquiler
             </span>
           )}
-          {movement.isShared && (
+          {isAgent && (
+            <span className="rounded-md bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint">
+              Auto · agente
+            </span>
+          )}
+          {movement.isShared && !isAgent && (
             <span className="rounded-md bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint">
               Compartido
             </span>
@@ -83,7 +98,9 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
           <span className="text-[11px] text-text-faint">
             {isRental
               ? "Generado desde un pago de alquiler"
-              : locked
+              : isAgent
+                ? "Se calcula desde el ingreso; se cambia editando ese ingreso"
+                : locked
                 ? `No editable (pasaron ${EDIT_WINDOW_HOURS} hs)`
                 : ""}
           </span>
@@ -130,14 +147,25 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
                     <Row label="Categoría" value={movement.categoryName ?? "—"} />
                     <Row label="Fecha" value={formatDate(movement.date)} />
                     {movement.agentName && <Row label="Agente" value={movement.agentName} />}
+                    {movement.feePercentage != null && !isAgent && (
+                      <Row label="Honorarios inmobiliaria" value={`${movement.feePercentage}%`} />
+                    )}
                     {movement.agentPercentage != null && (
                       <Row
                         label="Comisión del agente"
                         value={
                           movement.agentShareType === "amount"
                             ? formatMoney(movement.agentPercentage, movement.currency)
-                            : `${movement.agentPercentage}%`
+                            : agentAmount > 0
+                              ? `${movement.agentPercentage}% · ${formatMoney(agentAmount, movement.currency)}`
+                              : `${movement.agentPercentage}%`
                         }
+                      />
+                    )}
+                    {agentAmount > 0 && (
+                      <Row
+                        label="Queda para la inmobiliaria"
+                        value={formatMoney(movement.amount - agentAmount, movement.currency)}
                       />
                     )}
                     {movement.isShared && (

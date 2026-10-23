@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { now } from "@/lib/datetime";
 import { getAccountReport, type MovementFilters } from "@/lib/account/server";
-import { isCurrency, isEntryType } from "@/lib/account";
+import { isAccountArea, isCurrency, isEntryType } from "@/lib/account";
 import { getCostearPhoneForEmail } from "@/lib/costear/client";
 import { EstadosCuentaClient, type AccountFilters, type MovementPrefill } from "./_components/estados-cuenta-client";
 
@@ -19,6 +19,8 @@ interface Props {
     agentUserId?: string;
     shared?: string;
     view?: string;
+    /** Área: administracion | ventas. Sin área = General. */
+    area?: string;
     /** Atajo desde otras pantallas: abre "nuevo movimiento" precargado. */
     nuevo?: string;
     propiedad?: string;
@@ -48,6 +50,8 @@ export default async function EstadosCuentaPage({ searchParams }: Readonly<Props
   if (isCurrency(sp.currency)) filters.currency = sp.currency;
   if (sp.agentUserId) filters.agentUserId = sp.agentUserId;
   if (isShared !== undefined) filters.isShared = isShared;
+  const area = isAccountArea(sp.area) ? sp.area : undefined;
+  if (area) filters.area = area;
 
   const costearPhone = getCostearPhoneForEmail(user.email);
   const isCostearUser = costearPhone !== null;
@@ -88,6 +92,7 @@ export default async function EstadosCuentaPage({ searchParams }: Readonly<Props
     categoryId: sp.categoryId || undefined,
     agentUserId: sp.agentUserId || undefined,
     isShared,
+    area,
   };
 
   return (
@@ -99,6 +104,7 @@ export default async function EstadosCuentaPage({ searchParams }: Readonly<Props
         kind: c.kind as "income" | "expense",
         color: c.color,
         isSystem: c.isSystem,
+        area: isAccountArea(c.area) ? c.area : null,
       }))}
       agents={agents.map((a) => ({ id: a.id, name: a.fullName?.trim() || a.email }))}
       filters={appliedFilters}

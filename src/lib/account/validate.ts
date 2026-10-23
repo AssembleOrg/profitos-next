@@ -13,6 +13,8 @@ export interface EntryBody {
   description?: string;
   agentUserId?: string | null;
   propertyId?: string | null;
+  /** Honorarios de la inmobiliaria: % sobre el valor de la operación (opcional). */
+  feePercentage?: number | null;
   /** Comisión del agente: % o monto fijo. Obligatoria si hay agente. */
   agentPercentage?: number | null;
   /** "percent" | "amount" — cómo interpretar agentPercentage. */
@@ -33,6 +35,7 @@ export interface ValidatedEntry {
   description: string | null;
   agentUserId: string | null;
   propertyId: string | null;
+  feePercentage: number | null;
   agentPercentage: number | null;
   agentShareType: "percent" | "amount";
   isShared: boolean;
@@ -47,7 +50,7 @@ export interface ValidatedEntry {
 export async function validateEntry(body: EntryBody): Promise<ValidatedEntry> {
   const {
     categoryId, amount, currency, date, description, agentUserId, propertyId,
-    agentPercentage, agentShareType, isShared, sharedAgencyId, attachments,
+    feePercentage, agentPercentage, agentShareType, isShared, sharedAgencyId, attachments,
   } = body;
 
   if (!categoryId) throw new AppError(400, "La categoría es obligatoria");
@@ -93,6 +96,14 @@ export async function validateEntry(body: EntryBody): Promise<ValidatedEntry> {
     normalizedShare = agentPercentage;
   }
 
+  let fee: number | null = null;
+  if (feePercentage !== undefined && feePercentage !== null) {
+    if (typeof feePercentage !== "number" || !Number.isFinite(feePercentage) || feePercentage < 0 || feePercentage > 100) {
+      throw new AppError(400, "Los honorarios de la inmobiliaria deben ser un % entre 0 y 100");
+    }
+    fee = feePercentage;
+  }
+
   // Inmobiliaria compartida: solo tiene sentido si el movimiento es compartido.
   const shared = isShared === true;
   let agencyId: string | null = null;
@@ -111,6 +122,7 @@ export async function validateEntry(body: EntryBody): Promise<ValidatedEntry> {
     description: description?.trim() || null,
     agentUserId: agentUserId || null,
     propertyId: propertyId || null,
+    feePercentage: fee,
     agentPercentage: normalizedShare,
     agentShareType: shareType,
     isShared: shared,

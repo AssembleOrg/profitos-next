@@ -716,6 +716,8 @@ model AccountCategory {
   kind       String
   color      String?
   isSystem   Boolean        @default(false) @map("is_system")
+  // Área del negocio: "administracion" (alquileres) | "ventas" | null (solo en la vista General)
+  area       String?
   sortOrder  Int            @default(0) @map("sort_order")
   archivedAt DateTime?      @map("archived_at")
   entries    AccountEntry[]
@@ -742,8 +744,10 @@ model AccountEntry {
   agentUser       User?            @relation("AccountEntryAgent", fields: [agentUserId], references: [id], onDelete: SetNull)
   propertyId      String?          @map("property_id")
   property        Property?        @relation(fields: [propertyId], references: [id], onDelete: SetNull)
-  // Valor informativo dado al agente (solo egresos). No participa de cálculos.
-  // El número va en agentPercentage; agentShareType indica si es % o monto fijo.
+  // Honorarios de la inmobiliaria: % sobre el valor de la operación. Informativo.
+  feePercentage   Float?           @map("fee_percentage")
+  // Comisión del agente: % sobre el monto del movimiento o monto fijo (agentShareType).
+  // En los ingresos con agente se descuenta como egreso automático en el reporte.
   agentPercentage Float?           @map("agent_percentage")
   // "percent" | "amount"
   agentShareType  String           @default("percent") @map("agent_share_type")

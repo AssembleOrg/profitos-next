@@ -3,7 +3,7 @@ import { withHandler, AppError } from "@/lib/api/handler";
 import { ok, created } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
-import { isEntryType } from "@/lib/account";
+import { isAccountArea, isEntryType } from "@/lib/account";
 
 /**
  * Lista las categorías de ingreso/egreso.
@@ -29,13 +29,13 @@ export const GET = withHandler(async (request: NextRequest) => {
 
 /**
  * Crea una categoría. La pueden crear todos los usuarios.
- * Body: { name, kind: 'income'|'expense', color? }
+ * Body: { name, kind: 'income'|'expense', color?, area?: 'administracion'|'ventas'|null }
  */
 export const POST = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
   await getAuthContext();
   const body = await request.json();
-  const { name, kind, color } = body as { name?: string; kind?: string; color?: string };
+  const { name, kind, color, area } = body as { name?: string; kind?: string; color?: string; area?: string | null };
 
   if (!name?.trim()) throw new AppError(400, "El nombre es obligatorio");
   if (!isEntryType(kind)) throw new AppError(400, "Tipo de categoría inválido (income/expense)");
@@ -56,6 +56,7 @@ export const POST = withHandler(async (request: NextRequest) => {
       name: name.trim(),
       kind,
       color: color?.trim() || null,
+      area: isAccountArea(area) ? area : null,
       sortOrder: (last?.sortOrder ?? -1) + 1,
     },
   });

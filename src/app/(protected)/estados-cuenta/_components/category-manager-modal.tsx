@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import type { EntryType } from "@/lib/account";
+import { AREA_LABEL, type AccountArea, type EntryType } from "@/lib/account";
 import { SelectField } from "@/components/ui/select-field";
 import { Sheet } from "../../_components/sheet";
 import type { SerializedCategory } from "./estados-cuenta-client";
@@ -23,6 +23,7 @@ export function CategoryManagerModal({ open, onOpenChange, categories, isAdmin }
   const [name, setName] = useState("");
   const [kind, setKind] = useState<EntryType>("income");
   const [color, setColor] = useState("#10b981");
+  const [area, setArea] = useState<AccountArea | "">("");
   const [busy, setBusy] = useState(false);
 
   async function add() {
@@ -35,7 +36,7 @@ export function CategoryManagerModal({ open, onOpenChange, categories, isAdmin }
       const res = await fetch("/api/estados-cuenta/categorias", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), kind, color }),
+        body: JSON.stringify({ name: name.trim(), kind, color, area: area || null }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message ?? "Error");
@@ -61,6 +62,25 @@ export function CategoryManagerModal({ open, onOpenChange, categories, isAdmin }
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message ?? "Error");
       toast.success("Categoría actualizada");
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo actualizar");
+    }
+  }
+
+  /** Sin área → Administración → Ventas → Sin área. */
+  async function cycleArea(cat: SerializedCategory) {
+    const next: AccountArea | null =
+      cat.area === null ? "administracion" : cat.area === "administracion" ? "ventas" : null;
+    try {
+      const res = await fetch(`/api/estados-cuenta/categorias/${cat.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ area: next }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.message ?? "Error");
+      toast.success(`"${cat.name}" → ${next ? AREA_LABEL[next] : "solo General"}`);
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo actualizar");
@@ -108,6 +128,16 @@ export function CategoryManagerModal({ open, onOpenChange, categories, isAdmin }
                       <option value="income">Ingreso</option>
                       <option value="expense">Egreso</option>
                     </SelectField>
+                    <SelectField
+                      value={area}
+                      onChange={(e) => setArea(e.target.value as AccountArea | "")}
+                      wrapperClassName="w-auto"
+                      aria-label="Área"
+                    >
+                      <option value="">Sin área</option>
+                      <option value="administracion">Administración</option>
+                      <option value="ventas">Ventas</option>
+                    </SelectField>
                     <input
                       type="color"
                       value={color}
@@ -125,10 +155,15 @@ export function CategoryManagerModal({ open, onOpenChange, categories, isAdmin }
                     </button>
                   </div>
 
+                  <p className="mb-3 text-[11.5px] text-text-faint">
+                    El área decide en qué vista aparece cada movimiento: Administración, Ventas o solo en General.
+                    Tocá la etiqueta de área de una categoría para cambiarla.
+                  </p>
+
                   {/* Listas */}
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <CategoryColumn title="Ingresos" items={income} isAdmin={isAdmin} onRename={rename} onRemove={remove} />
-                    <CategoryColumn title="Egresos" items={expense} isAdmin={isAdmin} onRename={rename} onRemove={remove} />
+                    <CategoryColumn title="Ingresos" items={income} isAdmin={isAdmin} onRename={rename} onRemove={remove} onCycleArea={cycleArea} />
+                    <CategoryColumn title="Egresos" items={expense} isAdmin={isAdmin} onRename={rename} onRemove={remove} onCycleArea={cycleArea} />
                   </div>
                 </div>
     </Sheet>
@@ -141,12 +176,14 @@ function CategoryColumn({
   isAdmin,
   onRename,
   onRemove,
+  onCycleArea,
 }: Readonly<{
   title: string;
   items: SerializedCategory[];
   isAdmin: boolean;
   onRename: (c: SerializedCategory) => void;
   onRemove: (c: SerializedCategory) => void;
+  onCycleArea: (c: SerializedCategory) => void;
 }>) {
   return (
     <div>
@@ -156,6 +193,13 @@ function CategoryColumn({
           <div key={c.id} className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2">
             <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: c.color ?? "#64748b" }} />
             <span className="min-w-0 flex-1 truncate text-sm text-text">{c.name}</span>
+            {c.isSystem ? (
+              c.area && <AreaChip area={c.area} />
+            ) : (
+              <button type="button" onClick={() => onCycleArea(c)} title="Cambiar área" className="shrink-0">
+                <AreaChip area={c.area} />
+              </button>
+            )}
             {c.isSystem ? (
               <span className="shrink-0 rounded-full bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint">
                 Sistema
@@ -187,5 +231,17 @@ function CategoryColumn({
         {items.length === 0 && <p className="text-xs text-text-faint">Sin categorías.</p>}
       </div>
     </div>
+  );
+}
+
+function AreaChip({ area }: Readonly<{ area: AccountArea | null }>) {
+  return (
+    <span
+      className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
+        area ? "bg-sage-chip text-olive-light" : "bg-bg text-text-faint"
+      }`}
+    >
+      {area ? AREA_LABEL[area] : "Sin área"}
+    </span>
   );
 }

@@ -3,9 +3,10 @@ import { withHandler, AppError } from "@/lib/api/handler";
 import { ok } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
+import { isAccountArea } from "@/lib/account";
 
 /**
- * Edita una categoría (nombre, color, archivar/desarchivar).
+ * Edita una categoría (nombre, color, área, archivar/desarchivar).
  * No se puede cambiar el `kind` (rompería los movimientos asociados).
  * Las categorías de sistema no se pueden editar.
  */
@@ -19,9 +20,14 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
   if (category.isSystem) throw new AppError(400, "Las categorías de sistema no se pueden editar");
 
   const body = await request.json();
-  const { name, color, archived } = body as { name?: string; color?: string | null; archived?: boolean };
+  const { name, color, archived, area } = body as {
+    name?: string;
+    color?: string | null;
+    archived?: boolean;
+    area?: string | null;
+  };
 
-  const data: { name?: string; color?: string | null; archivedAt?: Date | null } = {};
+  const data: { name?: string; color?: string | null; archivedAt?: Date | null; area?: string | null } = {};
 
   if (name !== undefined) {
     if (!name.trim()) throw new AppError(400, "El nombre no puede quedar vacío");
@@ -32,6 +38,10 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
     data.name = name.trim();
   }
   if (color !== undefined) data.color = color?.trim() || null;
+  if (area !== undefined) {
+    if (area !== null && !isAccountArea(area)) throw new AppError(400, "Área inválida (administracion/ventas)");
+    data.area = area;
+  }
   if (archived !== undefined) data.archivedAt = archived ? new Date() : null;
 
   const updated = await prisma.accountCategory.update({ where: { id }, data });

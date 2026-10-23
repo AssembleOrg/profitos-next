@@ -5,13 +5,31 @@
 
 export type Currency = "ARS" | "USD";
 export type EntryType = "income" | "expense";
-export type MovementSource = "manual" | "rental_commission" | "costear";
+export type MovementSource = "manual" | "rental_commission" | "costear" | "agent_commission";
+
+/** Área del negocio de una categoría. null = sin área (solo aparece en General). */
+export type AccountArea = "administracion" | "ventas";
+/** Vista de estados de cuenta: un área o el movimiento general de la empresa. */
+export type AccountView = AccountArea | "general";
+
+export const ACCOUNT_AREAS: AccountArea[] = ["administracion", "ventas"];
+export const AREA_LABEL: Record<AccountArea, string> = {
+  administracion: "Administración",
+  ventas: "Ventas",
+};
+
+export function isAccountArea(value: unknown): value is AccountArea {
+  return value === "administracion" || value === "ventas";
+}
 
 export const CURRENCIES: Currency[] = ["ARS", "USD"];
 export const ENTRY_TYPES: EntryType[] = ["income", "expense"];
 
 /** Categoría de sistema que usan las comisiones de alquiler virtuales. */
 export const RENTAL_COMMISSION_CATEGORY_ID = "sys_rental_commission";
+
+/** Prefijo de id de las comisiones de agente derivadas (`agent:<id del ingreso>`). */
+export const AGENT_COMMISSION_ID_PREFIX = "agent:";
 
 /** Ventana en horas durante la cual un movimiento manual puede editarse. */
 export const EDIT_WINDOW_HOURS = 72;
@@ -80,6 +98,48 @@ export function monthLabel(key: string): string {
   return `${MONTH_NAMES[idx] ?? month} ${year}`;
 }
 
+// ── Comisión del agente ────────────────────────────────────────────
+
+/**
+ * Monto que se lleva el agente: % sobre el monto del movimiento o monto fijo.
+ * 0 si no hay agente o comisión cargada.
+ */
+export function agentCommissionAmount(
+  m: Pick<AccountMovement, "amount" | "agentUserId" | "agentPercentage" | "agentShareType">
+): number {
+  if (!m.agentUserId || m.agentPercentage == null || !(m.agentPercentage > 0)) return 0;
+  const raw = m.agentShareType === "amount" ? m.agentPercentage : (m.amount * m.agentPercentage) / 100;
+  return Math.round(raw * 100) / 100;
+}
+
+/**
+ * Egreso automático "Comisión de agente" derivado de un ingreso con agente.
+ * Los ingresos se muestran completos; la comisión baja por egresos.
+ */
+export function deriveAgentCommission(income: AccountMovement): AccountMovement | null {
+  if (income.type !== "income" || income.source !== "manual") return null;
+  const amount = agentCommissionAmount(income);
+  if (amount <= 0) return null;
+  const share =
+    income.agentShareType === "amount"
+      ? "monto fijo"
+      : `${income.agentPercentage}% de ${formatMoney(income.amount, income.currency)}`;
+  return {
+    ...income,
+    id: `${AGENT_COMMISSION_ID_PREFIX}${income.id}`,
+    parentId: income.id,
+    source: "agent_commission",
+    type: "expense",
+    categoryId: null,
+    categoryName: "Comisión de agente",
+    categoryColor: "#f97316",
+    amount,
+    description: `${share}${income.categoryName ? ` · ${income.categoryName}` : ""}`,
+    feePercentage: null,
+    attachments: null,
+  };
+}
+
 // ── Shapes de lectura ──────────────────────────────────────────────
 
 export interface AccountMovement {
@@ -89,6 +149,8 @@ export interface AccountMovement {
   categoryId: string | null;
   categoryName: string | null;
   categoryColor: string | null;
+  /** Área de la categoría (las comisiones de alquiler son "administracion"). */
+  area: AccountArea | null;
   amount: number;
   currency: Currency;
   /** Fecha contable, ISO YYYY-MM-DD. */
@@ -98,7 +160,9 @@ export interface AccountMovement {
   agentName: string | null;
   propertyId: string | null;
   propertyAddress: string | null;
-  /** Comisión del agente (obligatoria si hay agente): % o monto fijo. */
+  /** Honorarios de la inmobiliaria: % sobre el valor de la operación (informativo). */
+  feePercentage: number | null;
+  /** Comisión del agente (obligatoria si hay agente): % del movimiento o monto fijo. */
   agentPercentage: number | null;
   /** "percent" | "amount" — cómo interpretar agentPercentage. */
   agentShareType: "percent" | "amount";
@@ -112,6 +176,8 @@ export interface AccountMovement {
   createdByName: string | null;
   /** ISO timestamp de creación (para la ventana de 72 hs). */
   createdAt: string;
+  /** Solo en comisiones de agente derivadas: id del ingreso que las origina. */
+  parentId?: string | null;
 }
 
 export interface MonthBucket {
