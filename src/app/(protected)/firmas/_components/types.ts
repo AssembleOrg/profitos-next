@@ -21,6 +21,14 @@ export interface FirmaProperty {
   source: string | null;
 }
 
+export interface FirmaOperation {
+  amount: number | null;
+  currency: "ARS" | "USD";
+  feePercentage: number | null;
+  /** Estado de los honorarios en estados de cuenta. */
+  receivable: "none" | "pending" | "collected";
+}
+
 export interface FirmaColleague {
   withColleague: boolean;
   agencyId: string | null;
@@ -31,7 +39,7 @@ export interface FirmaColleague {
 
 export interface FirmaAction {
   id: string;
-  type: "creation" | "nota" | "status_change" | "date_set" | "reservation_update" | "colleague_update";
+  type: "creation" | "nota" | "status_change" | "date_set" | "reservation_update" | "colleague_update" | "operation_update";
   fromStatus: SignatureStatus | null;
   toStatus: SignatureStatus | null;
   dateField: string | null;
@@ -59,6 +67,7 @@ export interface SerializedFirma {
   visitAcordadaId: string | null;
   visitEntregaId: string | null;
   colleague: FirmaColleague;
+  operation: FirmaOperation;
   createdByUser: FirmaUser;
   actions: FirmaAction[];
   createdAt: string;

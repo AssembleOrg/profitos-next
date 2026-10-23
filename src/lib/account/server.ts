@@ -23,7 +23,10 @@ import {
   type EntryType,
   type MovementSource,
   type OpeningByCurrency,
+  type SalesStats,
+  type SalesStatsGroup,
 } from "./index";
+import { computeSignatureFees } from "@/lib/signatures/fees";
 
 export interface MovementFilters {
   from?: string; // ISO date YYYY-MM-DD (inclusive)
@@ -52,7 +55,8 @@ function userName(user: { fullName: string | null; email: string } | null): stri
 }
 
 function manualWhere(filters: MovementFilters, beforeRange = false): Prisma.AccountEntryWhereInput {
-  const where: Prisma.AccountEntryWhereInput = {};
+  // Los honorarios "a cobrar" de firmas no son movimientos de caja todavía.
+  const where: Prisma.AccountEntryWhereInput = { status: "collected" };
   const dateFilter: Prisma.DateTimeFilter = {};
   if (beforeRange) {
     if (filters.from) dateFilter.lt = new Date(`${filters.from}T00:00:00.000Z`);
@@ -162,7 +166,10 @@ function mapManual(entry: Prisma.AccountEntryGetPayload<{ include: typeof manual
     attachments: entry.attachments ?? null,
     createdByUserId: entry.createdByUserId,
     createdByName: userName(entry.createdByUser),
-    createdAt: entry.createdAt.toISOString(),
+    // Al cobrar unos honorarios "a cobrar" la ventana de edición arranca de nuevo.
+    createdAt: (entry.collectedAt ?? entry.createdAt).toISOString(),
+    status: entry.status === "pending" ? "pending" : "collected",
+    signatureProposalId: entry.signatureProposalId,
   };
 }
 
@@ -194,6 +201,8 @@ function mapRental(tx: Prisma.RentalPaymentTransactionGetPayload<{ include: type
     createdByUserId: tx.createdByUserId,
     createdByName: userName(tx.createdByUser),
     createdAt: tx.createdAt.toISOString(),
+    status: "collected",
+    signatureProposalId: null,
   };
 }
 
@@ -225,6 +234,8 @@ function mapCostear(e: CostearExpense): AccountMovement {
     createdByUserId: "",
     createdByName: null,
     createdAt: e.createdAt,
+    status: "collected",
+    signatureProposalId: null,
   };
 }
 
@@ -384,16 +395,73 @@ async function getOpeningBalances(filters: MovementFilters): Promise<OpeningByCu
 }
 
 /**
+ * Honorarios de firmas pendientes de cobro. No dependen del rango de fechas
+ * (lo pendiente se muestra siempre); sí del área y la moneda.
+ */
+export async function getReceivables(filters: MovementFilters): Promise<AccountMovement[]> {
+  if (filters.area === "administracion") return [];
+  const where: Prisma.AccountEntryWhereInput = { status: "pending" };
+  if (filters.currency) where.currency = filters.currency;
+  if (filters.area) where.category = { is: { area: filters.area } };
+  const rows = await prisma.accountEntry.findMany({
+    where,
+    include: manualInclude,
+    orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+  });
+  return rows.map(mapManual);
+}
+
+/**
+ * Firmas de venta del rango (por fecha de reserva), sin las rechazadas:
+ * cuántas fueron 100% nuestras y cuántas compartidas con colega, cuántas
+ * cerradas (entrega de llaves) y nuestros honorarios en cada grupo.
+ */
+export async function getSalesStats(filters: MovementFilters): Promise<SalesStats> {
+  const date: Prisma.DateTimeFilter = {};
+  if (filters.from) date.gte = new Date(`${filters.from}T00:00:00.000Z`);
+  if (filters.to) date.lte = new Date(`${filters.to}T00:00:00.000Z`);
+  const rows = await prisma.signatureProposal.findMany({
+    where: {
+      status: { not: "propuesta_rechazada" },
+      ...(Object.keys(date).length > 0 ? { reservationDate: date } : {}),
+    },
+    select: {
+      status: true,
+      withColleague: true,
+      colleagueSharePercent: true,
+      operationAmount: true,
+      operationCurrency: true,
+      feePercentage: true,
+    },
+  });
+  const empty = (): SalesStatsGroup => ({ count: 0, closed: 0, fees: {} });
+  const stats: SalesStats = { total: rows.length, own: empty(), shared: empty() };
+  for (const r of rows) {
+    const group = r.withColleague ? stats.shared : stats.own;
+    group.count += 1;
+    if (r.status === "entrega_llaves") group.closed += 1;
+    const fees = computeSignatureFees(r);
+    if (fees && isCurrency(r.operationCurrency)) {
+      if (filters.currency && filters.currency !== r.operationCurrency) continue;
+      group.fees[r.operationCurrency] = (group.fees[r.operationCurrency] ?? 0) + fees.ours;
+    }
+  }
+  return stats;
+}
+
+/**
  * Reporte completo: lista de movimientos + desglose por moneda con saldo acumulado.
  */
 export async function getAccountReport(
   filters: MovementFilters,
   options: ReportOptions = {}
 ): Promise<AccountReport> {
-  const [movements, opening] = await Promise.all([
+  const [movements, opening, receivables, sales] = await Promise.all([
     getMovements(filters, options),
     getOpeningBalances(filters),
+    getReceivables(filters),
+    filters.area === "ventas" ? getSalesStats(filters) : Promise.resolve(null),
   ]);
   const currencies: Currency[] = filters.currency ? [filters.currency] : CURRENCIES;
-  return buildReport(movements, opening, currencies);
+  return { ...buildReport(movements, opening, currencies), receivables, sales };
 }

@@ -32,6 +32,8 @@ interface Props {
   isCostearOwner: boolean;
   /** Valores iniciales para un alta nueva (no aplica al editar). */
   prefill?: MovementPrefill | null;
+  /** `editing` son honorarios "a cobrar" de una firma: se registra el cobro. */
+  collecting?: boolean;
 }
 
 type Destino = "inmobiliaria" | "costear";
@@ -49,6 +51,7 @@ export function MovementFormModal({
   defaultDate,
   isCostearOwner,
   prefill = null,
+  collecting = false,
 }: Readonly<Props>) {
   const router = useRouter();
   const [type, setType] = useState<EntryType>("income");
@@ -116,7 +119,8 @@ export function MovementFormModal({
       setCategoryId(editing.categoryId ?? "");
       setAmount(editing.amount);
       setCurrency(editing.currency);
-      setDate(editing.date);
+      // Al cobrar, la fecha contable es la del cobro (hoy por defecto).
+      setDate(collecting ? now().toISODate()! : editing.date);
       setDescription(editing.description ?? "");
       setAgentUserId(editing.agentUserId ?? "");
       setAgentPercentage(editing.agentPercentage != null ? String(editing.agentPercentage) : "");
@@ -329,6 +333,7 @@ export function MovementFormModal({
         isShared,
         sharedAgencyId: isShared ? sharedAgencyId : null,
         attachments,
+        ...(collecting ? { collect: true } : {}),
       };
       const res = await fetch(
         editing ? `/api/estados-cuenta/movimientos/${editing.id}` : "/api/estados-cuenta/movimientos",
@@ -340,7 +345,7 @@ export function MovementFormModal({
       );
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message ?? "Error");
-      toast.success(editing ? "Movimiento actualizado" : "Movimiento registrado");
+      toast.success(collecting ? "Cobro registrado: ya suma en ingresos" : editing ? "Movimiento actualizado" : "Movimiento registrado");
       onOpenChange(false);
       router.refresh();
     } catch (error) {
@@ -354,7 +359,7 @@ export function MovementFormModal({
     <Sheet
       open={open}
       onClose={() => onOpenChange(false)}
-      title={editing ? "Editar movimiento" : "Nuevo movimiento"}
+      title={collecting ? "Registrar cobro de honorarios" : editing ? "Editar movimiento" : "Nuevo movimiento"}
       maxWidth="sm:max-w-[640px]"
       footer={
         <>
@@ -371,13 +376,21 @@ export function MovementFormModal({
             disabled={submitting}
             className="inline-flex h-11 items-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? "Guardando…" : editing ? "Guardar cambios" : "Registrar"}
+            {submitting ? "Guardando…" : collecting ? "Registrar cobro" : editing ? "Guardar cambios" : "Registrar"}
           </button>
         </>
       }
     >
                 <div>
                   <div className="flex flex-col gap-4">
+                    {collecting && (
+                      <p className="rounded-[14px] bg-sand-chip px-3.5 py-2.5 text-[12.5px] text-text-muted">
+                        Confirmá la fecha y el monto que entró. Si hay agente, su comisión baja como egreso.
+                        Desde ahora cuenta en ingresos y saldos.
+                      </p>
+                    )}
+                    {!collecting && (
+                    <>
                     {/* Tipo */}
                     <div className="flex items-center gap-0.5 rounded-full border border-border bg-bg p-1">
                       <button
@@ -403,6 +416,8 @@ export function MovementFormModal({
                         Egreso
                       </button>
                     </div>
+                    </>
+                    )}
 
                     {/* Destino: inmobiliaria vs gasto personal (Costear). Solo la dueña, solo egresos. */}
                     {isCostearOwner && type === "expense" && (

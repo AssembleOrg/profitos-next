@@ -61,7 +61,8 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
 
   const isRental = movement.source === "rental_commission";
   const isAgent = movement.source === "agent_commission";
-  const isAuto = isRental || isAgent;
+  const isPending = movement.status === "pending";
+  const isAuto = isRental || isAgent || isPending;
   const canEdit = !isAuto && isWithinEditWindow(movement.createdAt, nowMs);
   const canDelete = !isAuto && isAdmin;
   const locked = !isAuto && !isWithinEditWindow(movement.createdAt, nowMs);
@@ -96,7 +97,9 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
       footer={
         <>
           <span className="text-[11px] text-text-faint">
-            {isRental
+            {isPending
+              ? "Honorarios a cobrar de una firma: se cobran desde la sección A cobrar"
+              : isRental
               ? "Generado desde un pago de alquiler"
               : isAgent
                 ? "Se calcula desde el ingreso; se cambia editando ese ingreso"

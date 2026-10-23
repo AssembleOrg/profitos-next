@@ -4,7 +4,8 @@ import { created, paginated } from "@/lib/api/response";
 import { parsePagination, buildPaginatedResult, paginationToSkip } from "@/lib/api/pagination";
 import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
-import { describeColleague, parseColleague, signatureInclude } from "@/lib/api/signatures";
+import { describeColleague, parseColleague, parseOperation, signatureInclude } from "@/lib/api/signatures";
+import { syncSignatureReceivable } from "@/lib/api/signature-receivable";
 import { isSignatureStatus } from "@/lib/signatures";
 import {
   calculateReservationExpiration,
@@ -84,6 +85,7 @@ export const POST = withHandler(async (request: NextRequest) => {
   const quickAddress = typeof newPropertyAddress === "string" ? newPropertyAddress.trim().slice(0, 300) : "";
   if (!propertyId && !quickAddress) throw new AppError(400, "Falta la propiedad");
   const colleague = await parseColleague(body as Record<string, unknown>);
+  const operation = parseOperation(body as Record<string, unknown>);
   if (!reservationDate) throw new AppError(400, "La fecha de reserva es obligatoria");
   if (!Number.isInteger(reservationTermDays) || reservationTermDays! <= 0 || reservationTermDays! > 3650) {
     throw new AppError(400, "La vigencia debe ser un número entero entre 1 y 3650");
@@ -129,10 +131,11 @@ export const POST = withHandler(async (request: NextRequest) => {
         })
       ).id;
 
-    return tx.signatureProposal.create({
+    const createdProposal = await tx.signatureProposal.create({
       data: {
         propertyId: resolvedPropertyId,
         ...colleague,
+        ...operation,
         title: title?.trim() || null,
         description: description?.trim() || null,
         attachments: (attachments as Prisma.InputJsonValue) ?? undefined,
@@ -155,8 +158,11 @@ export const POST = withHandler(async (request: NextRequest) => {
           },
         },
       },
-      include: signatureInclude,
+      select: { id: true },
     });
+    // Honorarios "a cobrar" en estados de cuenta (si ya hay valor y %).
+    await syncSignatureReceivable(createdProposal.id, tx);
+    return tx.signatureProposal.findUniqueOrThrow({ where: { id: createdProposal.id }, include: signatureInclude });
   });
 
   return created(proposal, "Propuesta creada correctamente", path);

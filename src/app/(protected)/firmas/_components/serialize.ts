@@ -1,6 +1,6 @@
 import type { Attachment, SignatureStatus } from "@/lib/signatures";
 import type { ReservationDayType } from "@/lib/signatures/reservation-expiry";
-import type { FirmaAction, FirmaColleague, FirmaProperty, FirmaUser, SerializedFirma } from "./types";
+import type { FirmaAction, FirmaColleague, FirmaOperation, FirmaProperty, FirmaUser, SerializedFirma } from "./types";
 
 interface RawUser {
   id: string;
@@ -55,6 +55,10 @@ interface RawProposal {
   colleagueAgency: { id: string; name: string } | null;
   colleagueName: string | null;
   colleagueSharePercent: number | null;
+  operationAmount: number | null;
+  operationCurrency: string;
+  feePercentage: number | null;
+  accountEntries?: { status: string }[];
   createdByUser: RawUser;
   actions: RawAction[];
   createdAt: Date;
@@ -108,6 +112,20 @@ function toProperty(raw: RawProperty): FirmaProperty {
   };
 }
 
+function toOperation(raw: RawProposal): FirmaOperation {
+  const entries = raw.accountEntries ?? [];
+  return {
+    amount: raw.operationAmount,
+    currency: raw.operationCurrency === "ARS" ? "ARS" : "USD",
+    feePercentage: raw.feePercentage,
+    receivable: entries.some((e) => e.status === "collected")
+      ? "collected"
+      : entries.some((e) => e.status === "pending")
+        ? "pending"
+        : "none",
+  };
+}
+
 function toColleague(raw: Pick<RawProposal, "withColleague" | "colleagueAgency" | "colleagueName" | "colleagueSharePercent">): FirmaColleague {
   return {
     withColleague: raw.withColleague,
@@ -151,6 +169,7 @@ export function serializeProposal(raw: RawProposal): SerializedFirma {
     visitAcordadaId: raw.visitAcordadaId,
     visitEntregaId: raw.visitEntregaId,
     colleague: toColleague(raw),
+    operation: toOperation(raw),
     createdByUser: toUser(raw.createdByUser),
     actions: raw.actions.map(toAction),
     createdAt: raw.createdAt.toISOString(),
@@ -175,6 +194,10 @@ export function serializeFromApi(raw: unknown): SerializedFirma {
     withColleague: r.withColleague === true,
     colleagueName: (r.colleagueName as string | null) ?? null,
     colleagueSharePercent: (r.colleagueSharePercent as number | null) ?? null,
+    operationAmount: (r.operationAmount as number | null) ?? null,
+    operationCurrency: (r.operationCurrency as string) ?? "USD",
+    feePercentage: (r.feePercentage as number | null) ?? null,
+    accountEntries: (r.accountEntries as { status: string }[]) ?? [],
     reservationDate: iso(r.reservationDate),
     reservationExpiresAt: iso(r.reservationExpiresAt),
     dateProcessStarted: iso(r.dateProcessStarted),

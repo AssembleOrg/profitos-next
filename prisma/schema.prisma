@@ -449,6 +449,14 @@ model SignatureProposal {
   colleagueName         String?  @map("colleague_name")
   colleagueSharePercent Float?   @map("colleague_share_percent")
 
+  // Datos económicos de la operación: generan los honorarios "a cobrar".
+  operationAmount   Float?  @map("operation_amount")
+  // ARS | USD
+  operationCurrency String  @default("USD") @map("operation_currency")
+  // % de honorarios de la inmobiliaria sobre el valor de la operación
+  feePercentage     Float?  @map("fee_percentage")
+  accountEntries    AccountEntry[]
+
   createdByUserId    String                    @map("created_by_user_id")
   createdByUser      User                      @relation("SignatureProposalCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
   actions            SignatureProposalAction[]
@@ -765,6 +773,13 @@ model AccountEntry {
   // Inmobiliaria con la que se comparte el movimiento (solo si isShared).
   sharedAgencyId  String?          @map("shared_agency_id")
   sharedAgency    Agency?          @relation(fields: [sharedAgencyId], references: [id], onDelete: SetNull)
+  // "collected" = movimiento real | "pending" = honorarios a cobrar de una firma
+  // (no suma en ingresos ni saldos hasta que se cobra).
+  status          String           @default("collected")
+  collectedAt     DateTime?        @map("collected_at")
+  // Firma que originó los honorarios (a cobrar o ya cobrados).
+  signatureProposalId String?      @map("signature_proposal_id")
+  signatureProposal   SignatureProposal? @relation(fields: [signatureProposalId], references: [id], onDelete: SetNull)
   attachments     Json?
   createdByUserId String           @map("created_by_user_id")
   createdByUser   User             @relation("AccountEntryCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
@@ -778,6 +793,8 @@ model AccountEntry {
   @@index([agentUserId])
   @@index([isShared])
   @@index([sharedAgencyId])
+  @@index([status])
+  @@index([signatureProposalId])
   @@map("jp_account_entries")
 }
 

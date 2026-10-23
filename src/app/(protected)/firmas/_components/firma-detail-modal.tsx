@@ -18,7 +18,16 @@ import { useSignedUrls } from "./use-signed-urls";
 import { DateField } from "../../_components/date-field";
 import type { FirmaAction, SerializedFirma } from "./types";
 import { serializeActionFromApi, serializeFromApi } from "./serialize";
-import { ColleagueFields, colleaguePayload, draftFromColleague, type ColleagueDraft } from "./colleague-fields";
+import {
+  ColleagueFields,
+  colleaguePayload,
+  draftFromColleague,
+  draftFromOperation,
+  OperationFields,
+  operationPayload,
+  type ColleagueDraft,
+  type OperationDraft,
+} from "./colleague-fields";
 import {
   RESERVATION_DAY_TYPE_LABEL,
   RESERVATION_DAY_TYPES,
@@ -359,17 +368,25 @@ function ReservationPanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
 
 function ColleaguePanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
   const [draft, setDraft] = useState<ColleagueDraft>(() => draftFromColleague(firma.colleague));
+  const [operation, setOperation] = useState<OperationDraft>(() => draftFromOperation(firma.operation));
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setDraft(draftFromColleague(firma.colleague));
-  }, [firma.id, firma.colleague]);
+    setOperation(draftFromOperation(firma.operation));
+  }, [firma.id, firma.colleague, firma.operation]);
 
-  const dirty = JSON.stringify(draft) !== JSON.stringify(draftFromColleague(firma.colleague));
+  const dirty =
+    JSON.stringify(draft) !== JSON.stringify(draftFromColleague(firma.colleague)) ||
+    JSON.stringify(operation) !== JSON.stringify(draftFromOperation(firma.operation));
+  const collected = firma.operation.receivable === "collected";
 
   async function save() {
-    const payload = colleaguePayload(draft);
-    if (typeof payload === "string") return toast.error(payload);
+    const colleaguePart = colleaguePayload(draft);
+    if (typeof colleaguePart === "string") return toast.error(colleaguePart);
+    const operationPart = operationPayload(operation);
+    if (typeof operationPart === "string") return toast.error(operationPart);
+    const payload = { ...colleaguePart, ...operationPart };
     setBusy(true);
     try {
       const res = await fetch(`/api/firmas/${firma.id}`, {
@@ -380,7 +397,7 @@ function ColleaguePanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message ?? "Error");
       onUpdated(serializeFromApi(body.data));
-      toast.success("Datos del colega guardados");
+      toast.success(collected ? "Guardado (los honorarios ya estaban cobrados: no cambian)" : "Operación guardada");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo guardar");
     } finally {
@@ -391,7 +408,18 @@ function ColleaguePanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
   return (
     <section className="rounded-[16px] border border-border bg-surface p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h4 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Colega</h4>
+        <div className="flex items-center gap-2">
+          <h4 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Operación y honorarios</h4>
+          {firma.operation.receivable !== "none" && (
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                collected ? "bg-sage-chip text-olive-light" : "bg-sand-chip text-warning"
+              }`}
+            >
+              {collected ? "Cobrado" : "A cobrar"}
+            </span>
+          )}
+        </div>
         {dirty && (
           <button
             type="button"
@@ -403,7 +431,10 @@ function ColleaguePanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
           </button>
         )}
       </div>
-      <ColleagueFields value={draft} onChange={setDraft} disabled={busy} />
+      <div className="flex flex-col gap-4">
+        <ColleagueFields value={draft} onChange={setDraft} disabled={busy} />
+        <OperationFields value={operation} onChange={setOperation} colleague={draft} disabled={busy} />
+      </div>
     </section>
   );
 }
@@ -648,6 +679,13 @@ function ActionBadge({ action }: { action: FirmaAction }) {
     return (
       <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-text-muted">
         {meta?.shortLabel ?? "Fecha"}
+      </span>
+    );
+  }
+  if (action.type === "operation_update") {
+    return (
+      <span className="rounded-full bg-sage-chip px-2 py-0.5 text-[10px] font-semibold text-olive-light">
+        Operación
       </span>
     );
   }

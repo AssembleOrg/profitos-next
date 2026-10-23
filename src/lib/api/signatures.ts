@@ -20,6 +20,7 @@ export const signatureInclude = {
     },
   },
   colleagueAgency: { select: { id: true, name: true } },
+  accountEntries: { select: { status: true } },
   createdByUser: { select: { id: true, email: true, fullName: true, avatarUrl: true } },
   actions: {
     orderBy: [{ createdAt: "desc" }],
@@ -56,6 +57,31 @@ export async function parseColleague(body: Record<string, unknown>): Promise<Col
     throw new AppError(400, "Indicá el % de honorarios que se comparte con el colega (0 a 100)");
   }
   return { withColleague: true, colleagueAgencyId: agencyId, colleagueName: name, colleagueSharePercent: share };
+}
+
+export interface OperationData {
+  operationAmount: number | null;
+  operationCurrency: "ARS" | "USD";
+  feePercentage: number | null;
+}
+
+/** Valor de la operación + % de honorarios (ambos opcionales hasta que se conozcan). */
+export function parseOperation(body: Record<string, unknown>): OperationData {
+  const amount = body.operationAmount;
+  const fee = body.feePercentage;
+  const currency = body.operationCurrency ?? "USD";
+  if (currency !== "ARS" && currency !== "USD") throw new AppError(400, "Moneda inválida (ARS/USD)");
+  if (amount != null && (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0)) {
+    throw new AppError(400, "El valor de la operación debe ser mayor a cero");
+  }
+  if (fee != null && (typeof fee !== "number" || !Number.isFinite(fee) || fee < 0 || fee > 100)) {
+    throw new AppError(400, "Los honorarios deben ser un % entre 0 y 100");
+  }
+  return {
+    operationAmount: (amount as number | null | undefined) ?? null,
+    operationCurrency: currency,
+    feePercentage: (fee as number | null | undefined) ?? null,
+  };
 }
 
 /** Texto para la línea de tiempo cuando cambia el colega. */

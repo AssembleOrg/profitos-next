@@ -12,6 +12,8 @@ import {
   type AccountMovement,
   type AccountReport,
   type Currency,
+  type SalesStats,
+  type SalesStatsGroup,
   type EntryType,
 } from "@/lib/account";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -77,10 +79,24 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
   // La precarga vale sólo para la primera apertura; después el alta arranca vacía.
   const [activePrefill, setActivePrefill] = useState<MovementPrefill | null>(prefill);
   const [editing, setEditing] = useState<AccountMovement | null>(null);
+  const [collecting, setCollecting] = useState(false);
   const [categorysOpen, setCategoriesOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [viewing, setViewing] = useState<AccountMovement | null>(null);
   const nowMs = Date.now();
+
+  function openCollect(m: AccountMovement) {
+    setEditing(m);
+    setCollecting(true);
+    setFormOpen(true);
+  }
+
+  // A cobrar por moneda (no entra en ingresos ni en el neto).
+  const receivableByCurrency = useMemo(() => {
+    const map = new Map<Currency, number>();
+    for (const r of report.receivables) map.set(r.currency, (map.get(r.currency) ?? 0) + r.amount);
+    return map;
+  }, [report.receivables]);
 
   function openDetail(m: AccountMovement) {
     setViewing(m);
@@ -302,6 +318,14 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
               <Stat label="Egresos" value={formatMoney(cr.totalExpense, cr.currency)} tone="expense" />
               <Stat label="Neto" value={formatMoney(cr.net, cr.currency)} tone={cr.net >= 0 ? "income" : "expense"} />
             </div>
+            {(receivableByCurrency.get(cr.currency) ?? 0) > 0 && (
+              <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
+                <span className="text-text-faint">A cobrar (firmas) · no entra al neto</span>
+                <span className="font-display font-bold text-warning">
+                  {formatMoney(receivableByCurrency.get(cr.currency) ?? 0, cr.currency)}
+                </span>
+              </div>
+            )}
             {isCostearOwner && cr.personalExpense > 0 && (
               <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
                 <span className="flex items-center gap-1.5 text-text-faint">
@@ -329,6 +353,38 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
           </div>
         ))}
       </section>
+
+      {report.sales && <SalesStatsStrip stats={report.sales} />}
+
+      {/* A cobrar: honorarios de firmas pendientes */}
+      {report.receivables.length > 0 && (
+        <section className="overflow-hidden rounded-[20px] border border-border bg-surface">
+          <div className="flex items-center justify-between gap-2 border-b border-border bg-sand-chip px-4 py-2.5">
+            <span className="font-display text-sm font-semibold text-text">A cobrar</span>
+            <span className="text-[11px] text-text-muted">Honorarios de firmas · pasan a ingreso al cobrarlos</span>
+          </div>
+          <div className="divide-y divide-border">
+            {report.receivables.map((r) => (
+              <div key={r.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13.5px] font-bold text-text">{r.propertyAddress ?? r.categoryName ?? "Firma"}</p>
+                  <p className="truncate text-[11.5px] text-text-faint">{r.description}</p>
+                </div>
+                <span className="shrink-0 font-display text-sm font-bold text-warning">
+                  {formatMoney(r.amount, r.currency)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => openCollect(r)}
+                  className="inline-flex h-9 shrink-0 items-center rounded-full bg-dark px-4 text-[12.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
+                >
+                  Cobrar
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Contenido */}
       {report.movements.length === 0 ? (
@@ -382,6 +438,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
           setFormOpen(v);
           if (!v) {
             setEditing(null);
+            setCollecting(false);
             if (activePrefill) {
               setActivePrefill(null);
               router.replace(pathname); // saca ?nuevo=… para que recargar no reabra el alta
@@ -390,6 +447,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
         }}
         prefill={activePrefill}
         editing={editing}
+        collecting={collecting}
         incomeCategories={incomeCategories}
         expenseCategories={expenseCategories}
         agents={agents}
@@ -430,6 +488,50 @@ const AREA_SUBTITLE: Record<AccountArea | "general", string> = {
 };
 
 // ── Subcomponentes ──────────────────────────────────────────────────
+
+function feesLabel(fees: SalesStatsGroup["fees"]): string {
+  const parts = (Object.entries(fees) as [Currency, number][])
+    .filter(([, v]) => v > 0)
+    .map(([cur, v]) => formatMoney(v, cur));
+  return parts.length > 0 ? parts.join(" + ") : "sin honorarios cargados";
+}
+
+/** Firmas de venta del periodo: 100% nuestras vs compartidas con colega. */
+function SalesStatsStrip({ stats }: Readonly<{ stats: SalesStats }>) {
+  const groups = [
+    { label: "100% nuestras", g: stats.own },
+    { label: "Compartidas con colega", g: stats.shared },
+  ];
+  return (
+    <section className="rounded-[20px] border border-border bg-surface p-4">
+      <div className="mb-3 flex items-baseline justify-between gap-2">
+        <h2 className="font-display text-base font-semibold text-text">Ventas del periodo</h2>
+        <span className="text-[11.5px] text-text-faint">
+          {stats.total} firma{stats.total === 1 ? "" : "s"} (por fecha de reserva, sin rechazadas)
+        </span>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {groups.map(({ label, g }) => (
+          <div key={label} className="rounded-[14px] bg-bg px-3.5 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">{label}</p>
+            <p className="mt-1 font-display text-xl font-bold text-text">
+              {g.count}
+              {stats.total > 0 && (
+                <span className="ml-1.5 text-xs font-semibold text-text-faint">
+                  {Math.round((g.count / stats.total) * 100)}%
+                </span>
+              )}
+            </p>
+            <p className="text-[11.5px] text-text-muted">
+              {g.closed} cerrada{g.closed === 1 ? "" : "s"} · {g.count - g.closed} en curso
+            </p>
+            <p className="mt-0.5 text-[11.5px] text-text-muted">Nuestros honorarios: {feesLabel(g.fees)}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function Field({ label, children }: Readonly<{ label: string; children: React.ReactNode }>) {
   return (

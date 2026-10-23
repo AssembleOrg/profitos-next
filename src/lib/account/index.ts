@@ -178,6 +178,24 @@ export interface AccountMovement {
   createdAt: string;
   /** Solo en comisiones de agente derivadas: id del ingreso que las origina. */
   parentId?: string | null;
+  /** "pending" = honorarios a cobrar de una firma (no suman hasta cobrarse). */
+  status: "collected" | "pending";
+  /** Firma que originó los honorarios. */
+  signatureProposalId: string | null;
+}
+
+/** Firmas de venta del periodo: propias vs compartidas con colega. */
+export interface SalesStatsGroup {
+  count: number;
+  closed: number;
+  /** Nuestros honorarios (después de compartir) por moneda. */
+  fees: Partial<Record<Currency, number>>;
+}
+
+export interface SalesStats {
+  total: number;
+  own: SalesStatsGroup;
+  shared: SalesStatsGroup;
 }
 
 export interface MonthBucket {
@@ -213,6 +231,10 @@ export interface CurrencyReport {
 export interface AccountReport {
   /** Movimientos del rango filtrado, ordenados por fecha desc. (todas las monedas). */
   movements: AccountMovement[];
+  /** Honorarios de firmas a cobrar (pendientes, sin importar el rango). */
+  receivables: AccountMovement[];
+  /** Estadística de firmas de venta (solo en la vista Ventas). */
+  sales: SalesStats | null;
   /** Reporte por moneda con saldo acumulado mensual. */
   byCurrency: CurrencyReport[];
 }
@@ -301,5 +323,5 @@ export function buildReport(
     };
   });
 
-  return { movements: sorted, byCurrency };
+  return { movements: sorted, byCurrency, receivables: [], sales: null };
 }

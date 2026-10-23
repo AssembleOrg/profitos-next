@@ -8,6 +8,7 @@ import {
   describeColleague,
   getProposalOrThrow,
   parseColleague,
+  parseOperation,
   signatureInclude,
   syncDateVisit,
 } from "@/lib/api/signatures";
@@ -17,6 +18,8 @@ import {
   type SignatureDateField,
 } from "@/lib/signatures";
 import type { Prisma } from "@/generated/prisma/client";
+import { syncSignatureReceivable } from "@/lib/api/signature-receivable";
+import { formatMoney } from "@/lib/account";
 import {
   calculateReservationExpiration,
   buildReservationReminderDates,
@@ -128,6 +131,29 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
     }
   }
 
+  // Valor de la operación y honorarios: se actualizan como una unidad.
+  if (["operationAmount", "operationCurrency", "feePercentage"].some((k) => k in body)) {
+    const op = parseOperation({
+      operationAmount: "operationAmount" in body ? body.operationAmount : proposal.operationAmount,
+      operationCurrency: "operationCurrency" in body ? body.operationCurrency : proposal.operationCurrency,
+      feePercentage: "feePercentage" in body ? body.feePercentage : proposal.feePercentage,
+    });
+    if (
+      op.operationAmount !== proposal.operationAmount ||
+      op.operationCurrency !== proposal.operationCurrency ||
+      op.feePercentage !== proposal.feePercentage
+    ) {
+      Object.assign(data, op);
+      auditActions.push({
+        type: "operation_update",
+        description:
+          op.operationAmount != null
+            ? `Operación: ${formatMoney(op.operationAmount, op.operationCurrency)}${op.feePercentage != null ? ` · honorarios ${op.feePercentage}%` : ""}`
+            : "Operación sin valor cargado",
+      });
+    }
+  }
+
   // Status change
   if (typeof body.status === "string" && body.status !== proposal.status) {
     if (!isSignatureStatus(body.status)) throw new AppError(400, "Estado inválido");
@@ -200,10 +226,14 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
         },
       }),
     },
-    include: signatureInclude,
+    select: { id: true },
   });
 
-  return ok(updated, "Propuesta actualizada correctamente", path);
+  // Recalcula (o borra si se rechazó) los honorarios "a cobrar".
+  await syncSignatureReceivable(updated.id);
+  const fresh = await getProposalOrThrow(updated.id);
+
+  return ok(fresh, "Propuesta actualizada correctamente", path);
 });
 
 export const DELETE = withHandler(async (request: NextRequest, context) => {
@@ -224,6 +254,8 @@ export const DELETE = withHandler(async (request: NextRequest, context) => {
     await prisma.visit.deleteMany({ where: { id: { in: visitIds } } });
   }
 
+  // Los honorarios pendientes se van con la firma; los ya cobrados quedan.
+  await prisma.accountEntry.deleteMany({ where: { signatureProposalId: id, status: "pending" } });
   await prisma.signatureProposal.delete({ where: { id } });
   return ok(null, "Propuesta eliminada correctamente", path);
 });

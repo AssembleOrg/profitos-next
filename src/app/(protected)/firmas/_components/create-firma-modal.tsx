@@ -8,7 +8,16 @@ import { MediaUploader } from "./media-uploader";
 import { useSignedUrls } from "./use-signed-urls";
 import type { SerializedFirma } from "./types";
 import { serializeFromApi } from "./serialize";
-import { ColleagueFields, colleaguePayload, EMPTY_COLLEAGUE, type ColleagueDraft } from "./colleague-fields";
+import {
+  ColleagueFields,
+  colleaguePayload,
+  EMPTY_COLLEAGUE,
+  EMPTY_OPERATION,
+  OperationFields,
+  operationPayload,
+  type ColleagueDraft,
+  type OperationDraft,
+} from "./colleague-fields";
 import { DateField } from "../../_components/date-field";
 import { SelectField } from "@/components/ui/select-field";
 import {
@@ -46,6 +55,7 @@ export function CreateFirmaModal({
   // Inmueble no publicado (cartera de un colega): solo se escribe la dirección.
   const [manualAddress, setManualAddress] = useState<string | null>(null);
   const [colleague, setColleague] = useState<ColleagueDraft>(EMPTY_COLLEAGUE);
+  const [operation, setOperation] = useState<OperationDraft>(EMPTY_OPERATION);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [reservationDate, setReservationDate] = useState("");
@@ -63,6 +73,7 @@ export function CreateFirmaModal({
     setPropertyQuery("");
     setManualAddress(null);
     setColleague(EMPTY_COLLEAGUE);
+    setOperation(EMPTY_OPERATION);
     setTitle("");
     setDescription("");
     setReservationDate("");
@@ -98,6 +109,11 @@ export function CreateFirmaModal({
       toast.error(colleagueData);
       return;
     }
+    const operationData = operationPayload(operation);
+    if (typeof operationData === "string") {
+      toast.error(operationData);
+      return;
+    }
     if (!reservationDate) {
       toast.error("Ingresá la fecha de la reserva");
       return;
@@ -115,6 +131,7 @@ export function CreateFirmaModal({
         body: JSON.stringify({
           ...(isManual ? { newPropertyAddress: manualAddress.trim() } : { propertyId }),
           ...colleagueData,
+          ...operationData,
           title: title.trim() || null,
           description: description.trim() || null,
           attachments,
@@ -266,12 +283,15 @@ export function CreateFirmaModal({
 
                     <div className="rounded-[16px] bg-bg p-4">
                       <div className="mb-3">
-                        <p className="text-[12.5px] font-bold text-text">¿Trabajamos con colega?</p>
+                        <p className="text-[12.5px] font-bold text-text">Operación y honorarios</p>
                         <p className="mt-0.5 text-[11.5px] text-text-faint">
                           Si la operación es compartida, indicá con quién y qué % de nuestros honorarios le corresponde.
                         </p>
                       </div>
-                      <ColleagueFields value={colleague} onChange={setColleague} />
+                      <div className="flex flex-col gap-4">
+                        <ColleagueFields value={colleague} onChange={setColleague} />
+                        <OperationFields value={operation} onChange={setOperation} colleague={colleague} />
+                      </div>
                     </div>
 
                     <div className="rounded-[16px] bg-bg p-4">
