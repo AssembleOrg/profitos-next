@@ -24,9 +24,17 @@ interface Props {
   onChange: (photos: EditorPhoto[], coverImageUrl: string | null) => void;
 }
 
-/** ¿El arrastre trae archivos del sistema (y no una tarjeta reordenándose)? */
+/** Tipo propio del arrastre de una tarjeta (para reordenar). */
+const CARD_MIME = "application/x-profitos-foto";
+
+/**
+ * ¿El arrastre trae archivos del sistema (y no una tarjeta reordenándose)?
+ * Chrome mete "Files" también al arrastrar una <img> de la página, por eso se
+ * descarta lo que traiga nuestro tipo propio.
+ */
 function hasFiles(dt: DataTransfer | null): boolean {
-  return Boolean(dt && Array.from(dt.types ?? []).includes("Files"));
+  const types = Array.from(dt?.types ?? []);
+  return types.includes("Files") && !types.includes(CARD_MIME);
 }
 
 type ApiBody = { data?: { photos?: EditorPhoto[]; coverImageUrl?: string | null }; message?: string };
@@ -41,6 +49,8 @@ export function PhotosEditor({ propertyId, photos, loading, active = true, onCha
   const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+  const [broken, setBroken] = useState<Set<string>>(() => new Set());
   const [dropHint, setDropHint] = useState(false);
   // Arrastre de archivos desde el sistema: se cuenta enter/leave porque el
   // navegador dispara dragleave al pasar por cada hijo.
@@ -236,34 +246,53 @@ export function PhotosEditor({ propertyId, photos, loading, active = true, onCha
                   onDragStart={(e) => {
                     setDragging(ph.image);
                     e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData(CARD_MIME, ph.image);
                   }}
-                  onDragEnd={() => setDragging(null)}
+                  onDragEnd={() => {
+                    setDragging(null);
+                    setOver(null);
+                  }}
                   onDragOver={(e) => {
-                    if (hasFiles(e.dataTransfer)) return; // archivos: los maneja el listener global
+                    if (!dragging) return; // archivos: los maneja el listener global
                     e.preventDefault();
                     e.stopPropagation();
+                    e.dataTransfer.dropEffect = "move";
+                    if (over !== ph.image) setOver(ph.image);
+                  }}
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node | null) && over === ph.image) setOver(null);
                   }}
                   onDrop={(e) => {
-                    if (hasFiles(e.dataTransfer)) return;
+                    if (!dragging) return;
                     e.preventDefault();
                     e.stopPropagation();
-                    if (!dragging || dragging === ph.image) return;
                     const from = list.findIndex((p) => p.image === dragging);
                     setDragging(null);
-                    move(from, idx);
+                    setOver(null);
+                    if (dragging !== ph.image) move(from, idx);
                   }}
-                  className={`group relative overflow-hidden rounded-[14px] border bg-bg ${
+                  className={`group relative cursor-grab overflow-hidden rounded-[14px] border bg-bg transition-shadow active:cursor-grabbing ${
                     dragging === ph.image ? "border-accent opacity-50" : "border-border"
-                  } ${isBusy ? "opacity-60" : ""}`}
+                  } ${over === ph.image && dragging !== ph.image ? "ring-2 ring-accent ring-offset-2" : ""} ${isBusy ? "opacity-60" : ""}`}
                 >
-                  <a href={ph.original ?? ph.image} target="_blank" rel="noopener noreferrer" className="block">
-                    <Image
-                      src={ph.thumb ?? ph.image}
-                      alt={ph.description ?? `Foto ${idx + 1}`}
-                      width={400}
-                      height={300}
-                      className="aspect-[4/3] w-full object-cover"
-                    />
+                  {/* draggable=false: si no, el navegador arrastra el link/imagen en vez de la tarjeta */}
+                  <a href={ph.original ?? ph.image} target="_blank" rel="noopener noreferrer" className="block" draggable={false}>
+                    {broken.has(ph.image) ? (
+                      <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-1 bg-sand-chip px-2 text-center">
+                        <span className="text-[12px] font-semibold text-text-muted">No se pudo cargar</span>
+                        <span className="text-[11px] text-text-faint">Borrala y volvé a subirla</span>
+                      </div>
+                    ) : (
+                      <Image
+                        src={ph.thumb ?? ph.image}
+                        alt={ph.description ?? `Foto ${idx + 1}`}
+                        width={400}
+                        height={300}
+                        draggable={false}
+                        onError={() => setBroken((s) => new Set(s).add(ph.image))}
+                        className="aspect-[4/3] w-full object-cover"
+                      />
+                    )}
                   </a>
                   {ph.isFrontCover && (
                     <span className="absolute left-2 top-2 rounded-full bg-dark px-2 py-0.5 text-[10px] font-bold text-dark-fg">Portada</span>
