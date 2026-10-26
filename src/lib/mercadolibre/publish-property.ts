@@ -132,7 +132,7 @@ async function assertUniqueTitle(title: string, excludeIds: string[], property: 
     .join(", ");
   throw new MlDuplicateTitleError(
     `Ya hay ${dupes.length === 1 ? "un aviso" : `${dupes.length} avisos`} en la cuenta de MercadoLibre con este mismo título: ${list}. ` +
-      `Con el título repetido, Tokko u otra herramienta conectada a la cuenta puede cerrar el aviso nuevo por error. ` +
+      `Para que no se confunda con otros avisos de la cuenta (incluidos los de Tokko), cada aviso tiene que tener su título. ` +
       (suggestion ? `Usá un título distinto, por ejemplo: "${suggestion}".` : "Usá un título distinto (agregá la calle)."),
     dupes,
     suggestion

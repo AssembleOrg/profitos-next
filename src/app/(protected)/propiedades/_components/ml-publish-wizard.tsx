@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { SelectField } from "@/components/ui/select-field";
+import { ML_DEFAULT_SELLER_CONTACT } from "@/lib/mercadolibre/config";
 
 // ---------------------------------------------------------------------------
 // Publicación en MercadoLibre — pantalla ÚNICA de revisión.
@@ -246,7 +247,13 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
   const [newPic, setNewPic] = useState("");
 
   // --- contacto ---
-  const [contact, setContact] = useState({ contact: "", area_code: "", phone: "", email: "" });
+  // Contacto de la inmobiliaria precargado: ML cerraba los avisos sin teléfono.
+  const [contact, setContact] = useState({
+    contact: ML_DEFAULT_SELLER_CONTACT.contact as string,
+    area_code: ML_DEFAULT_SELLER_CONTACT.area_code as string,
+    phone: ML_DEFAULT_SELLER_CONTACT.phone as string,
+    email: ML_DEFAULT_SELLER_CONTACT.email as string,
+  });
 
   // Carga inicial: conexión + propiedad + categoría raíz + provincias + publicación.
   useEffect(() => {
@@ -984,8 +991,8 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                       <div className="mt-2 rounded-[14px] border border-transparent bg-clay-chip px-3.5 py-3 text-xs text-terra">
                         <p className="font-semibold">Este título ya existe en la cuenta de MercadoLibre.</p>
                         <p className="mt-1">
-                          Con el título repetido, Tokko u otra herramienta conectada a la cuenta puede cerrar este aviso por
-                          error. Avisos con el mismo título:{" "}
+                          Para que no se confunda con otros avisos de la cuenta (incluidos los de Tokko), cada aviso tiene que
+                          tener su título. Avisos con el mismo título:{" "}
                           {titleCheck.duplicates.slice(0, 3).map((d, i) => (
                             <span key={d.id}>
                               {i > 0 && ", "}
@@ -1090,7 +1097,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
               </Section>
 
               {/* Contacto */}
-              <Section title="Contacto (opcional)">
+              <Section title="Contacto">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field label="Nombre de contacto" className="sm:col-span-2">
                     <input className={input} value={contact.contact} onChange={(e) => setContact({ ...contact, contact: e.target.value })} />

@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { withHandler } from "@/lib/api/handler";
 import { ok } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
-import { ML_PORTAL } from "@/lib/mercadolibre/config";
+import { ML, ML_PORTAL } from "@/lib/mercadolibre/config";
 import { getItem, getQuestion } from "@/lib/mercadolibre/items";
 import { upsertPortalQuestion } from "@/lib/mercadolibre/questions";
 import { reconcileMlPublication } from "@/lib/mercadolibre/watch";
@@ -10,7 +10,7 @@ import { reconcileMlPublication } from "@/lib/mercadolibre/watch";
 // Webhook de notificaciones de MercadoLibre (topics: items, questions).
 // Público: ML hace POST sin sesión. SIEMPRE responde 200 rápido para no
 // disparar reintentos; el procesamiento va en try/catch y nunca tira.
-// Seguridad opcional: si ML_WEBHOOK_SECRET está seteado, se exige ?token=.
+// Seguridad: con ML_WEBHOOK_SECRET se exige ?token= o application_id de nuestra app.
 
 interface MlNotification {
   resource?: string; // "/items/MLA123" | "/questions/5000"
@@ -53,19 +53,24 @@ async function handleNotification(notif: MlNotification) {
 
 export const POST = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
-  const secret = process.env.ML_WEBHOOK_SECRET;
-  if (secret && request.nextUrl.searchParams.get("token") !== secret) {
-    // No revelamos nada; devolvemos 200 igual para no filtrar la validez. Pero
-    // que quede en el log: si la URL de notificaciones de la app de ML no lleva
-    // ?token=, TODOS los avisos se ignoran y las bajas sólo se ven en el sync.
-    console.warn("[ML webhook] notificación ignorada: token ausente o inválido");
-    return ok({ received: true }, "ok", path);
-  }
 
   let notif: MlNotification = {};
   try {
     notif = (await request.json()) as MlNotification;
   } catch {
+    return ok({ received: true }, "ok", path);
+  }
+
+  // Válida si trae el ?token= o si viene dirigida a NUESTRA app de ML (la URL
+  // de notificaciones de la app no lleva token y antes se ignoraba todo). No
+  // hay riesgo en aceptarla: el handler nunca confía en el contenido, siempre
+  // vuelve a consultar el aviso/pregunta a la API de ML con nuestro token.
+  const secret = process.env.ML_WEBHOOK_SECRET;
+  const tokenOk = !secret || request.nextUrl.searchParams.get("token") === secret;
+  const ourApp = Boolean(ML.clientId) && String(notif.application_id ?? "") === ML.clientId;
+  if (!tokenOk && !ourApp) {
+    // No revelamos nada; devolvemos 200 igual para no filtrar la validez.
+    console.warn("[ML webhook] notificación ignorada: sin token y de otra app", notif.application_id);
     return ok({ received: true }, "ok", path);
   }
 

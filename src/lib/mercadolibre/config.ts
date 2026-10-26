@@ -16,6 +16,23 @@ export const ML = {
 
 export const ML_PORTAL = "mercadolibre" as const;
 
+/**
+ * Contacto de la inmobiliaria en los avisos de ML (los mismos datos que usa
+ * Tokko). Se manda siempre: los únicos avisos de la cuenta que salían sin
+ * teléfono eran los nuestros, y ML los cerraba a los 3 minutos (oct 2026).
+ * Lo que se cargue en el wizard pisa estos valores campo por campo.
+ */
+export const ML_DEFAULT_SELLER_CONTACT = {
+  contact: "Juliana Profitos Propiedades",
+  country_code: "+54",
+  area_code: "11",
+  phone: "53854029",
+  country_code2: "549",
+  area_code2: "11",
+  phone2: "1153854029",
+  email: "profitospropiedades@gmail.com",
+} as const;
+
 export function assertMlConfigured() {
   if (!ML.clientId || !ML.clientSecret) {
     throw new Error(
