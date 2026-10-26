@@ -38,6 +38,7 @@ model User {
   createdFollowUps   PropertyFollowUp[] @relation("FollowUpAssignedBy")
   propertyResponsibilities PropertyResponsible[]
   contactCases       ContactCase[]
+  buscalaConsultas   BuscalaConsulta[]
   followUpActions    FollowUpAction[]   @relation("FollowUpActionCreatedBy")
   tasaciones           Tasacion[]
   assignedObjectiveCards ObjectiveCard[]   @relation("ObjectiveCardAssignedTo")
@@ -969,4 +970,22 @@ model RentalServiceProof {
   @@index([contractId])
   @@index([status])
   @@map("jp_rental_service_proofs")
+}
+
+/// Historial local de consultas de personas (informes de Buscala) hechas desde
+/// Profitos. Buscala no distingue agentes (todas las consultas del partner van
+/// a un único usuario de servicio), así que el "quién consultó qué" vive acá.
+model BuscalaConsulta {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  identifier      String
+  kind            String
+  buscalaReportId String   @map("buscala_report_id")
+  label           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([userId])
+  @@map("jp_buscala_consultas")
 }

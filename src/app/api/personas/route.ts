@@ -1,6 +1,7 @@
 import { withHandler, AppError } from "@/lib/api/handler";
 import { created } from "@/lib/api/response";
 import { getAuthContext } from "@/lib/api/auth";
+import { prisma } from "@/lib/prisma/client";
 import { startReport, BuscalaError } from "@/lib/buscala/client";
 
 export const runtime = "nodejs";
@@ -8,16 +9,21 @@ export const runtime = "nodejs";
 /**
  * Inicia un informe de persona (Buscala). La API key vive sólo en el server
  * (este handler); el browser nunca la ve. Devuelve el informe recién creado
- * (fuentes en curso); el cliente poolea GET /api/personas/[id].
+ * (fuentes en curso); el cliente poolea GET /api/personas/[id]. Deja el rastro
+ * en el historial local (quién consultó qué).
  */
 export const POST = withHandler(async (request) => {
   const path = request.nextUrl.pathname;
-  await getAuthContext(); // exige estar logueado (staff)
+  const { userId } = await getAuthContext(); // exige estar logueado (staff)
   const body = await request.json().catch(() => null);
   const identifier = typeof body?.identifier === "string" ? body.identifier.trim() : "";
   if (!identifier) throw new AppError(400, "Ingresá un CUIT/CUIL o DNI.");
   try {
     const report = await startReport(identifier);
+    // Historial local (best-effort: no bloquea la respuesta si falla).
+    await prisma.buscalaConsulta
+      .create({ data: { userId, identifier: report.identifier, kind: report.kind, buscalaReportId: report.id, label: report.label } })
+      .catch((e) => console.error("[personas] no se pudo guardar el historial:", e));
     return created(report, "Informe iniciado", path);
   } catch (err) {
     throw toAppError(err);

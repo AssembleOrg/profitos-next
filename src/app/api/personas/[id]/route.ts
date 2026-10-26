@@ -1,6 +1,7 @@
 import { withHandler, AppError } from "@/lib/api/handler";
 import { ok } from "@/lib/api/response";
 import { getAuthContext } from "@/lib/api/auth";
+import { prisma } from "@/lib/prisma/client";
 import { getReport, BuscalaError } from "@/lib/buscala/client";
 
 export const runtime = "nodejs";
@@ -12,6 +13,13 @@ export const GET = withHandler(async (request, context) => {
   const { id } = (await context!.params) as { id: string };
   try {
     const report = await getReport(id);
+    // Completa la denominación en el historial cuando ya se conoce (al crearse
+    // la consulta el nombre todavía no estaba resuelto).
+    if (report.label) {
+      await prisma.buscalaConsulta
+        .updateMany({ where: { buscalaReportId: id, label: null }, data: { label: report.label } })
+        .catch(() => {});
+    }
     return ok(report, "Informe", path);
   } catch (err) {
     if (err instanceof BuscalaError && err.status === 404) throw new AppError(404, "Informe no encontrado.");

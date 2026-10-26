@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Spinner } from "../../_components/spinner";
@@ -39,6 +41,7 @@ const STATUS: Record<Source["status"], { label: string; cls: string; spin?: bool
 };
 
 export function PersonasClient({ configured }: { configured: boolean }) {
+  const presetId = useSearchParams().get("id");
   const [identifier, setIdentifier] = useState("");
   const [starting, setStarting] = useState(false);
   const [report, setReport] = useState<Report | null>(null);
@@ -88,6 +91,38 @@ export function PersonasClient({ configured }: { configured: boolean }) {
     [done],
   );
 
+  // Reabrir un informe desde el historial (/personas?id=...).
+  const abrirExistente = useCallback(
+    async (id: string) => {
+      if (timer.current) clearTimeout(timer.current);
+      setReport(null);
+      setPolling(true);
+      try {
+        const res = await fetch(`/api/personas/${id}`);
+        const body = await res.json();
+        if (!alive.current) return;
+        if (res.ok && body.data) {
+          setReport(body.data);
+          if (done(body.data)) setPolling(false);
+          else poll(id);
+        } else {
+          setPolling(false);
+          toast.error(body.message ?? "No se pudo abrir el informe.");
+        }
+      } catch {
+        if (alive.current) {
+          setPolling(false);
+          toast.error("Error de conexión.");
+        }
+      }
+    },
+    [done, poll],
+  );
+
+  useEffect(() => {
+    if (presetId) void abrirExistente(presetId);
+  }, [presetId, abrirExistente]);
+
   async function consultar(e: React.FormEvent) {
     e.preventDefault();
     const id = identifier.trim();
@@ -124,11 +159,19 @@ export function PersonasClient({ configured }: { configured: boolean }) {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Personas</h1>
-        <p className="mt-1 text-[12.5px] text-text-faint">
-          Informe de una persona por CUIT, CUIL o DNI. Buscamos en registros públicos y oficiales.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Personas</h1>
+          <p className="mt-1 text-[12.5px] text-text-faint">
+            Informe de una persona por CUIT, CUIL o DNI. Buscamos en registros públicos y oficiales.
+          </p>
+        </div>
+        <Link
+          href="/personas/historial"
+          className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg"
+        >
+          Historial
+        </Link>
       </div>
 
       {!configured && (
