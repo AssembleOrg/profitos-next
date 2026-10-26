@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
 export interface NotificationItem {
@@ -25,6 +26,9 @@ export interface NotificationItem {
   branchName?: string | null;
   portal?: string;
   permalink?: string | null;
+  // kind "publication_closed": baja que no pidió el sistema (Tokko, ML)
+  externalChange?: boolean;
+  externalChangeDetail?: string | null;
   // kind "contact": lead scrapeado (ZP/AP) o pregunta ML
   contactName?: string | null;
   contactEmail?: string | null;
@@ -37,6 +41,41 @@ export interface NotificationItem {
 }
 
 const LS_KEY = "jp_last_notifications_seen_at";
+const ALERTED_KEY = "jp_external_change_alerted";
+
+/**
+ * Bajas de avisos que no pidió el sistema: además de la campana, un aviso que
+ * queda en pantalla hasta cerrarlo (una vez por baja y por navegador).
+ */
+function alertExternalChanges(items: NotificationItem[]) {
+  let alerted: string[] = [];
+  try {
+    alerted = JSON.parse(localStorage.getItem(ALERTED_KEY) ?? "[]") as string[];
+  } catch {
+    /* vacío */
+  }
+  const fresh = items.filter(
+    (i) =>
+      i.kind === "publication_closed" &&
+      i.externalChange &&
+      !alerted.includes(`${i.id}:${i.eventAt}`) &&
+      Date.now() - new Date(i.eventAt).getTime() < 7 * 24 * 60 * 60_000
+  );
+  for (const i of fresh) {
+    const portal = i.portal === "mercadolibre" ? "MercadoLibre" : (i.portal ?? "portal");
+    const verb = i.status === "paused" ? "pausó" : "cerró";
+    toast.error(`Se ${verb} el aviso de ${portal} de ${i.property?.address ?? "una propiedad"} sin que lo pidiéramos`, {
+      description: i.externalChangeDetail ?? undefined,
+      duration: Infinity,
+      closeButton: true,
+      action: i.property ? { label: "Ver", onClick: () => (window.location.href = `/propiedades?q=${encodeURIComponent(i.property!.address)}`) } : undefined,
+    });
+  }
+  if (fresh.length) {
+    const next = [...alerted, ...fresh.map((i) => `${i.id}:${i.eventAt}`)].slice(-100);
+    localStorage.setItem(ALERTED_KEY, JSON.stringify(next));
+  }
+}
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -51,6 +90,7 @@ export function useNotifications() {
       const body = await res.json();
       const items = (body?.data?.items ?? []) as NotificationItem[];
       setNotifications(items);
+      alertExternalChanges(items);
 
       const lastSeen = localStorage.getItem(LS_KEY);
       if (!lastSeen) {

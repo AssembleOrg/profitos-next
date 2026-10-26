@@ -351,8 +351,10 @@ setInterval(() => void tick(), TICK_MS);
 setTimeout(() => void refreshCredits(), 20_000);
 
 // Sync de estados de MercadoLibre (API oficial, sin navegador/proxy → no usa el
-// mutex). Corrige chips desincronizados (ej: aviso pausado por ML). Cada 2h.
-const ML_SYNC_MS = Number(process.env.ML_SYNC_INTERVAL_MS ?? 2 * 60 * 60_000);
+// mutex). Corrige chips desincronizados y detecta avisos cerrados/pausados SIN
+// pedido del sistema (Tokko, moderación) → alerta al equipo. Cada 15 min: es
+// barato (un GET por aviso) y una baja no puede quedar horas sin verse.
+const ML_SYNC_MS = Number(process.env.ML_SYNC_INTERVAL_MS ?? 15 * 60_000);
 let mlSyncing = false;
 async function runMlSync(): Promise<void> {
   if (mlSyncing) return;
@@ -360,9 +362,6 @@ async function runMlSync(): Promise<void> {
   try {
     const { total, updated } = await syncMlPublications();
     if (updated) console.log(`[worker] ML sync: ${updated}/${total} publicaciones actualizadas`);
-    await syncArgenpropListings()
-      .then(logListingSync)
-      .catch((e) => console.warn("[worker] chequeo de avisos argenprop falló:", e instanceof Error ? e.message : e));
   } catch (e) {
     console.warn("[worker] ML sync falló:", e instanceof Error ? e.message : e);
   } finally {
@@ -371,6 +370,16 @@ async function runMlSync(): Promise<void> {
 }
 setTimeout(() => void runMlSync(), 40_000); // sync inicial (tras arrancar)
 setInterval(() => void runMlSync(), ML_SYNC_MS);
+
+// Chequeo de avisos de ArgenProp (sale por proxy): sigue cada 2h.
+const AP_LISTING_SYNC_MS = Number(process.env.AP_LISTING_SYNC_INTERVAL_MS ?? 2 * 60 * 60_000);
+async function runArgenpropListingSync(): Promise<void> {
+  await syncArgenpropListings()
+    .then(logListingSync)
+    .catch((e) => console.warn("[worker] chequeo de avisos argenprop falló:", e instanceof Error ? e.message : e));
+}
+setTimeout(() => void runArgenpropListingSync(), 45_000);
+setInterval(() => void runArgenpropListingSync(), AP_LISTING_SYNC_MS);
 
 async function shutdown() {
   await cancelReloginSession().catch(() => {});

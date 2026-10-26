@@ -34,7 +34,8 @@ export async function closeActiveListings(propertyId: string): Promise<ListingCl
         if (item?.status === "closed") {
           await prisma.propertyPublication.update({
             where: { propertyId_portal: { propertyId, portal: pub.portal } },
-            data: { status: "closed", lastError: null },
+            // La baja la pidió el usuario al sacar la propiedad de oferta: no es alerta.
+            data: { status: "closed", lastError: null, externalChangeAt: null, externalChangeDetail: null },
           });
           results.push({ portal: pub.portal, ok: true, message: "ya estaba cerrado en MercadoLibre" });
           continue;

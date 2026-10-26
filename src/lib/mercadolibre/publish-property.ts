@@ -13,7 +13,9 @@ import {
   type MlAttribute,
   type MlChildCategory,
 } from "@/lib/mercadolibre/catalog";
-import { getConnectionStatus } from "@/lib/mercadolibre/oauth";import { DESCRIPTION_MIN } from "@/lib/publish/readiness";
+import { getConnectionStatus } from "@/lib/mercadolibre/oauth";
+import { findSameTitleItems, rememberPublishedTitle, suggestUniqueTitle, type SameTitleItem } from "@/lib/mercadolibre/title-check";
+import { DESCRIPTION_MIN } from "@/lib/publish/readiness";
 
 
 /**
@@ -40,14 +42,23 @@ export async function publishPropertyToMl(propertyId: string, input: MlPublishIn
   }
   if (!input.pictures?.length) throw new AppError(400, "Se requiere al menos una foto");
 
-  const property = await prisma.property.findUnique({ where: { id: propertyId }, select: { id: true, publicUrl: true } });
+  const property = await prisma.property.findUnique({
+    where: { id: propertyId },
+    select: { id: true, publicUrl: true, address: true, city: true },
+  });
   if (!property) throw new AppError(404, "Propiedad no encontrada");
 
   const existing = await prisma.propertyPublication.findUnique({
     where: { propertyId_portal: { propertyId, portal: ML_PORTAL } },
   });
-  if (!existing?.externalId && (input.description ?? "").trim().length < DESCRIPTION_MIN) {
+  // Un item cerrado en ML no se reabre ni se edita: se publica uno nuevo.
+  const editId = existing?.externalId && existing.status !== "closed" ? existing.externalId : null;
+  if (!editId && (input.description ?? "").trim().length < DESCRIPTION_MIN) {
     throw new AppError(409, `Falta la descripción del aviso (mínimo ${DESCRIPTION_MIN} caracteres).`);
+  }
+  const previousTitle = (existing?.lastPayload as { title?: string } | null)?.title;
+  if (!editId || previousTitle !== input.title) {
+    await assertUniqueTitle(input.title, [existing?.externalId ?? ""], property);
   }
 
   await prisma.propertyPublication.upsert({
@@ -57,7 +68,7 @@ export async function publishPropertyToMl(propertyId: string, input: MlPublishIn
   });
 
   try {
-    let item = existing?.externalId ? await updateItem(existing.externalId, input) : await publishItem(input);
+    let item = editId ? await updateItem(editId, input) : await publishItem(input);
     // ML suele crear el item classified en "paused"; lo activamos.
     if (item.status !== "active" && item.status !== "closed") {
       try {
@@ -72,14 +83,17 @@ export async function publishPropertyToMl(propertyId: string, input: MlPublishIn
         externalId: item.id,
         status: item.status === "active" ? "active" : (item.status ?? "active"),
         permalink: item.permalink ?? null,
-        publishedAt: existing?.publishedAt ?? new Date(),
+        publishedAt: editId ? (existing?.publishedAt ?? new Date()) : new Date(),
         lastError: null,
+        externalChangeAt: null,
+        externalChangeDetail: null,
       },
     });
+    rememberPublishedTitle({ id: item.id, title: input.title, status: item.status, permalink: item.permalink ?? null });
     if (item.permalink && property.publicUrl !== item.permalink) {
       await prisma.property.update({ where: { id: propertyId }, data: { publicUrl: item.permalink } });
     }
-    return { publication, item, updated: Boolean(existing?.externalId) };
+    return { publication, item, updated: Boolean(editId) };
   } catch (err) {
     const detail = describeMlError(err);
     await prisma.propertyPublication.update({
@@ -88,6 +102,41 @@ export async function publishPropertyToMl(propertyId: string, input: MlPublishIn
     });
     throw new AppError(err instanceof MlApiError ? err.status || 502 : 502, detail);
   }
+}
+
+const STATUS_ES: Record<string, string> = { active: "activo", paused: "pausado", closed: "cerrado" };
+
+/** Título ya usado en la cuenta de ML: 409 con los avisos que chocan y una sugerencia. */
+export class MlDuplicateTitleError extends AppError {
+  constructor(
+    message: string,
+    public readonly duplicates: SameTitleItem[],
+    public readonly suggestion: string | null
+  ) {
+    super(409, message);
+  }
+}
+
+async function assertUniqueTitle(title: string, excludeIds: string[], property: { address: string; city: string | null }) {
+  let dupes: SameTitleItem[];
+  try {
+    dupes = await findSameTitleItems(title, excludeIds);
+  } catch (err) {
+    throw new AppError(502, `No se pudo verificar que el título no esté repetido en MercadoLibre (${describeMlError(err)}). Probá de nuevo en un rato.`);
+  }
+  if (!dupes.length) return;
+  const suggestion = suggestUniqueTitle(title, property.address, property.city);
+  const list = dupes
+    .slice(0, 3)
+    .map((d) => `${d.id} (${STATUS_ES[d.status] ?? d.status})`)
+    .join(", ");
+  throw new MlDuplicateTitleError(
+    `Ya hay ${dupes.length === 1 ? "un aviso" : `${dupes.length} avisos`} en la cuenta de MercadoLibre con este mismo título: ${list}. ` +
+      `Con el título repetido, Tokko u otra herramienta conectada a la cuenta puede cerrar el aviso nuevo por error. ` +
+      (suggestion ? `Usá un título distinto, por ejemplo: "${suggestion}".` : "Usá un título distinto (agregá la calle)."),
+    dupes,
+    suggestion
+  );
 }
 
 // ─── Inferencia desde la propiedad (chat IA) ────────────────────────────────

@@ -47,11 +47,20 @@ export async function changePublicationState(
       throw new AppError(400, "En MercadoLibre una publicación cerrada no se puede reactivar (hay que republicar)");
     }
     const status = ML_STATUS[action];
-    await setItemStatus(pub.externalId, status);
+    // Primero la DB y después ML: el webhook del cambio puede llegar antes de que
+    // vuelva la llamada, y tiene que encontrar el estado ya guardado para no
+    // tomarlo como una baja que vino de afuera (ver mercadolibre/watch.ts).
+    const where = { propertyId_portal: { propertyId, portal } };
     await prisma.propertyPublication.update({
-      where: { propertyId_portal: { propertyId, portal } },
-      data: { status, lastError: null },
+      where,
+      data: { status, lastError: null, externalChangeAt: null, externalChangeDetail: null },
     });
+    try {
+      await setItemStatus(pub.externalId, status);
+    } catch (e) {
+      await prisma.propertyPublication.update({ where, data: { status: pub.status } });
+      throw e;
+    }
     return { result: { portal, action, status }, message: "Estado actualizado en MercadoLibre" };
   }
 

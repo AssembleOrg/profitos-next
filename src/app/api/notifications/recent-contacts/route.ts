@@ -5,6 +5,17 @@ import { prisma } from "@/lib/prisma/client";
 import { resolveLeadProperties } from "@/lib/messages/inbox";
 import { now } from "@/lib/datetime";
 
+const URGENT_MS = 7 * 24 * 60 * 60_000;
+
+/** Baja de aviso no pedida en los últimos 7 días: se muestra primero. */
+function isUrgent(item: { kind: string; eventAt: Date; payload: unknown }): boolean {
+  return (
+    item.kind === "publication_closed" &&
+    (item.payload as { externalChange?: boolean }).externalChange === true &&
+    Date.now() - item.eventAt.getTime() < URGENT_MS
+  );
+}
+
 export const GET = withHandler(async (request) => {
   const auth = await getAuthContext();
   const searchParams = request.nextUrl.searchParams;
@@ -81,6 +92,8 @@ export const GET = withHandler(async (request) => {
         status: true,
         permalink: true,
         updatedAt: true,
+        externalChangeAt: true,
+        externalChangeDetail: true,
         property: { select: { id: true, address: true } },
       },
     }),
@@ -218,13 +231,16 @@ export const GET = withHandler(async (request) => {
     })),
     ...closedPublications.map((item) => ({
       kind: "publication_closed" as const,
-      eventAt: item.updatedAt,
+      eventAt: item.externalChangeAt ?? item.updatedAt,
       payload: {
         id: item.id,
         portal: item.portal,
         status: item.status,
         permalink: item.permalink,
         property: item.property,
+        // Baja que NO pidió el sistema (Tokko, ML): alerta, va siempre arriba.
+        externalChange: item.externalChangeAt != null,
+        externalChangeDetail: item.externalChangeDetail,
       },
     })),
     ...reservationReminders.map((item) => ({
@@ -278,7 +294,11 @@ export const GET = withHandler(async (request) => {
         },
       })),
   ]
-    .sort((a, b) => b.eventAt.getTime() - a.eventAt.getTime())
+    .sort((a, b) => {
+      const ua = isUrgent(a) ? 1 : 0;
+      const ub = isUrgent(b) ? 1 : 0;
+      return ub - ua || b.eventAt.getTime() - a.eventAt.getTime();
+    })
     .slice(0, limit)
     .map((item) => ({
       kind: item.kind,

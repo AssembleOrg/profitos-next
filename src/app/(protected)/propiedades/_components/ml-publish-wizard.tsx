@@ -49,6 +49,13 @@ interface Publication {
   categoryId: string | null;
   listingTypeId: string | null;
   lastError: string | null;
+  externalChangeAt: string | null;
+  externalChangeDetail: string | null;
+}
+interface TitleCheck {
+  status: "idle" | "checking" | "ok" | "duplicate" | "error";
+  duplicates: { id: string; title: string; status: string; permalink: string | null }[];
+  suggestion: string | null;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -230,6 +237,8 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
 
   // --- aviso ---
   const [title, setTitle] = useState("");
+  const [titleCheck, setTitleCheck] = useState<TitleCheck>({ status: "idle", duplicates: [], suggestion: null });
+  const [titleRetry, setTitleRetry] = useState(0);
   const [description, setDescription] = useState("");
   const [pictures, setPictures] = useState<string[]>([]);
   const [allPhotos, setAllPhotos] = useState<string[]>([]);
@@ -293,6 +302,37 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
     })();
      
   }, [propertyId]);
+
+  // Título repetido en la cuenta de ML → no se publica (Tokko reconoce sus
+  // avisos por título y puede cerrar el nuestro). Se chequea mientras se escribe.
+  useEffect(() => {
+    const t = title.trim();
+    if (!connected || showManage || !t) {
+      setTitleCheck({ status: "idle", duplicates: [], suggestion: null });
+      return;
+    }
+    setTitleCheck((c) => ({ ...c, status: "checking" }));
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api<{ duplicates: TitleCheck["duplicates"]; suggestion: string | null }>(
+          `/api/integrations/mercadolibre/title-check?propertyId=${encodeURIComponent(propertyId)}&title=${encodeURIComponent(t)}`
+        );
+        if (cancelled) return;
+        setTitleCheck({
+          status: res.duplicates.length ? "duplicate" : "ok",
+          duplicates: res.duplicates,
+          suggestion: res.suggestion,
+        });
+      } catch {
+        if (!cancelled) setTitleCheck({ status: "error", duplicates: [], suggestion: null });
+      }
+    }, 600);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [title, connected, showManage, propertyId, titleRetry]);
 
   // Prefill de atributos comunes desde los campos de la propiedad.
   const prefillAttributes = useCallback(
@@ -406,7 +446,8 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
 
   // Dispara la inferencia una vez que hay propiedad + árbol raíz.
   useEffect(() => {
-    if (inferDone || !property || !rootCat || leafCategory || publication?.externalId) return;
+    // Un aviso cerrado se publica de nuevo desde cero: también se infiere.
+    if (inferDone || !property || !rootCat || leafCategory || (publication?.externalId && publication.status !== "closed")) return;
     setInferDone(true);
     inferCategory(rootCat, property);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -457,9 +498,10 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
           Number(price) > 0 &&
           pictures.length &&
           locationOk &&
-          missingAttrIds.size === 0
+          missingAttrIds.size === 0 &&
+          titleCheck.status === "ok"
       ),
-    [leafCategory, title, listingTypeId, price, pictures, locationOk, missingAttrIds]
+    [leafCategory, title, listingTypeId, price, pictures, locationOk, missingAttrIds, titleCheck.status]
   );
 
   // Lista legible de lo que falta, para el footer.
@@ -467,6 +509,9 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
     const out: string[] = [];
     if (!leafCategory) out.push("categoría");
     if (!title.trim()) out.push("título");
+    else if (titleCheck.status === "duplicate") out.push("título distinto (ya existe en MercadoLibre)");
+    else if (titleCheck.status === "checking") out.push("verificar título");
+    else if (titleCheck.status === "error") out.push("verificar título (reintentá)");
     if (!listingTypeId) out.push("tipo");
     if (!(Number(price) > 0)) out.push("precio");
     if (!pictures.length) out.push("fotos");
@@ -474,7 +519,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
     else if (!loc.cityId) out.push("ciudad");
     if (missingAttrIds.size) out.push(`${missingAttrIds.size} característica${missingAttrIds.size > 1 ? "s" : ""}`);
     return out;
-  }, [leafCategory, title, listingTypeId, price, pictures, loc.stateId, loc.cityId, missingAttrIds]);
+  }, [leafCategory, title, listingTypeId, price, pictures, loc.stateId, loc.cityId, missingAttrIds, titleCheck.status]);
 
   function buildAttributesPayload() {
     return attributes.map((a) => {
@@ -534,7 +579,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
           body: JSON.stringify(payload),
         }
       );
-      toast.success(publication?.externalId ? "Publicación actualizada" : "Publicado en MercadoLibre");
+      toast.success(isEdit ? "Publicación actualizada" : "Publicado en MercadoLibre");
       if (pub.permalink && previewTab) previewTab.location.href = pub.permalink;
       else previewTab?.close();
       onPublished?.();
@@ -596,6 +641,9 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
 
   // ------------------------------- render ---------------------------------
 
+  // Un aviso cerrado no se edita: se publica uno nuevo.
+  const isEdit = Boolean(publication?.externalId) && publication?.status !== "closed";
+
   const listingName =
     listingPrices.find((p) => p.listing_type_id === listingTypeId)?.listing_type_name ?? listingTypeId;
 
@@ -647,6 +695,12 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                 </a>
               )}
             </div>
+            {publication.externalChangeDetail && (
+              <div className="rounded-[14px] border border-transparent bg-clay-chip px-3.5 py-3 text-xs text-terra">
+                <p className="font-semibold">No lo cerramos nosotros.</p>
+                <p className="mt-1">{publication.externalChangeDetail}</p>
+              </div>
+            )}
             {publication.lastError && (
               <p className="rounded-lg bg-clay-chip px-3 py-2 text-xs text-terra">{publication.lastError}</p>
             )}
@@ -671,9 +725,13 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                 </button>
               )}
             </div>
-            {publication.status !== "closed" && (
+            {publication.status !== "closed" ? (
               <button className={primaryBtn} onClick={enterEdit}>
                 Editar aviso
+              </button>
+            ) : (
+              <button className={primaryBtn} onClick={enterEdit}>
+                Publicar de nuevo
               </button>
             )}
           </div>
@@ -916,7 +974,51 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                 <div className="flex flex-col gap-3">
                   <Field label="Título del aviso">
                     <input className={input} value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} />
-                    <span className="mt-1 text-[11px] text-text-muted">{title.length}/60</span>
+                    <span className="mt-1 text-[11px] text-text-muted">
+                      {title.length}/60
+                      {titleCheck.status === "checking" && " · verificando que no esté repetido…"}
+                      {titleCheck.status === "ok" && " · título libre en MercadoLibre"}
+                    </span>
+                    {titleCheck.status === "duplicate" && (
+                      <div className="mt-2 rounded-[14px] border border-transparent bg-clay-chip px-3.5 py-3 text-xs text-terra">
+                        <p className="font-semibold">Este título ya existe en la cuenta de MercadoLibre.</p>
+                        <p className="mt-1">
+                          Con el título repetido, Tokko u otra herramienta conectada a la cuenta puede cerrar este aviso por
+                          error. Avisos con el mismo título:{" "}
+                          {titleCheck.duplicates.slice(0, 3).map((d, i) => (
+                            <span key={d.id}>
+                              {i > 0 && ", "}
+                              {d.permalink ? (
+                                <a href={d.permalink} target="_blank" rel="noreferrer" className="underline">
+                                  {d.id}
+                                </a>
+                              ) : (
+                                d.id
+                              )}{" "}
+                              ({STATUS_LABEL[d.status]?.toLowerCase() ?? d.status})
+                            </span>
+                          ))}
+                          .
+                        </p>
+                        {titleCheck.suggestion && (
+                          <button
+                            type="button"
+                            className="mt-2 rounded-full bg-dark px-3.5 py-1.5 text-[12px] font-bold text-dark-fg"
+                            onClick={() => setTitle(titleCheck.suggestion!)}
+                          >
+                            Usar “{titleCheck.suggestion}”
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {titleCheck.status === "error" && (
+                      <p className="mt-2 text-xs text-warning">
+                        No se pudo verificar el título en MercadoLibre.{" "}
+                        <button type="button" className="underline" onClick={() => setTitleRetry((n) => n + 1)}>
+                          Reintentar
+                        </button>
+                      </p>
+                    )}
                   </Field>
                   <Field label="Descripción">
                     <textarea
@@ -1025,7 +1127,7 @@ export function MlPublishWizard({ propertyId, propertyLabel, onClose, onPublishe
                 <button className={primaryBtn} disabled={!canPublish || publishing} onClick={handlePublish}>
                   {publishing
                     ? "Publicando…"
-                    : publication?.externalId
+                    : isEdit
                       ? "Actualizar publicación"
                       : "Publicar"}
                 </button>
