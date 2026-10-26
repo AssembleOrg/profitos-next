@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma/client";
 import { ML_PORTAL } from "@/lib/mercadolibre/config";
 import { getItem, getQuestion } from "@/lib/mercadolibre/items";
 import { upsertPortalQuestion } from "@/lib/mercadolibre/questions";
+import { reconcileMlPublication } from "@/lib/mercadolibre/watch";
 
 // Webhook de notificaciones de MercadoLibre (topics: items, questions).
 // Público: ML hace POST sin sesión. SIEMPRE responde 200 rápido para no
@@ -33,13 +34,7 @@ async function handleItem(itemId: string) {
   });
   if (!publication) return; // no es un aviso nuestro
   const item = await getItem(itemId);
-  await prisma.propertyPublication.update({
-    where: { id: publication.id },
-    data: {
-      status: item.status ?? publication.status,
-      permalink: item.permalink ?? publication.permalink,
-    },
-  });
+  await reconcileMlPublication(publication, item);
 }
 
 async function handleQuestion(questionId: string) {
@@ -60,7 +55,10 @@ export const POST = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
   const secret = process.env.ML_WEBHOOK_SECRET;
   if (secret && request.nextUrl.searchParams.get("token") !== secret) {
-    // No revelamos nada; devolvemos 200 igual para no filtrar la validez.
+    // No revelamos nada; devolvemos 200 igual para no filtrar la validez. Pero
+    // que quede en el log: si la URL de notificaciones de la app de ML no lleva
+    // ?token=, TODOS los avisos se ignoran y las bajas sólo se ven en el sync.
+    console.warn("[ML webhook] notificación ignorada: token ausente o inválido");
     return ok({ received: true }, "ok", path);
   }
 

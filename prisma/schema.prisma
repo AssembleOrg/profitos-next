@@ -157,6 +157,9 @@ model PropertyPublication {
   listingTypeId String?   @map("listing_type_id")
   lastPayload   Json?     @map("last_payload")
   lastError     String?   @map("last_error")
+  // Cambio de estado que NO pidió el sistema (lo cerró/pausó otro: Tokko, ML).
+  externalChangeAt     DateTime? @map("external_change_at")
+  externalChangeDetail String?   @map("external_change_detail")
   publishedAt   DateTime? @map("published_at")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")

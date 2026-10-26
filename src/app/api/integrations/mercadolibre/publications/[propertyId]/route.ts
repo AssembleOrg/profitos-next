@@ -4,7 +4,9 @@ import { ok } from "@/lib/api/response";
 import { getAuthContext } from "@/lib/api/auth";
 import { prisma } from "@/lib/prisma/client";
 import { ML_PORTAL } from "@/lib/mercadolibre/config";
-import { getItem, setItemStatus } from "@/lib/mercadolibre/items";
+import { getItem } from "@/lib/mercadolibre/items";
+import { reconcileMlPublication } from "@/lib/mercadolibre/watch";
+import { changePublicationState, STATE_ACTIONS, type StateAction } from "@/lib/publish/state";
 
 // Estado de la publicación de MercadoLibre para una propiedad.
 // Refresca el estado real desde ML (evita desincronización si el webhook no llegó).
@@ -18,15 +20,7 @@ export const GET = withHandler(async (request: NextRequest, context) => {
   if (publication?.externalId) {
     try {
       const item = await getItem(publication.externalId);
-      const changed =
-        (item.status && item.status !== publication.status) ||
-        (item.permalink && item.permalink !== publication.permalink);
-      if (changed) {
-        publication = await prisma.propertyPublication.update({
-          where: { propertyId_portal: { propertyId, portal: ML_PORTAL } },
-          data: { status: item.status ?? publication.status, permalink: item.permalink ?? publication.permalink },
-        });
-      }
+      publication = (await reconcileMlPublication(publication, item)) ?? publication;
     } catch {
       // si ML no responde, devolvemos lo que hay en DB
     }
@@ -40,21 +34,12 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
   await getAuthContext();
   const { propertyId } = (await context!.params) as { propertyId: string };
   const path = request.nextUrl.pathname;
-  const { action } = (await request.json()) as { action?: "pause" | "activate" | "close" };
+  const { action } = (await request.json()) as { action?: StateAction };
+  if (!action || !STATE_ACTIONS.includes(action)) throw new AppError(400, "Acción inválida");
 
-  const publication = await prisma.propertyPublication.findUnique({
+  await changePublicationState(propertyId, ML_PORTAL, action);
+  const updated = await prisma.propertyPublication.findUnique({
     where: { propertyId_portal: { propertyId, portal: ML_PORTAL } },
-  });
-  if (!publication?.externalId) throw new AppError(404, "La propiedad no está publicada en MercadoLibre");
-
-  const map = { pause: "paused", activate: "active", close: "closed" } as const;
-  const target = action ? map[action] : undefined;
-  if (!target) throw new AppError(400, "Acción inválida");
-
-  const item = await setItemStatus(publication.externalId, target);
-  const updated = await prisma.propertyPublication.update({
-    where: { propertyId_portal: { propertyId, portal: ML_PORTAL } },
-    data: { status: item.status ?? target },
   });
   return ok(updated, "Estado actualizado", path);
 });

@@ -69,7 +69,11 @@ function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
           <p className="line-clamp-1 text-sm font-bold leading-tight text-text">{item.property?.address ?? "Propiedad sin dirección"}</p>
           <p className="mt-0.5 text-xs font-semibold text-terra">
             {PORTAL_LABEL[item.portal ?? ""] ?? item.portal ?? "Portal"}: {STATUS_LABEL[item.status ?? ""] ?? item.status ?? "baja"}
+            {item.externalChange && " sin que la pidiéramos"}
           </p>
+          {item.externalChangeDetail && (
+            <p className="mt-0.5 line-clamp-3 text-xs text-text-muted">{item.externalChangeDetail}</p>
+          )}
         </>
       );
     case "contact":
@@ -150,7 +154,7 @@ export function NotifCard({ item, onNavigate }: Readonly<{ item: NotificationIte
       </div>
       <div className={`flex items-center gap-1.5 border-t border-border px-3 py-1.5 text-[11.5px] font-bold ${NOTIF_BADGE_CLASS[item.kind]}`}>
         <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-        {NOTIF_LABEL[item.kind]}
+        {item.externalChange ? "Baja NO pedida" : NOTIF_LABEL[item.kind]}
       </div>
     </>
   );

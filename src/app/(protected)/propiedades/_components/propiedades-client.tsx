@@ -50,7 +50,7 @@ interface Property {
   ownerReportData: Record<string, unknown> | null;
   createdAt: string;
   _count?: { visitas: number };
-  mlPublication?: { status: string; permalink: string | null; published: boolean } | null;
+  mlPublication?: { status: string; permalink: string | null; published: boolean; externalChangeDetail?: string | null } | null;
   portalPublications?: { portal: string; status: string; permalink: string | null }[];
 }
 
@@ -382,12 +382,15 @@ const ML_CHIP: Record<string, { label: string; cls: string }> = {
   publishing: { label: "ML publicando…", cls: "border-info/30 bg-info/10 text-info" },
   error: { label: "ML error", cls: "border-danger/30 bg-danger-chip text-danger" },
 };
-function MlChip({ status, permalink }: { status: string; permalink: string | null }) {
-  const c = ML_CHIP[status];
-  if (!c) return null;
+function MlChip({ status, permalink, externalDetail }: { status: string; permalink: string | null; externalDetail?: string | null }) {
+  const base = ML_CHIP[status];
+  if (!base) return null;
+  // Baja que no pidió el sistema (Tokko, ML): en rojo y con el motivo al pasar el mouse.
+  const external = Boolean(externalDetail) && (status === "closed" || status === "paused");
+  const c = external ? { label: `${base.label} por fuera`, cls: ML_CHIP.error.cls } : base;
   const chip = (
     <span
-      title={`MercadoLibre: ${c.label}`}
+      title={external ? `MercadoLibre: ${c.label}. ${externalDetail}` : `MercadoLibre: ${c.label}`}
       className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${c.cls}`}
     >
       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1353,7 +1356,7 @@ export function PropiedadesClient({
                   <p className="truncate text-[13.5px] font-bold leading-tight text-text">{p.address}</p>
                   {p.source === "manual" && <ManualChip />}
                   {p.mlPublication?.published && (
-                    <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
+                    <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} externalDetail={p.mlPublication.externalChangeDetail} />
                   )}
                   {p.portalPublications?.map((pub) => (
                     <PortalChip key={pub.portal} portal={pub.portal} status={pub.status} permalink={pub.permalink} />
@@ -1443,7 +1446,7 @@ export function PropiedadesClient({
                       <p className="truncate text-[13.5px] font-bold text-text">{p.address}</p>
                       {p.source === "manual" && <ManualChip />}
                       {p.mlPublication?.published && (
-                        <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
+                        <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} externalDetail={p.mlPublication.externalChangeDetail} />
                       )}
                       {p.portalPublications?.map((pub) => (
                         <PortalChip key={pub.portal} portal={pub.portal} status={pub.status} permalink={pub.permalink} />
@@ -1580,7 +1583,7 @@ export function PropiedadesClient({
                         <p className="text-[13.5px] font-bold text-text">{p.address}</p>
                         {p.source === "manual" && <ManualChip />}
                         {p.mlPublication?.published && (
-                          <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} />
+                          <MlChip status={p.mlPublication.status} permalink={p.mlPublication.permalink} externalDetail={p.mlPublication.externalChangeDetail} />
                         )}
                         {p.portalPublications?.map((pub) => (
                           <PortalChip key={pub.portal} portal={pub.portal} status={pub.status} permalink={pub.permalink} />
@@ -2074,7 +2077,7 @@ export function PropiedadesClient({
                     {editProperty?.mlPublication?.published && (
                       <div className="flex flex-wrap items-center justify-between gap-2 rounded-[14px] bg-sand-chip/40 px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <MlChip status={editProperty.mlPublication.status} permalink={null} />
+                          <MlChip status={editProperty.mlPublication.status} permalink={null} externalDetail={editProperty.mlPublication.externalChangeDetail} />
                           <span className="text-xs text-text-muted">Publicado en MercadoLibre</span>
                         </div>
                         {editProperty.mlPublication.permalink && (

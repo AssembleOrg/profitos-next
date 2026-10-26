@@ -115,7 +115,7 @@ export default async function PropiedadesPage({ searchParams }: Props) {
         createdAt: true,
         _count: { select: { visitas: true } },
         publications: {
-          select: { portal: true, status: true, permalink: true, externalId: true },
+          select: { portal: true, status: true, permalink: true, externalId: true, externalChangeDetail: true },
         },
       },
       orderBy,
@@ -167,7 +167,7 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     ownerReportData: unknown;
     createdAt: Date;
     _count: { visitas: number };
-    publications: { portal: string; status: string; permalink: string | null; externalId: string | null }[];
+    publications: { portal: string; status: string; permalink: string | null; externalId: string | null; externalChangeDetail: string | null }[];
   }) => ({
     id: p.id,
     externalId: p.externalId,
@@ -198,7 +198,9 @@ export default async function PropiedadesPage({ searchParams }: Props) {
     _count: p._count,
     mlPublication: (() => {
       const ml = p.publications.find((x) => x.portal === "mercadolibre");
-      return ml ? { status: ml.status, permalink: ml.permalink, published: Boolean(ml.externalId) } : null;
+      return ml
+        ? { status: ml.status, permalink: ml.permalink, published: Boolean(ml.externalId), externalChangeDetail: ml.externalChangeDetail }
+        : null;
     })(),
     portalPublications: p.publications
       .filter((x) => x.portal === "zonaprop" || x.portal === "argenprop")
