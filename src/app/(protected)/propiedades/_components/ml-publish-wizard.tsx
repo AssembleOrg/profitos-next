@@ -61,6 +61,7 @@ interface TitleCheck {
 const STATUS_LABEL: Record<string, string> = {
   draft: "Borrador",
   publishing: "Publicando…",
+  not_yet_active: "En revisión de MercadoLibre",
   active: "Activa",
   paused: "Pausada",
   closed: "Cerrada",

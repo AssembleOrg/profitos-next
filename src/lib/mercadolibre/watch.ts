@@ -16,8 +16,9 @@ import type { MlItem } from "./items";
  * guardado era activo/pausado, el cambio vino de afuera → se marca la alerta.
  */
 
-/** Estados nuestros desde los que una baja no pedida es noticia. */
-const WATCHED = new Set(["active", "paused"]);
+/** Estados nuestros desde los que una baja no pedida es noticia
+ * (not_yet_active: recién publicado, ML todavía lo está procesando). */
+const WATCHED = new Set(["active", "paused", "not_yet_active"]);
 
 /** sub_status de ML que indican moderación (los demás, ej. pack_quota_assigned, no dicen nada). */
 const MODERATION_SUB = new Set(["forbidden", "held", "suspended", "waiting_for_patch", "freezed", "under_review"]);

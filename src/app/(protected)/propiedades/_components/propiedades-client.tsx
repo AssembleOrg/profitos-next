@@ -380,6 +380,7 @@ const ML_CHIP: Record<string, { label: string; cls: string }> = {
   paused: { label: "ML pausada", cls: "border-warning/30 bg-warning-chip text-warning" },
   closed: { label: "ML cerrada", cls: "border-border bg-bg text-text-muted" },
   publishing: { label: "ML publicando…", cls: "border-info/30 bg-info/10 text-info" },
+  not_yet_active: { label: "ML en revisión", cls: "border-info/30 bg-info/10 text-info" },
   error: { label: "ML error", cls: "border-danger/30 bg-danger-chip text-danger" },
 };
 function MlChip({ status, permalink, externalDetail }: { status: string; permalink: string | null; externalDetail?: string | null }) {
