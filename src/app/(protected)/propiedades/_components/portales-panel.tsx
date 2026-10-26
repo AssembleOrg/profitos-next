@@ -34,7 +34,10 @@ const ZP_PLANS: { value: string; label: string }[] = [
 const ZP_PLAN_LABEL = (v: string) => ZP_PLANS.find((p) => p.value === v)?.label ?? "Simple";
 
 type ConnStatus = { portal: PortalKey; connected: boolean; lastOkAt: string | null; needsAction: boolean; actionHint: string | null };
-type Publication = { portal: string; status: string; published: boolean; permalink: string | null; lastError: string | null };
+type Publication = { portal: string; status: string; published: boolean; externalId?: string | null; permalink: string | null; lastError: string | null };
+
+/** Ficha de ArgenProp en Gestión: ahí se cargan las fotos y se publica. */
+const apGestionUrl = (id: string) => `https://gestion.argenprop.com/avisos/editar/${id}/datosgenerales`;
 type PlanCredit = { plan: string; label: string; available: number | null; used: number | null; total: number | null };
 type Credits = { plans: PlanCredit[]; fetchedAt: string | null; error: string | null };
 type Responsible = { userId: number; name: string; lastName: string; email: string };
@@ -144,7 +147,7 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
       const okMsg = activate
         ? `${PORTAL_META[portal].label}: publicando activo (gasta crédito)`
         : portal === "argenprop"
-          ? `${PORTAL_META[portal].label}: publicación encolada`
+          ? `${PORTAL_META[portal].label}: ficha encolada (fotos y publicación se terminan en ArgenProp Gestión)`
           : `${PORTAL_META[portal].label}: borrador encolado`;
       toast.success(okMsg);
       await load();
@@ -272,7 +275,9 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
     const pub = pubs[portal];
     const ready = readiness?.[portal];
     const notReady = meta.publishable && !pub?.published && ready ? !ready.ok : false;
-    return meta.publishable && !notReady;
+    // ArgenProp con ficha viva: no se vuelve a crear (quedaría duplicada).
+    const apHasFicha = portal === "argenprop" && Boolean(pub?.externalId) && ["draft", "active", "paused", "publishing"].includes(pub?.status ?? "");
+    return meta.publishable && !notReady && !apHasFicha;
   };
   const selectableCount = ORDER.filter(isSelectable).length;
   const selectedCount = [...selected].filter(isSelectable).length;
@@ -319,7 +324,13 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
               const ready = readiness?.[portal];
               // Bloquea publicar sólo si aún no hay aviso creado y faltan campos.
               const notReady = meta.publishable && !pub?.published && ready ? !ready.ok : false;
-              const chip = pub ? STATUS_CHIP[pub.status] : null;
+              // ArgenProp: el sistema sólo crea la ficha (sin fotos, sin publicar).
+              const apFicha = portal === "argenprop" && pub?.status === "draft" && pub.externalId ? pub.externalId : null;
+              const chip = apFicha
+                ? { label: `Ficha ${apFicha} sin publicar`, cls: "bg-clay-chip text-terra" }
+                : pub
+                  ? STATUS_CHIP[pub.status]
+                  : null;
               const selectable = isSelectable(portal);
               const isSel = selectable && selected.has(portal);
               const canToggle = selectable && busy === null;
@@ -582,21 +593,36 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                             </button>
                           </div>
                         </>
+                      ) : apFicha ? (
+                        <div className="rounded-[12px] bg-clay-chip px-3 py-2.5 text-[11.5px] text-terra">
+                          <p className="font-bold">La ficha está creada pero NO publicada.</p>
+                          <p className="mt-0.5">
+                            Falta cargar las fotos y publicarla en ArgenProp Gestión (el sistema todavía no lo hace).
+                          </p>
+                          <a
+                            href={apGestionUrl(apFicha)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-flex rounded-full bg-dark px-3.5 py-1.5 text-[12px] font-bold text-dark-fg"
+                          >
+                            Completar en ArgenProp ↗
+                          </a>
+                        </div>
                       ) : (
                         <button
                           onClick={() =>
                             setConfirm({
-                              title: "¿Publicar en ArgenProp?",
-                              body: "Crea y publica el aviso en ArgenProp (no tiene borrador).",
-                              cta: "Publicar",
+                              title: "¿Crear ficha en ArgenProp?",
+                              body: "Crea la ficha con datos, precio y descripción. Las fotos y la publicación se terminan en ArgenProp Gestión: el sistema todavía no lo hace.",
+                              cta: "Crear ficha",
                               run: () => void publishOne(portal, false),
                             })
                           }
                           disabled={publishBusy}
                           className={BTN_PRIMARY}
-                          title="Crea y publica el aviso en ArgenProp (no tiene borrador)"
+                          title="Crea la ficha (sin fotos ni publicación) en ArgenProp Gestión"
                         >
-                          Publicar en ArgenProp
+                          Crear ficha en ArgenProp
                         </button>
                       )
                     ) : (
@@ -609,7 +635,7 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                     <div className="flex items-center gap-1.5">
                       <span className={`h-1.5 w-1.5 rounded-full bg-current opacity-70 ${pub?.status === "publishing" ? "animate-pulse" : ""}`} aria-hidden />
                       {chip ? chip.label : "Sin publicar"}
-                      {pub?.permalink && (
+                      {pub?.permalink && !apFicha && (
                         <a
                           href={pub.permalink}
                           target="_blank"

@@ -154,14 +154,33 @@ export async function gestionPutEstado(idAviso: string, estado: string): Promise
   await markGestionOk();
 }
 
+/**
+ * GET con reintentos: cada intento sale por otra IP del pool, y una IP caída
+ * tiraba "fetch failed" y tumbaba el chequeo entero de avisos. Sólo para GET
+ * (repetir una lectura no tiene efectos).
+ */
+async function getWithRetry(url: string, init: FetchInit, attempts = 3): ReturnType<typeof httpFetch> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await httpFetch(url, withProxy(init));
+    } catch (e) {
+      lastErr = e;
+      const cause = (e as { cause?: { code?: string; message?: string } }).cause;
+      console.warn(`[argenprop] GET ${url} intento ${i + 1}/${attempts} falló: ${(e as Error).message}${cause ? ` (${cause.code ?? cause.message})` : ""}`);
+    }
+  }
+  throw lastErr;
+}
+
 /** GET de una página HTML del panel (listados de avisos). */
 export async function gestionGetHtml(path: string): Promise<string> {
   const cookie = await cookieHeader();
-  const res = await httpFetch(`${BASE}${path}`, withProxy({
+  const res = await getWithRetry(`${BASE}${path}`, {
     method: "GET",
     redirect: "manual",
     headers: { ...baseHeaders(cookie), accept: "text/html,application/xhtml+xml" },
-  }));
+  });
   assertNotLoginRedirect(res.headers.get("location"));
   if (res.status >= 400) throw new Error(`Gestión GET ${path} → ${res.status}`);
   return res.text();
@@ -170,11 +189,11 @@ export async function gestionGetHtml(path: string): Promise<string> {
 /** GET (para datos de referencia: provincias, partidos, coordenadas...). */
 export async function gestionGetJson<T = unknown>(path: string): Promise<T> {
   const cookie = await cookieHeader();
-  const res = await httpFetch(`${BASE}${path}`, withProxy({
+  const res = await getWithRetry(`${BASE}${path}`, {
     method: "GET",
     redirect: "manual",
     headers: { ...baseHeaders(cookie), accept: "application/json, text/plain, */*" },
-  }));
+  });
   const location = res.headers.get("location");
   assertNotLoginRedirect(location);
   if (res.status >= 400) throw new Error(`Gestión GET ${path} → ${res.status}`);

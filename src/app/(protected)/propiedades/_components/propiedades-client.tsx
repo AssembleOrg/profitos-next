@@ -429,8 +429,12 @@ const PORTAL_UI: Record<string, { abbr: string; name: string; dot: string }> = {
   argenprop: { abbr: "AP", name: "ArgenProp", dot: "#e2574c" },
 };
 function PortalChip({ portal, status, permalink }: { portal: string; status: string; permalink: string | null }) {
-  const c = PUB_CHIP[status];
   const ui = PORTAL_UI[portal];
+  // ArgenProp "draft" = ficha creada por el sistema, sin fotos ni publicar: la
+  // URL pública da 410, así que el chip lleva a la ficha en Gestión.
+  const apId = portal === "argenprop" && status === "draft" ? (permalink?.match(/aviso--(\d+)/) ?? [])[1] : undefined;
+  const c = apId ? { label: "sin publicar", cls: PUB_CHIP.error.cls } : PUB_CHIP[status];
+  if (apId) permalink = `https://gestion.argenprop.com/avisos/editar/${apId}/datosgenerales`;
   if (!c || !ui) return null;
   const chip = (
     <span

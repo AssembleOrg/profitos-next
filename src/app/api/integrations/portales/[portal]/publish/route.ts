@@ -35,6 +35,11 @@ export const POST = withHandler(async (request: NextRequest, context) => {
     responsibleUserId: body.responsibleUserId,
   });
   await triggerWorkerProcess(); // despierta al worker para procesar ya (no esperar al tick)
-  const msg = body.activate ? "Publicación (activar) encolada" : "Borrador encolado";
+  const msg =
+    portal === "argenprop"
+      ? "Ficha encolada: después hay que cargar fotos y publicarla en ArgenProp Gestión"
+      : body.activate
+        ? "Publicación (activar) encolada"
+        : "Borrador encolado";
   return ok({ queued: true, jobId, portal, activate: Boolean(body.activate) }, msg, path);
 });
