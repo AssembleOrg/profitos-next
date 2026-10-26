@@ -56,14 +56,21 @@ export async function uploadPhotoFromUrl(url: string): Promise<string> {
   return uploadPhoto(await res.arrayBuffer(), extFromUrl(url));
 }
 
-/** Sube varias fotos (por URL) en orden y devuelve sus keys. */
-export async function uploadPhotosFromUrls(urls: string[]): Promise<string[]> {
+/**
+ * Sube varias fotos (por URL) en orden y devuelve sus keys. Cada foto se
+ * reintenta (el pedido de URL firmada sale por el proxy y una IP caída hacía
+ * perder fotos en silencio); si igual falla, se sigue con las demás.
+ */
+export async function uploadPhotosFromUrls(urls: string[], attempts = 3): Promise<string[]> {
   const keys: string[] = [];
   for (const u of urls) {
-    try {
-      keys.push(await uploadPhotoFromUrl(u));
-    } catch {
-      // una foto que falla no debe tumbar toda la publicación
+    for (let i = 1; i <= attempts; i++) {
+      try {
+        keys.push(await uploadPhotoFromUrl(u));
+        break;
+      } catch (e) {
+        if (i === attempts) console.warn(`[argenprop] foto descartada tras ${attempts} intentos: ${u} — ${(e as Error).message}`);
+      }
     }
   }
   return keys;

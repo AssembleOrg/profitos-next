@@ -37,7 +37,7 @@ function proxyDispatcher(): ProxyAgent | undefined {
   return uri ? new ProxyAgent(uri) : undefined;
 }
 
-type FetchInit = NonNullable<Parameters<typeof httpFetch>[1]>;
+export type FetchInit = NonNullable<Parameters<typeof httpFetch>[1]>;
 /** Agrega el dispatcher del proxy al init del fetch (si hay proxy configurado). */
 function withProxy(init: FetchInit): FetchInit {
   const d = proxyDispatcher();
@@ -155,11 +155,12 @@ export async function gestionPutEstado(idAviso: string, estado: string): Promise
 }
 
 /**
- * GET con reintentos: cada intento sale por otra IP del pool, y una IP caída
- * tiraba "fetch failed" y tumbaba el chequeo entero de avisos. Sólo para GET
- * (repetir una lectura no tiene efectos).
+ * Fetch por el proxy con reintentos: cada intento sale por otra IP del pool, y
+ * una IP caída tiraba "fetch failed" y tumbaba el chequeo entero de avisos.
+ * Usar sólo con pedidos que se pueden repetir sin efectos (GET, o PUT
+ * idempotentes como asignar puntos).
  */
-async function getWithRetry(url: string, init: FetchInit, attempts = 3): ReturnType<typeof httpFetch> {
+export async function proxyFetchRetry(url: string, init: FetchInit, attempts = 3): ReturnType<typeof httpFetch> {
   let lastErr: unknown;
   for (let i = 0; i < attempts; i++) {
     try {
@@ -167,7 +168,7 @@ async function getWithRetry(url: string, init: FetchInit, attempts = 3): ReturnT
     } catch (e) {
       lastErr = e;
       const cause = (e as { cause?: { code?: string; message?: string } }).cause;
-      console.warn(`[argenprop] GET ${url} intento ${i + 1}/${attempts} falló: ${(e as Error).message}${cause ? ` (${cause.code ?? cause.message})` : ""}`);
+      console.warn(`[argenprop] ${init.method ?? "GET"} ${url} intento ${i + 1}/${attempts} falló: ${(e as Error).message}${cause ? ` (${cause.code ?? cause.message})` : ""}`);
     }
   }
   throw lastErr;
@@ -176,7 +177,7 @@ async function getWithRetry(url: string, init: FetchInit, attempts = 3): ReturnT
 /** GET de una página HTML del panel (listados de avisos). */
 export async function gestionGetHtml(path: string): Promise<string> {
   const cookie = await cookieHeader();
-  const res = await getWithRetry(`${BASE}${path}`, {
+  const res = await proxyFetchRetry(`${BASE}${path}`, {
     method: "GET",
     redirect: "manual",
     headers: { ...baseHeaders(cookie), accept: "text/html,application/xhtml+xml" },
@@ -189,7 +190,7 @@ export async function gestionGetHtml(path: string): Promise<string> {
 /** GET (para datos de referencia: provincias, partidos, coordenadas...). */
 export async function gestionGetJson<T = unknown>(path: string): Promise<T> {
   const cookie = await cookieHeader();
-  const res = await getWithRetry(`${BASE}${path}`, {
+  const res = await proxyFetchRetry(`${BASE}${path}`, {
     method: "GET",
     redirect: "manual",
     headers: { ...baseHeaders(cookie), accept: "application/json, text/plain, */*" },

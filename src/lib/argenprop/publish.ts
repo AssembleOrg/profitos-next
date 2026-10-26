@@ -5,9 +5,11 @@
  *   1) POST /wizardproperty/datosgeneralespost  → crea la ficha, 302 a
  *      /avisos/editar/{IdAviso}/datoscontacto  (de ahí sale el IdAviso).
  *   2) POST /wizardproperty/datoscontactopost   → datos de contacto.
- *   (Fotos y publicación final: pendientes de relevar.)
+ *   3) Publicar = asignar puntos (ver points.ts).
+ * Las fotos se suben antes a S3 (photos.ts) y viajan en el paso 1 como
+ * `{tipo}.MultimediaModel.Fotos[i].Url = key` (relevado de site.min.js).
  *
- * La ficha queda como borrador (no publicada) hasta asignarle puntos/posición.
+ * Sin el paso 3 la ficha queda oculta y la URL pública da 410.
  */
 import { gestionPostForm, markGestionOk } from "./gestion";
 
@@ -57,7 +59,7 @@ export type FichaInput = {
   descripcion: string;
   location: FichaLocation;
   caracteristicas?: FichaCaracteristicas;
-  /** Keys de fotos ya subidas (ver photos.ts), van en los campos `file`. */
+  /** Keys de fotos ya subidas (ver photos.ts). */
   photos?: string[];
   /** Prefijo del modelo por tipo (Casa., Departamento.). Default: capitaliza. */
   typePrefix?: string;
@@ -73,11 +75,14 @@ export function datosGeneralesPairs(input: FichaInput, idAviso = ""): [string, s
   const p = input.typePrefix ?? capitalize(input.tipoPropiedad);
   const c = input.caracteristicas ?? {};
   const loc = input.location;
-  // Un campo `file` por foto subida (key t/{uuid}.ext); si no hay, uno vacío.
-  const fileFields: [string, string][] = (input.photos?.length ? input.photos : [""]).map((k) => [
-    "file",
-    k,
-  ]);
+  // Fotos: un `{tipo}.MultimediaModel.Fotos[i].Url` por key subida (en el
+  // orden de la propiedad: la primera es la portada). El input `file` del form
+  // va vacío (el navegador sube directo a S3).
+  const photoPrefix = p.toLowerCase();
+  const fileFields: [string, string][] = [
+    ["file", ""],
+    ...(input.photos ?? []).map((k, i): [string, string] => [`${photoPrefix}.MultimediaModel.Fotos[${i}].Url`, k]),
+  ];
   return [
     ["IdAviso", idAviso],
     ["StepId", "DatosInmueble"],
@@ -142,6 +147,18 @@ export async function createFicha(input: FichaInput): Promise<string> {
   }
   await markGestionOk();
   return id;
+}
+
+/**
+ * Re-guarda los datos (y fotos) de una ficha que ya existe: mismo form con el
+ * IdAviso cargado. Se usa para completar una ficha creada antes sin fotos.
+ */
+export async function updateFicha(idAviso: string, input: FichaInput): Promise<void> {
+  const res = await gestionPostForm("/wizardproperty/datosgeneralespost", datosGeneralesPairs(input, idAviso));
+  if (!res.location?.includes(`/${idAviso}/`)) {
+    throw new Error(`No se pudo actualizar la ficha ${idAviso} (status ${res.status}, location ${res.location ?? "—"}).`);
+  }
+  await markGestionOk();
 }
 
 // ─── Paso 2: datos de contacto ───────────────────────────────────────────────

@@ -37,7 +37,7 @@ export const POST = withHandler(async (request: NextRequest, context) => {
   await triggerWorkerProcess(); // despierta al worker para procesar ya (no esperar al tick)
   const msg =
     portal === "argenprop"
-      ? "Ficha encolada: después hay que cargar fotos y publicarla en ArgenProp Gestión"
+      ? "Publicación en ArgenProp encolada"
       : body.activate
         ? "Publicación (activar) encolada"
         : "Borrador encolado";
