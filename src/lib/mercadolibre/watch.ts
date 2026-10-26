@@ -6,10 +6,9 @@ import type { MlItem } from "./items";
  * Vigilancia de avisos de MercadoLibre: detecta cuando un aviso nuestro se
  * cierra o pausa SIN que el sistema lo haya pedido.
  *
- * Caso real (Alvear al 900, 26/10/2026): se publicó y a los 3 minutos quedó
- * cerrado. No fue ML (sin infracción) ni el sistema: fue Tokko, conectado a la
- * misma cuenta, que cerró otro aviso suyo con el mismo título y se llevó puesto
- * el nuestro. Nadie se enteró hasta que lo vio el cliente.
+ * Caso real (Alvear al 900, 26/10/2026): se publicó dos veces y las dos quedó
+ * cerrado a los 3 minutos, sin infracción de ML y sin que el sistema lo pidiera.
+ * Nadie se enteró hasta que lo vio el cliente.
  *
  * Regla: cada cambio de estado que pide el sistema se guarda en la DB ANTES de
  * llamar a ML. Entonces, si ML informa un estado distinto al guardado y el

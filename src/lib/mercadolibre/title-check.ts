@@ -5,11 +5,10 @@ import { mlFetch } from "./client";
 /**
  * Títulos repetidos en la cuenta de MercadoLibre.
  *
- * Tokko (y cualquier otra herramienta conectada a la misma cuenta) puede
- * reconocer "sus" avisos por el título: el 26/10/2026 cerró un aviso suyo y en
- * la pasada siguiente cerró también el nuestro de Alvear al 900, publicado con
- * el mismo título exacto. Por eso no se publica con un título que ya exista en
- * la cuenta, en ningún estado (los cerrados también cuentan).
+ * La cuenta la comparten el sistema y Tokko (cientos de avisos). Un título
+ * repetido confunde a quien busca y a cualquier herramienta que reconozca
+ * avisos por título, así que no se publica con un título que ya exista en la
+ * cuenta, en ningún estado (los cerrados también cuentan).
  */
 
 export interface SameTitleItem {

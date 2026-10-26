@@ -1,5 +1,6 @@
 // Publicación / edición / cierre de items (inmuebles) en MercadoLibre.
 import { mlFetch } from "./client";
+import { ML_DEFAULT_SELLER_CONTACT } from "./config";
 
 export interface MlAttributeInput {
   id: string;
@@ -21,6 +22,8 @@ export interface MlLocationInput {
 export interface MlSellerContactInput {
   contact?: string;
   other_info?: string;
+  country_code?: string;
+  country_code2?: string;
   area_code?: string;
   phone?: string;
   area_code2?: string;
@@ -50,6 +53,19 @@ export interface MlItem {
   [k: string]: unknown;
 }
 
+/** Contacto por defecto de la inmobiliaria + lo que venga cargado (sin vacíos). */
+function sellerContact(input?: MlSellerContactInput): MlSellerContactInput {
+  const given = Object.fromEntries(Object.entries(input ?? {}).filter(([, v]) => typeof v === "string" && v.trim()));
+  // Si cargaron otro teléfono principal, el secundario por defecto no corresponde.
+  const base: MlSellerContactInput = { ...ML_DEFAULT_SELLER_CONTACT };
+  if (given.phone && given.phone !== ML_DEFAULT_SELLER_CONTACT.phone) {
+    delete base.phone2;
+    delete base.area_code2;
+    delete base.country_code2;
+  }
+  return { ...base, ...given };
+}
+
 function buildItemBody(input: MlPublishInput) {
   return {
     title: input.title,
@@ -71,7 +87,7 @@ function buildItemBody(input: MlPublishInput) {
         ...(a.value_id ? { value_id: a.value_id } : { value_name: a.value_name }),
       })),
     pictures: input.pictures.map((source) => ({ source })),
-    ...(input.sellerContact ? { seller_contact: input.sellerContact } : {}),
+    seller_contact: sellerContact(input.sellerContact),
   };
 }
 
