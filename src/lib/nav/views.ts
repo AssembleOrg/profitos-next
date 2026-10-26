@@ -20,6 +20,7 @@ export const APP_VIEWS: AppView[] = [
   { href: "/preguntas", label: "Preguntas ML" },
   { href: "/seguimientos", label: "Seguimientos" },
   { href: "/agenda", label: "Agenda" },
+  { href: "/personas", label: "Personas" },
   { href: "/propiedades", label: "Propiedades" },
   { href: "/tasaciones", label: "Tasaciones" },
   { href: "/firmas", label: "Estado de firmas" },

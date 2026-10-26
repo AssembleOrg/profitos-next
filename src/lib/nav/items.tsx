@@ -121,6 +121,20 @@ export const NAV_META_LIST: NavMeta[] = [
     ),
   },
   {
+    href: "/personas",
+    label: "Personas",
+    shortLabel: "Personas",
+    group: "clientes",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="7" r="4" />
+        <path d="M5 21v-2a4 4 0 014-4h4" />
+        <circle cx="17" cy="17" r="3" />
+        <path d="M21 21l-1.5-1.5" />
+      </svg>
+    ),
+  },
+  {
     href: "/propiedades",
     label: "Propiedades",
     shortLabel: "Props.",
