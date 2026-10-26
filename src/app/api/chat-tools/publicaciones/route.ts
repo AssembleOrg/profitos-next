@@ -131,7 +131,9 @@ export const POST = withHandler(async (request: NextRequest) => {
     console.log(`[chat-tools] ${who.email} encoló publicar ${prop.id} en ${portal} (job ${jobId})`);
     return ok(
       { propiedad: prop, portal, accion, jobId, encolado: true },
-      `Publicación de ${prop.direccion} en ${portal} encolada; el worker la procesa en unos minutos y el estado se ve en Propiedades → Portales.`,
+      portal === "argenprop"
+        ? `Ficha de ${prop.direccion} en ArgenProp encolada. OJO: el sistema todavía no carga fotos ni publica en ArgenProp; hay que completar la ficha y publicarla en ArgenProp Gestión (link en Propiedades → Portales).`
+        : `Publicación de ${prop.direccion} en ${portal} encolada; el worker la procesa en unos minutos y el estado se ve en Propiedades → Portales.`,
       path
     );
   }

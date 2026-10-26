@@ -29,15 +29,24 @@ export const POST = withHandler(async (request: NextRequest) => {
   await assertReadyToPublish(body.propertyId, portals);
 
   const queued: { portal: string; jobId: string }[] = [];
+  const skipped: { portal: string; reason: string }[] = [];
   for (const portal of portals) {
-    const jobId = await enqueuePublish(body.propertyId, portal, {
-      activate: Boolean(body.activate),
-      plan: body.plan,
-      responsibleUserId: body.responsibleUserId,
-    });
-    queued.push({ portal, jobId });
+    try {
+      const jobId = await enqueuePublish(body.propertyId, portal, {
+        activate: Boolean(body.activate),
+        plan: body.plan,
+        responsibleUserId: body.responsibleUserId,
+      });
+      queued.push({ portal, jobId });
+    } catch (err) {
+      // Ej: ArgenProp con ficha ya creada → no se duplica, los demás siguen.
+      if (err instanceof AppError && err.statusCode === 409) skipped.push({ portal, reason: err.message });
+      else throw err;
+    }
   }
-  await triggerWorkerProcess(); // despierta al worker para procesar ya (no esperar al tick)
+  if (!queued.length && skipped.length) throw new AppError(409, skipped.map((s) => s.reason).join(" "));
+  if (queued.length) await triggerWorkerProcess(); // despierta al worker para procesar ya (no esperar al tick)
   const msg = body.activate ? "Publicación (activar) encolada" : "Borrador encolado";
-  return ok({ queued }, `${msg} en ${queued.length} portal(es)`, path);
+  const extra = skipped.length ? ` ${skipped.map((s) => s.reason).join(" ")}` : "";
+  return ok({ queued, skipped }, `${msg} en ${queued.length} portal(es).${extra}`, path);
 });

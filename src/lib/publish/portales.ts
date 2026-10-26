@@ -10,6 +10,7 @@
  * de campos (fotos, características finas, tipo exacto, activación) es Fase 4.
  * MercadoLibre NO pasa por acá (publica sync vía su wizard propio).
  */
+import { AppError } from "@/lib/api/handler";
 import { prisma } from "@/lib/prisma/client";
 import {
   publishViaBrowser,
@@ -240,6 +241,11 @@ async function mapArgenprop(p: PropertyForPublish): Promise<FichaInput> {
   };
 }
 
+/** Edición de la ficha en ArgenProp Gestión (donde se cargan fotos y se publica). */
+export function argenpropGestionUrl(id: string): string {
+  return `https://gestion.argenprop.com/avisos/editar/${id}/datosgenerales`;
+}
+
 async function runArgenprop(p: PropertyForPublish): Promise<{ externalId: string; permalink: string; active: boolean }> {
   const id = await createFicha(await mapArgenprop(p));
   // Permalink PÚBLICO del aviso (el chip de la lista lo abre); la edición vive
@@ -262,6 +268,22 @@ export type EnqueueOpts = { activate?: boolean; plan?: string; action?: PublishJ
  * por (propertyId,portal). `activate:true` → publica ONLINE (gasta crédito).
  */
 export async function enqueuePublish(propertyId: string, portal: PublishPortal, opts: EnqueueOpts = {}): Promise<string> {
+  // ArgenProp: publicar crea SIEMPRE una ficha nueva. Si ya hay una viva, no se
+  // crea otra (Alvear al 900 terminó con dos fichas ocultas, oct 2026).
+  if (portal === "argenprop" && (opts.action ?? "publish") === "publish") {
+    const existing = await prisma.propertyPublication.findUnique({
+      where: { propertyId_portal: { propertyId, portal } },
+      select: { externalId: true, status: true },
+    });
+    if (existing?.externalId && ["draft", "active", "paused", "publishing"].includes(existing.status)) {
+      throw new AppError(
+        409,
+        existing.status === "draft"
+          ? `Ya hay una ficha en ArgenProp (${existing.externalId}) sin publicar: completala en ArgenProp Gestión (${argenpropGestionUrl(existing.externalId)}).`
+          : `La propiedad ya tiene aviso en ArgenProp (${existing.externalId}).`
+      );
+    }
+  }
   const job = await prisma.publishJob.create({
     data: {
       propertyId,
