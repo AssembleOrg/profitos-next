@@ -147,7 +147,7 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
       const okMsg = activate
         ? `${PORTAL_META[portal].label}: publicando activo (gasta crédito)`
         : portal === "argenprop"
-          ? `${PORTAL_META[portal].label}: ficha encolada (fotos y publicación se terminan en ArgenProp Gestión)`
+          ? `${PORTAL_META[portal].label}: publicación encolada (tarda alrededor de un minuto)`
           : `${PORTAL_META[portal].label}: borrador encolado`;
       toast.success(okMsg);
       await load();
@@ -275,8 +275,8 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
     const pub = pubs[portal];
     const ready = readiness?.[portal];
     const notReady = meta.publishable && !pub?.published && ready ? !ready.ok : false;
-    // ArgenProp con ficha viva: no se vuelve a crear (quedaría duplicada).
-    const apHasFicha = portal === "argenprop" && Boolean(pub?.externalId) && ["draft", "active", "paused", "publishing"].includes(pub?.status ?? "");
+    // ArgenProp ya publicado / en curso: no se vuelve a publicar (una ficha sin publicar sí: se completa).
+    const apHasFicha = portal === "argenprop" && Boolean(pub?.externalId) && ["active", "paused", "publishing"].includes(pub?.status ?? "");
     return meta.publishable && !notReady && !apHasFicha;
   };
   const selectableCount = ORDER.filter(isSelectable).length;
@@ -596,33 +596,42 @@ export function PortalesPanel({ propertyId }: { propertyId: string }) {
                       ) : apFicha ? (
                         <div className="rounded-[12px] bg-clay-chip px-3 py-2.5 text-[11.5px] text-terra">
                           <p className="font-bold">La ficha está creada pero NO publicada.</p>
-                          <p className="mt-0.5">
-                            Falta cargar las fotos y publicarla en ArgenProp Gestión (el sistema todavía no lo hace).
-                          </p>
-                          <a
-                            href={apGestionUrl(apFicha)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-2 inline-flex rounded-full bg-dark px-3.5 py-1.5 text-[12px] font-bold text-dark-fg"
-                          >
-                            Completar en ArgenProp ↗
-                          </a>
+                          <p className="mt-0.5">Se completa con fotos y contacto y se publica con 1 punto del abono.</p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <button
+                              onClick={() =>
+                                setConfirm({
+                                  title: "¿Publicar en ArgenProp?",
+                                  body: `Completa la ficha ${apFicha} con las fotos y el contacto y la publica con 1 punto del abono de ArgenProp.`,
+                                  cta: "Publicar",
+                                  run: () => void publishOne(portal, false),
+                                })
+                              }
+                              disabled={publishBusy}
+                              className="rounded-full bg-dark px-3.5 py-1.5 text-[12px] font-bold text-dark-fg disabled:opacity-50"
+                            >
+                              Completar y publicar
+                            </button>
+                            <a href={apGestionUrl(apFicha)} target="_blank" rel="noopener noreferrer" className="underline">
+                              Ver en Gestión ↗
+                            </a>
+                          </div>
                         </div>
                       ) : (
                         <button
                           onClick={() =>
                             setConfirm({
-                              title: "¿Crear ficha en ArgenProp?",
-                              body: "Crea la ficha con datos, precio y descripción. Las fotos y la publicación se terminan en ArgenProp Gestión: el sistema todavía no lo hace.",
-                              cta: "Crear ficha",
+                              title: "¿Publicar en ArgenProp?",
+                              body: "Sube la ficha con fotos y contacto y la publica con 1 punto del abono de ArgenProp.",
+                              cta: "Publicar",
                               run: () => void publishOne(portal, false),
                             })
                           }
                           disabled={publishBusy}
                           className={BTN_PRIMARY}
-                          title="Crea la ficha (sin fotos ni publicación) en ArgenProp Gestión"
+                          title="Publica el aviso en ArgenProp (usa 1 punto del abono)"
                         >
-                          Crear ficha en ArgenProp
+                          Publicar en ArgenProp
                         </button>
                       )
                     ) : (

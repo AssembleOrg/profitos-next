@@ -20,7 +20,9 @@ import {
   type PhotoSource,
 } from "@/lib/zonaprop/browser-publish";
 import type { Feature } from "@/lib/zonaprop/publish";
-import { createFicha, type FichaInput } from "@/lib/argenprop/publish";
+import { createFicha, setContacto, updateFicha, type ContactoInput, type FichaInput } from "@/lib/argenprop/publish";
+import { uploadPhotosFromUrls } from "@/lib/argenprop/photos";
+import { publishWithPoints } from "@/lib/argenprop/points";
 import { gestionPutEstado } from "@/lib/argenprop/gestion";
 import { resolveLocation } from "@/lib/argenprop/location";import { DESCRIPTION_MIN } from "./readiness";
 
@@ -246,11 +248,42 @@ export function argenpropGestionUrl(id: string): string {
   return `https://gestion.argenprop.com/avisos/editar/${id}/datosgenerales`;
 }
 
-async function runArgenprop(p: PropertyForPublish): Promise<{ externalId: string; permalink: string; active: boolean }> {
-  const id = await createFicha(await mapArgenprop(p));
-  // Permalink PÚBLICO del aviso (el chip de la lista lo abre); la edición vive
-  // en gestion.argenprop.com/avisos/editar/{id}.
-  return { externalId: id, permalink: `https://www.argenprop.com/aviso--${id}`, active: false };
+/** Contacto de la inmobiliaria en los avisos de ArgenProp (el mismo que en ML). */
+const AP_CONTACT: ContactoInput = {
+  nombreInmobiliaria: "Juliana Profitos Propiedades",
+  disponibilidad: "Lunes a Viernes de 10:00 a 18:00 hs.",
+  telefono1: "+541153854029",
+  celular: "5491153854029",
+  whatsapp: "5491153854029",
+  email: "profitospropiedades@gmail.com",
+};
+
+/** ArgenProp admite hasta 50 fotos por aviso. */
+const AP_MAX_PHOTOS = 50;
+
+/**
+ * Publica en ArgenProp de punta a punta: sube las fotos, crea (o completa, si
+ * ya había una ficha sin publicar) la ficha, carga el contacto y le asigna
+ * puntos, que es lo que la pone online. Antes sólo creaba la ficha: quedaba
+ * oculta y la URL pública daba 410 (Alvear al 900, oct 2026).
+ */
+async function runArgenprop(p: PropertyForPublish, existingId?: string): Promise<{ externalId: string; permalink: string; active: boolean }> {
+  const input = await mapArgenprop(p);
+  const urls = photoUrls(p.photos).map((x) => x.url).slice(0, AP_MAX_PHOTOS);
+  const keys = await uploadPhotosFromUrls(urls);
+  if (!keys.length) throw new Error("ArgenProp: no se pudo subir ninguna foto de la propiedad (hace falta al menos una).");
+  input.photos = keys;
+
+  let id: string;
+  if (existingId) {
+    await updateFicha(existingId, input);
+    id = existingId;
+  } else {
+    id = await createFicha(input);
+  }
+  await setContacto(id, AP_CONTACT);
+  const state = await publishWithPoints(id);
+  return { externalId: id, permalink: `https://www.argenprop.com/aviso--${id}`, active: state.visible };
 }
 
 // ─── Cola ────────────────────────────────────────────────────────────────────
@@ -275,13 +308,9 @@ export async function enqueuePublish(propertyId: string, portal: PublishPortal, 
       where: { propertyId_portal: { propertyId, portal } },
       select: { externalId: true, status: true },
     });
-    if (existing?.externalId && ["draft", "active", "paused", "publishing"].includes(existing.status)) {
-      throw new AppError(
-        409,
-        existing.status === "draft"
-          ? `Ya hay una ficha en ArgenProp (${existing.externalId}) sin publicar: completala en ArgenProp Gestión (${argenpropGestionUrl(existing.externalId)}).`
-          : `La propiedad ya tiene aviso en ArgenProp (${existing.externalId}).`
-      );
+    // Una ficha "draft" sí se acepta: el job la completa (fotos + contacto + puntos) en vez de crear otra.
+    if (existing?.externalId && ["active", "paused", "publishing"].includes(existing.status)) {
+      throw new AppError(409, `La propiedad ya tiene aviso en ArgenProp (${existing.externalId}).`);
     }
   }
   const job = await prisma.publishJob.create({
@@ -298,10 +327,17 @@ export async function enqueuePublish(propertyId: string, portal: PublishPortal, 
   // Sólo el publish pisa el estado con "publishing"; un cambio de estado
   // (pausar/baja/reactivar) mantiene el estado real hasta que el worker aplique.
   if ((opts.action ?? "publish") === "publish") {
+    // ArgenProp reusa la ficha previa (ver runArgenprop), salvo que esté dada de baja.
+    const dropClosedAp =
+      portal === "argenprop" &&
+      (await prisma.propertyPublication.findUnique({
+        where: { propertyId_portal: { propertyId, portal } },
+        select: { status: true },
+      }))?.status === "closed";
     await prisma.propertyPublication.upsert({
       where: { propertyId_portal: { propertyId, portal } },
       create: { propertyId, portal, status: "publishing" },
-      update: { status: "publishing", lastError: null },
+      update: { status: "publishing", lastError: null, ...(dropClosedAp ? { externalId: null, permalink: null } : {}) },
     });
   }
   return job.id;
@@ -311,9 +347,10 @@ async function runPortal(
   portal: PublishPortal,
   p: PropertyForPublish,
   activate?: { plan: string },
-  responsibleUserId?: string
+  responsibleUserId?: string,
+  existingId?: string
 ): Promise<{ externalId: string; permalink: string; active: boolean }> {
-  return portal === "zonaprop" ? runZonaprop(p, activate, responsibleUserId) : runArgenprop(p);
+  return portal === "zonaprop" ? runZonaprop(p, activate, responsibleUserId) : runArgenprop(p, existingId);
 }
 
 /** Procesa un job: corre el motor y actualiza PropertyPublication. Lo llama el worker. */
@@ -390,7 +427,15 @@ export async function processPublishJob(jobId: string): Promise<void> {
 
   try {
     const activate = job.activate && portal === "zonaprop" ? { plan: job.plan ?? ZP_DEFAULT_PLAN } : undefined;
-    const { externalId, permalink, active } = await runPortal(portal, property, activate, job.responsibleUserId ?? undefined);
+    // ArgenProp: si ya hay ficha creada (sin publicar), se completa esa.
+    const prev =
+      portal === "argenprop"
+        ? await prisma.propertyPublication.findUnique({
+            where: { propertyId_portal: { propertyId: job.propertyId, portal } },
+            select: { externalId: true },
+          })
+        : null;
+    const { externalId, permalink, active } = await runPortal(portal, property, activate, job.responsibleUserId ?? undefined, prev?.externalId ?? undefined);
     const status = active ? "active" : "draft";
     await prisma.propertyPublication.upsert({
       where: { propertyId_portal: { propertyId: job.propertyId, portal } },

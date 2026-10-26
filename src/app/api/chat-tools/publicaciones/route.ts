@@ -132,7 +132,7 @@ export const POST = withHandler(async (request: NextRequest) => {
     return ok(
       { propiedad: prop, portal, accion, jobId, encolado: true },
       portal === "argenprop"
-        ? `Ficha de ${prop.direccion} en ArgenProp encolada. OJO: el sistema todavía no carga fotos ni publica en ArgenProp; hay que completar la ficha y publicarla en ArgenProp Gestión (link en Propiedades → Portales).`
+        ? `Publicación de ${prop.direccion} en ArgenProp encolada (fotos, contacto y 1 punto del abono); en alrededor de un minuto se ve en Propiedades → Portales.`
         : `Publicación de ${prop.direccion} en ${portal} encolada; el worker la procesa en unos minutos y el estado se ve en Propiedades → Portales.`,
       path
     );
