@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma/client";
 import { gestionGetHtml } from "@/lib/argenprop/gestion";
 import { withZonapropPanel } from "@/lib/zonaprop/browser-publish";
+import { fetchZpDashboard, fetchZpQualities, markDifusionError, saveDifusion, zpRowsForDifusion, type DifusionSaveResult } from "./difusion";
+import { parseApCards, type ListingRow, type ZpPosting } from "./difusion-parse";
 
 /**
  * Chequeo de avisos de ZonaProp y ArgenProp contra el estado REAL del portal.
@@ -28,6 +30,8 @@ export type ListingSyncResult = {
   skippedReason?: string;
   /** Cambios aplicados (o que se aplicarían en dry-run): externalId: antes → después. */
   changes: string[];
+  /** Panel de Difusión (no en dry-run). */
+  difusion?: DifusionSaveResult | { error: string };
 };
 export type ListingSyncOpts = { dryRun?: boolean };
 
@@ -72,13 +76,24 @@ async function applyPortalStates(portal: string, live: Map<string, LiveState>, c
 // panel, oct 2026): cada aviso trae stateAndDates[0].status ONLINE | OFFLINE.
 // Los archivados no aparecen.
 
-type ZpListPage = { postings?: { postingId: number; stateAndDates?: { status?: string }[] }[] };
+type ZpListPage = { postings?: ZpPosting[] };
 
 const ZP_PAGE_SIZE = 50;
 
 export async function syncZonapropListings(opts: ListingSyncOpts = {}): Promise<ListingSyncResult> {
-  const { live, complete } = await withZonapropPanel(async (page, sessionId) => {
+  try {
+    return await syncZonapropListingsInner(opts);
+  } catch (e) {
+    // Sesión vencida / Cloudflare: el panel de Difusión lo muestra como no actualizado.
+    if (!opts.dryRun) await markDifusionError("zonaprop", e instanceof Error ? e.message : String(e));
+    throw e;
+  }
+}
+
+async function syncZonapropListingsInner(opts: ListingSyncOpts): Promise<ListingSyncResult> {
+  const { live, complete, difusionRows, portalSummary } = await withZonapropPanel(async (page, sessionId) => {
     const live = new Map<string, LiveState>();
+    const all: ZpPosting[] = [];
     let complete = false;
     for (let n = 1; n <= MAX_PAGES; n++) {
       const res = await page.evaluate(
@@ -98,6 +113,7 @@ export async function syncZonapropListings(opts: ListingSyncOpts = {}): Promise<
         const id = String(p.postingId);
         if (live.has(id)) continue;
         nuevos++;
+        all.push(p);
         const st = (p.stateAndDates?.[0]?.status ?? "").toUpperCase();
         live.set(id, st === "ONLINE" ? "active" : "paused");
       }
@@ -109,9 +125,39 @@ export async function syncZonapropListings(opts: ListingSyncOpts = {}): Promise<
       }
       if (nuevos === 0) break;
     }
-    return { live, complete };
+    // Panel de Difusión: calidad de los avisos vivos + totales de la cuenta, con
+    // el mismo navegador. Si falla, el chequeo de estados sigue igual.
+    let difusionRows: ListingRow[] | { error: string } = { error: "dry-run" };
+    let portalSummary: Record<string, unknown> | null = null;
+    if (!opts.dryRun) {
+      try {
+        difusionRows = zpRowsForDifusion(all, await fetchZpQualities(page, sessionId, all));
+        portalSummary = await fetchZpDashboard(page, sessionId).catch(() => null);
+      } catch (e) {
+        difusionRows = { error: e instanceof Error ? e.message : String(e) };
+      }
+    }
+    return { live, complete, difusionRows, portalSummary };
   });
-  return applyPortalStates("zonaprop", live, complete, opts);
+  const result = await applyPortalStates("zonaprop", live, complete, opts);
+  if (!opts.dryRun) result.difusion = await saveDifusionSafe("zonaprop", difusionRows, complete, portalSummary);
+  return result;
+}
+
+async function saveDifusionSafe(
+  portal: string,
+  rows: ListingRow[] | { error: string },
+  complete: boolean,
+  portalSummary: Record<string, unknown> | null = null,
+): Promise<DifusionSaveResult | { error: string }> {
+  try {
+    if (!Array.isArray(rows)) throw new Error(rows.error);
+    return await saveDifusion(portal, rows, { complete, portalSummary });
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    await markDifusionError(portal, error);
+    return { error };
+  }
 }
 
 // ─── ArgenProp ───────────────────────────────────────────────────────────────
@@ -135,7 +181,17 @@ function apLastPage(html: string, slug: string): number {
 }
 
 export async function syncArgenpropListings(opts: ListingSyncOpts = {}): Promise<ListingSyncResult> {
+  try {
+    return await syncArgenpropListingsInner(opts);
+  } catch (e) {
+    if (!opts.dryRun) await markDifusionError("argenprop", e instanceof Error ? e.message : String(e));
+    throw e;
+  }
+}
+
+async function syncArgenpropListingsInner(opts: ListingSyncOpts): Promise<ListingSyncResult> {
   const live = new Map<string, LiveState>();
+  const difusionRows = new Map<string, ListingRow>();
   let complete = true;
   for (const { slug, state } of AP_LISTS) {
     const first = await gestionGetHtml(`/propiedades-${slug}`);
@@ -146,7 +202,12 @@ export async function syncArgenpropListings(opts: ListingSyncOpts = {}): Promise
     const pages = [first];
     for (let n = 2; n <= last; n++) pages.push(await gestionGetHtml(`/propiedades-${slug}-pagina-${n}-orden-masnuevos`));
     if (apLastPage(first, slug) > MAX_PAGES) complete = false;
-    for (const html of pages) for (const id of apIds(html)) if (!live.has(id) || state === "active") live.set(id, state);
+    for (const html of pages) {
+      for (const id of apIds(html)) if (!live.has(id) || state === "active") live.set(id, state);
+      for (const row of parseApCards(html, slug.toUpperCase())) if (!difusionRows.has(row.externalId) || row.published) difusionRows.set(row.externalId, row);
+    }
   }
-  return applyPortalStates("argenprop", live, complete, opts);
+  const result = await applyPortalStates("argenprop", live, complete, opts);
+  if (!opts.dryRun) result.difusion = await saveDifusionSafe("argenprop", [...difusionRows.values()], complete);
+  return result;
 }

@@ -46,3 +46,27 @@ export async function triggerWorkerCreditsRefresh(): Promise<{ ok: boolean; erro
     return { ok: false, error: e instanceof Error ? e.message : "error" };
   }
 }
+
+/**
+ * Pide al worker actualizar el panel de Difusión (recorre los listados de
+ * ZonaProp y ArgenProp). Puede tardar un par de minutos. Fail-soft.
+ */
+export async function triggerWorkerDifusionRefresh(): Promise<{ ok: boolean; error?: string }> {
+  const base = process.env.WORKER_PUBLIC_URL?.trim();
+  const secret = process.env.RELOGIN_SHARED_SECRET?.trim();
+  if (!base || !secret) return { ok: false, error: "Worker no configurado (WORKER_PUBLIC_URL)" };
+  try {
+    const token = signReloginToken("difusion", 300);
+    const res = await fetch(`${base.replace(/\/+$/, "")}/difusion/refresh`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(280_000),
+    });
+    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    return { ok: Boolean(data.ok), error: data.error };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "error" };
+  }
+}

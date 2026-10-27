@@ -27,7 +27,7 @@ export const GET = withHandler(async (request) => {
   const reminderFrom = new Date(`${today.minus({ days: 45 }).toISODate()}T00:00:00.000Z`);
   const reminderUntil = new Date(`${today.toISODate()}T00:00:00.000Z`);
 
-  const [followUps, properties, overdueFollowUps, closedPublications, leads, questions, reservationReminders] = await Promise.all([
+  const [followUps, properties, overdueFollowUps, closedPublications, leads, questions, reservationReminders, listingIssues] = await Promise.all([
     prisma.propertyFollowUp.findMany({
       where: followUpWhere,
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
@@ -147,6 +147,14 @@ export const GET = withHandler(async (request) => {
         },
       },
     }),
+    // Avisos de ZP/AP a los que les apareció un error en el portal (duplicado,
+    // sin cupo, penalizado). Lo detecta el worker al recorrer los listados.
+    prisma.portalListing.findMany({
+      where: { gone: false, issuesChangedAt: { gte: new Date(Date.now() - URGENT_MS) } },
+      orderBy: [{ issuesChangedAt: "desc" }],
+      take: limit * 3,
+      select: { id: true, portal: true, address: true, url: true, propertyId: true, issues: true, issuesChangedAt: true },
+    }),
   ]);
 
   // Vincular leads con nuestra propiedad (propertyRef == referenceCode) y
@@ -181,6 +189,16 @@ export const GET = withHandler(async (request) => {
     const set = respByProp.get(propId);
     return !set || set.size === 0 || set.has(auth.userId);
   };
+
+  const withError = listingIssues
+    .map((l) => ({ ...l, error: ((l.issues as { level?: string; message?: string }[]) ?? []).find((i) => i.level === "error") }))
+    .filter((l) => l.error)
+    .slice(0, limit);
+  const issuePropIds = [...new Set(withError.map((l) => l.propertyId).filter(Boolean))] as string[];
+  const issueProps = issuePropIds.length
+    ? await prisma.property.findMany({ where: { id: { in: issuePropIds } }, select: { id: true, address: true } })
+    : [];
+  const issuePropMap = new Map(issueProps.map((p) => [p.id, p]));
 
   const merged = [
     ...followUps.map((item) => ({
@@ -241,6 +259,18 @@ export const GET = withHandler(async (request) => {
         // Baja que NO pidió el sistema (Tokko, ML): alerta, va siempre arriba.
         externalChange: item.externalChangeAt != null,
         externalChangeDetail: item.externalChangeDetail,
+      },
+    })),
+    ...withError.map((item) => ({
+      kind: "listing_issue" as const,
+      eventAt: item.issuesChangedAt!,
+      payload: {
+        id: item.id,
+        portal: item.portal,
+        address: item.address,
+        permalink: item.url,
+        issue: item.error?.message ?? null,
+        property: item.propertyId ? (issuePropMap.get(item.propertyId) ?? null) : null,
       },
     })),
     ...reservationReminders.map((item) => ({

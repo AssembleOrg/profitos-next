@@ -147,6 +147,32 @@ function logListingSync(r: ListingSyncResult): void {
   const extra = r.skippedReason ? ` · ${r.skippedReason}` : "";
   console.log(`[worker] chequeo de avisos ${r.portal}: ${r.updated} actualizados (${r.closed} cerrados) sobre ${r.seen} en el portal${extra}`);
   for (const c of r.changes) console.log(`[worker]   ${r.portal} ${c}`);
+  if (r.difusion) console.log(`[worker] difusión ${r.portal}: ${JSON.stringify(r.difusion)}`);
+}
+
+/**
+ * "Actualizar" del panel de Difusión: corre ya el chequeo de avisos de los dos
+ * portales (ZP usa el navegador → respeta el mutex). Responde al terminar.
+ */
+async function refreshDifusion(): Promise<{ ok: boolean; error?: string }> {
+  const errors: string[] = [];
+  await syncArgenpropListings()
+    .then(logListingSync)
+    .catch((e) => errors.push(`ArgenProp: ${e instanceof Error ? e.message : e}`));
+  if (browserBusy || isReloginActive()) {
+    errors.push("ZonaProp: el worker está ocupado, se actualiza en la próxima pasada");
+  } else {
+    browserBusy = true;
+    try {
+      await syncZonapropListings().then(logListingSync);
+      lastZpListingSync = Date.now();
+    } catch (e) {
+      errors.push(`ZonaProp: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      browserBusy = false;
+    }
+  }
+  return errors.length ? { ok: false, error: errors.join(" · ") } : { ok: true };
 }
 
 async function tick(): Promise<void> {
@@ -280,6 +306,14 @@ const server = http.createServer(async (req, res) => {
     const body = await readJson(req);
     if (!verifyReloginToken(String(body.token ?? ""))) return send(res, 401, { message: "token inválido" });
     const r = await refreshCredits();
+    return send(res, r.ok ? 200 : 503, r);
+  }
+
+  // "Actualizar" del panel de Difusión (tarda: recorre los listados de ZP y AP).
+  if (p === "/difusion/refresh" && req.method === "POST") {
+    const body = await readJson(req);
+    if (!verifyReloginToken(String(body.token ?? ""))) return send(res, 401, { message: "token inválido" });
+    const r = await refreshDifusion();
     return send(res, r.ok ? 200 : 503, r);
   }
 

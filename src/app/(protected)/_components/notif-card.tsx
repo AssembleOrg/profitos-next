@@ -16,6 +16,7 @@ const NOTIF_BADGE_CLASS: Record<NotificationItem["kind"], string> = {
   publication_closed: "bg-clay-chip text-terra",
   contact: "bg-info-chip text-info",
   reservation_expiry: "bg-sand-chip text-warning",
+  listing_issue: "bg-clay-chip text-terra",
 };
 
 const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
@@ -25,6 +26,7 @@ const NOTIF_LABEL: Record<NotificationItem["kind"], string> = {
   publication_closed: "Baja aviso",
   contact: "Contacto",
   reservation_expiry: "Reserva",
+  listing_issue: "Aviso con error",
 };
 
 const PORTAL_LABEL: Record<string, string> = {
@@ -89,6 +91,14 @@ function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
           </p>
         </>
       );
+    case "listing_issue":
+      return (
+        <>
+          <p className="line-clamp-1 text-sm font-bold leading-tight text-text">{item.property?.address ?? item.address ?? "Aviso"}</p>
+          <p className="mt-0.5 text-xs font-semibold text-terra">{PORTAL_LABEL[item.portal ?? ""] ?? item.portal ?? "Portal"}</p>
+          {item.issue && <p className="mt-0.5 line-clamp-3 text-xs text-text-muted">{item.issue}</p>}
+        </>
+      );
     case "reservation_expiry":
       return (
         <>
@@ -124,6 +134,9 @@ function notifHref(item: NotificationItem): string | null {
   // El id de la central es `portal:rowId` (ver lib/messages/inbox.ts).
   if (item.kind === "contact") {
     return item.portal ? `/consultants?deck=${encodeURIComponent(`${item.portal}:${item.id}`)}` : "/consultants";
+  }
+  if (item.kind === "listing_issue") {
+    return `/propiedades/difusion`;
   }
   if (item.kind === "reservation_expiry") {
     return item.property?.id ? `/firmas?propertyId=${encodeURIComponent(item.property.id)}` : "/firmas";

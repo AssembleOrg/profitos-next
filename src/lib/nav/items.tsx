@@ -147,6 +147,19 @@ export const NAV_META_LIST: NavMeta[] = [
     ),
   },
   {
+    href: "/propiedades/difusion",
+    label: "Difusión",
+    shortLabel: "Difusión",
+    group: "propiedades",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 11a9 9 0 019 9" />
+        <path d="M4 4a16 16 0 0116 16" />
+        <circle cx="5" cy="19" r="1" />
+      </svg>
+    ),
+  },
+  {
     href: "/tasaciones",
     label: "Tasaciones",
     shortLabel: "Tasac.",

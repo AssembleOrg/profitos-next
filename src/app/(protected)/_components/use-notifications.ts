@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
 export interface NotificationItem {
-  kind: "followup_assignment" | "property" | "overdue_followup" | "publication_closed" | "contact" | "reservation_expiry";
+  kind: "followup_assignment" | "property" | "overdue_followup" | "publication_closed" | "contact" | "reservation_expiry" | "listing_issue";
   eventAt: string;
   id: string;
   createdAt?: string;
@@ -36,6 +36,8 @@ export interface NotificationItem {
   message?: string | null;
   propertyTitle?: string | null;
   proposalId?: string;
+  // kind "listing_issue": aviso con un error nuevo en el portal (panel de Difusión)
+  issue?: string | null;
   daysBefore?: number;
   expiresAt?: string | null;
 }
