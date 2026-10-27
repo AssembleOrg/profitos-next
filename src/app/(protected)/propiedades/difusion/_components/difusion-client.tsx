@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatRelative } from "@/lib/datetime";
+import { Sheet } from "../../../_components/sheet";
 import { PLAN_LABEL, PORTAL_LABEL, STATUS_LABEL, hasAlert, hasError } from "@/lib/publish/difusion-parse";
 import type { DifusionListing, DifusionPortal, DifusionUnlisted } from "@/lib/publish/difusion-view";
 
@@ -35,6 +36,39 @@ function plural(n: number, one: string, many: string) {
   return `${n} ${n === 1 ? one : many}`;
 }
 
+/** Ficha de la propiedad: Propiedades filtrado por código (único) y el modal abierto (?open=). */
+function fichaHref(p: { id: string; address: string; referenceCode?: string | null }): string {
+  return `/propiedades?q=${encodeURIComponent(p.referenceCode || p.address)}&open=${encodeURIComponent(p.id)}`;
+}
+
+function filterListings(listings: DifusionListing[], portal: string, view: View, q: string): DifusionListing[] {
+  const matches = (...f: (string | null | undefined)[]) => !q || f.some((x) => x?.toLowerCase().includes(q));
+  return listings
+    .filter((l) => portal === "todos" || l.portal === portal)
+    .filter((l) => {
+      if (view === "errores") return hasError(l);
+      if (view === "alertas") return l.published && !hasError(l) && hasAlert(l);
+      if (view === "sugerencias") return l.published && !hasError(l) && !hasAlert(l) && l.issues.length > 0;
+      if (view === "publicados") return l.published;
+      return false;
+    })
+    .filter((l) => matches(l.address, l.code, l.title, l.property?.address, l.externalId));
+}
+
+function filterUnlisted(unlisted: DifusionUnlisted[], portal: string, q: string): DifusionUnlisted[] {
+  return unlisted
+    .filter((u) => portal === "todos" || u.missing.includes(portal))
+    .filter((u) => !q || [u.address, u.referenceCode].some((x) => x?.toLowerCase().includes(q)));
+}
+
+const VIEW_TITLE: Record<View, string> = {
+  errores: "Avisos con errores",
+  alertas: "Avisos con alertas",
+  sugerencias: "Avisos con sugerencias",
+  publicados: "Avisos publicados",
+  "sin-aviso": "Propiedades sin aviso",
+};
+
 export function DifusionClient({ portals, listings, unlisted }: Readonly<Props>) {
   const router = useRouter();
   const totalErrores = portals.reduce((a, p) => a + p.summary.errores, 0);
@@ -42,6 +76,8 @@ export function DifusionClient({ portals, listings, unlisted }: Readonly<Props>)
   const [view, setView] = useState<View>(totalErrores > 0 ? "errores" : "alertas");
   const [query, setQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  // Modal que abren los números de cada portal (errores, alertas, publicados…).
+  const [modal, setModal] = useState<{ portal: string; view: View } | null>(null);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -60,36 +96,12 @@ export function DifusionClient({ portals, listings, unlisted }: Readonly<Props>)
   }
 
   function pick(p: string, v: View) {
-    setPortal(p);
-    setView(v);
-    document.getElementById("difusion-lista")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setModal({ portal: p, view: v });
   }
 
   const q = query.trim().toLowerCase();
-  const matches = (...fields: (string | null | undefined)[]) => !q || fields.some((f) => f?.toLowerCase().includes(q));
-
-  const filtered = useMemo(() => {
-    return listings
-      .filter((l) => portal === "todos" || l.portal === portal)
-      .filter((l) => {
-        if (view === "errores") return hasError(l);
-        if (view === "alertas") return l.published && !hasError(l) && hasAlert(l);
-        if (view === "sugerencias") return l.published && !hasError(l) && !hasAlert(l) && l.issues.length > 0;
-        if (view === "publicados") return l.published;
-        return false;
-      })
-      .filter((l) => matches(l.address, l.code, l.title, l.property?.address, l.externalId));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listings, portal, view, q]);
-
-  const filteredUnlisted = useMemo(
-    () =>
-      unlisted
-        .filter((u) => portal === "todos" || u.missing.includes(portal))
-        .filter((u) => matches(u.address, u.referenceCode)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [unlisted, portal, q],
-  );
+  const filtered = useMemo(() => filterListings(listings, portal, view, q), [listings, portal, view, q]);
+  const filteredUnlisted = useMemo(() => filterUnlisted(unlisted, portal, q), [unlisted, portal, q]);
 
   // "Avisos duplicados: 600…,599…" → direcciones (ZP sólo da los ids).
   const addressById = useMemo(() => {
@@ -168,7 +180,205 @@ export function DifusionClient({ portals, listings, unlisted }: Readonly<Props>)
           {filtered.length > 300 && <li className="px-2 text-xs text-text-faint">Se muestran los primeros 300. Usá el buscador para encontrar el resto.</li>}
         </ul>
       )}
+
+      {modal && (
+        <DifusionModal
+          modal={modal}
+          onChange={setModal}
+          onClose={() => setModal(null)}
+          portals={portals}
+          listings={listings}
+          unlisted={unlisted}
+          addressById={addressById}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * Modal de un número del panel (errores, alertas, publicados…): lista compacta;
+ * cada aviso se despliega con el detalle y lleva a la ficha de la propiedad.
+ * Arriba se puede cambiar de portal y de vista sin cerrarlo.
+ */
+function DifusionModal({
+  modal,
+  onChange,
+  onClose,
+  portals,
+  listings,
+  unlisted,
+  addressById,
+}: {
+  modal: { portal: string; view: View };
+  onChange: (m: { portal: string; view: View }) => void;
+  onClose: () => void;
+  portals: DifusionPortal[];
+  listings: DifusionListing[];
+  unlisted: DifusionUnlisted[];
+  addressById: Map<string, string>;
+}) {
+  const [query, setQuery] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const q = query.trim().toLowerCase();
+  const items = useMemo(() => filterListings(listings, modal.portal, modal.view, q), [listings, modal, q]);
+  const props = useMemo(() => filterUnlisted(unlisted, modal.portal, q), [unlisted, modal, q]);
+  const isUnlisted = modal.view === "sin-aviso";
+  const total = isUnlisted ? props.length : items.length;
+  const portalName = modal.portal === "todos" ? "todos los portales" : (PORTAL_LABEL[modal.portal] ?? modal.portal);
+
+  return (
+    <Sheet
+      open
+      onClose={onClose}
+      title={VIEW_TITLE[modal.view]}
+      description={`${portalName} · ${total} ${isUnlisted ? (total === 1 ? "propiedad" : "propiedades") : total === 1 ? "aviso" : "avisos"}`}
+      maxWidth="sm:max-w-2xl"
+      headerExtra={
+        <div className="flex flex-col gap-2 px-4 pb-3 sm:px-5">
+          <Segmented
+            value={modal.portal}
+            onChange={(p) => {
+              setOpenId(null);
+              onChange({ ...modal, portal: p });
+            }}
+            options={[{ key: "todos", label: "Todos" }, ...portals.map((p) => ({ key: p.portal, label: PORTAL_LABEL[p.portal] ?? p.portal }))]}
+          />
+          <Segmented
+            value={modal.view}
+            onChange={(v) => {
+              setOpenId(null);
+              onChange({ ...modal, view: v as View });
+            }}
+            options={VIEWS}
+          />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar dirección o código"
+            className="h-10 w-full rounded-full border border-border bg-surface px-4 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
+          />
+        </div>
+      }
+    >
+      {total === 0 ? (
+        <p className="px-1 py-8 text-center text-sm text-text-muted">
+          {isUnlisted ? "No hay propiedades con avisos faltantes." : modal.view === "errores" ? "No hay avisos con errores." : "No hay avisos para mostrar."}
+        </p>
+      ) : isUnlisted ? (
+        <ul className="flex flex-col gap-2">
+          {props.slice(0, 300).map((u) => (
+            <li key={u.id}>
+              <Link
+                href={fichaHref(u)}
+                prefetch={false}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-3 active:bg-bg"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-bold text-text">{u.address}</span>
+                  <span className="block text-xs text-text-muted">Sin aviso en {u.missing.map((m) => PORTAL_LABEL[m] ?? m).join(", ")}</span>
+                </span>
+                <span className="shrink-0 text-xs font-semibold text-info">Abrir ficha →</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {items.slice(0, 300).map((l) => {
+            const key = `${l.portal}:${l.id}`;
+            return (
+              <ModalRow
+                key={key}
+                l={l}
+                showPortal={modal.portal === "todos"}
+                open={openId === key}
+                onToggle={() => setOpenId(openId === key ? null : key)}
+                addressById={addressById}
+              />
+            );
+          })}
+          {total > 300 && <li className="px-2 text-xs text-text-faint">Se muestran los primeros 300. Usá el buscador para el resto.</li>}
+        </ul>
+      )}
+    </Sheet>
+  );
+}
+
+function ModalRow({
+  l,
+  showPortal,
+  open,
+  onToggle,
+  addressById,
+}: {
+  l: DifusionListing;
+  showPortal: boolean;
+  open: boolean;
+  onToggle: () => void;
+  addressById: Map<string, string>;
+}) {
+  const address = l.property?.address ?? l.address ?? l.title ?? `Aviso ${l.externalId}`;
+  const first = l.issues.find((i) => i.level === "error") ?? l.issues.find((i) => i.level === "warn") ?? l.issues[0];
+  const plan = planLabel(l.plan);
+  return (
+    <li className={`overflow-hidden rounded-2xl border bg-surface transition-colors ${open ? "border-border-strong" : "border-border"}`}>
+      <button onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-3 px-3 py-2.5 text-left active:bg-bg">
+        <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-bg">
+          {l.pictureUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={l.pictureUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+          )}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-bold text-text">{address}</span>
+          <span className="block truncate text-xs text-text-muted">
+            {showPortal ? `${PORTAL_LABEL[l.portal] ?? l.portal} · ` : ""}
+            {first ? readableMessage(l, first.message, addressById) : `${STATUS_LABEL[l.status] ?? l.status}${plan ? ` · ${plan}` : ""}`}
+          </span>
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`shrink-0 text-text-faint transition-transform ${open ? "rotate-180" : ""}`}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open && (
+        <div className="flex flex-col gap-2.5 border-t border-border px-3 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11.5px] font-semibold text-text-muted">{PORTAL_LABEL[l.portal] ?? l.portal}</span>
+            <StatusChip l={l} />
+            {plan && <span className="text-[11.5px] text-text-muted">{plan}</span>}
+            {l.quality !== null && <QualityBar value={l.quality} />}
+            {l.code && <span className="text-[11.5px] text-text-faint">{l.code}</span>}
+          </div>
+          {l.issues.length > 0 ? (
+            <ul className="flex flex-col gap-1.5">
+              {l.issues.map((i, n) => (
+                <li key={n} className="flex gap-2 text-[13px] leading-snug">
+                  <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${i.level === "error" ? "bg-terra" : i.level === "warn" ? "bg-warning" : "bg-border-strong"}`} />
+                  <span className={i.level === "error" ? "text-text" : "text-text-muted"}>{readableMessage(l, i.message, addressById)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[13px] text-text-muted">El portal no marca nada para revisar en este aviso.</p>
+          )}
+          <div className="flex flex-wrap gap-2 pt-1">
+            {l.property ? (
+              <Link href={fichaHref(l.property)} prefetch={false} className="inline-flex h-10 items-center rounded-full bg-dark px-4 text-[13px] font-semibold text-dark-fg active:opacity-80">
+                Abrir ficha
+              </Link>
+            ) : (
+              <span className="inline-flex h-10 items-center text-xs text-text-faint">No está vinculado a una propiedad del sistema</span>
+            )}
+            {l.url && (
+              <a href={l.url} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center rounded-full border border-border px-4 text-[13px] font-semibold text-text-muted active:bg-bg">
+                Ver en {PORTAL_LABEL[l.portal] ?? "el portal"} ↗
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+    </li>
   );
 }
 
@@ -334,8 +544,8 @@ function ListingRow({ l, showPortal, addressById }: { l: DifusionListing; showPo
             </a>
           )}
           {l.property ? (
-            <Link href={`/propiedades?q=${encodeURIComponent(l.property.address)}`} prefetch={false} className="text-text-muted hover:text-text hover:underline">
-              Ver propiedad
+            <Link href={fichaHref(l.property)} prefetch={false} className="text-text-muted hover:text-text hover:underline">
+              Abrir ficha
             </Link>
           ) : (
             <span className="font-normal text-text-faint">No vinculado a una propiedad del sistema</span>
@@ -355,7 +565,7 @@ function UnlistedList({ items }: { items: DifusionUnlisted[] }) {
       {items.slice(0, 300).map((u) => (
         <li key={u.id} className="flex flex-col gap-1 rounded-[18px] border border-border bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <Link href={`/propiedades?q=${encodeURIComponent(u.address)}`} prefetch={false} className="truncate text-sm font-bold text-text hover:underline">
+            <Link href={fichaHref(u)} prefetch={false} className="truncate text-sm font-bold text-text hover:underline">
               {u.address}
             </Link>
             {u.referenceCode && <span className="ml-2 text-[11.5px] text-text-faint">{u.referenceCode}</span>}
