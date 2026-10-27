@@ -269,7 +269,8 @@ export const GET = withHandler(async (request) => {
         portal: item.portal,
         address: item.address,
         permalink: item.url,
-        issue: item.error?.message ?? null,
+        // La lista de ids de duplicados no le sirve a nadie en la campana (el panel la muestra con direcciones).
+        issue: item.error?.message?.replace(/\s*Avisos duplicados:[\d,\s]*\.?/, "") ?? null,
         property: item.propertyId ? (issuePropMap.get(item.propertyId) ?? null) : null,
       },
     })),

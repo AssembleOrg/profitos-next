@@ -118,6 +118,7 @@ function mapScraped(row: {
   propertyRef: string | null;
   propertyUrl: string | null;
   price: string | null;
+  raw?: unknown;
 }, prop?: { id: string; address: string; coverImageUrl?: string | null } | null): InboxMessage {
   const date = row.messageAt ?? row.scrapedAt;
   return {
@@ -137,7 +138,8 @@ function mapScraped(row: {
     price: row.price,
     propertyId: prop?.id ?? null,
     propertyAddress: prop?.address ?? null,
-    coverImageUrl: prop?.coverImageUrl ?? null,
+    // ML interesados: si el aviso no es de una propiedad nuestra, la foto del aviso.
+    coverImageUrl: prop?.coverImageUrl ?? (row.raw as { picture?: string | null } | null)?.picture ?? null,
     caseStatus: null,
     takenByUserId: null,
     takenByName: null,

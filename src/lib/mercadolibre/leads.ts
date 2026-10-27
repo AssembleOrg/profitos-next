@@ -85,7 +85,7 @@ function messageFor(r: MlLeadRow): string {
   return `${VERB[r.section] ?? "Contacto"} en el aviso de MercadoLibre${veces}.${r.doc ? ` ${r.doc}.` : ""}`;
 }
 
-export type MlItemInfo = { code: string | null; permalink: string | null; title: string | null; address: string | null };
+export type MlItemInfo = { code: string | null; permalink: string | null; title: string | null; address: string | null; picture: string | null };
 
 /**
  * Datos de avisos que no publicamos nosotros (los sube Tokko): el atributo
@@ -95,9 +95,9 @@ export async function fetchMlItemsInfo(itemIds: string[]): Promise<Map<string, M
   const out = new Map<string, MlItemInfo>();
   for (let i = 0; i < itemIds.length; i += 20) {
     const ids = itemIds.slice(i, i + 20);
-    const res = await mlFetch<{ code: number; body?: { id: string; title?: string; permalink?: string; attributes?: { id: string; value_name?: string | null }[]; location?: { address_line?: string } } }[]>(
+    const res = await mlFetch<{ code: number; body?: { id: string; title?: string; permalink?: string; thumbnail?: string; pictures?: { secure_url?: string }[]; attributes?: { id: string; value_name?: string | null }[]; location?: { address_line?: string } } }[]>(
       "/items",
-      { query: { ids: ids.join(","), attributes: "id,title,permalink,attributes,location" } },
+      { query: { ids: ids.join(","), attributes: "id,title,permalink,attributes,location,thumbnail,pictures" } },
     ).catch(() => []);
     for (const r of res) {
       if (r.code !== 200 || !r.body) continue;
@@ -107,6 +107,7 @@ export async function fetchMlItemsInfo(itemIds: string[]): Promise<Map<string, M
         permalink: b.permalink ?? null,
         title: b.title ?? null,
         address: b.location?.address_line?.replace(/\s+/g, " ").trim() || null,
+        picture: b.pictures?.[0]?.secure_url || b.thumbnail?.replace(/^http:/, "https:") || null,
       });
     }
   }
@@ -158,13 +159,14 @@ export async function saveMlLeads(rows: MlLeadRow[], itemsInfo?: Map<string, MlI
       propertyTitle: prop?.publicationTitle ?? it?.title ?? prop?.address ?? r.itemId,
       propertyAddress: prop?.address ?? it?.address ?? null,
       propertyUrl: pub?.permalink ?? it?.permalink ?? null,
-      raw: { itemId: r.itemId, clicks: r.clicks } as object,
+      // picture: foto del aviso para la tarjeta cuando no hay propiedad nuestra vinculada.
+      raw: { itemId: r.itemId, clicks: r.clicks, picture: it?.picture ?? null } as object,
     };
     const prev = byKey.get(`${r.externalId}:${r.section}`);
     if (!prev) {
       await prisma.scrapedLead.create({ data: { portal: ML_PORTAL, section: r.section, externalId: r.externalId, ...data } });
       created++;
-    } else if ((prev.messageAt?.getTime() ?? 0) !== r.lastAt.getTime() || (prev.raw as { clicks?: number } | null)?.clicks !== r.clicks) {
+    } else if ((prev.messageAt?.getTime() ?? 0) !== r.lastAt.getTime() || JSON.stringify(prev.raw) !== JSON.stringify(data.raw)) {
       await prisma.scrapedLead.update({ where: { id: prev.id }, data });
       updated++;
     }

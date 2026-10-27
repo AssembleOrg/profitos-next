@@ -32,6 +32,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "static.tokkobroker.com",
       },
+      // Foto del aviso de MercadoLibre en los interesados sin propiedad vinculada.
+      {
+        protocol: "https",
+        hostname: "http2.mlstatic.com",
+      },
     ],
   },
 };
