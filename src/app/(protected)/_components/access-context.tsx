@@ -33,7 +33,9 @@ export function AccessProvider({ isAdmin, accessibleHrefs, children }: Readonly<
     return {
       isAdmin,
       accessible,
-      canAccess: (href: string) => isAdmin || accessible.has(href),
+      // Misma regla que la ruta: una sub-vista (ej. /propiedades/difusion) hereda
+      // el permiso de su vista padre.
+      canAccess: (href: string) => isPathAllowed(href, accessible, isAdmin),
     };
   }, [isAdmin, accessibleHrefs]);
 
