@@ -4,7 +4,8 @@
  *
  * Fuentes:
  *  - ScrapedLead (jp_scraped_leads): ZonaProp / ArgenProp — leads scrapeados con
- *    datos de contacto (nombre, tel, email, mensaje, propiedad).
+ *    datos de contacto (nombre, tel, email, mensaje, propiedad) — y MercadoLibre
+ *    "interesados" (tocó WhatsApp / Llamar, lib/mercadolibre/leads.ts).
  *  - PortalQuestion (jp_portal_questions): MercadoLibre — preguntas públicas del
  *    aviso (texto + estado; sin datos de contacto, ML no los expone).
  *
@@ -16,7 +17,8 @@ import { Prisma } from "@/generated/prisma/client";
 
 export const INBOX_PORTALS = ["mercadolibre", "zonaprop", "argenprop"] as const;
 export type InboxPortal = (typeof INBOX_PORTALS)[number];
-const SCRAPER_PORTALS = ["zonaprop", "argenprop"] as const;
+// Portales con filas en jp_scraped_leads (ML: interesados por WhatsApp/llamada).
+const LEAD_PORTALS = ["zonaprop", "argenprop", "mercadolibre"] as const;
 
 export type InboxMessage = {
   id: string; // `${portal}:${rowId}` — único entre fuentes
@@ -79,7 +81,7 @@ function dateBounds(from?: string, to?: string): { gte?: Date; lte?: Date } {
 }
 
 function scrapedWhere(q: string, bounds: { gte?: Date; lte?: Date }): Prisma.ScrapedLeadWhereInput {
-  const and: Prisma.ScrapedLeadWhereInput[] = [{ portal: { in: [...SCRAPER_PORTALS] } }];
+  const and: Prisma.ScrapedLeadWhereInput[] = [{ portal: { in: [...LEAD_PORTALS] } }];
   if (q) {
     and.push({
       OR: [
@@ -172,9 +174,10 @@ export async function getInboxMessageById(id: string): Promise<InboxMessage | nu
   if (!isInboxPortal(portal) || !rowId) return null;
 
   let msg: InboxMessage | null = null;
-  if (portal === "mercadolibre") {
-    const x = await prisma.portalQuestion.findUnique({ where: { id: rowId } });
-    if (!x) return null;
+  // ML tiene dos fuentes: preguntas (jp_portal_questions) e interesados (jp_scraped_leads).
+  const mlQuestion = portal === "mercadolibre" ? await prisma.portalQuestion.findUnique({ where: { id: rowId } }) : null;
+  if (mlQuestion) {
+    const x = mlQuestion;
     const prop = x.propertyId
       ? await prisma.property.findUnique({
           where: { id: x.propertyId },
@@ -245,14 +248,14 @@ export async function getInboxMessages(filters: InboxFilters, viewer?: InboxView
     })
     .catch(() => {});
 
-  const wantScraped = !portalFilter || portalFilter !== "mercadolibre";
+  const wantScraped = true; // todos los portales tienen filas en jp_scraped_leads
   const wantMl = !portalFilter || portalFilter === "mercadolibre";
   const fetchTake = FETCH_WINDOW;
 
   const sw = scrapedWhere(q, bounds);
   const qw = questionWhere(q, bounds);
 
-  const [scrapedRows, mlRows, zpCount, apCount, mlCount] = await Promise.all([
+  const [scrapedRows, mlRows, zpCount, apCount, mlCount, mlLeadCount] = await Promise.all([
     wantScraped
       ? prisma.scrapedLead.findMany({
           where: portalFilter ? { AND: [sw, { portal: portalFilter }] } : sw,
@@ -270,6 +273,7 @@ export async function getInboxMessages(filters: InboxFilters, viewer?: InboxView
     prisma.scrapedLead.count({ where: { AND: [sw, { portal: "zonaprop" }] } }),
     prisma.scrapedLead.count({ where: { AND: [sw, { portal: "argenprop" }] } }),
     prisma.portalQuestion.count({ where: qw }),
+    prisma.scrapedLead.count({ where: { AND: [sw, { portal: "mercadolibre" }] } }),
   ]);
 
   // ML: resolver dirección/permalink de la propiedad (sin FK, lookup por id).
@@ -379,5 +383,5 @@ export async function getInboxMessages(filters: InboxFilters, viewer?: InboxView
   const total = merged.length;
   const items = merged.slice((page - 1) * limit, page * limit);
 
-  return { items, total, totalAll: zpCount + apCount + mlCount, counts };
+  return { items, total, totalAll: zpCount + apCount + mlCount + mlLeadCount, counts };
 }
