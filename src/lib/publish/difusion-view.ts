@@ -23,7 +23,7 @@ export type DifusionListing = {
   quality: number | null;
   issues: ListingIssue[];
   issuesChangedAt: string | null;
-  property: { id: string; address: string } | null;
+  property: { id: string; address: string; referenceCode: string | null } | null;
 };
 
 export type DifusionPortal = {
@@ -83,7 +83,7 @@ export async function getDifusionData(): Promise<{ portals: DifusionPortal[]; li
   ]);
 
   const propIds = [...new Set(rows.map((r) => r.propertyId).filter((x): x is string => !!x))];
-  const props = propIds.length ? await prisma.property.findMany({ where: { id: { in: propIds } }, select: { id: true, address: true } }) : [];
+  const props = propIds.length ? await prisma.property.findMany({ where: { id: { in: propIds } }, select: { id: true, address: true, referenceCode: true } }) : [];
   const propMap = new Map(props.map((p) => [p.id, p]));
 
   const listings: DifusionListing[] = rows.map((r) => ({
@@ -126,7 +126,7 @@ export async function getDifusionData(): Promise<{ portals: DifusionPortal[]; li
       quality: null,
       issues,
       issuesChangedAt: issues.length ? (p.externalChangeAt ?? p.updatedAt).toISOString() : null,
-      property: { id: p.property.id, address: p.property.address },
+      property: { id: p.property.id, address: p.property.address, referenceCode: p.property.referenceCode },
     });
   }
 
