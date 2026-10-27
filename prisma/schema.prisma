@@ -873,6 +873,54 @@ model PortalResponsibles {
   @@map("jp_portal_responsibles")
 }
 
+// Panel de Difusión: TODOS los avisos de la cuenta en cada portal (los
+// publicados desde Profitos y los que vienen de Tokko u otra herramienta), con
+// el plan, la calidad y los problemas que informa el portal. Lo llena el worker
+// al recorrer los listados (lib/publish/difusion.ts).
+model PortalListing {
+  id              String    @id @default(cuid())
+  portal          String // zonaprop | argenprop
+  externalId      String    @map("external_id")
+  // Propiedad nuestra (por PropertyPublication o por código de referencia). Sin FK.
+  propertyId      String?   @map("property_id")
+  code            String?
+  title           String?
+  address         String?
+  url             String?
+  pictureUrl      String?   @map("picture_url")
+  // Estado crudo del portal (ZP: ONLINE|NEAR_END|OFFLINE|DRAFT|WITHOUT_CREDIT; AP: VIGENTE|RESERVADO|SUSPENDIDO)
+  status          String
+  published       Boolean   @default(false)
+  plan            String? // simple | destacado | superdestacado
+  quality         Int? // 0-100 (sólo ZonaProp)
+  // [{ rule, level: "error"|"warn", message }]
+  issues          Json      @default("[]")
+  firstSeenAt     DateTime  @default(now()) @map("first_seen_at")
+  lastSeenAt      DateTime  @default(now()) @map("last_seen_at")
+  // Cuándo apareció el último error nuevo (alimenta la campana de notificaciones).
+  issuesChangedAt DateTime? @map("issues_changed_at")
+  // Ya no aparece en el listado del portal (archivado / eliminado).
+  gone            Boolean   @default(false)
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@unique([portal, externalId])
+  @@index([portal, published])
+  @@index([propertyId])
+  @@map("jp_portal_listings")
+}
+
+// Última pasada del panel de Difusión por portal (cuándo, si anduvo, totales del portal).
+model PortalDiffusion {
+  portal   String   @id
+  syncedAt DateTime @default(now()) @map("synced_at")
+  ok       Boolean  @default(true)
+  error    String?
+  // Totales que da el propio portal (ZP: duplicados, denuncias, etc.).
+  summary  Json?
+
+  @@map("jp_portal_diffusion")
+}
+
 // Cupo de créditos de publicación por portal (ZonaProp: Simple/Destacado/Súper).
 // Lo refresca el worker (necesita navegador+sesión); la web lo lee de acá.
 model PortalCredits {
