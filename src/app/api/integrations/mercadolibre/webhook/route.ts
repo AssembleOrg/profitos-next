@@ -6,8 +6,9 @@ import { ML, ML_PORTAL } from "@/lib/mercadolibre/config";
 import { getItem, getQuestion } from "@/lib/mercadolibre/items";
 import { upsertPortalQuestion } from "@/lib/mercadolibre/questions";
 import { reconcileMlPublication } from "@/lib/mercadolibre/watch";
+import { handleMlLeadNotification } from "@/lib/mercadolibre/leads";
 
-// Webhook de notificaciones de MercadoLibre (topics: items, questions).
+// Webhook de notificaciones de MercadoLibre (topics: items, questions, vis_leads).
 // Público: ML hace POST sin sesión. SIEMPRE responde 200 rápido para no
 // disparar reintentos; el procesamiento va en try/catch y nunca tira.
 // Seguridad: con ML_WEBHOOK_SECRET se exige ?token= o application_id de nuestra app.
@@ -48,6 +49,8 @@ async function handleNotification(notif: MlNotification) {
   if (!id) return;
   if (topic === "items") await handleItem(id);
   else if (topic === "questions") await handleQuestion(id);
+  // Interesados (tocó WhatsApp / Llamar): resource "/vis/leads/{id}".
+  else if (topic === "vis_leads" || notif.resource?.startsWith("/vis/leads/")) await handleMlLeadNotification(id);
   // otros topics: ignorados
 }
 

@@ -25,6 +25,7 @@ const KIND_LABEL: Record<string, string> = {
   whatsapp: "WhatsApp",
   contactados: "Contacto",
   pregunta: "Pregunta",
+  visita: "Visita",
 };
 
 // Pestañas de estado de gestión (jp_contact_cases).

@@ -24,6 +24,7 @@ import { processPendingPublishJobs } from "@/lib/publish/portales";
 import { verifyReloginToken } from "@/lib/scraper/relogin-token";
 import { refreshZonapropCredits } from "@/lib/publish/credits";
 import { syncMlPublications } from "@/lib/mercadolibre/sync";
+import { syncMlLeads } from "@/lib/mercadolibre/leads";
 import { syncArgenpropListings, syncZonapropListings, type ListingSyncResult } from "@/lib/publish/listing-sync";
 import {
   startReloginSession,
@@ -396,6 +397,12 @@ async function runMlSync(): Promise<void> {
   try {
     const { total, updated } = await syncMlPublications();
     if (updated) console.log(`[worker] ML sync: ${updated}/${total} publicaciones actualizadas`);
+    // Interesados (tocó WhatsApp / Llamar): respaldo del webhook vis_leads.
+    const leads = await syncMlLeads().catch((e) => {
+      console.warn("[worker] ML interesados falló:", e instanceof Error ? e.message : e);
+      return null;
+    });
+    if (leads && (leads.created || leads.updated)) console.log(`[worker] ML interesados: ${leads.created} nuevos, ${leads.updated} actualizados`);
   } catch (e) {
     console.warn("[worker] ML sync falló:", e instanceof Error ? e.message : e);
   } finally {
