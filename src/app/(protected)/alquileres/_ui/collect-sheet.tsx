@@ -34,6 +34,8 @@ import {
 interface EditableLine extends ChargeLine {
   key: string;
   included: boolean;
+  /** El concepto descuenta del total. `amount` se edita siempre en positivo. */
+  subtract?: boolean;
 }
 
 interface CollectResult {
@@ -124,7 +126,10 @@ export function CollectSheet({
     };
   }, [open, dueId]);
 
-  const active = useMemo(() => lines.filter((l) => l.included && l.amount > 0), [lines]);
+  const active = useMemo(
+    () => lines.filter((l) => l.included && l.amount > 0).map((l) => (l.subtract ? { ...l, amount: -l.amount } : l)),
+    [lines],
+  );
   const split = useMemo(() => splitCharges(active, feePercent), [active, feePercent]);
   const currency = ctx?.currency ?? "ARS";
   const tenantBook = ctx?.books.find((b) => b.kind === "inquilino");
@@ -149,7 +154,7 @@ export function CollectSheet({
       const data = await api<CollectResult>(`/api/alquileres/vencimientos/${ctx.dueId}/cobros`, {
         method: "POST",
         json: {
-          lines: active.map(({ kind, label, amount, refId }) => ({ kind, label, amount, refId })),
+          lines: active.map(({ kind, label, amount, refId, affectsFee }) => ({ kind, label, amount, refId, affectsFee })),
           feePercent,
           isFull: mode === "total",
           paidAt: `${paidAt}T12:00:00-03:00`,
@@ -232,7 +237,7 @@ export function CollectSheet({
               </h3>
               <ul className="flex flex-col divide-y divide-border rounded-[18px] border border-border">
                 {lines.map((l) => (
-                  <li key={l.key} className="flex items-center gap-3 px-3.5 py-2.5">
+                  <li key={l.key} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2.5">
                     <Check checked={l.included} onChange={(v) => patchLine(l.key, { included: v })} />
                     {l.kind === "extra" ? (
                       <input
@@ -247,6 +252,18 @@ export function CollectSheet({
                         {l.kind === "rent" && <span className="ml-1.5 text-[11.5px] text-text-faint">base de honorarios</span>}
                       </span>
                     )}
+                    {l.kind !== "rent" && (
+                      <Segmented
+                        size="sm"
+                        ariaLabel={`Suma o resta: ${l.label}`}
+                        value={l.subtract ? "resta" : "suma"}
+                        onChange={(v) => patchLine(l.key, { subtract: v === "resta" })}
+                        options={[
+                          { value: "suma", label: "Suma" },
+                          { value: "resta", label: "Resta" },
+                        ]}
+                      />
+                    )}
                     <div className="w-[132px] shrink-0">
                       <CurrencyInput value={l.amount} onChange={(v) => patchLine(l.key, { amount: v ?? 0 })} disabled={!l.included} />
                     </div>
@@ -259,6 +276,11 @@ export function CollectSheet({
                       >
                         <IconX size={14} />
                       </button>
+                    )}
+                    {l.kind !== "rent" && (
+                      <div className="flex w-full items-center gap-2 pl-8 text-[12px] text-text-muted">
+                        <Check checked={!!l.affectsFee} onChange={(v) => patchLine(l.key, { affectsFee: v })} label="Afecta honorarios" />
+                      </div>
                     )}
                   </li>
                 ))}
