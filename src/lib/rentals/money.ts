@@ -5,7 +5,9 @@
  *
  * Regla de la planilla de la inmobiliaria:
  *   total inquilino   = alquiler + municipal + servicios + otros
- *   honorarios        = % sobre el alquiler (default 5%)
+ *                       (cualquier concepto salvo el alquiler puede restar: monto negativo)
+ *   honorarios        = % sobre el alquiler (default 5%); un concepto entra en la
+ *                       base solo si se marca a mano (affectsFee)
  *   neto propietario  = total inquilino − honorarios
  */
 
@@ -18,6 +20,8 @@ export interface ChargeLine {
   amount: number;
   /** id de RentalContractAdditional cuando kind = "additional" */
   refId?: string | null;
+  /** El concepto (sume o reste) entra en la base de honorarios. Por defecto no. */
+  affectsFee?: boolean;
 }
 
 export interface ChargeSplit {
@@ -40,10 +44,10 @@ export function sanitizeFeePercent(value: unknown, fallback = DEFAULT_FEE_PERCEN
   return round2(n);
 }
 
-/** Honorarios sobre el alquiler; el resto de los conceptos pasa entero al propietario. */
+/** Honorarios sobre el alquiler; el resto de los conceptos, sume o reste, pasa entero al propietario salvo que tenga affectsFee. */
 export function splitCharges(lines: ChargeLine[], feePercent: number): ChargeSplit {
   const tenantTotal = round2(lines.reduce((acc, l) => acc + (Number.isFinite(l.amount) ? l.amount : 0), 0));
-  const feeBase = round2(lines.filter((l) => l.kind === "rent").reduce((acc, l) => acc + l.amount, 0));
+  const feeBase = Math.max(0, round2(lines.filter((l) => l.kind === "rent" || l.affectsFee).reduce((acc, l) => acc + l.amount, 0)));
   const pct = sanitizeFeePercent(feePercent, 0);
   const feeAmount = round2((feeBase * pct) / 100);
   return { tenantTotal, feeBase, feePercent: pct, feeAmount, ownerTotal: round2(tenantTotal - feeAmount) };
@@ -60,7 +64,7 @@ export function sanitizeChargeLines(raw: unknown): ChargeLine[] {
     const label = typeof r.label === "string" ? r.label.trim().slice(0, 80) : "";
     const amount = typeof r.amount === "number" && Number.isFinite(r.amount) ? round2(r.amount) : Number.NaN;
     if (!kind || !label || !Number.isFinite(amount)) continue;
-    out.push({ kind, label, amount, refId: typeof r.refId === "string" ? r.refId : null });
+    out.push({ kind, label, amount, refId: typeof r.refId === "string" ? r.refId : null, affectsFee: r.affectsFee === true });
   }
   return out;
 }

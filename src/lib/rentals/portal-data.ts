@@ -112,13 +112,15 @@ export async function getTenantPortalData(tenantId: string): Promise<PortalData>
       const dues: PortalDue[] = c.dueDates.map((d) => {
         const collected = d.transactions.reduce((a, t) => a + t.amountPaid, 0);
         const date = isoDate(d.dueDate);
+        const status = getDueEffectiveStatus({ dueDate: date, status: d.status, gracePeriodDays: c.gracePeriodDays, expectedAmount: d.expectedAmount, collected });
         return {
           id: d.id,
           dueDate: date,
           period: date.slice(0, 7),
           periodLabel: periodLabel(d.dueDate),
-          status: getDueEffectiveStatus({ dueDate: date, status: d.status, gracePeriodDays: c.gracePeriodDays, expectedAmount: d.expectedAmount, collected }),
-          amount: d.expectedAmount,
+          status,
+          // Cuota cobrada: lo que pagó de verdad (puede tener conceptos que restan).
+          amount: status === "pagado" && collected > 0 ? collected : d.expectedAmount,
           collected,
         };
       });

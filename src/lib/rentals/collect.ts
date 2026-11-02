@@ -131,7 +131,8 @@ export interface CollectInput {
 
 export async function collectRent(input: CollectInput) {
   if (input.lines.length === 0) throw new AppError(400, "Agregá al menos un concepto");
-  if (input.lines.some((l) => l.amount < 0)) throw new AppError(400, "Los montos no pueden ser negativos");
+  // Los conceptos pueden restar (ej. expensas que pagó el inquilino); el alquiler no.
+  if (input.lines.some((l) => l.kind === "rent" && l.amount < 0)) throw new AppError(400, "El alquiler no puede ser negativo");
   const split = splitCharges(input.lines, sanitizeFeePercent(input.feePercent));
   if (split.tenantTotal <= 0) throw new AppError(400, "El total cobrado tiene que ser mayor a cero");
 

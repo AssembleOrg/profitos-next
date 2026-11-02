@@ -368,7 +368,7 @@ function Ledger({
               </button>
               <div className="mt-2 flex items-end justify-between gap-3">
                 <div>
-                  <p className="font-display text-[18px] font-bold tabular-nums text-text">{money(due.expected, d.currency)}</p>
+                  <p className="font-display text-[18px] font-bold tabular-nums text-text">{money(isSettled(due) ? due.collected : due.expected, d.currency)}</p>
                   <p className="text-[11.5px] text-text-faint">
                     {fee ? `Honorarios ${money(fee, d.currency)} · propietario ${money(owner, d.currency)}` : `Alquiler ${money(due.rent, d.currency)}`}
                   </p>
@@ -404,7 +404,11 @@ function Ledger({
               const month = due.dueDate.slice(0, 7);
               const isCurrent = month === currentMonth;
               const future = month > currentMonth;
-              const extras = due.lines.filter((l) => l.included).reduce((a, l) => a + l.amount, 0);
+              // Cuota cobrada: se muestra lo que realmente se cobró (los conceptos pueden sumar o restar).
+              const settled = isSettled(due);
+              const extras = settled
+                ? due.payments.reduce((a, p) => a + (p.lines ?? []).reduce((b, l) => b + (l.kind === "rent" ? 0 : l.amount), 0), 0)
+                : due.lines.filter((l) => l.included).reduce((a, l) => a + l.amount, 0);
               const fee = due.payments.reduce((a, p) => a + p.commissionAmount, 0);
               const owner = due.payments.reduce((a, p) => a + p.ownerAmount, 0);
               const adj = adjustmentMonths.get(month);
@@ -439,7 +443,7 @@ function Ledger({
                     </td>
                     <Num v={due.rent} c={d.currency} />
                     <Num v={extras} c={d.currency} dim={!extras} />
-                    <Num v={due.expected} c={d.currency} strong />
+                    <Num v={settled ? due.collected : due.expected} c={d.currency} strong />
                     <Num v={fee} c={d.currency} dim={!fee} neg />
                     <Num v={owner} c={d.currency} dim={!owner} />
                     <td className="whitespace-nowrap px-3 py-2.5">
@@ -481,10 +485,14 @@ function Ledger({
   );
 }
 
+function isSettled(due: DossierDue) {
+  return due.status === "pagado" && due.payments.length > 0 && due.payments.every((p) => p.lines);
+}
+
 function Num({ v, c, strong, dim, neg }: { v: number; c: string; strong?: boolean; dim?: boolean; neg?: boolean }) {
   return (
     <td className={`whitespace-nowrap px-3 py-2.5 text-right text-[13px] tabular-nums ${strong ? "font-display font-bold text-text" : dim ? "text-text-faint" : "text-text-muted"}`}>
-      {dim ? "—" : `${neg ? "− " : ""}${money(v, c)}`}
+      {dim ? "—" : `${neg || v < 0 ? "− " : ""}${money(Math.abs(v), c)}`}
     </td>
   );
 }
@@ -589,7 +597,7 @@ function PaymentRow({ p, dueId, currency, onChanged }: { p: PaymentDTO; dueId: s
       </div>
       {p.lines && (
         <p className="text-[12px] text-text-faint">
-          {p.lines.map((l) => `${l.label} ${money(l.amount, currency)}`).join(" · ")}
+          {p.lines.map((l) => `${l.label} ${l.amount < 0 ? "− " : ""}${money(Math.abs(l.amount), currency)}`).join(" · ")}
           {p.commissionAmount > 0 && ` · honorarios ${p.feePercent ?? ""}% ${money(p.commissionAmount, currency)}`}
         </p>
       )}
