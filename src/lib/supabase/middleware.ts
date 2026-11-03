@@ -11,6 +11,11 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
+  // Web pública de la inmobiliaria: sin sesión ni consulta a Supabase Auth.
+  if (request.nextUrl.pathname === "/web" || request.nextUrl.pathname.startsWith("/web/")) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
   let supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } });
 
   const supabase = createServerClient(
