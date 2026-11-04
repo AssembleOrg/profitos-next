@@ -1,8 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Schibsted_Grotesk } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
 import { CONTACT, WEB_BASE, whatsappUrl } from "@/lib/web/format";
+import { googleWebClientId } from "@/lib/web/server/visitor-session";
+import { AccountProvider } from "./_components/account";
+import { ActivityTracker } from "./_components/activity-tracker";
 import { WhatsappFab } from "./_components/whatsapp-fab";
 import { Header } from "./_components/header";
 import "./web.css";
@@ -24,6 +28,8 @@ export default function WebLayout({ children }: Readonly<{ children: React.React
   return (
     <div className={`jw ${font.variable}`}>
       <a href="#contenido" className="jw-skip">Saltar al contenido</a>
+      <AccountProvider clientId={googleWebClientId()}>
+      <Suspense><ActivityTracker /></Suspense>
       <Header />
       <main id="contenido">{children}</main>
       <footer className="jw-footer" id="contacto">
@@ -54,9 +60,10 @@ export default function WebLayout({ children }: Readonly<{ children: React.React
         <p className="jw-legal">
           Todas las medidas enunciadas son meramente orientativas, las medidas exactas serán las que se expresen en el respectivo título de propiedad de cada inmueble. Todas las fotos, imágenes y videos son meramente ilustrativos y no contractuales. Los precios enunciados son meramente orientativos y no contractuales.
         </p>
-        <p className="jw-copy">© {new Date().getFullYear()} Juliana Profitos Propiedades · {CONTACT.license} · CUIT {CONTACT.cuit}</p>
+        <p className="jw-copy">© {new Date().getFullYear()} Juliana Profitos Propiedades · {CONTACT.license} · CUIT {CONTACT.cuit} · <Link href={`${WEB_BASE}/privacidad`}>Privacidad</Link></p>
       </footer>
       <WhatsappFab />
+      </AccountProvider>
     </div>
   );
 }

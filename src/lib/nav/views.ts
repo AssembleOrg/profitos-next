@@ -31,6 +31,7 @@ export const APP_VIEWS: AppView[] = [
   { href: "/inmobiliarias", label: "Inmobiliarias" },
   { href: "/objetivos", label: "Objetivos" },
   { href: "/mis-objetivos", label: "Mis objetivos" },
+  { href: "/analitica-web", label: "Analítica web", adminOnly: true },
   { href: "/adicionales", label: "Adicionales", adminOnly: true },
   { href: "/miembros", label: "Miembros", adminOnly: true },
   { href: "/configuracion", label: "Configuración", adminOnly: true },

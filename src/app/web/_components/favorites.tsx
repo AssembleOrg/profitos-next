@@ -3,11 +3,14 @@
 import { useCallback, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { WEB_BASE } from "@/lib/web/format";
+import { useAccount } from "./account";
 import { IconHeart } from "./icons";
+import { track } from "./tracker";
 
 const KEY = "jw-favoritas";
 const EVENT = "jw-favoritas-change";
 const EMPTY = "";
+const INVITED_KEY = "jw-invitado";
 
 function read(): string {
   try {
@@ -34,6 +37,7 @@ function useFavorites(): string[] {
 export function FavoriteButton({ propertyKey, label }: { propertyKey: string; label: string }) {
   const favorites = useFavorites();
   const active = favorites.includes(propertyKey);
+  const { enabled, visitor, openLogin } = useAccount();
   const toggle = useCallback(() => {
     const next = active ? favorites.filter((key) => key !== propertyKey) : [...favorites, propertyKey];
     try {
@@ -42,7 +46,13 @@ export function FavoriteButton({ propertyKey, label }: { propertyKey: string; la
       return;
     }
     window.dispatchEvent(new Event(EVENT));
-  }, [active, favorites, propertyKey]);
+    track(active ? "favorite_remove" : "favorite_add", { propertyKey });
+    // Una sola invitación por pestaña: se ofrece, no se exige.
+    if (!active && enabled && !visitor && !sessionStorage.getItem(INVITED_KEY)) {
+      sessionStorage.setItem(INVITED_KEY, "1");
+      openLogin("Guardamos esta propiedad. Ingresá para tener tus favoritas en todos tus dispositivos.");
+    }
+  }, [active, enabled, favorites, openLogin, propertyKey, visitor]);
 
   return (
     <button

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { whatsappUrl } from "@/lib/web/format";
 import { IconWhatsapp } from "./icons";
+import { track } from "./tracker";
 
 /**
  * Arma el mensaje y abre WhatsApp. No guarda nada todavía: cuando las consultas
@@ -21,6 +22,7 @@ export function WhatsappForm({ intro, detailLabel, detailPlaceholder, cta, defau
       return;
     }
     setError(null);
+    track("form_submit", { label: detailLabel });
     window.open(whatsappUrl(`${intro}\nNombre: ${name}\n${detailLabel}: ${detail}`), "_blank", "noopener");
   }
 
