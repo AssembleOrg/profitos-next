@@ -4,6 +4,7 @@ import { catalogOptions, filterCatalog, getCatalog, groupUnits, sortCatalog } fr
 import { WEB_BASE } from "@/lib/web/format";
 import { ListingFilters } from "../_components/listing-filters";
 import { PropertyCard } from "../_components/property-card";
+import { TrackSearch } from "../_components/track-search";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,7 @@ export default async function WebListing({ searchParams }: { searchParams: Searc
         <h1>{heading(values)}</h1>
         <p aria-live="polite">{results.length} {results.length === 1 ? "resultado" : "resultados"}</p>
       </div>
+      <TrackSearch values={values} results={results.length} />
       <ListingFilters values={values} types={options.types} zones={options.zones} />
       {visible.length > 0 ? (
         <div className="jw-grid">

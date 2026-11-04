@@ -38,6 +38,9 @@ export const IconPlay = (p: SVGProps<SVGSVGElement>) => (
 export const IconGrid = (p: SVGProps<SVGSVGElement>) => (
   <Base {...p}><rect x="4" y="4" width="6.5" height="6.5" rx="1" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1" /><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1" /></Base>
 );
+export const IconPerson = (p: SVGProps<SVGSVGElement>) => (
+  <Base {...p}><circle cx="12" cy="8.5" r="3.5" /><path d="M5 20c.7-3.6 3.4-5.5 7-5.5s6.3 1.9 7 5.5" /></Base>
+);
 export const IconCheck = (p: SVGProps<SVGSVGElement>) => (
   <Base strokeWidth="2.4" {...p}><path d="m5 12.5 4.5 4.5L19 7.5" /></Base>
 );

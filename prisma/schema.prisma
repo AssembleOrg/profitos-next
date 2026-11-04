@@ -1040,3 +1040,69 @@ model BuscalaConsulta {
   @@index([userId])
   @@map("jp_buscala_consultas")
 }
+
+// Web pública: quien entra con Google. Separado de jp_users: nunca da acceso al sistema.
+model WebVisitor {
+  id               String    @id @default(cuid())
+  googleSub        String    @unique @map("google_sub")
+  email            String
+  name             String?
+  pictureUrl       String?   @map("picture_url")
+  phone            String?
+  phoneAskCount    Int       @default(0) @map("phone_ask_count")
+  phoneLastAskedAt DateTime? @map("phone_last_asked_at")
+  marketingConsent Boolean   @default(false) @map("marketing_consent")
+  termsAcceptedAt  DateTime? @map("terms_accepted_at")
+  loginCount       Int       @default(0) @map("login_count")
+  firstLoginAt     DateTime  @default(now()) @map("first_login_at")
+  lastLoginAt      DateTime  @default(now()) @map("last_login_at")
+  isInternal       Boolean   @default(false) @map("is_internal")
+  favorites        Json      @default("[]")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  events           WebEvent[]
+
+  @@index([email])
+  @@map("jp_web_visitors")
+}
+
+// Web pública: lo que pasa en la web. Sin IP. Los datos de la propiedad quedan
+// copiados al momento del evento para que el historial no cambie con el catálogo.
+model WebEvent {
+  id           String    @id @default(cuid())
+  clientId     String    @unique @map("client_id")
+  anonId       String    @map("anon_id")
+  sessionId    String    @map("session_id")
+  visitorId    String?   @map("visitor_id")
+  visitor      WebVisitor? @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+  type         String
+  path         String?
+  propertyKey  String?   @map("property_key")
+  address      String?
+  operation    String?
+  propertyType String?   @map("property_type")
+  zone         String?
+  price        Float?
+  currency     String?
+  query        String?
+  filters      Json?
+  resultsCount Int?      @map("results_count")
+  durationMs   Int?      @map("duration_ms")
+  scrollDepth  Int?      @map("scroll_depth")
+  label        String?
+  device       String?
+  browser      String?
+  channel      String?
+  referrerHost String?   @map("referrer_host")
+  utmSource    String?   @map("utm_source")
+  utmCampaign  String?   @map("utm_campaign")
+  isBot        Boolean   @default(false) @map("is_bot")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@index([createdAt, type])
+  @@index([anonId, createdAt])
+  @@index([visitorId, createdAt])
+  @@index([propertyKey, createdAt])
+  @@map("jp_web_events")
+}

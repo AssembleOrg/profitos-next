@@ -25,6 +25,7 @@ export function Developments({ items }: { items: Development[] }) {
               href={whatsappUrl(`Hola, quiero consultar por el emprendimiento ${item.name} (${item.address}).`)}
               target="_blank"
               rel="noreferrer"
+              data-track-label={item.name}
               onMouseEnter={() => setActive(index)}
               onFocus={() => setActive(index)}
             >

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { IconArrow, IconBack, IconClose, IconGrid } from "./icons";
+import { track as trackEvent } from "./tracker";
 import { useModal } from "./use-modal";
 
 type Photo = { src: string; thumb: string; alt: string };
@@ -20,6 +21,7 @@ export function Gallery({ photos }: { photos: Photo[] }) {
     setStart(at);
     setIndex(at);
     setOpen(true);
+    trackEvent("photo_open", { label: String(at + 1) });
   }
 
   useEffect(() => {

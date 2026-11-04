@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { IconClose, IconFilters } from "./icons";
 import { Select, type SelectOption } from "./select";
 import { Sheet } from "./sheet";
+import { track } from "./tracker";
 
 export type FilterValues = Record<string, string | undefined>;
 
@@ -85,7 +86,7 @@ export function ListingFilters({ values, types, zones }: { values: FilterValues;
           <Select variant="bar" label="Zona" value={values.zona ?? ""} options={zoneOptions} onChange={(value) => update("zona", value)} />
           <Select variant="bar" label="Ambientes" value={values.amb ?? ""} options={[{ value: "", label: "Todos" }, ...ROOMS]} onChange={(value) => update("amb", value)} />
         </div>
-        <button type="button" className="jw-more" onClick={() => setOpen(true)}>
+        <button type="button" className="jw-more" onClick={() => { setOpen(true); track("filters_open"); }}>
           <IconFilters width={18} height={18} /> Filtros
           {active.length > 0 && <span className="jw-more-count">{active.length}</span>}
         </button>

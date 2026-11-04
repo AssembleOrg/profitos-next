@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CONTACT, WEB_BASE } from "@/lib/web/format";
+import { AccountButton } from "./account-button";
 import { FavoritesLink } from "./favorites";
 import { IconClose, IconMenu, IconPhone, IconSearch } from "./icons";
 import { useModal } from "./use-modal";
@@ -48,6 +49,7 @@ export function Header() {
           <IconPhone width={16} height={16} /> {CONTACT.phoneDisplay}
         </a>
         <FavoritesLink />
+        <AccountButton />
         <button type="button" className="jw-menu" aria-label="Abrir menú" aria-expanded={open} onClick={() => setOpen(true)}>
           <IconMenu />
         </button>
