@@ -12,6 +12,8 @@ import { CurrencyInput } from "../../alquileres/_components/currency-input";
 import { MediaUploader } from "../../alquileres/_components/media-uploader";
 import type { RentalAttachment } from "../../alquileres/_components/voice-recorder";
 import { agentCommissionAmount, formatMoney, type AccountMovement, type Currency, type EntryType } from "@/lib/account";
+import { fundKey, parseFundKey, splitInstallments } from "@/lib/account/funds";
+import { formatDate } from "@/lib/datetime";
 import type { SerializedAgent, SerializedCategory } from "./estados-cuenta-client";
 import { PropertyPicker } from "./property-picker";
 import { AgencyPicker } from "./agency-picker";
@@ -32,8 +34,10 @@ interface Props {
   isCostearOwner: boolean;
   /** Valores iniciales para un alta nueva (no aplica al editar). */
   prefill?: MovementPrefill | null;
-  /** `editing` son honorarios "a cobrar" de una firma: se registra el cobro. */
+  /** `editing` es un pendiente (a cobrar / a pagar): se registra el cobro o el pago. */
   collecting?: boolean;
+  /** Personas que pueden tener plata (bolsillo "persona"). */
+  people: { id: string; name: string }[];
 }
 
 type Destino = "inmobiliaria" | "costear";
@@ -52,6 +56,7 @@ export function MovementFormModal({
   isCostearOwner,
   prefill = null,
   collecting = false,
+  people,
 }: Readonly<Props>) {
   const router = useRouter();
   const [type, setType] = useState<EntryType>("income");
@@ -73,6 +78,14 @@ export function MovementFormModal({
   const [attachments, setAttachments] = useState<RentalAttachment[]>([]);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  // Estado y plan: ya cobrado/pagado o pendiente, en cuotas o no.
+  const [pending, setPending] = useState(false);
+  const [installments, setInstallments] = useState(1);
+  // Bolsillo: "caja" | "banco" | "persona:<id>" | "" (sin indicar, solo movimientos viejos).
+  const [fundValue, setFundValue] = useState("caja");
+  const [counterparty, setCounterparty] = useState("");
+  // Cobro/pago parcial de un pendiente: el resto sigue pendiente.
+  const [keepRest, setKeepRest] = useState(true);
 
   // Extracción con IA de Costear (foto/audio/texto → borrador de gasto).
   const [merchant, setMerchant] = useState("");
@@ -113,7 +126,20 @@ export function MovementFormModal({
     setIaText("");
     setIaOpen(false);
     setExtracting(false);
+    setPending(false);
+    setInstallments(1);
+    setKeepRest(true);
     if (editing) {
+      setCounterparty(editing.counterparty ?? "");
+      setFundValue(
+        collecting
+          ? "caja"
+          : editing.fund
+            ? fundKey(editing.fund, editing.fundUserId)
+            : editing.status === "pending"
+              ? "caja"
+              : ""
+      );
       const atts = asAttachments(editing.attachments);
       setType(editing.type);
       setCategoryId(editing.categoryId ?? "");
@@ -151,6 +177,8 @@ export function MovementFormModal({
       setPropertyLabel(null);
       setAttachments([]);
       setSignedUrls({});
+      setCounterparty("");
+      setFundValue("caja");
       if (prefill) {
         setType(prefill.type);
         setDescription(prefill.description);
@@ -244,6 +272,21 @@ export function MovementFormModal({
         })
       : 0;
 
+  const isPendingEdit = Boolean(editing && editing.status === "pending" && !collecting);
+  // ¿Esta carga mueve plata ahora? (ya cobrado/pagado, primera cuota, o registrar un cobro)
+  const movesMoneyNow = collecting || (editing ? editing.status !== "pending" : !pending);
+  const partial = collecting && editing != null && amount != null && amount > 0 && amount < editing.amount - 0.005;
+  const plan =
+    !editing && installments > 1 && amount && amount > 0
+      ? splitInstallments(amount, installments).map((v, i) => {
+          const d = date ? new Date(`${date}T12:00:00Z`) : new Date();
+          d.setUTCMonth(d.getUTCMonth() + i);
+          return { amount: v, date: d.toISOString().slice(0, 10) };
+        })
+      : null;
+  const doneWord = type === "income" ? "cobró" : "pagó";
+  const pendingWord = type === "income" ? "A cobrar" : "A pagar";
+
   async function submit() {
     // El gasto personal (Costear) no necesita categoría; sí descripción.
     if (isCostear) {
@@ -315,6 +358,14 @@ export function MovementFormModal({
       toast.error("Los honorarios de la inmobiliaria deben ser un % entre 0 y 100");
       return;
     }
+    if (movesMoneyNow && !fundValue) {
+      toast.error(type === "income" ? "Indicá dónde entró la plata" : "Indicá de dónde salió la plata");
+      return;
+    }
+    const parsedFund = parseFundKey(fundValue);
+    const fundPayload = movesMoneyNow
+      ? { fund: parsedFund?.fund ?? null, fundUserId: parsedFund?.userId ?? null }
+      : { fund: null, fundUserId: null };
     setSubmitting(true);
     try {
       const payload = {
@@ -333,7 +384,10 @@ export function MovementFormModal({
         isShared,
         sharedAgencyId: isShared ? sharedAgencyId : null,
         attachments,
-        ...(collecting ? { collect: true } : {}),
+        counterparty: type === "expense" ? counterparty.trim() || null : null,
+        ...fundPayload,
+        ...(collecting ? { collect: true, keepRest: partial && keepRest } : {}),
+        ...(!editing ? { plan: { pending, installments, firstCollected: !pending } } : {}),
       };
       const res = await fetch(
         editing ? `/api/estados-cuenta/movimientos/${editing.id}` : "/api/estados-cuenta/movimientos",
@@ -345,7 +399,11 @@ export function MovementFormModal({
       );
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message ?? "Error");
-      toast.success(collecting ? "Cobro registrado: ya suma en ingresos" : editing ? "Movimiento actualizado" : "Movimiento registrado");
+      toast.success(
+        collecting
+          ? type === "income" ? "Cobro registrado: ya suma en ingresos" : "Pago registrado: ya suma en egresos"
+          : body?.message ?? (editing ? "Movimiento actualizado" : "Movimiento registrado")
+      );
       onOpenChange(false);
       router.refresh();
     } catch (error) {
@@ -359,7 +417,13 @@ export function MovementFormModal({
     <Sheet
       open={open}
       onClose={() => onOpenChange(false)}
-      title={collecting ? "Registrar cobro de honorarios" : editing ? "Editar movimiento" : "Nuevo movimiento"}
+      title={
+        collecting
+          ? type === "income" ? "Registrar cobro" : "Registrar pago"
+          : isPendingEdit
+            ? `Editar ${pendingWord.toLowerCase()}`
+            : editing ? "Editar movimiento" : "Nuevo movimiento"
+      }
       maxWidth="sm:max-w-[640px]"
       footer={
         <>
@@ -376,7 +440,11 @@ export function MovementFormModal({
             disabled={submitting}
             className="inline-flex h-11 items-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? "Guardando…" : collecting ? "Registrar cobro" : editing ? "Guardar cambios" : "Registrar"}
+            {submitting
+              ? "Guardando…"
+              : collecting
+                ? type === "income" ? "Registrar cobro" : "Registrar pago"
+                : editing ? "Guardar cambios" : "Registrar"}
           </button>
         </>
       }
@@ -385,8 +453,10 @@ export function MovementFormModal({
                   <div className="flex flex-col gap-4">
                     {collecting && (
                       <p className="rounded-[14px] bg-sand-chip px-3.5 py-2.5 text-[12.5px] text-text-muted">
-                        Confirmá la fecha y el monto que entró. Si hay agente, su comisión baja como egreso.
-                        Desde ahora cuenta en ingresos y saldos.
+                        {type === "income"
+                          ? "Confirmá la fecha, el monto que entró y dónde quedó la plata. Si hay agente, su comisión baja como egreso."
+                          : "Confirmá la fecha, el monto que se pagó y de dónde salió la plata."}
+                        {editing?.installmentCount ? ` Cuota ${editing.installmentNumber} de ${editing.installmentCount}.` : ""}
                       </p>
                     )}
                     {!collecting && (
@@ -417,6 +487,83 @@ export function MovementFormModal({
                       </button>
                     </div>
                     </>
+                    )}
+
+                    {/* Estado: ya cobrado/pagado o pendiente + cuotas (solo altas de la inmobiliaria) */}
+                    {!editing && !isCostear && (
+                      <div className="flex flex-col gap-3 rounded-[16px] bg-bg p-3">
+                        <div className="flex items-center gap-0.5 rounded-full border border-border bg-surface p-1" role="radiogroup" aria-label="Estado">
+                          {[
+                            { v: false, label: `Ya se ${doneWord}` },
+                            { v: true, label: pendingWord },
+                          ].map((opt) => (
+                            <button
+                              key={opt.label}
+                              type="button"
+                              role="radio"
+                              aria-checked={pending === opt.v}
+                              onClick={() => setPending(opt.v)}
+                              className={`flex-1 rounded-full px-3 py-2 text-[12.5px] transition-colors ${
+                                pending === opt.v ? "bg-dark font-bold text-dark-fg" : "font-semibold text-text-muted hover:text-text"
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[12.5px] font-semibold text-text-muted">
+                            Cuotas <span className="font-normal text-text-faint">(mensuales)</span>
+                          </span>
+                          <div className="flex items-center gap-1 rounded-full border border-border bg-surface p-1">
+                            <button
+                              type="button"
+                              aria-label="Una cuota menos"
+                              onClick={() => setInstallments((n) => Math.max(1, n - 1))}
+                              className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted hover:bg-bg"
+                            >
+                              −
+                            </button>
+                            <span className="min-w-[4.5rem] text-center text-[13px] font-bold tabular-nums text-text">
+                              {installments === 1 ? "Sin cuotas" : `${installments} cuotas`}
+                            </span>
+                            <button
+                              type="button"
+                              aria-label="Una cuota más"
+                              onClick={() => setInstallments((n) => Math.min(36, n + 1))}
+                              className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted hover:bg-bg"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                        {plan && (
+                          <ul className="flex flex-col gap-1 text-[12px] text-text-muted">
+                            {plan.map((c, i) => (
+                              <li key={c.date + i} className="flex items-center justify-between gap-2">
+                                <span>
+                                  Cuota {i + 1} · {formatDate(c.date)}
+                                </span>
+                                <span className="flex items-center gap-2">
+                                  <span className="font-display font-semibold tabular-nums text-text">{formatMoney(c.amount, currency)}</span>
+                                  <span
+                                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                      i === 0 && !pending ? "bg-sage-chip text-olive-light" : "bg-sand-chip text-warning"
+                                    }`}
+                                  >
+                                    {i === 0 && !pending ? (type === "income" ? "Cobrada" : "Pagada") : pendingWord}
+                                  </span>
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {!plan && pending && (
+                          <p className="text-[11.5px] text-text-faint">
+                            Queda en {pendingWord} y no suma en {type === "income" ? "ingresos" : "egresos"} hasta que se {doneWord === "cobró" ? "cobre" : "pague"}.
+                          </p>
+                        )}
+                      </div>
                     )}
 
                     {/* Destino: inmobiliaria vs gasto personal (Costear). Solo la dueña, solo egresos. */}
@@ -609,6 +756,65 @@ export function MovementFormModal({
                         </div>
                       </div>
                     </div>
+
+                    {/* Cobro/pago parcial: el resto sigue pendiente */}
+                    {partial && editing && (
+                      <button
+                        type="button"
+                        onClick={() => setKeepRest((v) => !v)}
+                        className="flex items-center justify-between gap-3 rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-left text-[12.5px] text-text-muted"
+                      >
+                        <span>
+                          {keepRest
+                            ? `Quedan ${formatMoney(Math.round((editing.amount - (amount ?? 0)) * 100) / 100, currency)} ${pendingWord.toLowerCase()}`
+                            : "Se da por saldado con este monto"}
+                        </span>
+                        <span className={`flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors ${keepRest ? "bg-olive-light" : "bg-border"}`}>
+                          <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${keepRest ? "translate-x-5" : ""}`} />
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Bolsillo: dónde entró / de dónde salió la plata */}
+                    {!isCostear && movesMoneyNow && (
+                      <div>
+                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
+                          {type === "income" ? "¿Dónde entró la plata?" : "¿De dónde salió la plata?"}
+                        </label>
+                        <SelectField value={fundValue} onChange={(e) => setFundValue(e.target.value)}>
+                          {editing && !editing.fund && !collecting && <option value="">Sin indicar (anterior a la caja)</option>}
+                          <option value="caja">Caja de la oficina</option>
+                          <option value="banco">Banco / transferencia</option>
+                          <optgroup label={type === "income" ? "Se lo llevó" : "Lo pagó de su bolsillo"}>
+                            {people.map((p) => (
+                              <option key={p.id} value={`persona:${p.id}`}>{p.name}</option>
+                            ))}
+                          </optgroup>
+                        </SelectField>
+                      </div>
+                    )}
+
+                    {/* A quién se le paga (egresos) */}
+                    {!isCostear && type === "expense" && (
+                      <div>
+                        <label className="mb-1.5 block text-[12.5px] font-semibold text-text-muted">
+                          ¿A quién se le paga? <span className="text-text-faint">(opcional: colega, agente, proveedor…)</span>
+                        </label>
+                        <input
+                          type="text"
+                          list="estados-cuenta-personas"
+                          value={counterparty}
+                          onChange={(e) => setCounterparty(e.target.value)}
+                          placeholder="Ej. Octavio"
+                          className={inputClass}
+                        />
+                        <datalist id="estados-cuenta-personas">
+                          {people.map((p) => (
+                            <option key={p.id} value={p.name} />
+                          ))}
+                        </datalist>
+                      </div>
+                    )}
 
                     {/* Honorarios de la inmobiliaria (solo ingresos): % sobre el valor de la operación */}
                     {!isCostear && type === "income" && (

@@ -27,6 +27,7 @@ import {
   type SalesStatsGroup,
 } from "./index";
 import { computeSignatureFees } from "@/lib/signatures/fees";
+import { FUND_LABEL, isFundKind } from "./funds";
 
 export interface MovementFilters {
   from?: string; // ISO date YYYY-MM-DD (inclusive)
@@ -49,7 +50,7 @@ export interface ReportOptions {
   costearPhone?: string | null;
 }
 
-function userName(user: { fullName: string | null; email: string } | null): string | null {
+export function userName(user: { fullName: string | null; email: string } | null): string | null {
   if (!user) return null;
   return user.fullName?.trim() || user.email;
 }
@@ -118,12 +119,13 @@ function rentalWhere(filters: MovementFilters, beforeRange = false): Prisma.Rent
   return where;
 }
 
-const manualInclude = {
+export const manualInclude = {
   category: { select: { id: true, name: true, color: true, area: true } },
   agentUser: { select: { id: true, fullName: true, email: true } },
   property: { select: { id: true, address: true } },
   sharedAgency: { select: { id: true, name: true } },
   createdByUser: { select: { id: true, fullName: true, email: true } },
+  fundUser: { select: { id: true, fullName: true, email: true } },
 } satisfies Prisma.AccountEntryInclude;
 
 const rentalInclude = {
@@ -140,7 +142,7 @@ const rentalInclude = {
   },
 } satisfies Prisma.RentalPaymentTransactionInclude;
 
-function mapManual(entry: Prisma.AccountEntryGetPayload<{ include: typeof manualInclude }>): AccountMovement {
+export function mapManual(entry: Prisma.AccountEntryGetPayload<{ include: typeof manualInclude }>): AccountMovement {
   return {
     id: entry.id,
     source: "manual",
@@ -170,7 +172,24 @@ function mapManual(entry: Prisma.AccountEntryGetPayload<{ include: typeof manual
     createdAt: (entry.collectedAt ?? entry.createdAt).toISOString(),
     status: entry.status === "pending" ? "pending" : "collected",
     signatureProposalId: entry.signatureProposalId,
+    fund: isFundKind(entry.fund) ? entry.fund : null,
+    fundUserId: entry.fundUserId,
+    fundLabel: fundLabelOf(entry.fund, entry.fundUser),
+    counterparty: entry.counterparty,
+    installmentGroup: entry.installmentGroup,
+    installmentNumber: entry.installmentNumber,
+    installmentCount: entry.installmentCount,
   };
+}
+
+/** Etiqueta del bolsillo: "Caja de la oficina", "Banco" o el nombre de la persona. */
+export function fundLabelOf(
+  fund: string | null,
+  user: { fullName: string | null; email: string } | null | undefined
+): string | null {
+  if (!isFundKind(fund)) return null;
+  if (fund === "persona") return userName(user ?? null) ?? "Persona";
+  return FUND_LABEL[fund];
 }
 
 function mapRental(tx: Prisma.RentalPaymentTransactionGetPayload<{ include: typeof rentalInclude }>): AccountMovement {
@@ -203,6 +222,13 @@ function mapRental(tx: Prisma.RentalPaymentTransactionGetPayload<{ include: type
     createdAt: tx.createdAt.toISOString(),
     status: "collected",
     signatureProposalId: null,
+    fund: tx.fund === "caja" || tx.fund === "banco" ? tx.fund : null,
+    fundUserId: null,
+    fundLabel: tx.fund === "caja" || tx.fund === "banco" ? FUND_LABEL[tx.fund] : null,
+    counterparty: null,
+    installmentGroup: null,
+    installmentNumber: null,
+    installmentCount: null,
   };
 }
 
@@ -236,6 +262,13 @@ function mapCostear(e: CostearExpense): AccountMovement {
     createdAt: e.createdAt,
     status: "collected",
     signatureProposalId: null,
+    fund: null,
+    fundUserId: null,
+    fundLabel: null,
+    counterparty: null,
+    installmentGroup: null,
+    installmentNumber: null,
+    installmentCount: null,
   };
 }
 
@@ -395,20 +428,26 @@ async function getOpeningBalances(filters: MovementFilters): Promise<OpeningByCu
 }
 
 /**
- * Honorarios de firmas pendientes de cobro. No dependen del rango de fechas
- * (lo pendiente se muestra siempre); sí del área y la moneda.
+ * Pendientes: a cobrar (ingresos) o a pagar (egresos). No dependen del rango
+ * de fechas (lo pendiente se muestra siempre); sí del área y la moneda.
  */
-export async function getReceivables(filters: MovementFilters): Promise<AccountMovement[]> {
-  if (filters.area === "administracion") return [];
-  const where: Prisma.AccountEntryWhereInput = { status: "pending" };
+export async function getPending(
+  type: EntryType,
+  filters: Pick<MovementFilters, "currency" | "area"> = {}
+): Promise<AccountMovement[]> {
+  const where: Prisma.AccountEntryWhereInput = { status: "pending", type };
   if (filters.currency) where.currency = filters.currency;
   if (filters.area) where.category = { is: { area: filters.area } };
   const rows = await prisma.accountEntry.findMany({
     where,
     include: manualInclude,
-    orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+    orderBy: [{ date: "asc" }, { installmentNumber: "asc" }, { createdAt: "asc" }],
   });
   return rows.map(mapManual);
+}
+
+export function getReceivables(filters: MovementFilters): Promise<AccountMovement[]> {
+  return getPending("income", filters);
 }
 
 /**
@@ -432,6 +471,7 @@ export async function getSalesStats(filters: MovementFilters): Promise<SalesStat
       operationAmount: true,
       operationCurrency: true,
       feePercentage: true,
+      feeAmount: true,
     },
   });
   const empty = (): SalesStatsGroup => ({ count: 0, closed: 0, fees: {} });
@@ -456,12 +496,13 @@ export async function getAccountReport(
   filters: MovementFilters,
   options: ReportOptions = {}
 ): Promise<AccountReport> {
-  const [movements, opening, receivables, sales] = await Promise.all([
+  const [movements, opening, receivables, payables, sales] = await Promise.all([
     getMovements(filters, options),
     getOpeningBalances(filters),
     getReceivables(filters),
+    getPending("expense", filters),
     filters.area === "ventas" ? getSalesStats(filters) : Promise.resolve(null),
   ]);
   const currencies: Currency[] = filters.currency ? [filters.currency] : CURRENCIES;
-  return { ...buildReport(movements, opening, currencies), receivables, sales };
+  return { ...buildReport(movements, opening, currencies), receivables, payables, sales };
 }

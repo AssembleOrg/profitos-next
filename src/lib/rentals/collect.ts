@@ -1,4 +1,5 @@
 import { DateTime } from "luxon";
+import { fundForMethod } from "@/lib/account/funds";
 import { prisma } from "@/lib/prisma/client";
 import { AppError } from "@/lib/api/handler";
 import type { Prisma } from "@/generated/prisma/client";
@@ -154,6 +155,8 @@ export async function collectRent(input: CollectInput) {
         feePercent: split.feePercent,
         breakdown: breakdown as unknown as Prisma.InputJsonValue,
         method: input.method?.trim() || null,
+        // Efectivo → caja de la oficina; el resto → banco.
+        fund: fundForMethod(input.method),
         paidAt: input.paidAt ?? new Date(),
         isFull: input.isFull,
         notes: input.notes?.trim() || null,

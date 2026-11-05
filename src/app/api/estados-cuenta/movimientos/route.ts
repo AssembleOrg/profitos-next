@@ -1,12 +1,12 @@
 import type { NextRequest } from "next/server";
 import { withHandler, AppError } from "@/lib/api/handler";
 import { ok, created } from "@/lib/api/response";
-import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
 import { getAccountReport, type MovementFilters } from "@/lib/account/server";
 import { validateEntry, type EntryBody } from "@/lib/account/validate";
 import { isAccountArea, isCurrency, isEntryType, type Currency, type MovementSource } from "@/lib/account";
 import { createCostearExpense, getCostearPhoneForEmail } from "@/lib/costear/client";
+import { createEntries, parsePlan, type PlanBody } from "@/lib/account/entries";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -69,7 +69,7 @@ interface PersonalExpenseBody {
 export const POST = withHandler(async (request: NextRequest) => {
   const path = request.nextUrl.pathname;
   const auth = await getAuthContext();
-  const raw = (await request.json()) as EntryBody & PersonalExpenseBody;
+  const raw = (await request.json()) as EntryBody & PersonalExpenseBody & { plan?: PlanBody };
 
   // ── Gasto personal → Costear (no se persiste en profitos) ──
   if (raw.personal === true) {
@@ -97,18 +97,16 @@ export const POST = withHandler(async (request: NextRequest) => {
     return created({ source: "costear", id: expense.id }, "Gasto personal registrado en Costear", path);
   }
 
-  // ── Movimiento normal de la inmobiliaria ──
+  // ── Movimiento normal de la inmobiliaria (cobrado, pendiente o en cuotas) ──
+  const plan = parsePlan(raw.plan);
   const data = await validateEntry(raw);
+  const entries = await createEntries(data, plan, auth.userId);
 
-  const entry = await prisma.accountEntry.create({
-    data: { ...data, createdByUserId: auth.userId },
-    include: {
-      category: { select: { id: true, name: true, color: true } },
-      agentUser: { select: { id: true, fullName: true, email: true } },
-      property: { select: { id: true, address: true } },
-      sharedAgency: { select: { id: true, name: true } },
-    },
-  });
-
-  return created(entry, "Movimiento registrado correctamente", path);
+  const message =
+    entries.length > 1
+      ? `Plan de ${entries.length} cuotas registrado`
+      : entries[0].status === "pending"
+        ? data.type === "income" ? "Registrado como a cobrar" : "Registrado como a pagar"
+        : "Movimiento registrado correctamente";
+  return created({ entries }, message, path);
 });

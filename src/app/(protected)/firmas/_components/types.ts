@@ -25,6 +25,8 @@ export interface FirmaOperation {
   amount: number | null;
   currency: "ARS" | "USD";
   feePercentage: number | null;
+  /** Honorarios totales en monto fijo (manda sobre el %). */
+  feeAmount: number | null;
   /** Estado de los honorarios en estados de cuenta. */
   receivable: "none" | "pending" | "collected";
 }
@@ -35,6 +37,8 @@ export interface FirmaColleague {
   agencyName: string | null;
   name: string | null;
   sharePercent: number | null;
+  /** Cobramos el total y le pagamos su parte al colega. */
+  collectsAll: boolean;
 }
 
 export interface FirmaAction {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { now, formatDate } from "@/lib/datetime";
@@ -59,6 +60,8 @@ interface Props {
   isCostearOwner: boolean;
   /** Alta precargada desde otra pantalla (?nuevo=ingreso&propiedad=…&detalle=…). */
   prefill?: MovementPrefill | null;
+  /** Personas que pueden tener plata (bolsillo "persona"). */
+  people: { id: string; name: string }[];
 }
 
 export interface MovementPrefill {
@@ -71,7 +74,7 @@ export interface MovementPrefill {
 const selectClass =
   "h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text focus:border-border-strong focus:outline-none";
 
-export function EstadosCuentaClient({ report, categories, agents, filters, isAdmin, isCostearOwner, prefill = null }: Readonly<Props>) {
+export function EstadosCuentaClient({ report, categories, agents, filters, isAdmin, isCostearOwner, prefill = null, people }: Readonly<Props>) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -91,12 +94,10 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
     setFormOpen(true);
   }
 
-  // A cobrar por moneda (no entra en ingresos ni en el neto).
-  const receivableByCurrency = useMemo(() => {
-    const map = new Map<Currency, number>();
-    for (const r of report.receivables) map.set(r.currency, (map.get(r.currency) ?? 0) + r.amount);
-    return map;
-  }, [report.receivables]);
+  // A cobrar / a pagar por moneda (no entran en ingresos, egresos ni en el neto).
+  const receivableByCurrency = useMemo(() => totalsByCurrency(report.receivables), [report.receivables]);
+  const payableByCurrency = useMemo(() => totalsByCurrency(report.payables), [report.payables]);
+  const today = now().toISODate()!;
 
   function openDetail(m: AccountMovement) {
     setViewing(m);
@@ -167,6 +168,12 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
           <p className="mt-1 text-[12.5px] text-text-faint">{AREA_SUBTITLE[filters.area ?? "general"]}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/estados-cuenta/caja"
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4.5 text-[13.5px] font-semibold text-text transition-colors hover:bg-bg"
+          >
+            Caja y pendientes
+          </Link>
           <button
             type="button"
             onClick={() => setCategoriesOpen(true)}
@@ -320,9 +327,17 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
             </div>
             {(receivableByCurrency.get(cr.currency) ?? 0) > 0 && (
               <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
-                <span className="text-text-faint">A cobrar (firmas) · no entra al neto</span>
+                <span className="text-text-faint">A cobrar · no entra al neto</span>
                 <span className="font-display font-bold text-warning">
                   {formatMoney(receivableByCurrency.get(cr.currency) ?? 0, cr.currency)}
+                </span>
+              </div>
+            )}
+            {(payableByCurrency.get(cr.currency) ?? 0) > 0 && (
+              <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
+                <span className="text-text-faint">A pagar · no entra al neto</span>
+                <span className="font-display font-bold text-terra">
+                  {formatMoney(payableByCurrency.get(cr.currency) ?? 0, cr.currency)}
                 </span>
               </div>
             )}
@@ -356,35 +371,25 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
 
       {report.sales && <SalesStatsStrip stats={report.sales} />}
 
-      {/* A cobrar: honorarios de firmas pendientes */}
-      {report.receivables.length > 0 && (
-        <section className="overflow-hidden rounded-[20px] border border-border bg-surface">
-          <div className="flex items-center justify-between gap-2 border-b border-border bg-sand-chip px-4 py-2.5">
-            <span className="font-display text-sm font-semibold text-text">A cobrar</span>
-            <span className="text-[11px] text-text-muted">Honorarios de firmas · pasan a ingreso al cobrarlos</span>
-          </div>
-          <div className="divide-y divide-border">
-            {report.receivables.map((r) => (
-              <div key={r.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13.5px] font-bold text-text">{r.propertyAddress ?? r.categoryName ?? "Firma"}</p>
-                  <p className="truncate text-[11.5px] text-text-faint">{r.description}</p>
-                </div>
-                <span className="shrink-0 font-display text-sm font-bold text-warning">
-                  {formatMoney(r.amount, r.currency)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => openCollect(r)}
-                  className="inline-flex h-9 shrink-0 items-center rounded-full bg-dark px-4 text-[12.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
-                >
-                  Cobrar
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Pendientes: a cobrar (firmas, cuotas) y a pagar (colegas, cuotas) */}
+      <PendingList
+        title="A cobrar"
+        hint="Firmas y cuotas · pasan a ingreso al cobrarlas"
+        items={report.receivables}
+        action="Cobrar"
+        today={today}
+        onSettle={openCollect}
+        onOpen={openDetail}
+      />
+      <PendingList
+        title="A pagar"
+        hint="Colegas y cuotas · pasan a egreso al pagarlas"
+        items={report.payables}
+        action="Pagar"
+        today={today}
+        onSettle={openCollect}
+        onOpen={openDetail}
+      />
 
       {/* Contenido */}
       {report.movements.length === 0 ? (
@@ -453,6 +458,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
         agents={agents}
         defaultDate={filters.to}
         isCostearOwner={isCostearOwner}
+        people={people}
       />
 
       <CategoryManagerModal
@@ -488,6 +494,77 @@ const AREA_SUBTITLE: Record<AccountArea | "general", string> = {
 };
 
 // ── Subcomponentes ──────────────────────────────────────────────────
+
+function totalsByCurrency(items: AccountMovement[]): Map<Currency, number> {
+  const map = new Map<Currency, number>();
+  for (const r of items) map.set(r.currency, (map.get(r.currency) ?? 0) + r.amount);
+  return map;
+}
+
+/** Lista de pendientes (a cobrar o a pagar) con el botón para registrarlos. */
+export function PendingList({
+  title,
+  hint,
+  items,
+  action,
+  today,
+  onSettle,
+  onOpen,
+}: Readonly<{
+  title: string;
+  hint: string;
+  items: AccountMovement[];
+  action: string;
+  today: string;
+  onSettle: (m: AccountMovement) => void;
+  onOpen: (m: AccountMovement) => void;
+}>) {
+  if (items.length === 0) return null;
+  const tone = action === "Cobrar" ? "text-warning" : "text-terra";
+  return (
+    <section className="overflow-hidden rounded-[20px] border border-border bg-surface">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-sand-chip px-4 py-2.5">
+        <span className="font-display text-sm font-semibold text-text">{title}</span>
+        <span className="text-[11px] text-text-muted">{hint}</span>
+      </div>
+      <div className="divide-y divide-border">
+        {items.map((r) => {
+          const overdue = r.date < today;
+          const meta = [
+            r.installmentCount ? `Cuota ${r.installmentNumber}/${r.installmentCount}` : null,
+            r.propertyAddress && r.counterparty ? r.counterparty : null,
+            r.propertyAddress || r.counterparty ? r.description : r.categoryName,
+          ].filter(Boolean).join(" · ");
+          return (
+            <div key={r.id} className="flex items-center gap-3 px-4 py-3">
+              <button type="button" onClick={() => onOpen(r)} className="min-w-0 flex-1 text-left">
+                <p className="truncate text-[13.5px] font-bold text-text">
+                  {r.propertyAddress ?? r.counterparty ?? r.description ?? r.categoryName ?? "Pendiente"}
+                </p>
+                <p className="line-clamp-2 text-[11.5px] text-text-faint">
+                  <span className={overdue ? "font-semibold text-terra" : ""}>
+                    {overdue ? "Venció" : "Vence"} {formatDate(r.date)}
+                  </span>
+                  {meta ? ` · ${meta}` : ""}
+                </p>
+              </button>
+              <span className={`shrink-0 font-display text-sm font-bold tabular-nums ${tone}`}>
+                {formatMoney(r.amount, r.currency)}
+              </span>
+              <button
+                type="button"
+                onClick={() => onSettle(r)}
+                className="inline-flex h-9 shrink-0 items-center rounded-full bg-dark px-4 text-[12.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
+              >
+                {action}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
 function feesLabel(fees: SalesStatsGroup["fees"]): string {
   const parts = (Object.entries(fees) as [Currency, number][])
@@ -619,6 +696,8 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
     m.agentName,
     m.sharedAgencyName ? `con ${m.sharedAgencyName}` : null,
     m.propertyAddress,
+    m.installmentCount ? `Cuota ${m.installmentNumber}/${m.installmentCount}` : null,
+    m.fund === "persona" && m.fundLabel ? `${m.type === "income" ? "Lo tiene" : "Pagó"} ${m.fundLabel}` : m.fundLabel,
   ].filter(Boolean).join(" · ");
 
   const rowClass = `flex w-full items-center gap-3 px-4 py-3 text-left ${
