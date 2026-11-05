@@ -116,7 +116,8 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
       colleague.withColleague !== proposal.withColleague ||
       colleague.colleagueAgencyId !== proposal.colleagueAgencyId ||
       colleague.colleagueName !== proposal.colleagueName ||
-      colleague.colleagueSharePercent !== proposal.colleagueSharePercent;
+      colleague.colleagueSharePercent !== proposal.colleagueSharePercent ||
+      colleague.collectsAll !== proposal.collectsAll;
     if (changed) {
       data.withColleague = colleague.withColleague;
       data.colleagueAgency = colleague.colleagueAgencyId
@@ -124,6 +125,7 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
         : { disconnect: true };
       data.colleagueName = colleague.colleagueName;
       data.colleagueSharePercent = colleague.colleagueSharePercent;
+      data.collectsAll = colleague.collectsAll;
       const agencyName = colleague.colleagueAgencyId
         ? (await prisma.agency.findUnique({ where: { id: colleague.colleagueAgencyId }, select: { name: true } }))?.name ?? null
         : null;
@@ -132,24 +134,34 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
   }
 
   // Valor de la operación y honorarios: se actualizan como una unidad.
-  if (["operationAmount", "operationCurrency", "feePercentage"].some((k) => k in body)) {
+  if (["operationAmount", "operationCurrency", "feePercentage", "feeAmount"].some((k) => k in body)) {
     const op = parseOperation({
       operationAmount: "operationAmount" in body ? body.operationAmount : proposal.operationAmount,
       operationCurrency: "operationCurrency" in body ? body.operationCurrency : proposal.operationCurrency,
       feePercentage: "feePercentage" in body ? body.feePercentage : proposal.feePercentage,
+      feeAmount: "feeAmount" in body ? body.feeAmount : proposal.feeAmount,
     });
     if (
       op.operationAmount !== proposal.operationAmount ||
       op.operationCurrency !== proposal.operationCurrency ||
-      op.feePercentage !== proposal.feePercentage
+      op.feePercentage !== proposal.feePercentage ||
+      op.feeAmount !== proposal.feeAmount
     ) {
       Object.assign(data, op);
+      const feeText =
+        op.feeAmount != null
+          ? ` · honorarios fijos ${formatMoney(op.feeAmount, op.operationCurrency)}`
+          : op.feePercentage != null
+            ? ` · honorarios ${op.feePercentage}%`
+            : "";
       auditActions.push({
         type: "operation_update",
         description:
           op.operationAmount != null
-            ? `Operación: ${formatMoney(op.operationAmount, op.operationCurrency)}${op.feePercentage != null ? ` · honorarios ${op.feePercentage}%` : ""}`
-            : "Operación sin valor cargado",
+            ? `Operación: ${formatMoney(op.operationAmount, op.operationCurrency)}${feeText}`
+            : op.feeAmount != null
+              ? `Honorarios fijos ${formatMoney(op.feeAmount, op.operationCurrency)}`
+              : "Operación sin valor cargado",
       });
     }
   }

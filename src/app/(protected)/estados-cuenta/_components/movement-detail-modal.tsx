@@ -62,10 +62,12 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
   const isRental = movement.source === "rental_commission";
   const isAgent = movement.source === "agent_commission";
   const isPending = movement.status === "pending";
-  const isAuto = isRental || isAgent || isPending;
-  const canEdit = !isAuto && isWithinEditWindow(movement.createdAt, nowMs);
-  const canDelete = !isAuto && isAdmin;
-  const locked = !isAuto && !isWithinEditWindow(movement.createdAt, nowMs);
+  // Pendientes cargados a mano: se editan y borran (los de una firma, desde la firma).
+  const manualPending = isPending && !movement.signatureProposalId;
+  const isAuto = isRental || isAgent || (isPending && !manualPending);
+  const canEdit = manualPending || (!isAuto && isWithinEditWindow(movement.createdAt, nowMs));
+  const canDelete = manualPending || (!isAuto && isAdmin);
+  const locked = !isAuto && !manualPending && !isWithinEditWindow(movement.createdAt, nowMs);
   // En un ingreso con agente: cuánto se lleva el agente y cuánto queda para la inmobiliaria.
   const agentAmount = movement.type === "income" ? agentCommissionAmount(movement) : 0;
 
@@ -97,8 +99,10 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
       footer={
         <>
           <span className="text-[11px] text-text-faint">
-            {isPending
-              ? "Honorarios a cobrar de una firma: se cobran desde la sección A cobrar"
+            {isPending && !manualPending
+              ? "Viene de una firma: se cobra o paga desde la sección de pendientes"
+              : manualPending
+              ? movement.type === "income" ? "Se cobra desde la sección A cobrar" : "Se paga desde la sección A pagar"
               : isRental
               ? "Generado desde un pago de alquiler"
               : isAgent
@@ -148,7 +152,15 @@ export function MovementDetailModal({ open, onOpenChange, movement, isAdmin, now
 
                   <dl className="flex flex-col gap-0 divide-y divide-border border-t border-border">
                     <Row label="Categoría" value={movement.categoryName ?? "—"} />
-                    <Row label="Fecha" value={formatDate(movement.date)} />
+                    <Row label={isPending ? "Vence" : "Fecha"} value={formatDate(movement.date)} />
+                    {isPending && <Row label="Estado" value={movement.type === "income" ? "A cobrar" : "A pagar"} />}
+                    {movement.installmentCount && (
+                      <Row label="Cuota" value={`${movement.installmentNumber} de ${movement.installmentCount}`} />
+                    )}
+                    {movement.fundLabel && (
+                      <Row label={movement.type === "income" ? "Entró en" : "Salió de"} value={movement.fundLabel} />
+                    )}
+                    {movement.counterparty && !isAgent && <Row label="A quién" value={movement.counterparty} />}
                     {movement.agentName && <Row label="Agente" value={movement.agentName} />}
                     {movement.feePercentage != null && !isAgent && (
                       <Row label="Honorarios inmobiliaria" value={`${movement.feePercentage}%`} />

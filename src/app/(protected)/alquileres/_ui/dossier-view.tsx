@@ -338,7 +338,7 @@ function Ledger({
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-2 pt-4 md:px-5">
         <h2 className="font-display text-base font-semibold text-text">Cuenta mes a mes</h2>
         <p className="text-[12px] text-text-faint">
-          Cobrado {money(d.totals.collected, d.currency)} · honorarios {money(d.totals.fees, d.currency)} · rendido {money(d.totals.toOwner, d.currency)}
+          Cobrado {money(d.totals.collected, d.currency)} · honorarios {money(d.totals.fees, d.currency)} · al propietario {money(d.totals.toOwner, d.currency)}
         </p>
       </div>
       {/* Mobile: una tarjeta por mes */}

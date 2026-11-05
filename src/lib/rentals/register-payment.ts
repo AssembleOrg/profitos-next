@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma/client";
+import { fundForMethod } from "@/lib/account/funds";
 import { AppError } from "@/lib/api/handler";
 import { generateAndStoreReceipt } from "@/lib/rentals/receipt";
 import type { Prisma } from "@/generated/prisma/client";
@@ -66,6 +67,8 @@ export async function registerRentalPayment(input: RegisterPaymentInput) {
       commissionAmount: commission,
       ownerAmount,
       method: input.method?.trim() || null,
+      // Efectivo → caja de la oficina; el resto → banco.
+      fund: fundForMethod(input.method),
       paidAt: input.paidAt ?? new Date(),
       isFull,
       notes: input.notes?.trim() || null,

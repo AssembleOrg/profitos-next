@@ -55,6 +55,7 @@ model User {
   reviewedServiceProofs         RentalServiceProof[]        @relation("RentalServiceProofReviewedBy")
   createdAccountEntries         AccountEntry[]              @relation("AccountEntryCreatedBy")
   agentAccountEntries           AccountEntry[]              @relation("AccountEntryAgent")
+  fundAccountEntries            AccountEntry[]              @relation("AccountEntryFundUser")
 
   @@map("jp_users")
 }
@@ -459,6 +460,10 @@ model SignatureProposal {
   operationCurrency String  @default("USD") @map("operation_currency")
   // % de honorarios de la inmobiliaria sobre el valor de la operación
   feePercentage     Float?  @map("fee_percentage")
+  // Honorarios totales en monto fijo (si viene, manda sobre el %).
+  feeAmount         Float?  @map("fee_amount")
+  // true = cobramos el total y le pagamos su parte al colega ("a pagar").
+  collectsAll       Boolean @default(false) @map("collects_all")
   accountEntries    AccountEntry[]
 
   createdByUserId    String                    @map("created_by_user_id")
@@ -698,6 +703,12 @@ model RentalPaymentTransaction {
   // % de honorarios aplicado en este cobro y desglose congelado de conceptos
   feePercent       Float?        @map("fee_percent")
   breakdown        Json?
+  // Bolsillo donde entró el pago ("caja" | "banco"). null = cobro anterior a la caja.
+  fund             String?
+  // Rendición al propietario: cuándo retiró su parte y de qué bolsillo salió.
+  ownerPaidAt      DateTime?     @map("owner_paid_at")
+  ownerPaidFund    String?       @map("owner_paid_fund")
+  ownerPaidByUserId String?      @map("owner_paid_by_user_id")
   receipts         RentalReceipt[]
   createdByUserId  String        @map("created_by_user_id")
   createdByUser    User          @relation("RentalPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
@@ -705,6 +716,7 @@ model RentalPaymentTransaction {
 
   @@index([dueDateId])
   @@index([paidAt])
+  @@index([ownerPaidAt])
   @@map("jp_rental_payment_transactions")
 }
 
@@ -784,6 +796,17 @@ model AccountEntry {
   // Firma que originó los honorarios (a cobrar o ya cobrados).
   signatureProposalId String?      @map("signature_proposal_id")
   signatureProposal   SignatureProposal? @relation(fields: [signatureProposalId], references: [id], onDelete: SetNull)
+  // Dónde entró / de dónde salió la plata: "caja" | "banco" | "persona" (fundUserId).
+  // null = movimiento anterior a la caja (no suma en los saldos de caja).
+  fund            String?
+  fundUserId      String?          @map("fund_user_id")
+  fundUser        User?            @relation("AccountEntryFundUser", fields: [fundUserId], references: [id], onDelete: SetNull)
+  // A quién se le paga / quién paga (texto libre: colega, Octavio, proveedor…).
+  counterparty    String?
+  // Plan de cuotas: mismas cuotas comparten installmentGroup.
+  installmentGroup  String?        @map("installment_group")
+  installmentNumber Int?           @map("installment_number")
+  installmentCount  Int?           @map("installment_count")
   attachments     Json?
   createdByUserId String           @map("created_by_user_id")
   createdByUser   User             @relation("AccountEntryCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
@@ -799,6 +822,8 @@ model AccountEntry {
   @@index([sharedAgencyId])
   @@index([status])
   @@index([signatureProposalId])
+  @@index([fund])
+  @@index([installmentGroup])
   @@map("jp_account_entries")
 }
 
@@ -1105,4 +1130,28 @@ model WebEvent {
   @@index([visitorId, createdAt])
   @@index([propertyKey, createdAt])
   @@map("jp_web_events")
+}
+
+// Movimientos entre bolsillos (retiros, depósitos) y ajustes de saldo (arqueo).
+// Bolsillo = "caja" | "banco" | "persona" (+ userId).
+model CashTransfer {
+  id              String    @id @default(cuid())
+  // transfer | adjust
+  kind            String
+  fromFund        String?   @map("from_fund")
+  fromUserId      String?   @map("from_user_id")
+  toFund          String    @map("to_fund")
+  toUserId        String?   @map("to_user_id")
+  // transfer: siempre > 0. adjust: diferencia (puede ser negativa).
+  amount          Float
+  currency        String    @default("ARS")
+  date            DateTime  @db.Date
+  description     String?
+  createdByUserId String    @map("created_by_user_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([date])
+  @@index([toFund])
+  @@index([fromFund])
+  @@map("jp_cash_transfers")
 }

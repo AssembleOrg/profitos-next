@@ -20,7 +20,7 @@ export const signatureInclude = {
     },
   },
   colleagueAgency: { select: { id: true, name: true } },
-  accountEntries: { select: { status: true } },
+  accountEntries: { select: { status: true, type: true } },
   createdByUser: { select: { id: true, email: true, fullName: true, avatarUrl: true } },
   actions: {
     orderBy: [{ createdAt: "desc" }],
@@ -35,6 +35,8 @@ export interface ColleagueData {
   colleagueAgencyId: string | null;
   colleagueName: string | null;
   colleagueSharePercent: number | null;
+  /** true = cobramos el total y le pagamos su parte al colega. */
+  collectsAll: boolean;
 }
 
 /**
@@ -43,7 +45,7 @@ export interface ColleagueData {
  */
 export async function parseColleague(body: Record<string, unknown>): Promise<ColleagueData> {
   if (body.withColleague !== true) {
-    return { withColleague: false, colleagueAgencyId: null, colleagueName: null, colleagueSharePercent: null };
+    return { withColleague: false, colleagueAgencyId: null, colleagueName: null, colleagueSharePercent: null, collectsAll: false };
   }
   const agencyId = typeof body.colleagueAgencyId === "string" && body.colleagueAgencyId ? body.colleagueAgencyId : null;
   const name = typeof body.colleagueName === "string" ? body.colleagueName.trim().slice(0, 200) || null : null;
@@ -56,13 +58,21 @@ export async function parseColleague(body: Record<string, unknown>): Promise<Col
   if (typeof share !== "number" || !Number.isFinite(share) || share < 0 || share > 100) {
     throw new AppError(400, "Indicá el % de honorarios que se comparte con el colega (0 a 100)");
   }
-  return { withColleague: true, colleagueAgencyId: agencyId, colleagueName: name, colleagueSharePercent: share };
+  return {
+    withColleague: true,
+    colleagueAgencyId: agencyId,
+    colleagueName: name,
+    colleagueSharePercent: share,
+    collectsAll: body.collectsAll === true,
+  };
 }
 
 export interface OperationData {
   operationAmount: number | null;
   operationCurrency: "ARS" | "USD";
   feePercentage: number | null;
+  /** Honorarios totales en monto fijo (manda sobre el %). */
+  feeAmount: number | null;
 }
 
 /** Valor de la operación + % de honorarios (ambos opcionales hasta que se conozcan). */
@@ -77,10 +87,16 @@ export function parseOperation(body: Record<string, unknown>): OperationData {
   if (fee != null && (typeof fee !== "number" || !Number.isFinite(fee) || fee < 0 || fee > 100)) {
     throw new AppError(400, "Los honorarios deben ser un % entre 0 y 100");
   }
+  const fixed = body.feeAmount;
+  if (fixed != null && (typeof fixed !== "number" || !Number.isFinite(fixed) || fixed <= 0)) {
+    throw new AppError(400, "Los honorarios fijos deben ser mayores a cero");
+  }
   return {
     operationAmount: (amount as number | null | undefined) ?? null,
     operationCurrency: currency,
-    feePercentage: (fee as number | null | undefined) ?? null,
+    // Con monto fijo el % no aplica.
+    feePercentage: fixed != null ? null : ((fee as number | null | undefined) ?? null),
+    feeAmount: (fixed as number | null | undefined) ?? null,
   };
 }
 
@@ -88,7 +104,8 @@ export function parseOperation(body: Record<string, unknown>): OperationData {
 export function describeColleague(data: ColleagueData, agencyName: string | null): string {
   if (!data.withColleague) return "Operación 100% propia (sin colega)";
   const who = [data.colleagueName, agencyName].filter(Boolean).join(" · ");
-  return `Con colega: ${who} — se comparte el ${data.colleagueSharePercent}% de los honorarios`;
+  const collects = data.collectsAll ? " · cobramos el total y le pagamos su parte" : "";
+  return `Con colega: ${who} — se comparte el ${data.colleagueSharePercent}% de los honorarios${collects}`;
 }
 
 export async function getProposalOrThrow(id: string) {

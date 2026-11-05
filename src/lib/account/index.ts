@@ -3,6 +3,8 @@
 // Helpers puros (sin acceso a DB). El acceso a datos vive en ./server.
 // ────────────────────────────────────────────────────────────────────
 
+import type { FundKind } from "./funds";
+
 export type Currency = "ARS" | "USD";
 export type EntryType = "income" | "expense";
 export type MovementSource = "manual" | "rental_commission" | "costear" | "agent_commission";
@@ -137,6 +139,11 @@ export function deriveAgentCommission(income: AccountMovement): AccountMovement 
     description: `${share}${income.categoryName ? ` · ${income.categoryName}` : ""}`,
     feePercentage: null,
     attachments: null,
+    // A quién se le paga: el agente. Las cuotas no aplican a la comisión derivada.
+    counterparty: income.agentName,
+    installmentGroup: null,
+    installmentNumber: null,
+    installmentCount: null,
   };
 }
 
@@ -178,10 +185,24 @@ export interface AccountMovement {
   createdAt: string;
   /** Solo en comisiones de agente derivadas: id del ingreso que las origina. */
   parentId?: string | null;
-  /** "pending" = honorarios a cobrar de una firma (no suman hasta cobrarse). */
+  /**
+   * "pending" = a cobrar (ingreso) o a pagar (egreso): no suma en ingresos,
+   * egresos ni saldos hasta que se cobra/paga.
+   */
   status: "collected" | "pending";
   /** Firma que originó los honorarios. */
   signatureProposalId: string | null;
+  /** Bolsillo donde entró / de donde salió la plata (null = anterior a la caja). */
+  fund: FundKind | null;
+  fundUserId: string | null;
+  /** "Caja de la oficina", "Banco" o el nombre de la persona. */
+  fundLabel: string | null;
+  /** A quién se le paga / quién paga (texto libre). */
+  counterparty: string | null;
+  /** Plan de cuotas (todas las cuotas del plan comparten el grupo). */
+  installmentGroup: string | null;
+  installmentNumber: number | null;
+  installmentCount: number | null;
 }
 
 /** Firmas de venta del periodo: propias vs compartidas con colega. */
@@ -231,8 +252,10 @@ export interface CurrencyReport {
 export interface AccountReport {
   /** Movimientos del rango filtrado, ordenados por fecha desc. (todas las monedas). */
   movements: AccountMovement[];
-  /** Honorarios de firmas a cobrar (pendientes, sin importar el rango). */
+  /** A cobrar: ingresos pendientes (firmas, cuotas), sin importar el rango. */
   receivables: AccountMovement[];
+  /** A pagar: egresos pendientes (colegas, cuotas), sin importar el rango. */
+  payables: AccountMovement[];
   /** Estadística de firmas de venta (solo en la vista Ventas). */
   sales: SalesStats | null;
   /** Reporte por moneda con saldo acumulado mensual. */
@@ -323,5 +346,5 @@ export function buildReport(
     };
   });
 
-  return { movements: sorted, byCurrency, receivables: [], sales: null };
+  return { movements: sorted, byCurrency, receivables: [], payables: [], sales: null };
 }

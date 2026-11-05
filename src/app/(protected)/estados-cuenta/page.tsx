@@ -111,6 +111,7 @@ export default async function EstadosCuentaPage({ searchParams }: Readonly<Props
       isAdmin={user.role === "admin"}
       isCostearOwner={isCostearUser}
       prefill={prefill}
+      people={agents.map((a) => ({ id: a.id, name: a.fullName?.trim() || a.email }))}
     />
   );
 }

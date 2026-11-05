@@ -58,7 +58,9 @@ interface RawProposal {
   operationAmount: number | null;
   operationCurrency: string;
   feePercentage: number | null;
-  accountEntries?: { status: string }[];
+  feeAmount: number | null;
+  collectsAll: boolean;
+  accountEntries?: { status: string; type?: string }[];
   createdByUser: RawUser;
   actions: RawAction[];
   createdAt: Date;
@@ -113,11 +115,13 @@ function toProperty(raw: RawProperty): FirmaProperty {
 }
 
 function toOperation(raw: RawProposal): FirmaOperation {
-  const entries = raw.accountEntries ?? [];
+  // El estado de los honorarios es el del ingreso (el egreso es la parte del colega).
+  const entries = (raw.accountEntries ?? []).filter((e) => (e.type ?? "income") === "income");
   return {
     amount: raw.operationAmount,
     currency: raw.operationCurrency === "ARS" ? "ARS" : "USD",
     feePercentage: raw.feePercentage,
+    feeAmount: raw.feeAmount ?? null,
     receivable: entries.some((e) => e.status === "collected")
       ? "collected"
       : entries.some((e) => e.status === "pending")
@@ -126,13 +130,16 @@ function toOperation(raw: RawProposal): FirmaOperation {
   };
 }
 
-function toColleague(raw: Pick<RawProposal, "withColleague" | "colleagueAgency" | "colleagueName" | "colleagueSharePercent">): FirmaColleague {
+function toColleague(
+  raw: Pick<RawProposal, "withColleague" | "colleagueAgency" | "colleagueName" | "colleagueSharePercent" | "collectsAll">
+): FirmaColleague {
   return {
     withColleague: raw.withColleague,
     agencyId: raw.colleagueAgency?.id ?? null,
     agencyName: raw.colleagueAgency?.name ?? null,
     name: raw.colleagueName,
     sharePercent: raw.colleagueSharePercent,
+    collectsAll: raw.collectsAll === true,
   };
 }
 
@@ -197,7 +204,9 @@ export function serializeFromApi(raw: unknown): SerializedFirma {
     operationAmount: (r.operationAmount as number | null) ?? null,
     operationCurrency: (r.operationCurrency as string) ?? "USD",
     feePercentage: (r.feePercentage as number | null) ?? null,
-    accountEntries: (r.accountEntries as { status: string }[]) ?? [],
+    feeAmount: (r.feeAmount as number | null) ?? null,
+    collectsAll: r.collectsAll === true,
+    accountEntries: (r.accountEntries as { status: string; type?: string }[]) ?? [],
     reservationDate: iso(r.reservationDate),
     reservationExpiresAt: iso(r.reservationExpiresAt),
     dateProcessStarted: iso(r.dateProcessStarted),

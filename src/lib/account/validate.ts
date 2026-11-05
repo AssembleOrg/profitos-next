@@ -2,6 +2,7 @@ import { AppError } from "@/lib/api/handler";
 import { prisma } from "@/lib/prisma/client";
 import type { Prisma } from "@/generated/prisma/client";
 import { isCurrency, RENTAL_COMMISSION_CATEGORY_ID } from "./index";
+import { isFundKind, type FundKind } from "./funds";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -24,6 +25,14 @@ export interface EntryBody {
   /** Inmobiliaria con la que se comparte (solo si isShared). */
   sharedAgencyId?: string | null;
   attachments?: unknown[];
+  /**
+   * Bolsillo: "caja" | "banco" | "persona" (+ fundUserId).
+   * Sin el campo → caja. null explícito → sin bolsillo (movimientos viejos).
+   */
+  fund?: string | null;
+  fundUserId?: string | null;
+  /** A quién se le paga / quién paga (texto libre). */
+  counterparty?: string | null;
 }
 
 export interface ValidatedEntry {
@@ -41,6 +50,24 @@ export interface ValidatedEntry {
   isShared: boolean;
   sharedAgencyId: string | null;
   attachments: Prisma.InputJsonValue | undefined;
+  fund: FundKind | null;
+  fundUserId: string | null;
+  counterparty: string | null;
+}
+
+/** Valida el bolsillo. undefined → caja; null → sin bolsillo. */
+export async function validateFund(
+  fund: string | null | undefined,
+  fundUserId: string | null | undefined
+): Promise<{ fund: FundKind | null; fundUserId: string | null }> {
+  if (fund === undefined) return { fund: "caja", fundUserId: null };
+  if (fund === null || fund === "") return { fund: null, fundUserId: null };
+  if (!isFundKind(fund)) throw new AppError(400, "Bolsillo inválido (caja, banco o persona)");
+  if (fund !== "persona") return { fund, fundUserId: null };
+  if (!fundUserId) throw new AppError(400, "Elegí la persona que tiene la plata");
+  const exists = await prisma.user.count({ where: { id: fundUserId } });
+  if (!exists) throw new AppError(400, "La persona elegida no existe");
+  return { fund, fundUserId };
 }
 
 /**
@@ -52,6 +79,7 @@ export async function validateEntry(body: EntryBody): Promise<ValidatedEntry> {
     categoryId, amount, currency, date, description, agentUserId, propertyId,
     feePercentage, agentPercentage, agentShareType, isShared, sharedAgencyId, attachments,
   } = body;
+  const funds = await validateFund(body.fund, body.fundUserId);
 
   if (!categoryId) throw new AppError(400, "La categoría es obligatoria");
   if (categoryId === RENTAL_COMMISSION_CATEGORY_ID) {
@@ -78,7 +106,7 @@ export async function validateEntry(body: EntryBody): Promise<ValidatedEntry> {
     const exists = await prisma.property.count({ where: { id: propertyId } });
     if (!exists) throw new AppError(400, "La propiedad seleccionada no existe");
   }
-  if (attachments !== undefined && !Array.isArray(attachments)) {
+  if (attachments != null && !Array.isArray(attachments)) {
     throw new AppError(400, "Adjuntos inválidos");
   }
 
@@ -128,5 +156,7 @@ export async function validateEntry(body: EntryBody): Promise<ValidatedEntry> {
     isShared: shared,
     sharedAgencyId: agencyId,
     attachments: (attachments as Prisma.InputJsonValue) ?? undefined,
+    ...funds,
+    counterparty: typeof body.counterparty === "string" ? body.counterparty.trim().slice(0, 120) || null : null,
   };
 }
