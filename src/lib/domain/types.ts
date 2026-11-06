@@ -7,6 +7,9 @@ export interface AppUser {
   googleAccessToken: string | null;
   googleRefreshToken: string | null;
   navFavorites: string[] | null;
+  avatarCustom: boolean;
+  contactPhones: unknown;
+  sessionsRevokedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

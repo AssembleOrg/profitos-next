@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { AUTH_ERRORS } from "@/lib/domain/types";
 import { resolvePublicOrigin } from "@/lib/server/public-origin";
+import { getDeviceSession, revokeSession } from "@/lib/auth/device-sessions";
 
 export interface LoginState {
   error?: string;
@@ -36,6 +37,14 @@ export async function signInWithGoogle(): Promise<LoginState> {
 
 export async function signOut() {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    // Queda en el historial de Dispositivos como cerrada.
+    const device = await getDeviceSession(user.id).catch(() => null);
+    if (device?.status === "ok") await revokeSession(user.id, device.sessionId).catch(() => undefined);
+  }
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/login");
 }

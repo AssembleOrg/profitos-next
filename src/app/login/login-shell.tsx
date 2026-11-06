@@ -8,6 +8,7 @@ import { AUTH_ERRORS } from "@/lib/domain/types";
 function mapUrlError(error: string | null): string | undefined {
   if (error === "not_whitelisted") return AUTH_ERRORS.NOT_WHITELISTED;
   if (error === "auth_failed") return AUTH_ERRORS.OAUTH_ERROR;
+  if (error === "sesion_cerrada") return "La sesión de este dispositivo se cerró desde otro. Volvé a entrar.";
   return undefined;
 }
 

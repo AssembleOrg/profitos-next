@@ -15,6 +15,7 @@ import { NotificationsProvider } from "./notifications-context";
 interface ProtectedShellProps {
   realRole: Role;
   avatarUrl: string | null;
+  userName: string;
   greeting: ReactNode;
   favorites: string[];
   accessibleHrefs: string[];
@@ -22,7 +23,7 @@ interface ProtectedShellProps {
   children: ReactNode;
 }
 
-function Shell({ avatarUrl, greeting, children }: Readonly<Omit<ProtectedShellProps, "realRole" | "favorites" | "accessibleHrefs" | "isAdmin">>) {
+function Shell({ avatarUrl, userName, greeting, children }: Readonly<Omit<ProtectedShellProps, "realRole" | "favorites" | "accessibleHrefs" | "isAdmin">>) {
   const { effectiveRole } = useRolePreview();
   const pathname = usePathname();
   const isDashboard = pathname === "/dashboard";
@@ -53,7 +54,7 @@ function Shell({ avatarUrl, greeting, children }: Readonly<Omit<ProtectedShellPr
 
         <div className="px-5 pb-nav pt-4 md:px-6 md:pb-10 md:pt-5 lg:px-10">{children}</div>
       </main>
-      <BottomNav role={effectiveRole} />
+      <BottomNav role={effectiveRole} avatarUrl={avatarUrl} userName={userName} />
     </>
   );
 }
@@ -61,6 +62,7 @@ function Shell({ avatarUrl, greeting, children }: Readonly<Omit<ProtectedShellPr
 export function ProtectedShell({
   realRole,
   avatarUrl,
+  userName,
   greeting,
   favorites,
   accessibleHrefs,
@@ -72,7 +74,7 @@ export function ProtectedShell({
       <AccessProvider isAdmin={isAdmin} accessibleHrefs={accessibleHrefs}>
         <NavFavoritesProvider initialFavorites={favorites}>
           <NotificationsProvider>
-            <Shell avatarUrl={avatarUrl} greeting={greeting}>
+            <Shell avatarUrl={avatarUrl} userName={userName} greeting={greeting}>
               {children}
             </Shell>
           </NotificationsProvider>
