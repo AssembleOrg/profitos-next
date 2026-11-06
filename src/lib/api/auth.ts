@@ -2,6 +2,7 @@ import { AppError } from "@/lib/api/handler";
 import { prisma } from "@/lib/prisma/client";
 import { createClient } from "@/lib/supabase/server";
 import { resolveRoleFromEmail } from "@/lib/auth/roles";
+import { getDeviceSession } from "@/lib/auth/device-sessions";
 
 export interface AuthContext {
   userId: string;
@@ -32,6 +33,10 @@ export async function getAuthContext(): Promise<AuthContext> {
   // Staff = fila en jp_users (la crea el callback de Google para emails de la
   // whitelist). Una sesión válida sin esa fila no es staff.
   if (!appUser) throw new AppError(403, "Sin acceso");
+
+  // Sesión cerrada desde "Mi perfil → Dispositivos".
+  const device = await getDeviceSession(user.id);
+  if (device.status === "revoked") throw new AppError(401, "La sesión de este dispositivo se cerró");
 
   const email = appUser?.email ?? user.email ?? "";
   const role = normalizeRole(appUser?.role, email);

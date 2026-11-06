@@ -9,6 +9,8 @@ import { SplashScreen } from "./_components/splash-screen";
 import { NativeParityProvider } from "./_components/native-parity-provider";
 import { ProtectedShell } from "./_components/protected-shell";
 import { ChatActionRefresher } from "./_components/chat-action-refresher";
+import { SessionLocationOnce } from "./_components/session-location-once";
+import { getDeviceSession } from "@/lib/auth/device-sessions";
 
 export default async function ProtectedLayout({
   children,
@@ -19,6 +21,12 @@ export default async function ProtectedLayout({
 
   if (!user) {
     redirect("/login");
+  }
+
+  // Sesión cerrada desde otro dispositivo → limpiar cookies y volver al login.
+  const device = await getDeviceSession(user.id);
+  if (device.status === "revoked") {
+    redirect("/api/auth/salir");
   }
 
   // Control de acceso por vistas: si el usuario abre por URL una vista a la que
@@ -46,9 +54,11 @@ export default async function ProtectedLayout({
     <div className="flex min-h-dvh flex-col bg-bg">
       <NativeParityProvider />
       <SplashScreen />
+      {device.status === "ok" && device.needsLocation && <SessionLocationOnce sessionId={device.sessionId} />}
       <ProtectedShell
         realRole={user.role}
         avatarUrl={user.avatarUrl}
+        userName={user.fullName ?? user.email}
         greeting={greeting}
         favorites={user.navFavorites ?? []}
         accessibleHrefs={accessibleHrefs}

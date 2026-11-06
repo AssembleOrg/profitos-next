@@ -29,8 +29,15 @@ model User {
   googleAccessToken  String?    @map("google_access_token")
   googleRefreshToken String?    @map("google_refresh_token")
   navFavorites       Json?      @map("nav_favorites")
+  /// true = foto subida por el usuario (el login con Google no la pisa).
+  avatarCustom       Boolean    @default(false) @map("avatar_custom")
+  /// [{ label, number, whatsapp }]
+  contactPhones      Json       @default("[]") @map("contact_phones")
+  /// "Cerrar las demás": sesiones sin fila iniciadas antes de esto no valen.
+  sessionsRevokedAt  DateTime?  @map("sessions_revoked_at")
   createdAt          DateTime   @default(now()) @map("created_at")
   updatedAt          DateTime   @updatedAt @map("updated_at")
+  deviceSessions     UserSession[]
   visitas            Visit[]
   properties         Property[]
   clients            Client[]
@@ -58,6 +65,31 @@ model User {
   fundAccountEntries            AccountEntry[]              @relation("AccountEntryFundUser")
 
   @@map("jp_users")
+}
+
+/// Sesión por dispositivo. id = session_id de Supabase Auth.
+model UserSession {
+  id             String    @id
+  userId         String    @map("user_id")
+  userAgent      String?   @map("user_agent")
+  device         String?
+  ip             String?
+  locality       String?
+  area           String?
+  region         String?
+  country        String?
+  latitude       Float?
+  longitude      Float?
+  accuracy       Float?
+  /// gps | denied | null
+  locationSource String?   @map("location_source")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  lastSeenAt     DateTime  @default(now()) @map("last_seen_at")
+  revokedAt      DateTime? @map("revoked_at")
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("jp_user_sessions")
 }
 
 model Property {

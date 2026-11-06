@@ -260,6 +260,18 @@ export function Topbar({ avatarUrl, role }: Readonly<TopbarProps>) {
 
             {showMenu && (
               <div className="absolute right-0 top-full z-50 mt-3 min-w-[170px] rounded-2xl border border-border bg-surface p-1.5 shadow-2xl">
+                <Link
+                  href="/perfil"
+                  prefetch={false}
+                  onClick={() => setShowMenu(false)}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 21a8 8 0 0116 0" />
+                  </svg>
+                  Mi perfil
+                </Link>
                 <form action={signOut}>
                   <button
                     type="submit"

@@ -16,9 +16,11 @@ import {
 
 interface BottomNavProps {
   role?: "admin" | "user" | "viewer";
+  avatarUrl?: string | null;
+  userName?: string;
 }
 
-export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
+export function BottomNav({ role, avatarUrl, userName }: Readonly<BottomNavProps> = {}) {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
   const moreDrag = useDragControls();
@@ -97,6 +99,31 @@ export function BottomNav({ role }: Readonly<BottomNavProps> = {}) {
                   Más secciones
                 </p>
               </div>
+
+              {/* Mi perfil: foto, teléfonos, dispositivos y cerrar sesión */}
+              <Link
+                href="/perfil"
+                prefetch={false}
+                onClick={() => setShowMore(false)}
+                className={`mx-4 mb-3 flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors active:scale-[0.98] ${
+                  pathname === "/perfil" ? "bg-olive-deep" : "bg-bg active:bg-surface-elevated"
+                }`}
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-warning-chip">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span className="font-display text-[14px] font-bold text-text">{(userName || "?").charAt(0).toUpperCase()}</span>
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13.5px] font-semibold text-text">{userName || "Mi cuenta"}</span>
+                  <span className="block text-[11px] text-text-faint">Mi perfil · dispositivos · cerrar sesión</span>
+                </span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-text-faint">
+                  <polyline points="9 6 15 12 9 18" />
+                </svg>
+              </Link>
 
               {/* Grid of items */}
               <div className="grid max-h-[58dvh] grid-cols-3 gap-2 overflow-y-auto px-4 pb-2">

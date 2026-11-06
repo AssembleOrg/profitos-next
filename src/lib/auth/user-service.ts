@@ -19,12 +19,16 @@ export async function upsertUser(params: UpsertUserParams): Promise<AppUser> {
   });
   const role = whitelist?.defaultRole ?? resolveRoleFromEmail(params.email);
 
+  // Si subió su propia foto desde "Mi perfil", el login con Google no la pisa.
+  const existing = await prisma.user.findUnique({ where: { id: params.id }, select: { avatarCustom: true } });
+  const keepAvatar = existing?.avatarCustom === true;
+
   const user = await prisma.user.upsert({
     where: { id: params.id },
     update: {
       email: params.email,
       fullName: params.fullName ?? undefined,
-      avatarUrl: params.avatarUrl ?? undefined,
+      avatarUrl: keepAvatar ? undefined : (params.avatarUrl ?? undefined),
       ...(params.googleAccessToken !== undefined && {
         googleAccessToken: params.googleAccessToken,
       }),
