@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
 import { buildPropertyWhatsAppLink } from "@/lib/whatsapp";
+import { OwnerStatsPanel } from "./owner-stats-panel";
 import { MlPublishWizard } from "./ml-publish-wizard";
 import { PortalesPanel } from "./portales-panel";
 import { PhotosEditor } from "./photos-editor";
@@ -542,7 +543,7 @@ export function PropiedadesClient({
   const [pdfPopup, setPdfPopup] = useState<PdfPopupState | null>(null);
   const [ownerModalProperty, setOwnerModalProperty] = useState<Property | null>(null);
   const [wizardProperty, setWizardProperty] = useState<Property | null>(null);
-  const [ownerForm, setOwnerForm] = useState({ visitasTotales: "", visitasMes: "", quejas: "", mejoras: "" });
+  const [ownerForm, setOwnerForm] = useState({ quejas: "", mejoras: "" });
   const [ownerSaving, setOwnerSaving] = useState(false);
 
   // Resultado del OAuth de MercadoLibre (?ml_connected / ?ml_error)
@@ -945,8 +946,6 @@ export function PropiedadesClient({
     setPdfPopup(null);
     const data = (p.ownerReportData ?? {}) as Record<string, unknown>;
     setOwnerForm({
-      visitasTotales: data.visitasTotales != null ? String(data.visitasTotales) : "",
-      visitasMes: data.visitasMes != null ? String(data.visitasMes) : "",
       quejas: (data.quejas as string) ?? "",
       mejoras: (data.mejoras as string) ?? "",
     });
@@ -956,9 +955,8 @@ export function PropiedadesClient({
   async function handleOwnerSubmit() {
     if (!ownerModalProperty) return;
     setOwnerSaving(true);
+    // Las visitas y consultas salen solas de ZonaProp / la central: acá sólo los comentarios.
     const payload = {
-      visitasTotales: ownerForm.visitasTotales ? Number(ownerForm.visitasTotales) : null,
-      visitasMes: ownerForm.visitasMes ? Number(ownerForm.visitasMes) : null,
       quejas: ownerForm.quejas,
       mejoras: ownerForm.mejoras,
     };
@@ -2296,30 +2294,7 @@ export function PropiedadesClient({
           <p className="text-sm text-text-muted">
             {ownerModalProperty?.address}
           </p>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Visitas totales</label>
-              <input
-                type="number"
-                min={0}
-                value={ownerForm.visitasTotales}
-                onChange={(e) => setOwnerForm((f) => ({ ...f, visitasTotales: e.target.value }))}
-                placeholder="0"
-                className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Visitas este mes</label>
-              <input
-                type="number"
-                min={0}
-                value={ownerForm.visitasMes}
-                onChange={(e) => setOwnerForm((f) => ({ ...f, visitasMes: e.target.value }))}
-                placeholder="0"
-                className="w-full rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-              />
-            </div>
-          </div>
+          {ownerModalProperty && <OwnerStatsPanel propertyId={ownerModalProperty.id} />}
           <div>
             <label className="mb-1 block text-[12.5px] font-semibold text-text-muted">Quejas / Observaciones</label>
             <textarea
