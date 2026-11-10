@@ -6,10 +6,12 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { ContractDossier, DossierDue, PaymentDTO, ServiceProofDTO } from "@/lib/rentals/dto";
 import { formatReceiptNo } from "@/lib/rentals/money";
+import { CORRECTION_FREE_HOURS } from "@/lib/rentals/correction";
 import { useSignedUrls } from "../_components/use-signed-urls";
 import { AttachmentPreview } from "../_components/media-uploader";
 import type { RentalAttachment } from "../_components/voice-recorder";
 import { CollectSheet } from "./collect-sheet";
+import { CorrectSheet, ReceiptPrintLinks, type CorrectTarget } from "./correct-sheet";
 import { AdjustmentSheet, type AdjustmentTarget } from "./adjustment-sheet";
 import { DueEditSheet } from "./due-edit-sheet";
 import { ProofSheet } from "./proof-sheet";
@@ -63,11 +65,21 @@ function waLink(phone: string | null, text = "") {
 export function DossierView({ d, today }: { d: ContractDossier; today: string }) {
   const router = useRouter();
   const [collectDue, setCollectDue] = useState<string | null>(null);
+  const [correct, setCorrect] = useState<CorrectTarget | null>(null);
   const [adjust, setAdjust] = useState<AdjustmentTarget | null>(null);
   const [editDue, setEditDue] = useState<DossierDue | null>(null);
   const [proofOpen, setProofOpen] = useState(false);
   const [portal, setPortal] = useState<PortalAccessTarget | null>(null);
   const refresh = () => router.refresh();
+  // Se calcula al tocar el botón (no en el render): si ya pasaron las 96 h pide motivo.
+  const openCorrect = (due: DossierDue, payment: PaymentDTO) =>
+    setCorrect({
+      dueId: due.id,
+      payment,
+      currency: d.currency,
+      description: `${capitalize(monthLabel(due.dueDate.slice(0, 7)))} · ${propertyLine(d.property.address, d.unit)}`,
+      late: Date.now() - new Date(payment.createdAt).getTime() > CORRECTION_FREE_HOURS * 3_600_000,
+    });
 
   const nextOpen = d.dues.find((x) => x.status !== "pagado" && x.status !== "condonado");
   const adjustTarget: AdjustmentTarget = {
@@ -213,7 +225,7 @@ export function DossierView({ d, today }: { d: ContractDossier; today: string })
 
       {d.managed ? (
         <>
-          <Ledger d={d} today={today} onCollect={setCollectDue} onEdit={setEditDue} onChanged={refresh} />
+          <Ledger d={d} today={today} onCollect={setCollectDue} onEdit={setEditDue} onCorrect={openCorrect} onChanged={refresh} />
 
           <div className="grid gap-4 xl:grid-cols-2">
             <ProofsCard proofs={d.proofs} services={d.tenantServices} onAdd={() => setProofOpen(true)} onChanged={refresh} />
@@ -231,6 +243,7 @@ export function DossierView({ d, today }: { d: ContractDossier; today: string })
       )}
 
       <CollectSheet dueId={collectDue} open={Boolean(collectDue)} onClose={() => setCollectDue(null)} onDone={refresh} />
+      <CorrectSheet target={correct} onClose={() => setCorrect(null)} onDone={refresh} />
       <AdjustmentSheet target={adjust} onClose={() => setAdjust(null)} onDone={refresh} />
       <DueEditSheet due={editDue} currency={d.currency} onClose={() => setEditDue(null)} onDone={refresh} />
       <ProofSheet
@@ -295,12 +308,14 @@ function Ledger({
   today,
   onCollect,
   onEdit,
+  onCorrect,
   onChanged,
 }: {
   d: ContractDossier;
   today: string;
   onCollect: (id: string) => void;
   onEdit: (due: DossierDue) => void;
+  onCorrect: (due: DossierDue, payment: PaymentDTO) => void;
   onChanged: () => void;
 }) {
   const currentMonth = today.slice(0, 7);
@@ -381,7 +396,7 @@ function Ledger({
               </div>
               {expanded && (
                 <div className="mt-3">
-                  <DueDetail due={due} currency={d.currency} onCollect={() => onCollect(due.id)} onEdit={() => onEdit(due)} onChanged={onChanged} />
+                  <DueDetail due={due} currency={d.currency} onCollect={() => onCollect(due.id)} onEdit={() => onEdit(due)} onCorrect={(p) => onCorrect(due, p)} onChanged={onChanged} />
                 </div>
               )}
             </li>
@@ -464,7 +479,7 @@ function Ledger({
                   {expanded && (
                     <tr className="bg-bg">
                       <td colSpan={8} className="px-4 pb-4 pt-1 md:px-5">
-                        <DueDetail due={due} currency={d.currency} onCollect={() => onCollect(due.id)} onEdit={() => onEdit(due)} onChanged={onChanged} />
+                        <DueDetail due={due} currency={d.currency} onCollect={() => onCollect(due.id)} onEdit={() => onEdit(due)} onCorrect={(p) => onCorrect(due, p)} onChanged={onChanged} />
                       </td>
                     </tr>
                   )}
@@ -485,6 +500,17 @@ function Ledger({
   );
 }
 
+/** "10/11/2026 14:32" en hora de Buenos Aires. */
+function dateTimeAR(iso: string) {
+  return new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
+    .format(new Date(iso))
+    .replace(",", "");
+}
+
+function hoursLabel(hours: number) {
+  return hours >= 48 ? `${Math.floor(hours / 24)} días` : `${hours} h`;
+}
+
 function isSettled(due: DossierDue) {
   return due.status === "pagado" && due.payments.length > 0 && due.payments.every((p) => p.lines);
 }
@@ -502,12 +528,14 @@ function DueDetail({
   currency,
   onCollect,
   onEdit,
+  onCorrect,
   onChanged,
 }: {
   due: DossierDue;
   currency: string;
   onCollect: () => void;
   onEdit: () => void;
+  onCorrect: (p: PaymentDTO) => void;
   onChanged: () => void;
 }) {
   return (
@@ -515,7 +543,7 @@ function DueDetail({
       {due.payments.length === 0 ? (
         <p className="text-[12.5px] text-text-faint">Todavía no hay cobros en esta cuota.</p>
       ) : (
-        due.payments.map((p) => <PaymentRow key={p.id} p={p} dueId={due.id} currency={currency} onChanged={onChanged} />)
+        due.payments.map((p) => <PaymentRow key={p.id} p={p} dueId={due.id} currency={currency} onCorrect={() => onCorrect(p)} onChanged={onChanged} />)
       )}
       {due.notes && <p className="rounded-[12px] bg-bg px-3 py-2 text-[12.5px] text-text-muted">{due.notes}</p>}
       <div className="flex flex-wrap gap-2">
@@ -532,7 +560,7 @@ function DueDetail({
   );
 }
 
-function PaymentRow({ p, dueId, currency, onChanged }: { p: PaymentDTO; dueId: string; currency: string; onChanged: () => void }) {
+function PaymentRow({ p, dueId, currency, onCorrect, onChanged }: { p: PaymentDTO; dueId: string; currency: string; onCorrect: () => void; onChanged: () => void }) {
   const legacyUrls = useSignedUrls(p.legacyReceipt?.path ? [p.legacyReceipt.path] : []);
   const [busy, setBusy] = useState(false);
   const [dialog, ask] = useReasonSheet();
@@ -591,9 +619,16 @@ function PaymentRow({ p, dueId, currency, onChanged }: { p: PaymentDTO; dueId: s
             · {dateAR(p.paidAt)} · {p.method ?? "sin medio"} · {p.isFull ? "pago total" : "a cuenta"} · {p.createdBy}
           </span>
         </p>
-        <button type="button" disabled={busy} onClick={deletePayment} className="text-[12px] font-semibold text-text-faint hover:text-terra">
-          Eliminar cobro
-        </button>
+        <span className="flex items-center gap-3">
+          {p.lines && (
+            <button type="button" disabled={busy} onClick={onCorrect} className="text-[12px] font-semibold text-text-faint hover:text-text">
+              Corregir
+            </button>
+          )}
+          <button type="button" disabled={busy} onClick={deletePayment} className="text-[12px] font-semibold text-text-faint hover:text-terra">
+            Eliminar cobro
+          </button>
+        </span>
       </div>
       {p.lines && (
         <p className="text-[12px] text-text-faint">
@@ -602,6 +637,18 @@ function PaymentRow({ p, dueId, currency, onChanged }: { p: PaymentDTO; dueId: s
         </p>
       )}
       {p.receiptNotes && <p className="text-[12px] italic text-text-muted">“{p.receiptNotes}”</p>}
+      {p.corrections.length > 0 && (
+        <ul className="flex flex-col gap-1 rounded-[12px] bg-bg px-3 py-2 text-[12px] text-text-muted">
+          {p.corrections.map((c) => (
+            <li key={c.at}>
+              <span className="font-semibold text-text">Corregido el {dateTimeAR(c.at)}</span> por {c.by}
+              {c.late && <span className="font-semibold text-terra"> · a {hoursLabel(c.hoursAfterIssue)} de emitido</span>}
+              {c.summary && ` · ${c.summary}`}
+              {c.reason && <span className="italic"> · “{c.reason}”</span>}
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="flex flex-wrap gap-2">
         {p.receipts.map((r) => {
           const label = formatReceiptNo(r.pointOfSale, r.number);
@@ -610,9 +657,7 @@ function PaymentRow({ p, dueId, currency, onChanged }: { p: PaymentDTO; dueId: s
               {r.bookKind === "inquilino" ? "Inquilino" : "Propietario"} {label}
               {r.status === "emitido" ? (
                 <>
-                  <a href={`/api/alquileres/recibos/${r.id}/pdf`} target="_blank" rel="noreferrer" className="rounded-full bg-dark px-2.5 py-0.5 text-[11px] font-bold text-dark-fg no-underline">
-                    PDF
-                  </a>
+                  <ReceiptPrintLinks receiptId={r.id} />
                   <button type="button" disabled={busy} onClick={() => voidReceipt(r.id, label)} className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-text-faint hover:bg-clay-chip hover:text-terra">
                     Anular
                   </button>

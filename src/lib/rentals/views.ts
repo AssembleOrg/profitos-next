@@ -5,6 +5,7 @@ import { now } from "@/lib/datetime";
 import { getDueEffectiveStatus, type RentalDueEffectiveStatus } from "@/lib/rentals";
 import type { ChargeLine } from "@/lib/rentals/money";
 import { periodLabel, type PaymentBreakdown } from "@/lib/rentals/collect";
+import { correctionSummary, readCorrections } from "@/lib/rentals/correction";
 import type {
   AdjustmentAlert,
   AgendaAdjustment,
@@ -524,6 +525,8 @@ export async function getContractDossier(id: string): Promise<ContractDossier | 
               attachments: true,
               receiptNumber: true,
               receiptPath: true,
+              createdAt: true,
+              ownerPaidAt: true,
               createdByUser: { select: { fullName: true, email: true } },
               receipts: {
                 orderBy: { bookKind: "asc" },
@@ -580,6 +583,11 @@ export async function getContractDossier(id: string): Promise<ContractDossier | 
         legacyReceipt: t.receiptNumber ? { number: t.receiptNumber, path: t.receiptPath } : null,
         createdBy: t.createdByUser.fullName ?? t.createdByUser.email,
         attachments: t.attachments,
+        createdAt: t.createdAt.toISOString(),
+        ownerPaidAt: t.ownerPaidAt?.toISOString() ?? null,
+        corrections: readCorrections(b)
+          .map((k) => ({ at: k.at, by: k.byName, late: k.late, hoursAfterIssue: k.hoursAfterIssue, reason: k.reason, summary: correctionSummary(k, c.currency) }))
+          .reverse(),
       };
     });
     return {

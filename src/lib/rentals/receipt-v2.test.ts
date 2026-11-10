@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PDFDocument } from "pdf-lib";
-import { renderReceiptPdf, type ReceiptPdfInput } from "./receipt-v2";
+import { parseReceiptLayout, renderReceiptPdf, type ReceiptPdfInput } from "./receipt-v2";
 
 const input: ReceiptPdfInput = {
   kind: "inquilino",
@@ -27,11 +27,23 @@ test("el recibo guardado (portal) sigue siendo de una sola hoja A5", async () =>
   assert.deepEqual([Math.round(p[0].getWidth()), Math.round(p[0].getHeight())], [420, 595]);
 });
 
-test("para imprimir en la oficina salen dos hojas iguales de tamaño: original y copia", async () => {
+test("dos hojas (por defecto en la oficina): original y copia, las dos A5", async () => {
   for (const kind of ["inquilino", "propietario"] as const) {
-    const p = await pages(await renderReceiptPdf({ ...input, kind }, { officeCopy: true }));
+    const p = await pages(await renderReceiptPdf({ ...input, kind }, { layout: "dos-hojas" }));
     assert.equal(p.length, 2, kind);
     assert.equal(p[0].getWidth(), p[1].getWidth());
     assert.equal(p[0].getHeight(), p[1].getHeight());
   }
+});
+
+test("A4 apaisada: una sola hoja con las dos mitades", async () => {
+  const p = await pages(await renderReceiptPdf(input, { layout: "a4" }));
+  assert.equal(p.length, 1);
+  assert.deepEqual([Math.round(p[0].getWidth()), Math.round(p[0].getHeight())], [842, 595]);
+});
+
+test("formato pedido por URL: solo a4 cambia el default", () => {
+  assert.equal(parseReceiptLayout(null), "dos-hojas");
+  assert.equal(parseReceiptLayout("cualquiera"), "dos-hojas");
+  assert.equal(parseReceiptLayout("a4"), "a4");
 });

@@ -7,16 +7,15 @@ import { toast } from "sonner";
 import { Sheet } from "../../_components/sheet";
 import { DateField } from "../../_components/date-field";
 import { SelectField } from "@/components/ui/select-field";
-import { CurrencyInput } from "../_components/currency-input";
 import { MediaUploader } from "../_components/media-uploader";
 import type { RentalAttachment } from "../_components/voice-recorder";
 import { useSignedUrls } from "../_components/use-signed-urls";
-import { splitCharges, type ChargeLine } from "@/lib/rentals/money";
+import { splitCharges } from "@/lib/rentals/money";
 
 import type { CollectContext } from "@/lib/rentals/dto";
-import { IconCheck, IconFlag, IconPlus, IconReceipt, IconX } from "./icons";
+import { ConceptLines, activeLines, nextLineKey, toChargeLines, type EditableLine } from "./concept-lines";
+import { IconCheck, IconFlag, IconReceipt } from "./icons";
 import {
-  Check,
   DuePill,
   Field,
   Segmented,
@@ -31,13 +30,6 @@ import {
   textareaBox,
 } from "./kit";
 
-interface EditableLine extends ChargeLine {
-  key: string;
-  included: boolean;
-  /** El concepto descuenta del total. `amount` se edita siempre en positivo. */
-  subtract?: boolean;
-}
-
 interface CollectResult {
   transactionId: string;
   receiptIds: string[];
@@ -46,11 +38,6 @@ interface CollectResult {
 }
 
 const METHODS = ["Efectivo", "Transferencia", "Depósito", "Cheque", "Mercado Pago", "Otro"];
-const QUICK_EXTRAS = ["Punitorios", "Diferencia de aumento", "Expensas", "Otros"];
-
-let lineSeq = 0;
-const nextKey = () => `l${++lineSeq}`;
-
 function todayISO() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
 }
@@ -104,8 +91,8 @@ export function CollectSheet({
         const partialBefore = data.alreadyCollected > 0;
         setLines(
           partialBefore
-            ? [{ key: nextKey(), kind: "rent", label: "Saldo del alquiler", amount: remaining, included: true }]
-            : data.lines.map((l) => ({ ...l, key: nextKey() })),
+            ? [{ key: nextLineKey(), kind: "rent", label: "Saldo del alquiler", amount: remaining, included: true }]
+            : data.lines.map((l) => ({ ...l, key: nextLineKey() })),
         );
         setFeePercent(data.feePercent);
         setPaidAt(todayISO());
@@ -126,22 +113,11 @@ export function CollectSheet({
     };
   }, [open, dueId]);
 
-  const active = useMemo(
-    () => lines.filter((l) => l.included && l.amount > 0).map((l) => (l.subtract ? { ...l, amount: -l.amount } : l)),
-    [lines],
-  );
+  const active = useMemo(() => activeLines(lines), [lines]);
   const split = useMemo(() => splitCharges(active, feePercent), [active, feePercent]);
   const currency = ctx?.currency ?? "ARS";
   const tenantBook = ctx?.books.find((b) => b.kind === "inquilino");
   const ownerBook = ctx?.books.find((b) => b.kind === "propietario");
-
-  function patchLine(key: string, patch: Partial<EditableLine>) {
-    setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
-  }
-
-  function addExtra(label: string) {
-    setLines((prev) => [...prev, { key: nextKey(), kind: "extra", label, amount: 0, included: true }]);
-  }
 
   async function submit() {
     if (!ctx || saving) return;
@@ -154,7 +130,7 @@ export function CollectSheet({
       const data = await api<CollectResult>(`/api/alquileres/vencimientos/${ctx.dueId}/cobros`, {
         method: "POST",
         json: {
-          lines: active.map(({ kind, label, amount, refId, affectsFee }) => ({ kind, label, amount, refId, affectsFee })),
+          lines: toChargeLines(lines),
           feePercent,
           isFull: mode === "total",
           paidAt: `${paidAt}T12:00:00-03:00`,
@@ -231,69 +207,7 @@ export function CollectSheet({
               </p>
             )}
 
-            <section aria-labelledby="concepts-title">
-              <h3 id="concepts-title" className="mb-2 font-display text-[15px] font-semibold text-text">
-                Conceptos del mes
-              </h3>
-              <ul className="flex flex-col divide-y divide-border rounded-[18px] border border-border">
-                {lines.map((l) => (
-                  <li key={l.key} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2.5">
-                    <Check checked={l.included} onChange={(v) => patchLine(l.key, { included: v })} />
-                    {l.kind === "extra" ? (
-                      <input
-                        aria-label="Concepto"
-                        value={l.label}
-                        onChange={(e) => patchLine(l.key, { label: e.target.value })}
-                        className="h-9 min-w-0 flex-1 rounded-[10px] border border-transparent bg-bg px-2.5 text-[13.5px] text-text outline-none focus:border-accent"
-                      />
-                    ) : (
-                      <span className={`min-w-0 flex-1 truncate text-[13.5px] ${l.included ? "text-text" : "text-text-faint line-through"}`}>
-                        {l.label}
-                        {l.kind === "rent" && <span className="ml-1.5 text-[11.5px] text-text-faint">base de honorarios</span>}
-                      </span>
-                    )}
-                    {l.kind !== "rent" && (
-                      <Segmented
-                        size="sm"
-                        ariaLabel={`Suma o resta: ${l.label}`}
-                        value={l.subtract ? "resta" : "suma"}
-                        onChange={(v) => patchLine(l.key, { subtract: v === "resta" })}
-                        options={[
-                          { value: "suma", label: "Suma" },
-                          { value: "resta", label: "Resta" },
-                        ]}
-                      />
-                    )}
-                    <div className="w-[132px] shrink-0">
-                      <CurrencyInput value={l.amount} onChange={(v) => patchLine(l.key, { amount: v ?? 0 })} disabled={!l.included} />
-                    </div>
-                    {l.kind === "extra" && (
-                      <button
-                        type="button"
-                        aria-label={`Quitar ${l.label}`}
-                        onClick={() => setLines((prev) => prev.filter((x) => x.key !== l.key))}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-text-faint hover:bg-clay-chip hover:text-terra"
-                      >
-                        <IconX size={14} />
-                      </button>
-                    )}
-                    {l.kind !== "rent" && (
-                      <div className="flex w-full items-center gap-2 pl-8 text-[12px] text-text-muted">
-                        <Check checked={!!l.affectsFee} onChange={(v) => patchLine(l.key, { affectsFee: v })} label="Afecta honorarios" />
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {QUICK_EXTRAS.map((label) => (
-                  <button key={label} type="button" onClick={() => addExtra(label)} className={btnSecondarySm}>
-                    <IconPlus size={13} />
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </section>
+            <ConceptLines lines={lines} onChange={setLines} />
 
           </div>
           <SplitPanel
@@ -606,6 +520,20 @@ function CollectDone({ ctx, result, split }: { ctx: CollectContext; result: Coll
           </a>
         )}
       </div>
+      <p className="mt-2 text-[12px] text-text-faint">
+        Salen en dos hojas (original y copia): imprimilas a 2 por hoja. ¿Preferís una sola A4 apaisada?{" "}
+        {first && (
+          <a href={`/api/alquileres/recibos/${first}/pdf?formato=a4`} target="_blank" rel="noreferrer" className="font-semibold text-text-muted underline underline-offset-2">
+            inquilino
+          </a>
+        )}
+        {first && second && " · "}
+        {second && (
+          <a href={`/api/alquileres/recibos/${second}/pdf?formato=a4`} target="_blank" rel="noreferrer" className="font-semibold text-text-muted underline underline-offset-2">
+            propietario
+          </a>
+        )}
+      </p>
       {phone && (
         <a
           href={`https://wa.me/${phone.startsWith("54") ? phone : `54${phone}`}?text=${waText}`}

@@ -88,29 +88,54 @@ function money(amount: number, currency: string) {
   return `${currency === "USD" ? "U$D" : "$"} ${formatARNumber(amount, { decimals: true })}`;
 }
 
-export interface ReceiptPdfOptions {
-  /**
-   * Agrega una segunda hoja igual a la primera pero con la aclaración de la
-   * firma en blanco: es la copia que queda en la inmobiliaria y la completa a
-   * mano quien firma. Se imprime a "2 por hoja" y sale un A4 con las dos.
-   */
-  officeCopy?: boolean;
+/**
+ * Cómo sale el PDF:
+ * - "original":  una hoja A5. Es el que se guarda y baja el inquilino del portal.
+ * - "dos-hojas": original + copia para la inmobiliaria, cada una en su hoja A5.
+ *                Se imprime a "2 páginas por hoja".
+ * - "a4":        las dos mitades ya armadas en una A4 apaisada. Se imprime tal cual.
+ *
+ * La copia para la inmobiliaria es igual al original pero con la aclaración
+ * de la firma en blanco: la completa a mano quien firma.
+ */
+export type ReceiptLayout = "original" | "dos-hojas" | "a4";
+
+export function parseReceiptLayout(value: string | null | undefined): Exclude<ReceiptLayout, "original"> {
+  return value === "a4" ? "a4" : "dos-hojas";
 }
 
+export interface ReceiptPdfOptions {
+  layout?: ReceiptLayout;
+}
+
+const A5: [number, number] = [419.53, 595.28];
+const A4_LANDSCAPE: [number, number] = [841.89, 595.28];
+
 export async function renderReceiptPdf(input: ReceiptPdfInput, opts: ReceiptPdfOptions = {}): Promise<Uint8Array> {
+  const layout = opts.layout ?? "original";
+  const title = `${input.kind === "inquilino" ? "Recibo por cuenta de terceros" : "Recibo"} ${formatReceiptNo(input.pointOfSale, input.number)}`;
+
   const pdf = await PDFDocument.create();
   const fonts = {
     regular: await pdf.embedFont(StandardFonts.Helvetica),
     bold: await pdf.embedFont(StandardFonts.HelveticaBold),
   };
-  const isTenant = input.kind === "inquilino";
-  pdf.setTitle(`${isTenant ? "Recibo por cuenta de terceros" : "Recibo"} ${formatReceiptNo(input.pointOfSale, input.number)}`);
+  pdf.setTitle(title);
   pdf.setAuthor(INMOBILIARIA.tagline);
-
   drawReceiptPage(pdf, input, fonts, { blankSigner: false });
-  if (opts.officeCopy) drawReceiptPage(pdf, input, fonts, { blankSigner: true });
+  if (layout === "original") return pdf.save();
+  drawReceiptPage(pdf, input, fonts, { blankSigner: true });
+  if (layout === "dos-hojas") return pdf.save();
 
-  return pdf.save();
+  // A4 apaisada: original a la izquierda, copia a la derecha; el corte va al medio.
+  const sheet = await PDFDocument.create();
+  sheet.setTitle(title);
+  sheet.setAuthor(INMOBILIARIA.tagline);
+  const [original, copy] = await sheet.embedPdf(await pdf.save(), [0, 1]);
+  const page = sheet.addPage(A4_LANDSCAPE);
+  page.drawPage(original, { x: 0, y: 0 });
+  page.drawPage(copy, { x: A4_LANDSCAPE[0] - A5[0], y: 0 });
+  return sheet.save();
 }
 
 function drawReceiptPage(
@@ -119,7 +144,7 @@ function drawReceiptPage(
   { regular, bold }: { regular: PDFFont; bold: PDFFont },
   { blankSigner }: { blankSigner: boolean },
 ) {
-  const page = pdf.addPage([419.53, 595.28]); // A5
+  const page = pdf.addPage(A5);
   const { width, height } = page.getSize();
   const m = 26;
   const right = width - m;
