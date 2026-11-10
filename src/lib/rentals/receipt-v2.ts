@@ -88,18 +88,42 @@ function money(amount: number, currency: string) {
   return `${currency === "USD" ? "U$D" : "$"} ${formatARNumber(amount, { decimals: true })}`;
 }
 
-export async function renderReceiptPdf(input: ReceiptPdfInput): Promise<Uint8Array> {
+export interface ReceiptPdfOptions {
+  /**
+   * Agrega una segunda hoja igual a la primera pero con la aclaración de la
+   * firma en blanco: es la copia que queda en la inmobiliaria y la completa a
+   * mano quien firma. Se imprime a "2 por hoja" y sale un A4 con las dos.
+   */
+  officeCopy?: boolean;
+}
+
+export async function renderReceiptPdf(input: ReceiptPdfInput, opts: ReceiptPdfOptions = {}): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
+  const fonts = {
+    regular: await pdf.embedFont(StandardFonts.Helvetica),
+    bold: await pdf.embedFont(StandardFonts.HelveticaBold),
+  };
+  const isTenant = input.kind === "inquilino";
+  pdf.setTitle(`${isTenant ? "Recibo por cuenta de terceros" : "Recibo"} ${formatReceiptNo(input.pointOfSale, input.number)}`);
+  pdf.setAuthor(INMOBILIARIA.tagline);
+
+  drawReceiptPage(pdf, input, fonts, { blankSigner: false });
+  if (opts.officeCopy) drawReceiptPage(pdf, input, fonts, { blankSigner: true });
+
+  return pdf.save();
+}
+
+function drawReceiptPage(
+  pdf: PDFDocument,
+  input: ReceiptPdfInput,
+  { regular, bold }: { regular: PDFFont; bold: PDFFont },
+  { blankSigner }: { blankSigner: boolean },
+) {
   const page = pdf.addPage([419.53, 595.28]); // A5
   const { width, height } = page.getSize();
-  const regular = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const m = 26;
   const right = width - m;
   const isTenant = input.kind === "inquilino";
-
-  pdf.setTitle(`${isTenant ? "Recibo por cuenta de terceros" : "Recibo"} ${formatReceiptNo(input.pointOfSale, input.number)}`);
-  pdf.setAuthor(INMOBILIARIA.tagline);
 
   // Marco del recibo
   page.drawRectangle({ x: m - 8, y: m - 8, width: width - (m - 8) * 2, height: height - (m - 8) * 2, borderColor: INK, borderWidth: 1 });
@@ -240,11 +264,9 @@ export async function renderReceiptPdf(input: ReceiptPdfInput): Promise<Uint8Arr
   rule(page, half + 34, right, footY + 21, FAINT, 0.5);
   text(page, "Aclaración", half + 6, footY + 2, bold, 7.5);
   rule(page, half + 50, right, footY + 1, FAINT, 0.5);
-  text(page, fit(signer, regular, 8, right - half - 56), half + 52, footY + 4, regular, 8, MUTED);
+  if (!blankSigner) text(page, fit(signer, regular, 8, right - half - 56), half + 52, footY + 4, regular, 8, MUTED);
 
   text(page, "Documento no válido como factura.", half + 6, m - 2, regular, 6, FAINT);
-
-  return pdf.save();
 }
 
 export function receiptStoragePath(input: Pick<ReceiptPdfInput, "kind" | "pointOfSale" | "number" | "property">) {
