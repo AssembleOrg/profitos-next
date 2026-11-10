@@ -26,6 +26,7 @@ import { refreshZonapropCredits } from "@/lib/publish/credits";
 import { syncMlPublications } from "@/lib/mercadolibre/sync";
 import { syncMlLeads } from "@/lib/mercadolibre/leads";
 import { syncArgenpropListings, syncZonapropListings, type ListingSyncResult } from "@/lib/publish/listing-sync";
+import { refreshPropertyPostingStats, syncZonapropPostingStats, type PostingStatsSyncResult } from "@/lib/zonaprop/posting-stats";
 import {
   startReloginSession,
   finishReloginSession,
@@ -176,6 +177,30 @@ async function refreshDifusion(): Promise<{ ok: boolean; error?: string }> {
   return errors.length ? { ok: false, error: errors.join(" · ") } : { ok: true };
 }
 
+// Estadísticas de avisos de ZonaProp (informe al propietario): una tanda por
+// tick de los que tienen más de ~20 h; sin vencidos no abre el navegador.
+function logStats(r: PostingStatsSyncResult): void {
+  if (!r.candidates) return;
+  console.log(`[worker] estadísticas zonaprop: ${r.ok}/${r.candidates} avisos actualizados${r.failed ? ` (${r.failed} sin datos)` : ""}`);
+  for (const e of r.errors.slice(0, 5)) console.log(`[worker]   estadísticas ${e}`);
+}
+
+/** "Actualizar ahora" del informe al propietario (una propiedad). */
+async function refreshStats(propertyId: string): Promise<{ ok: boolean; error?: string }> {
+  if (browserBusy || isReloginActive()) return { ok: false, error: "El worker está ocupado, probá en un minuto" };
+  browserBusy = true;
+  try {
+    const r = await refreshPropertyPostingStats(propertyId);
+    logStats(r);
+    if (!r.candidates) return { ok: false, error: "La propiedad no tiene aviso de ZonaProp vinculado" };
+    return r.ok ? { ok: true } : { ok: false, error: r.errors[0] ?? "ZonaProp no devolvió datos" };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "error" };
+  } finally {
+    browserBusy = false;
+  }
+}
+
 async function tick(): Promise<void> {
   if (browserBusy) return;
   // Mientras hay un login remoto abierto, no lanzamos otro navegador (chocarían
@@ -212,6 +237,9 @@ async function tick(): Promise<void> {
       console.log(`[worker] procesos tras la corrida: ${ps.total} (zombis ${ps.zombies})`);
       for (const p of result.portals) if (!p.ok) exitIfForkExhausted(String(p.error));
     }
+    await syncZonapropPostingStats()
+      .then(logStats)
+      .catch((e) => console.warn("[worker] estadísticas zonaprop falló:", e instanceof Error ? e.message : e));
   } catch (e) {
     console.warn("[worker] Error en tick:", e instanceof Error ? e.message : e);
     exitIfForkExhausted(e instanceof Error ? e.message : String(e));
@@ -315,6 +343,16 @@ const server = http.createServer(async (req, res) => {
     const body = await readJson(req);
     if (!verifyReloginToken(String(body.token ?? ""))) return send(res, 401, { message: "token inválido" });
     const r = await refreshDifusion();
+    return send(res, r.ok ? 200 : 503, r);
+  }
+
+  // "Actualizar ahora" del informe al propietario: estadísticas de ZP de una propiedad.
+  if (p === "/stats/refresh" && req.method === "POST") {
+    const body = await readJson(req);
+    if (!verifyReloginToken(String(body.token ?? ""))) return send(res, 401, { message: "token inválido" });
+    const propertyId = String(body.propertyId ?? "").trim();
+    if (!propertyId) return send(res, 400, { ok: false, error: "falta propertyId" });
+    const r = await refreshStats(propertyId);
     return send(res, r.ok ? 200 : 503, r);
   }
 

@@ -391,8 +391,8 @@ async function main() {
   d.card({
     title: "Ficha para el dueño con comentarios",
     chips: [conf],
-    body: "Guarda visitas totales, visitas del mes, quejas/observaciones y mejoras/sugerencias, y te da el link al PDF para el dueño.",
-    examples: ["Armá la ficha del dueño de Uriburu 1734 3º B: 12 visitas totales, 4 este mes, se quejan del precio, sugerir pintar"],
+    body: "Guarda quejas/observaciones y mejoras/sugerencias y te da el link al PDF para el dueño. Las visitas, apariciones y consultas de ZonaProp las trae solo.",
+    examples: ["Armá la ficha del dueño de Uriburu 1734 3º B: se quejan del precio, sugerir pintar"],
   });
   d.card({
     title: "Registrar pago de alquiler",

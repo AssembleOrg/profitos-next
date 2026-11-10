@@ -978,6 +978,55 @@ model PortalDiffusion {
   @@map("jp_portal_diffusion")
 }
 
+// Estadísticas de cada aviso según el propio portal (ZonaProp: panel
+// "Desempeño"). Las trae el worker para el informe al propietario. Sin FK.
+model PortalPostingStats {
+  id                String    @id @default(cuid())
+  portal            String // zonaprop
+  externalId        String    @map("external_id")
+  propertyId        String?   @map("property_id")
+  // Desde que se publicó el aviso.
+  totalImpressions  Int?      @map("total_impressions")
+  totalVisits       Int?      @map("total_visits")
+  totalLeads        Int?      @map("total_leads")
+  // Ventana del portal (últimos 30 días).
+  periodFrom        DateTime? @map("period_from") @db.Date
+  periodTo          DateTime? @map("period_to") @db.Date
+  impressions30     Int?      @map("impressions_30")
+  visits30          Int?      @map("visits_30")
+  leads30           Int?      @map("leads_30")
+  contacts30        Int?      @map("contacts_30")
+  // { whatsapp, leadForm, viewData, socialAds }
+  contactsByChannel Json?     @map("contacts_by_channel")
+  // Variación contra los 30 días anteriores: { impressions|visits|leads|contacts: { pct, dir: up|down|equal } }
+  trend             Json?
+  // Promedio de avisos parecidos (mismo segmento) en 30 días: { impressions, visits, leads }
+  segment           Json?
+  // Visitas por semana de los últimos 90 días: [{ from, to, impressions, views, leads }]
+  weekly            Json?
+  fetchedAt         DateTime? @map("fetched_at")
+  error             String?
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@unique([portal, externalId])
+  @@index([propertyId])
+  @@map("jp_portal_posting_stats")
+}
+
+// Serie diaria del aviso (se acumula: el portal sólo devuelve 30 días).
+model PortalPostingDaily {
+  portal      String
+  externalId  String   @map("external_id")
+  day         DateTime @db.Date
+  impressions Int      @default(0)
+  views       Int      @default(0)
+  leads       Int      @default(0)
+  updatedAt   DateTime @default(now()) @map("updated_at")
+
+  @@id([portal, externalId, day])
+  @@map("jp_portal_posting_daily")
+}
+
 // Cupo de créditos de publicación por portal (ZonaProp: Simple/Destacado/Súper).
 // Lo refresca el worker (necesita navegador+sesión); la web lo lee de acá.
 model PortalCredits {

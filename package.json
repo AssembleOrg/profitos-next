@@ -9,7 +9,8 @@
     "db:push": "prisma db execute --config prisma/prisma.config.ts --stdin",
     "db:generate": "prisma generate --config prisma/prisma.config.ts",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@novnc/novnc": "^1.7.0",

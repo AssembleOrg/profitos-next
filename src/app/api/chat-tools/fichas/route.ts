@@ -5,13 +5,16 @@ import { prisma } from "@/lib/prisma/client";
 import type { Prisma } from "@/generated/prisma/client";
 import { assertChatToolsAuth, siteUrl } from "@/lib/api/chat-tools";
 import { resolveProperty } from "@/lib/chat/resolve-property";
+import { getOwnerReportStats } from "@/lib/reports/owner-stats";
 
 // Tools del chat IA para FICHAS de propiedad (PDF). El PDF lo genera la ruta
 // existente /api/propiedades/[id]/pdf (sesión del usuario): acá sólo se
 // resuelve la propiedad, se guardan los comentarios y se devuelve el link.
 //  - GET: links de la ficha normal y de la ficha para el dueño.
-//  - POST: guarda los comentarios de la ficha para el dueño (visitas, quejas,
-//    mejoras) y devuelve el link. Requiere confirmación del lado del chat.
+//  - POST: guarda los comentarios de la ficha para el dueño (quejas, mejoras) y
+//    devuelve el link. Requiere confirmación del lado del chat.
+// Las visitas y consultas YA NO se cargan a mano: el informe las trae solo de
+// ZonaProp y de la central (visitasTotales/visitasMes se ignoran si llegan).
 
 type Body = {
   propertyId?: string;
@@ -36,12 +39,24 @@ export const GET = withHandler(async (request: NextRequest) => {
     referencia: sp.get("referencia") ?? undefined,
     direccion: sp.get("direccion") ?? undefined,
   });
-  const row = await prisma.property.findUnique({ where: { id: prop.id }, select: { ownerReportData: true } });
+  const row = await prisma.property.findUnique({ where: { id: prop.id }, select: { ownerReportData: true, referenceCode: true } });
+  const stats = await getOwnerReportStats(prop.id, row?.referenceCode ?? null);
+  const z = stats.zonaprop;
   return ok(
     {
       propiedad: prop,
       ...links(prop.id),
       comentariosActuales: (row?.ownerReportData as Record<string, unknown> | null) ?? null,
+      zonaprop: z?.fetchedAt
+        ? {
+            datosAl: z.fetchedAt,
+            ultimos30Dias: { apariciones: z.impressions30, visitas: z.visits30, consultas: z.contacts30 },
+            visitasEsteMes: z.thisMonth.views,
+            desdeQueSePublico: { visitas: z.totalVisits, interesados: z.totalLeads },
+            promedioAvisosParecidos: z.segment,
+          }
+        : null,
+      consultasEnProfitos: stats.inquiries,
       nota: "Compartí el link completo tal cual; se abre desde Profitos con la sesión del usuario.",
     },
     "Ficha de propiedad",
@@ -59,16 +74,15 @@ export const POST = withHandler(async (request: NextRequest) => {
     return s ? s.slice(0, max) : undefined;
   };
   const nuevos: Record<string, string> = {};
-  const vt = clean(body.visitasTotales, 40);
-  const vm = clean(body.visitasMes, 40);
   const q = clean(body.quejas, 1200);
   const m = clean(body.mejoras, 1200);
-  if (vt) nuevos.visitasTotales = vt;
-  if (vm) nuevos.visitasMes = vm;
   if (q) nuevos.quejas = q;
   if (m) nuevos.mejoras = m;
   if (!Object.keys(nuevos).length) {
-    throw new AppError(400, "No hay comentarios para guardar (visitasTotales, visitasMes, quejas o mejoras)");
+    throw new AppError(
+      400,
+      "No hay comentarios para guardar (quejas o mejoras). Las visitas ya no se cargan a mano: el informe las trae solo de ZonaProp."
+    );
   }
 
   const row = await prisma.property.findUnique({ where: { id: prop.id }, select: { ownerReportData: true } });
