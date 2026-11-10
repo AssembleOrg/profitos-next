@@ -235,8 +235,8 @@ export async function collectRent(input: CollectInput) {
   return { ...result, pdfErrors };
 }
 
-/** Genera (o regenera) el PDF de un recibo emitido a partir del desglose congelado del cobro. */
-export async function ensureReceiptPdf(receiptId: string, opts: { force?: boolean } = {}) {
+/** Datos del recibo para dibujar el PDF, a partir del desglose congelado del cobro. */
+async function loadReceiptPdfInput(receiptId: string) {
   const receipt = await prisma.rentalReceipt.findUnique({
     where: { id: receiptId },
     include: {
@@ -258,7 +258,6 @@ export async function ensureReceiptPdf(receiptId: string, opts: { force?: boolea
     },
   });
   if (!receipt) throw new AppError(404, "Recibo no encontrado");
-  if (receipt.pdfPath && !opts.force) return receipt.pdfPath;
   const tx = receipt.transaction;
   if (!tx) throw new AppError(409, "El recibo no tiene un cobro asociado");
 
@@ -283,6 +282,20 @@ export async function ensureReceiptPdf(receiptId: string, opts: { force?: boolea
     notes: stored?.receiptNotes ?? null,
     isPartial: !tx.isFull,
   };
+  return { receipt, pdfInput };
+}
+
+/**
+ * Genera (o regenera) el PDF guardado de un recibo emitido. Es el original de
+ * una hoja: el que descarga el inquilino desde el portal.
+ */
+export async function ensureReceiptPdf(receiptId: string, opts: { force?: boolean } = {}) {
+  if (!opts.force) {
+    const existing = await prisma.rentalReceipt.findUnique({ where: { id: receiptId }, select: { pdfPath: true } });
+    if (!existing) throw new AppError(404, "Recibo no encontrado");
+    if (existing.pdfPath) return existing.pdfPath;
+  }
+  const { receipt, pdfInput } = await loadReceiptPdfInput(receiptId);
   const bytes = await renderReceiptPdf(pdfInput);
   const path = receiptStoragePath(pdfInput);
   await storeReceiptPdf(path, bytes);
@@ -291,6 +304,18 @@ export async function ensureReceiptPdf(receiptId: string, opts: { force?: boolea
     data: { pdfPath: path, issuedAt: receipt.issuedAt ?? new Date() },
   });
   return path;
+}
+
+/**
+ * PDF para imprimir en la oficina: el original más la copia que queda en la
+ * inmobiliaria (aclaración de la firma en blanco). Se dibuja en el momento,
+ * así también sirve para los recibos emitidos antes de este cambio.
+ */
+export async function renderOfficeReceiptPdf(receiptId: string) {
+  const { pdfInput } = await loadReceiptPdfInput(receiptId);
+  const bytes = await renderReceiptPdf(pdfInput, { officeCopy: true });
+  const filename = receiptStoragePath(pdfInput).split("/").pop() ?? "recibo.pdf";
+  return { bytes, filename };
 }
 
 // ──────────────────────────────────────────────────────────────────
