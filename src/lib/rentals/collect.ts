@@ -5,7 +5,17 @@ import { AppError } from "@/lib/api/handler";
 import type { Prisma } from "@/generated/prisma/client";
 import { formatARS } from "@/lib/rentals";
 import { formatReceiptNo, sanitizeFeePercent, splitCharges, type ChargeLine, type ChargeSplit } from "@/lib/rentals/money";
-import { renderReceiptPdf, receiptStoragePath, storeReceiptPdf, type ReceiptKind } from "@/lib/rentals/receipt-v2";
+import {
+  correctionSummary,
+  hoursSince,
+  isLateCorrection,
+  readCorrections,
+  sameSnapshot,
+  CORRECTION_FREE_HOURS,
+  type PaymentCorrection,
+  type PaymentSnapshot,
+} from "@/lib/rentals/correction";
+import { renderReceiptPdf, receiptStoragePath, storeReceiptPdf, type ReceiptKind, type ReceiptLayout } from "@/lib/rentals/receipt-v2";
 
 /**
  * Operaciones de alquiler tradicional (v2): cobro con dos recibos numerados,
@@ -28,6 +38,8 @@ export interface PaymentBreakdown {
   lines: ChargeLine[];
   split: ChargeSplit;
   receiptNotes: string | null;
+  /** Historial de correcciones hechas después de emitir (la más nueva al final). */
+  corrections?: PaymentCorrection[];
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -235,6 +247,127 @@ export async function collectRent(input: CollectInput) {
   return { ...result, pdfErrors };
 }
 
+// ──────────────────────────────────────────────────────────────────
+// Corrección de un cobro ya emitido
+// ──────────────────────────────────────────────────────────────────
+
+export interface CorrectInput {
+  dueDateId: string;
+  transactionId: string;
+  lines: ChargeLine[];
+  feePercent: number;
+  receiptNotes?: string | null;
+  /** Por qué se corrige. Obligatorio pasadas las 96 horas. */
+  reason?: string | null;
+  userId: string;
+  /** Solo para tests. */
+  now?: Date;
+}
+
+/**
+ * Corrige los montos de un cobro ya emitido. Los recibos conservan su número y
+ * se vuelven a dibujar; la caja y los estados de cuenta se recalculan solos
+ * porque leen del cobro. Queda registrado quién, cuándo, y el antes y después.
+ */
+export async function correctCollection(input: CorrectInput) {
+  if (input.lines.length === 0) throw new AppError(400, "Agregá al menos un concepto");
+  if (input.lines.some((l) => l.kind === "rent" && l.amount < 0)) throw new AppError(400, "El alquiler no puede ser negativo");
+  const split = splitCharges(input.lines, sanitizeFeePercent(input.feePercent));
+  if (split.tenantTotal <= 0) throw new AppError(400, "El total cobrado tiene que ser mayor a cero");
+  const now = input.now ?? new Date();
+  const reason = input.reason?.trim() || null;
+
+  const result = await prisma.$transaction(async (tx) => {
+    const payment = await tx.rentalPaymentTransaction.findUnique({
+      where: { id: input.transactionId },
+      select: {
+        id: true,
+        dueDateId: true,
+        createdAt: true,
+        ownerPaidAt: true,
+        breakdown: true,
+        receipts: { select: { id: true, bookKind: true, status: true, pointOfSale: true, number: true } },
+        dueDate: { select: { contract: { select: { currency: true } } } },
+      },
+    });
+    if (!payment || payment.dueDateId !== input.dueDateId) throw new AppError(404, "Cobro no encontrado");
+    const stored = payment.breakdown as unknown as PaymentBreakdown | null;
+    if (!stored?.lines || !stored.split) {
+      throw new AppError(409, "Este cobro es anterior a los recibos numerados y no se puede corregir. Eliminalo y volvé a cobrarlo.");
+    }
+    const user = await tx.user.findUnique({ where: { id: input.userId }, select: { fullName: true, email: true } });
+
+    const before: PaymentSnapshot = { lines: stored.lines, split: stored.split, receiptNotes: stored.receiptNotes ?? null };
+    const after: PaymentSnapshot = { lines: input.lines, split, receiptNotes: input.receiptNotes?.trim() || null };
+    if (sameSnapshot(before, after)) throw new AppError(400, "No cambiaste nada del cobro");
+
+    const late = isLateCorrection(payment.createdAt, now);
+    if (late && !reason) {
+      throw new AppError(400, `Pasaron más de ${CORRECTION_FREE_HOURS} horas desde que se emitió: contá el motivo de la corrección`);
+    }
+    const correction: PaymentCorrection = {
+      at: now.toISOString(),
+      byUserId: input.userId,
+      byName: user?.fullName ?? user?.email ?? "—",
+      hoursAfterIssue: hoursSince(payment.createdAt, now),
+      late,
+      reason,
+      ownerAlreadyPaid: payment.ownerPaidAt !== null,
+      before,
+      after,
+    };
+    const breakdown: PaymentBreakdown = { ...after, corrections: [...readCorrections(stored), correction] };
+
+    await tx.rentalPaymentTransaction.update({
+      where: { id: payment.id },
+      data: {
+        amountPaid: split.tenantTotal,
+        commissionAmount: split.feeAmount,
+        ownerAmount: split.ownerTotal,
+        feePercent: split.feePercent,
+        breakdown: breakdown as unknown as Prisma.InputJsonValue,
+      },
+    });
+    const emitted = payment.receipts.filter((r) => r.status === "emitido");
+    for (const r of emitted) {
+      await tx.rentalReceipt.update({
+        where: { id: r.id },
+        data: { amount: r.bookKind === "inquilino" ? split.tenantTotal : split.ownerTotal },
+      });
+    }
+    const numbers = emitted.map((r) => `${r.bookKind} ${formatReceiptNo(r.pointOfSale, r.number)}`).join(", ");
+    await tx.rentalDueDateAction.create({
+      data: {
+        dueDateId: payment.dueDateId,
+        type: "payment_edit",
+        description: [
+          `Cobro corregido${numbers ? ` · recibos ${numbers}` : ""}`,
+          correctionSummary(correction, payment.dueDate.contract.currency),
+          late ? `a ${correction.hoursAfterIssue} h de emitido (fuera de las ${CORRECTION_FREE_HOURS} h)` : null,
+          correction.ownerAlreadyPaid ? "el propietario ya había retirado su parte" : null,
+          reason ? `motivo: ${reason}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        createdByUserId: input.userId,
+      },
+    });
+    return { transactionId: payment.id, receiptIds: emitted.map((r) => r.id), late };
+  });
+
+  // Igual que al cobrar: si un PDF falla, la corrección queda y se reintenta al abrirlo.
+  const pdfErrors: string[] = [];
+  for (const id of result.receiptIds) {
+    try {
+      await ensureReceiptPdf(id, { force: true });
+    } catch (err) {
+      console.error("[Recibo v2] No se pudo regenerar el PDF corregido:", err);
+      pdfErrors.push(id);
+    }
+  }
+  return { ...result, pdfErrors };
+}
+
 /** Datos del recibo para dibujar el PDF, a partir del desglose congelado del cobro. */
 async function loadReceiptPdfInput(receiptId: string) {
   const receipt = await prisma.rentalReceipt.findUnique({
@@ -308,14 +441,15 @@ export async function ensureReceiptPdf(receiptId: string, opts: { force?: boolea
 
 /**
  * PDF para imprimir en la oficina: el original más la copia que queda en la
- * inmobiliaria (aclaración de la firma en blanco). Se dibuja en el momento,
- * así también sirve para los recibos emitidos antes de este cambio.
+ * inmobiliaria (aclaración de la firma en blanco), en dos hojas A5 o armado en
+ * una A4 apaisada. Se dibuja en el momento, así también sirve para los recibos
+ * emitidos antes de este cambio.
  */
-export async function renderOfficeReceiptPdf(receiptId: string) {
+export async function renderOfficeReceiptPdf(receiptId: string, layout: Exclude<ReceiptLayout, "original"> = "dos-hojas") {
   const { pdfInput } = await loadReceiptPdfInput(receiptId);
-  const bytes = await renderReceiptPdf(pdfInput, { officeCopy: true });
-  const filename = receiptStoragePath(pdfInput).split("/").pop() ?? "recibo.pdf";
-  return { bytes, filename };
+  const bytes = await renderReceiptPdf(pdfInput, { layout });
+  const base = (receiptStoragePath(pdfInput).split("/").pop() ?? "recibo.pdf").replace(/\.pdf$/, "");
+  return { bytes, filename: `${base}${layout === "a4" ? "_a4" : ""}.pdf` };
 }
 
 // ──────────────────────────────────────────────────────────────────

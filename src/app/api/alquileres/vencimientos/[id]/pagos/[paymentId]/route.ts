@@ -4,7 +4,30 @@ import { ok } from "@/lib/api/response";
 import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
 import { assertCanDeleteTransaction } from "@/lib/api/rentals";
-import { formatReceiptNo } from "@/lib/rentals/money";
+import { formatReceiptNo, sanitizeChargeLines } from "@/lib/rentals/money";
+import { correctCollection } from "@/lib/rentals/collect";
+
+/**
+ * Corrige un cobro ya emitido: cambia sus conceptos y honorarios sin anular los
+ * recibos (conservan el número y se vuelven a dibujar). Queda registrado.
+ */
+export const PATCH = withHandler(async (request: NextRequest, context) => {
+  const path = request.nextUrl.pathname;
+  const auth = await getAuthContext();
+  const { id, paymentId } = await context!.params;
+  const body = (await request.json()) as Record<string, unknown>;
+
+  const result = await correctCollection({
+    dueDateId: id,
+    transactionId: paymentId,
+    lines: sanitizeChargeLines(body.lines),
+    feePercent: typeof body.feePercent === "number" ? body.feePercent : Number.NaN,
+    receiptNotes: typeof body.receiptNotes === "string" ? body.receiptNotes : null,
+    reason: typeof body.reason === "string" ? body.reason : null,
+    userId: auth.userId,
+  });
+  return ok(result, result.pdfErrors.length ? "Cobro corregido. Algún PDF no se pudo regenerar." : "Cobro corregido", path);
+});
 
 export const DELETE = withHandler(async (request: NextRequest, context) => {
   const path = request.nextUrl.pathname;

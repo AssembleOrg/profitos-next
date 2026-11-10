@@ -3,10 +3,13 @@ import { withHandler, AppError } from "@/lib/api/handler";
 import { getAuthContext } from "@/lib/api/auth";
 import { prisma } from "@/lib/prisma/client";
 import { ensureReceiptPdf, renderOfficeReceiptPdf } from "@/lib/rentals/collect";
+import { parseReceiptLayout } from "@/lib/rentals/receipt-v2";
 
 /**
- * Abre el PDF de un recibo para imprimir en la oficina: dos hojas, el original
- * y la copia que queda en la inmobiliaria (aclaración de la firma en blanco).
+ * Abre el PDF de un recibo para imprimir en la oficina: el original y la copia
+ * que queda en la inmobiliaria (aclaración de la firma en blanco).
+ * Por defecto son dos hojas A5 (se imprime a "2 por hoja"); ?formato=a4 las
+ * devuelve ya armadas en una A4 apaisada.
  * ?regenerar=1 vuelve a dibujar también el original guardado (el del portal).
  */
 export const GET = withHandler(async (request: NextRequest, context) => {
@@ -24,7 +27,7 @@ export const GET = withHandler(async (request: NextRequest, context) => {
     console.error("[Recibo v2] No se pudo guardar el original:", err);
   }
 
-  const { bytes, filename } = await renderOfficeReceiptPdf(id);
+  const { bytes, filename } = await renderOfficeReceiptPdf(id, parseReceiptLayout(request.nextUrl.searchParams.get("formato")));
   return new NextResponse(Buffer.from(bytes), {
     headers: {
       "Content-Type": "application/pdf",

@@ -150,6 +150,22 @@ export interface PaymentDTO {
   legacyReceipt: { number: number; path: string | null } | null;
   createdBy: string;
   attachments: unknown;
+  /** Cuándo se registró el cobro (desde acá corren las 96 h para corregir libremente). */
+  createdAt: string;
+  /** El propietario ya retiró su parte. */
+  ownerPaidAt: string | null;
+  /** Correcciones hechas después de emitir, la más nueva primero. */
+  corrections: PaymentCorrectionDTO[];
+}
+
+export interface PaymentCorrectionDTO {
+  at: string;
+  by: string;
+  late: boolean;
+  hoursAfterIssue: number;
+  reason: string | null;
+  /** "Total U$D 1.200,00 → U$D 1.100,00 · …" */
+  summary: string;
 }
 
 export interface DueLine {
