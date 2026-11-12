@@ -126,8 +126,8 @@
   --color-dark: var(--color-dark);
   --color-dark-fg: var(--color-dark-fg);
   --color-dark-muted: var(--color-dark-muted);
-  --font-sans: var(--font-figtree);
-  --font-display: var(--font-bricolage);
+  --font-sans: var(--font-lexend);
+  --font-display: var(--font-outfit);
   --animate-loading-bar: loading-bar 1s ease-in-out infinite;
 }
 
