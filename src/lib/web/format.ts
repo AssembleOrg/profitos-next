@@ -39,6 +39,15 @@ export function formatPrice(price: number | null, currency: string | null): stri
   return `${isUsd ? "USD" : "$"} ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(price)}`;
 }
 
+/** Para los pines del mapa: "USD 120 k", "$ 1,2 M". */
+export function formatPriceShort(price: number | null, currency: string | null): string {
+  if (!price) return "Consultar";
+  const sign = isUsd(currency) ? "USD" : "$";
+  if (price >= 1_000_000) return `${sign} ${(price / 1_000_000).toLocaleString("es-AR", { maximumFractionDigits: 1 })} M`;
+  if (price >= 1000) return `${sign} ${Math.round(price / 1000).toLocaleString("es-AR")} k`;
+  return `${sign} ${Math.round(price)}`;
+}
+
 export function isUsd(currency: string | null): boolean {
   return /usd|u\$s|dolar|dólar/i.test(currency ?? "");
 }

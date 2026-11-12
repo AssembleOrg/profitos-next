@@ -264,7 +264,7 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
   }
 
   return (
-    <div className="flex flex-col gap-5 pb-28 md:pb-24">
+    <div className="flex flex-col gap-3 pb-28 md:gap-5 md:pb-24">
       <Link
         href={editing && initial ? `/alquileres/${initial.id}` : "/alquileres/contratos"}
         className="inline-flex w-fit items-center gap-1.5 text-[12.5px] font-semibold text-text-faint hover:text-text"
@@ -272,7 +272,7 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
         <IconArrowLeft size={15} /> {editing ? "Volver al legajo" : "Contratos"}
       </Link>
       <header>
-        <h1 className="font-display text-[26px] font-semibold leading-tight text-text md:text-[28px]">
+        <h1 className="font-display text-[22px] font-semibold leading-tight text-text sm:text-[26px] md:text-[28px]">
           {editing ? "Condiciones del contrato" : "Nuevo contrato de alquiler"}
         </h1>
         <p className="mt-0.5 text-[12.5px] text-text-faint">
@@ -282,7 +282,7 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
         </p>
       </header>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-3 md:gap-4 xl:grid-cols-2">
         {/* 1. Partes */}
         <FormSection title="Propiedad y partes">
           <Field
@@ -298,8 +298,8 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
               value={admin}
               onChange={setAdmin}
               options={[
-                { value: "inmobiliaria", label: "La inmobiliaria" },
-                { value: "propietario", label: "El propietario" },
+                { value: "inmobiliaria", label: <><span className="sm:hidden">Inmobiliaria</span><span className="hidden sm:inline">La inmobiliaria</span></> },
+                { value: "propietario", label: <><span className="sm:hidden">Propietario</span><span className="hidden sm:inline">El propietario</span></> },
               ]}
             />
           </Field>
@@ -613,12 +613,15 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
         <div className="flex items-center justify-between gap-3">
           <p className="min-w-0 text-[12.5px] text-text-muted">
             {!managed ? (
-              <span className="font-semibold text-text">Lo administra el propietario · sin cobros mensuales</span>
+              <span className="font-semibold text-text">
+                <span className="sm:hidden">Sin cobros mensuales</span>
+                <span className="hidden sm:inline">Lo administra el propietario · sin cobros mensuales</span>
+              </span>
             ) : editing ? (
               "Los cambios valen para los próximos cobros."
             ) : (
               <>
-                <span className="font-semibold text-text">{dueCount} vencimientos</span>
+                <span className="whitespace-nowrap font-semibold text-text">{dueCount} vencimientos</span>
                 {amount ? (
                   <span className="hidden sm:inline">
                     {" "}
@@ -628,12 +631,12 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
               </>
             )}
           </p>
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
             <Link href={editing && initial ? `/alquileres/${initial.id}` : "/alquileres/contratos"} className={btnText}>
               Cancelar
             </Link>
             <button type="button" className={btnPrimary} disabled={saving} onClick={submit}>
-              {saving ? "Guardando…" : editing ? "Guardar condiciones" : "Cargar contrato"}
+              {saving ? "Guardando…" : editing ? <>Guardar<span className="hidden sm:inline"> condiciones</span></> : <>Cargar<span className="hidden sm:inline"> contrato</span></>}
             </button>
           </div>
         </div>
@@ -644,7 +647,7 @@ export function ContractForm({ options, initial }: { options: FormOptions; initi
 
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-4 rounded-[20px] border border-border bg-surface p-4 md:p-5">
+    <section className="flex flex-col gap-4 rounded-[20px] border border-border bg-surface p-3.5 md:p-5">
       <h2 className="font-display text-base font-semibold text-text">{title}</h2>
       {children}
     </section>

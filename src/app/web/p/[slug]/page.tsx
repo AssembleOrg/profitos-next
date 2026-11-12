@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCatalog, getPropertyByKey, groupUnits } from "@/lib/web/catalog";
 import { CONTACT, formatPrice, OPERATION_LABEL, WEB_BASE, whatsappUrl } from "@/lib/web/format";
+import { CountUp } from "../../_components/count-up";
 import { FavoriteButton } from "../../_components/favorites";
 import { Gallery } from "../../_components/gallery";
 import { IconBack, IconPhone, IconWhatsapp } from "../../_components/icons";
@@ -45,12 +46,15 @@ export default async function WebProperty({ params }: Props) {
     .filter((group) => group !== ownGroup && group.lead.operation === property.operation && group.lead.type === property.type)
     .slice(0, 3);
 
+  // Los cuatro datos que más se buscan van grandes arriba; el resto, en la lista.
+  const highlights = [
+    property.surface ? { label: "m² totales", value: Math.round(property.surface) } : null,
+    property.rooms ? { label: property.rooms === 1 ? "Ambiente" : "Ambientes", value: property.rooms } : null,
+    property.bedrooms ? { label: property.bedrooms === 1 ? "Dormitorio" : "Dormitorios", value: property.bedrooms } : null,
+    property.bathrooms ? { label: property.bathrooms === 1 ? "Baño" : "Baños", value: property.bathrooms } : null,
+  ].filter((item): item is { label: string; value: number } => item !== null);
   const facts = [
-    property.surface ? { label: "Superficie total", value: `${Math.round(property.surface)} m²` } : null,
     property.roofedSurface ? { label: "Cubierta", value: `${Math.round(property.roofedSurface)} m²` } : null,
-    property.rooms ? { label: "Ambientes", value: String(property.rooms) } : null,
-    property.bedrooms ? { label: "Dormitorios", value: String(property.bedrooms) } : null,
-    property.bathrooms ? { label: "Baños", value: String(property.bathrooms) } : null,
     property.parking ? { label: "Cocheras", value: String(property.parking) } : null,
     property.age !== null && property.age >= 0 ? { label: "Antigüedad", value: property.age === 0 ? "A estrenar" : `${property.age} años` } : null,
     property.orientation ? { label: "Orientación", value: property.orientation } : null,
@@ -84,6 +88,13 @@ export default async function WebProperty({ params }: Props) {
               <h1>{property.address}</h1>
               <p>{property.type} en {OPERATION_LABEL[property.operation].toLowerCase()} en {property.zone}</p>
               <p className="jw-detail-price">{formatPrice(property.price, property.currency)}</p>
+              {highlights.length > 0 && (
+                <dl className="jw-highlights">
+                  {highlights.map((item) => (
+                    <div key={item.label}><dt>{item.label}</dt><dd><CountUp value={item.value} /></dd></div>
+                  ))}
+                </dl>
+              )}
             </header>
 
             {facts.length > 0 && (

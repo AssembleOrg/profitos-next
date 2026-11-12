@@ -4,6 +4,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useTransition } from "react";
 import { SelectField } from "@/components/ui/select-field";
 import { DateField } from "../../_components/date-field";
+import { FilterBar, FilterChip } from "../../_components/filter-bar";
 
 const TABS = [
   ["resumen", "Resumen"],
@@ -45,11 +46,12 @@ export function InsightsFilters({ options, active }: { options: Options; active:
   const custom = Boolean(params.get("desde"));
   const days = custom ? "" : params.get("dias") ?? "30";
   const filterCount = ["dispositivo", "canal", "persona", "op", "tipo", "zona"].filter((key) => params.get(key)).length;
+  const clearFilters = () => update({ dispositivo: undefined, canal: undefined, persona: undefined, op: undefined, tipo: undefined, zona: undefined });
   const exportHref = `${pathname}/exportar?${new URLSearchParams({ ...Object.fromEntries(params.entries()), tab: active }).toString()}`;
 
   return (
     <div className="flex flex-col gap-3" data-pending={pending} style={{ opacity: pending ? 0.6 : 1, transition: "opacity 200ms" }}>
-      <nav className="-mx-4 flex gap-1 overflow-x-auto px-4 md:mx-0 md:px-0" aria-label="Secciones">
+      <nav className="-mx-5 flex gap-1 overflow-x-auto px-5 [scrollbar-width:none] md:mx-0 md:px-0" aria-label="Secciones">
         {TABS.map(([key, label]) => (
           <button
             key={key}
@@ -63,30 +65,25 @@ export function InsightsFilters({ options, active }: { options: Options; active:
         ))}
       </nav>
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-3 md:p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex overflow-x-auto rounded-xl bg-bg p-1" role="group" aria-label="Período">
+      <FilterBar
+        activeCount={filterCount}
+        onClear={clearFilters}
+        chips={
+          <>
             {PERIODS.map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={days === value}
-                onClick={() => update({ dias: value === "30" ? undefined : value, desde: undefined, hasta: undefined })}
-                className={`min-h-9 whitespace-nowrap rounded-lg px-3 text-[13px] ${days === value ? "bg-surface font-semibold text-text shadow-sm" : "text-text-muted"}`}
-              >
+              <FilterChip key={value} active={days === value} onClick={() => update({ dias: value === "30" ? undefined : value, desde: undefined, hasta: undefined })}>
                 {label}
-              </button>
+              </FilterChip>
             ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <DateField value={params.get("desde") ?? ""} onChange={(value: string) => update({ desde: value || undefined, dias: undefined })} placeholder="Desde" className="w-36" />
-            <DateField value={params.get("hasta") ?? ""} onChange={(value: string) => update({ hasta: value || undefined, dias: undefined })} placeholder="Hasta" className="w-36" />
-          </div>
-          <a href={exportHref} className="ml-auto inline-flex min-h-10 items-center rounded-xl border border-border-strong px-3 text-[13px] font-medium text-text hover:bg-surface-elevated">
-            Exportar CSV
-          </a>
-        </div>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+            <a href={exportHref} className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full border border-border bg-surface px-3.5 text-[12.5px] font-semibold text-text-muted hover:text-text lg:ml-auto">
+              Exportar CSV
+            </a>
+          </>
+        }
+        fields={
+          <>
+          <DateField value={params.get("desde") ?? ""} onChange={(value: string) => update({ desde: value || undefined, dias: undefined })} placeholder="Desde" />
+          <DateField value={params.get("hasta") ?? ""} onChange={(value: string) => update({ hasta: value || undefined, dias: undefined })} placeholder="Hasta" />
           <SelectField aria-label="Personas" value={params.get("persona") ?? ""} onChange={(event) => update({ persona: event.target.value || undefined })}>
             <option value="">Todas las personas</option>
             <option value="registrados">Registradas</option>
@@ -112,13 +109,14 @@ export function InsightsFilters({ options, active }: { options: Options; active:
             <option value="">Toda zona</option>
             {options.zones.map((value) => <option key={value} value={value}>{value}</option>)}
           </SelectField>
-        </div>
-        {filterCount > 0 && (
-          <button type="button" className="self-start text-[13px] font-medium text-text underline underline-offset-2" onClick={() => update({ dispositivo: undefined, canal: undefined, persona: undefined, op: undefined, tipo: undefined, zona: undefined })}>
-            Limpiar {filterCount} {filterCount === 1 ? "filtro" : "filtros"}
-          </button>
-        )}
-      </div>
+          {filterCount > 0 && (
+            <button type="button" className="hidden h-11 self-center justify-self-start text-[13px] font-medium text-text underline underline-offset-2 lg:block" onClick={clearFilters}>
+              Limpiar {filterCount} {filterCount === 1 ? "filtro" : "filtros"}
+            </button>
+          )}
+          </>
+        }
+      />
     </div>
   );
 }

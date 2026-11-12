@@ -21,9 +21,9 @@ function Delta({ now, before, invert }: { now: number; before: number; invert?: 
 
 function Tile({ label, value, now, before, hint }: { label: string; value: string; now: number; before: number; hint?: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-surface p-4" title={hint}>
+    <div className="min-w-0 rounded-2xl border border-border bg-surface p-3.5 md:p-4" title={hint}>
       <p className="text-[12.5px] text-text-muted">{label}</p>
-      <p className="mt-1 font-display text-[26px] font-bold leading-tight tabular-nums text-text">{value}</p>
+      <p className="mt-1 font-display text-[22px] font-bold leading-tight tabular-nums text-text md:text-[26px]">{value}</p>
       <Delta now={now} before={before} />
     </div>
   );
@@ -47,7 +47,7 @@ export function OverviewTab({ data, rangeDays }: { data: Data; rangeDays: number
   const { current, previous, points, previousPoints, steps } = data;
   const first = steps[0]?.people ?? 0;
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 md:gap-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {tiles(current, previous).map((tile) => <Tile key={tile.label} {...tile} />)}
       </div>

@@ -10,7 +10,8 @@ const RENEWAL_DAYS = 60;
 
 function moneyText(value: Money, fallback = "$ 0"): string {
   const parts = CURRENCIES.filter((c) => value[c] !== 0).map((c) => formatMoney(value[c], c));
-  return parts.length > 0 ? parts.join(" + ") : fallback;
+  // " · " y no " + ": pesos y dólares no se suman (ver DESIGN.md, Patrón de vista).
+  return parts.length > 0 ? parts.join(" · ") : fallback;
 }
 
 /**
@@ -60,7 +61,7 @@ export async function PanoramaCard() {
   const banco = cash?.funds.find((f) => f.key === "banco") ?? null;
 
   return (
-    <section className="flex flex-col gap-4 rounded-[20px] border border-border bg-surface p-4 md:p-5">
+    <section className="flex flex-col gap-4 rounded-[20px] border border-border bg-surface p-3.5 md:p-5">
       <header className="flex items-center justify-between gap-2">
         <h3 className="font-display text-base font-semibold text-text">Panorama</h3>
         {showMoney && (
@@ -73,23 +74,23 @@ export async function PanoramaCard() {
       {cash && caja && (
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
           <Tile label="En la caja" href="/estados-cuenta/caja" dark>
-            <span className="font-display text-lg font-bold tabular-nums">{formatMoney(caja.ARS, "ARS")}</span>
-            {caja.USD !== 0 && <span className="font-display text-sm font-bold tabular-nums">{formatMoney(caja.USD, "USD")}</span>}
+            <span className="truncate font-display text-base font-bold tabular-nums md:text-lg" title={formatMoney(caja.ARS, "ARS")}>{formatMoney(caja.ARS, "ARS")}</span>
+            {caja.USD !== 0 && <span className="truncate font-display text-sm font-bold tabular-nums" title={formatMoney(caja.USD, "USD")}>{formatMoney(caja.USD, "USD")}</span>}
             {(cash.ownerPendingInCaja.ARS !== 0 || cash.ownerPendingInCaja.USD !== 0) && (
               <span className="text-[11px] text-dark-fg/70">De propietarios: {moneyText(cash.ownerPendingInCaja)}</span>
             )}
           </Tile>
           <Tile label="A cobrar" href="/estados-cuenta/caja">
-            <span className="font-display text-base font-bold tabular-nums text-warning">{moneyText(cash.receivableTotal)}</span>
+            <span className="font-display text-base font-bold tabular-nums text-warning [overflow-wrap:anywhere]">{moneyText(cash.receivableTotal)}</span>
             {(cash.receivableOverdue.ARS !== 0 || cash.receivableOverdue.USD !== 0) && (
               <span className="text-[11px] font-semibold text-terra">Vencido {moneyText(cash.receivableOverdue)}</span>
             )}
           </Tile>
           <Tile label="A pagar" href="/estados-cuenta/caja">
-            <span className="font-display text-base font-bold tabular-nums text-terra">{moneyText(cash.payableTotal)}</span>
+            <span className="font-display text-base font-bold tabular-nums text-terra [overflow-wrap:anywhere]">{moneyText(cash.payableTotal)}</span>
           </Tile>
           <Tile label="Propietarios sin retirar" href="/estados-cuenta/caja">
-            <span className="font-display text-base font-bold tabular-nums text-text">{moneyText(cash.ownerPendingTotal)}</span>
+            <span className="font-display text-base font-bold tabular-nums text-text [overflow-wrap:anywhere]">{moneyText(cash.ownerPendingTotal)}</span>
           </Tile>
         </div>
       )}
@@ -172,7 +173,7 @@ function Tile({
   return (
     <Link
       href={href}
-      className={`flex min-w-0 flex-col gap-0.5 rounded-[14px] px-3.5 py-3 transition-opacity hover:opacity-90 ${
+      className={`flex min-w-0 flex-col gap-0.5 rounded-[14px] px-3 py-3 transition-opacity md:px-3.5 hover:opacity-90 ${
         dark ? "bg-dark text-dark-fg" : "bg-bg"
       }`}
     >

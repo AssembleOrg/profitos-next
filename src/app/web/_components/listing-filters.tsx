@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { IconClose, IconFilters } from "./icons";
 import { Select, type SelectOption } from "./select";
 import { Sheet } from "./sheet";
@@ -44,6 +44,8 @@ function withCounts(all: string, entries: [string, number][]): SelectOption[] {
 export function ListingFilters({ values, types, zones }: { values: FilterValues; types: [string, number][]; zones: [string, number][] }) {
   const router = useRouter();
   const pathname = usePathname();
+  // Al filtrar se queda en la vista elegida (lista o mapa).
+  const view = useSearchParams().get("vista");
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -52,6 +54,7 @@ export function ListingFilters({ values, types, zones }: { values: FilterValues;
     for (const [key, value] of Object.entries(next)) {
       if (value && key !== "pag") params.set(key, value);
     }
+    if (view) params.set("vista", view);
     const query = params.toString();
     startTransition(() => router.push(query ? `${pathname}?${query}` : pathname, { scroll: false }));
   }

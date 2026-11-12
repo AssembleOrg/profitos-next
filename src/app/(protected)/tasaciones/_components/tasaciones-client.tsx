@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 import { Spinner } from "../../_components/spinner";
 import { Sheet } from "../../_components/sheet";
+import { PageHeader, headerPrimary } from "../../_components/page-header";
 import { formatDate } from "@/lib/datetime";
 import { changeMark } from "@/lib/motion";
 
@@ -149,26 +150,23 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Tasaciones</h1>
-          <p className="text-[12.5px] text-text-faint">
-            {total} tasaci{total !== 1 ? "ones" : "ón"} registrada{total !== 1 ? "s" : ""}
-          </p>
-        </div>
+    <div className="flex flex-col gap-3 md:gap-5">
+      <PageHeader
+        title="Tasaciones"
+        subtitle={`${total} tasaci${total !== 1 ? "ones" : "ón"} registrada${total !== 1 ? "s" : ""}`}
+        actions={
         <button
           onClick={() => setCreateOpen(true)}
-          className="inline-flex h-11 items-center gap-2 self-start rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 sm:self-auto"
+          className={headerPrimary}
         >
           <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          Nueva tasación
+          Nueva<span className="hidden sm:inline"> tasación</span>
         </button>
-      </div>
+        }
+      />
 
       {/* Filters — mobile: barra compacta + Sheet */}
       <div className="flex gap-2 sm:hidden">
@@ -234,7 +232,7 @@ export function TasacionesClient({ items, page, totalPages, total, limit, isAdmi
           items.map((t) => {
             const sc = STATUS_CONFIG[t.status] ?? { label: t.status, pill: "bg-bg text-text-faint" };
             return (
-              <Link key={t.id} href={`/tasaciones/${t.id}`}>
+              <Link key={t.id} href={`/tasaciones/${t.id}`} className="block">
                 <motion.div
                   // motion.div: framer congela el ref externo → sólo marca tasaciones nuevas.
                   ref={changeMark(t.id)}

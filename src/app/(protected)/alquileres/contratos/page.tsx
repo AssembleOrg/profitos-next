@@ -23,7 +23,7 @@ export default async function ContratosPage({ searchParams }: Readonly<Props>) {
   ]);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-3 md:gap-5">
       <RentalsHeader
         tab="contratos"
         pendingProofs={pendingProofs}

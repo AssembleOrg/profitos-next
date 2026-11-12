@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatRelative } from "@/lib/datetime";
 import { Sheet } from "../../../_components/sheet";
+import { headerAction } from "../../../_components/page-header";
 import { SelectField } from "@/components/ui/select-field";
 import { PLAN_LABEL, PORTAL_LABEL, STATUS_LABEL, hasAlert, hasError } from "@/lib/publish/difusion-parse";
 import type { DifusionListing, DifusionPortal, DifusionUnlisted } from "@/lib/publish/difusion-view";
@@ -186,17 +187,17 @@ export function DifusionClient({ portals, listings, unlisted }: Readonly<Props>)
   const count = view === "sin-aviso" ? filteredUnlisted.length : filtered.length;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3 md:gap-5">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Difusión</h1>
+        <div className="min-w-0">
+          <h1 className="font-display text-[22px] font-semibold leading-tight text-text sm:text-[26px] md:text-[28px]">Difusión</h1>
           <p className="text-sm text-text-muted">Cómo están tus avisos en cada portal: qué salió, qué tiene errores y qué conviene revisar.</p>
         </div>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border border-border bg-surface px-4 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg disabled:opacity-50"
+          className={`${headerAction} self-start disabled:opacity-50 sm:self-auto`}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={refreshing ? "animate-spin" : ""}>
             <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
@@ -216,7 +217,7 @@ export function DifusionClient({ portals, listings, unlisted }: Readonly<Props>)
       {/* Filtros */}
       <div id="difusion-lista" className="flex scroll-mt-4 flex-col gap-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex min-w-0 flex-wrap gap-2">
             <Segmented
               value={portal}
               onChange={setPortal}
@@ -224,7 +225,7 @@ export function DifusionClient({ portals, listings, unlisted }: Readonly<Props>)
             />
             <Segmented value={view} onChange={(v) => setView(v as View)} options={VIEWS} />
           </div>
-          <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+          <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto lg:shrink-0">
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -478,7 +479,7 @@ function ModalRow({
 
 function Segmented({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: { key: string; label: string }[] }) {
   return (
-    <div className="flex gap-1 overflow-x-auto rounded-full border border-border bg-surface p-1">
+    <div className="flex max-w-full gap-1 overflow-x-auto rounded-full border border-border bg-surface p-1 [scrollbar-width:none]">
       {options.map((o) => (
         <button
           key={o.key}
@@ -505,7 +506,7 @@ function PortalCard({ p, onPick }: { p: DifusionPortal; onPick: (portal: string,
   const neverSynced = p.portal !== "mercadolibre" && !p.syncedAt;
 
   return (
-    <section className="flex flex-col gap-3 rounded-[18px] border border-border bg-surface p-4">
+    <section className="flex flex-col gap-3 rounded-[18px] border border-border bg-surface p-3.5 md:p-4">
       <header className="flex items-baseline justify-between gap-2">
         <h2 className="font-display text-base font-semibold text-text">{PORTAL_LABEL[p.portal] ?? p.portal}</h2>
         <span className="text-[11.5px] text-text-faint">
@@ -550,7 +551,7 @@ function PortalCard({ p, onPick }: { p: DifusionPortal; onPick: (portal: string,
             {s.calidadPromedio !== null && <li>Calidad promedio de los avisos: <b className="text-text">{s.calidadPromedio}%</b></li>}
             {s.sugerencias > 0 && (
               <li>
-                <button onClick={() => onPick(p.portal, "sugerencias")} className="underline decoration-border-strong underline-offset-2 hover:text-text">
+                <button onClick={() => onPick(p.portal, "sugerencias")} className="text-left underline decoration-border-strong underline-offset-2 hover:text-text">
                   {plural(s.sugerencias, "aviso", "avisos")} con sugerencias para mejorar
                 </button>
               </li>
@@ -559,7 +560,7 @@ function PortalCard({ p, onPick }: { p: DifusionPortal; onPick: (portal: string,
             {denuncias !== null && denuncias > 0 && <li><b className="text-terra">{plural(denuncias, "denuncia", "denuncias")}</b> de usuarios</li>}
             {p.portal === "argenprop" && <li>ArgenProp no informa calidad ni alertas por aviso.</li>}
             <li>
-              <button onClick={() => onPick(p.portal, "sin-aviso")} className="underline decoration-border-strong underline-offset-2 hover:text-text">
+              <button onClick={() => onPick(p.portal, "sin-aviso")} className="text-left underline decoration-border-strong underline-offset-2 hover:text-text">
                 {plural(p.sinAviso, "propiedad", "propiedades")} publicada{p.sinAviso === 1 ? "" : "s"} en otro portal y acá no
               </button>
             </li>
@@ -612,7 +613,7 @@ function ListingRow({ l, showPortal, addressById }: { l: DifusionListing; showPo
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="truncate text-sm font-bold text-text">{address}</span>
+          <span className="min-w-0 max-w-full truncate text-sm font-bold text-text">{address}</span>
           {l.code && <span className="text-[11.5px] text-text-faint">{l.code}</span>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -658,11 +659,11 @@ function UnlistedList({ items }: { items: DifusionUnlisted[] }) {
     <ul className="flex flex-col gap-2">
       {items.slice(0, 300).map((u) => (
         <li key={u.id} className="flex flex-col gap-1 rounded-[18px] border border-border bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <Link href={fichaHref(u)} prefetch={false} className="truncate text-sm font-bold text-text hover:underline">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <Link href={fichaHref(u)} prefetch={false} className="min-w-0 truncate text-sm font-bold text-text hover:underline">
               {u.address}
             </Link>
-            {u.referenceCode && <span className="ml-2 text-[11.5px] text-text-faint">{u.referenceCode}</span>}
+            {u.referenceCode && <span className="shrink-0 text-[11.5px] text-text-faint">{u.referenceCode}</span>}
           </div>
           <span className="text-xs text-text-muted">Sin aviso en {u.missing.map((m) => PORTAL_LABEL[m] ?? m).join(", ")}</span>
         </li>

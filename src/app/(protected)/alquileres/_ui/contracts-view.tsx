@@ -110,7 +110,7 @@ export function ContractsView({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 md:gap-4">
       {dialog}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div role="radiogroup" aria-label="Filtrar contratos" className="-mx-5 flex gap-1.5 overflow-x-auto px-5 lg:mx-0 lg:px-0">
@@ -256,12 +256,12 @@ export function ContractsView({
                     <ContractPill status={r.status} />
                   </div>
                   <div className="mt-2.5 flex items-end justify-between gap-3">
-                    <div>
-                      <p className="font-display text-[18px] font-bold tabular-nums text-text">{money(r.baseAmount, r.currency)}</p>
-                      <p className="text-[11.5px] text-text-faint">{adjustText(r)}</p>
+                    <div className="min-w-0">
+                      <p className="truncate font-display text-[18px] font-bold tabular-nums text-text" title={money(r.baseAmount, r.currency)}>{money(r.baseAmount, r.currency)}</p>
+                      <p className="truncate text-[11.5px] text-text-faint">{adjustText(r)}</p>
                     </div>
                     {r.nextDue && (
-                      <div className="text-right">
+                      <div className="shrink-0 text-right">
                         <DuePill status={r.nextDue.status} />
                         <p className="mt-0.5 text-[11.5px] tabular-nums text-text-faint">{dateAR(r.nextDue.date)}</p>
                       </div>

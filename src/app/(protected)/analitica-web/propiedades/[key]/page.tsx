@@ -20,10 +20,10 @@ export default async function PropertyInsightsPage({ params, searchParams }: { p
   const back = new URLSearchParams({ ...(filters as Record<string, string>), tab: "propiedades" }).toString();
 
   return (
-    <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 pb-24 pt-4 md:px-6">
+    <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-3 md:gap-4">
       <Link href={`/analitica-web?${back}`} className="min-h-11 self-start py-2 text-[13.5px] font-medium text-text-muted hover:text-text">← Propiedades</Link>
       <header>
-        <h1 className="font-display text-[26px] font-semibold text-text">{address}</h1>
+        <h1 className="font-display text-[22px] font-semibold leading-tight text-text [overflow-wrap:anywhere] sm:text-[26px]">{address}</h1>
         <p className="mt-1 text-[13.5px] text-text-muted">{subtitle ? `${subtitle} · ` : ""}del {range.label} · <a href={`${WEB_BASE}/p/${encodeURIComponent(key)}-ficha`} target="_blank" rel="noreferrer" className="underline underline-offset-2">Ver ficha</a></p>
       </header>
       <Panel title="Quién la miró" subtitle={`${viewers.length} ${viewers.length === 1 ? "persona" : "personas"}, de quien más tiempo le dedicó a quien menos`}>

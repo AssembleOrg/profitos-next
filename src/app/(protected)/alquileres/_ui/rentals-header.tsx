@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { headerPrimary } from "../../_components/page-header";
 import { IconPlus } from "./icons";
 
 export type RentalsTab = "agenda" | "contratos" | "recibos" | "comprobantes";
@@ -27,16 +28,16 @@ export function RentalsHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="flex flex-col gap-4">
+    <header className="flex flex-col gap-3 md:gap-4">
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-display text-[26px] font-semibold leading-tight text-text md:text-[28px]">Alquileres</h1>
-          {subtitle && <p className="mt-0.5 text-[12.5px] text-text-faint">{subtitle}</p>}
+          <h1 className="font-display text-[22px] font-semibold leading-tight text-text sm:text-[26px] md:text-[28px]">Alquileres</h1>
+          {subtitle && <p className="mt-0.5 line-clamp-2 text-[12.5px] text-text-faint">{subtitle}</p>}
         </div>
         {action ?? (
           <Link
             href="/alquileres/contratos/nuevo"
-            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-dark px-4 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:h-11 md:px-5 md:text-[13.5px]"
+            className={`${headerPrimary} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent`}
           >
             <IconPlus size={16} className="text-accent" />
             <span className="hidden sm:inline">Nuevo contrato</span>

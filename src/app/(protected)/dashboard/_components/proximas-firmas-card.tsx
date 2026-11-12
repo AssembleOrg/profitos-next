@@ -44,9 +44,9 @@ export async function ProximasFirmasCard({
   const upcoming = buildUpcomingActions(proposals, { daysAhead, daysPast, limit });
 
   return (
-    <section className="flex flex-col rounded-[20px] border border-border bg-surface p-4 md:p-5">
-      <header className="flex items-center justify-between">
-        <div>
+    <section className="flex flex-col rounded-[20px] border border-border bg-surface p-3.5 md:p-5">
+      <header className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <h3 className="font-display text-base font-semibold text-text">
             Próximas firmas
           </h3>

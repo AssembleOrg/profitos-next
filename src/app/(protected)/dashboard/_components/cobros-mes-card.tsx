@@ -79,9 +79,9 @@ export async function CobrosMesCard({
   const monthPending = Math.max(0, monthExpected - monthCollected);
 
   return (
-    <section className="flex flex-col rounded-[20px] border border-border bg-surface p-4 md:p-5">
-      <header className="flex items-center justify-between">
-        <div>
+    <section className="flex flex-col rounded-[20px] border border-border bg-surface p-3.5 md:p-5">
+      <header className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <h3 className="font-display text-base font-semibold text-text">
             Cobros del mes
           </h3>
@@ -138,7 +138,7 @@ export async function CobrosMesCard({
                     {d.contract.tenant.fullName} · {formatDate(d.dueDate)} · {RENTAL_DUE_STATUS_LABEL[effective]}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-0.5 text-right">
+                <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
                   <span className="font-display text-xs font-bold text-text">{formatARS(pending)}</span>
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${effective === "vencido" ? "bg-clay-chip text-terra" : daysAway <= 1 ? "bg-sand-chip text-warning" : "bg-surface text-text-faint"}`}
@@ -158,9 +158,9 @@ export async function CobrosMesCard({
 function MonthStat({ label, value, tone }: { label: string; value: string; tone?: "emerald" | "amber" }) {
   const v = tone === "emerald" ? "text-olive-light" : tone === "amber" ? "text-warning" : "text-text";
   return (
-    <div className="flex flex-col gap-0.5 rounded-[14px] bg-bg p-2.5">
-      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">{label}</span>
-      <span className={`font-display text-sm font-bold ${v}`}>{value}</span>
+    <div className="flex min-w-0 flex-col gap-0.5 rounded-[14px] bg-bg p-2.5">
+      <span className="truncate text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">{label}</span>
+      <span className={`truncate font-display text-sm font-bold tabular-nums ${v}`} title={value}>{value}</span>
     </div>
   );
 }

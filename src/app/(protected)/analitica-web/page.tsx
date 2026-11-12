@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentAccess } from "@/lib/auth/access";
 import { getFilterOptions, getOverview, getPeople, getProperties, getQuality, getSearches, resolveRange, type InsightFilters } from "@/lib/web/server/insights";
+import { PageHeader } from "../_components/page-header";
 import { InsightsFilters } from "./_components/insights-filters";
 import { OverviewTab } from "./_components/overview-tab";
 import { PeopleTab } from "./_components/people-tab";
@@ -35,11 +36,8 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
   const options = await getFilterOptions();
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-5 px-4 pb-24 pt-4 md:px-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-[26px] font-semibold text-text">Analítica web</h1>
-        <p className="text-[13.5px] text-text-muted">Lo que pasa en la web pública, del {range.label}. Sin bots ni personas del equipo.</p>
-      </header>
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-3 md:gap-5">
+      <PageHeader title="Analítica web" subtitle={<>Lo que pasa en la web pública, del {range.label}. Sin bots ni personas del equipo.</>} />
       <InsightsFilters options={options} active={tab} />
       {tab === "resumen" && <OverviewTab data={await getOverview(filters, range)} rangeDays={range.days} />}
       {tab === "propiedades" && <PropertiesTab rows={await getProperties(filters, range)} />}

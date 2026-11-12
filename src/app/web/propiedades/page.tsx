@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { catalogOptions, filterCatalog, getCatalog, groupUnits, sortCatalog } from "@/lib/web/catalog";
 import { WEB_BASE } from "@/lib/web/format";
+import { CountUp } from "../_components/count-up";
 import { ListingFilters } from "../_components/listing-filters";
+import { ListingMap, type MapPin } from "../_components/listing-map";
 import { PropertyCard } from "../_components/property-card";
 import { TrackSearch } from "../_components/track-search";
 
@@ -44,6 +46,29 @@ export default async function WebListing({ searchParams }: { searchParams: Searc
   const pages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE));
   const visible = groups.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  const onMap = params.vista === "mapa";
+  const viewHref = (map: boolean) => {
+    const query = new URLSearchParams(values as Record<string, string>);
+    if (map) query.set("vista", "mapa");
+    const text = query.toString();
+    return `${WEB_BASE}/propiedades${text ? `?${text}` : ""}`;
+  };
+  // En el mapa van todas (sin paginar). Las que no tienen coordenada se listan abajo.
+  const pins: MapPin[] = groups
+    .filter((group) => group.lead.lat != null && group.lead.lng != null)
+    .map((group) => ({
+      key: group.lead.key,
+      href: group.lead.href,
+      title: group.title,
+      meta: `${group.lead.type} en ${group.lead.zone}`,
+      price: group.lead.price,
+      fromPrice: group.units > 1 ? group.fromPrice : null,
+      currency: group.lead.currency,
+      cover: group.lead.cover,
+      lat: group.lead.lat as number,
+      lng: group.lead.lng as number,
+    }));
+  const unplaced = groups.filter((group) => group.lead.lat == null || group.lead.lng == null);
   const pageHref = (target: number) => {
     const query = new URLSearchParams(values as Record<string, string>);
     if (target > 1) query.set("pag", String(target));
@@ -55,11 +80,25 @@ export default async function WebListing({ searchParams }: { searchParams: Searc
     <div className="jw-listing jw-wrap">
       <div className="jw-listing-head">
         <h1>{heading(values)}</h1>
-        <p aria-live="polite">{results.length} {results.length === 1 ? "resultado" : "resultados"}</p>
+        <p aria-live="polite"><CountUp value={results.length} /> {results.length === 1 ? "resultado" : "resultados"}</p>
+        <nav className="jw-seg jw-view" aria-label="Ver como">
+          <Link href={viewHref(false)} aria-current={onMap ? undefined : "page"} scroll={false}>Lista</Link>
+          <Link href={viewHref(true)} aria-current={onMap ? "page" : undefined} scroll={false}>Mapa</Link>
+        </nav>
       </div>
       <TrackSearch values={values} results={results.length} />
       <ListingFilters values={values} types={options.types} zones={options.zones} />
-      {visible.length > 0 ? (
+      {onMap && groups.length > 0 ? (
+        <>
+          <ListingMap pins={pins} />
+          {unplaced.length > 0 && (
+            <section className="jw-section">
+              <div className="jw-section-head"><h2>Sin ubicación en el mapa</h2></div>
+              <div className="jw-grid">{unplaced.map((group) => <PropertyCard key={group.lead.id} group={group} hideTag={Boolean(values.op)} />)}</div>
+            </section>
+          )}
+        </>
+      ) : visible.length > 0 ? (
         <div className="jw-grid">
           {visible.map((group, index) => <PropertyCard key={group.lead.id} group={group} priority={index < 3} hideTag={Boolean(values.op)} />)}
         </div>
@@ -70,7 +109,7 @@ export default async function WebListing({ searchParams }: { searchParams: Searc
           <Link className="jw-btn jw-btn-primary" href={`${WEB_BASE}/propiedades`}>Ver todas las propiedades</Link>
         </div>
       )}
-      {pages > 1 && (
+      {!onMap && pages > 1 && (
         <nav className="jw-pages" aria-label="Páginas">
           {page > 1 && <Link href={pageHref(page - 1)}>Anterior</Link>}
           <span>Página {page} de {pages}</span>

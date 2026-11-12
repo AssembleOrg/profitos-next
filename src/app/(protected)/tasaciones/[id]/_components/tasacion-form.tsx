@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { headerAction, headerPrimary } from "../../../_components/page-header";
 import { PriceTableEditor } from "./price-table-editor";
 import { ImageUploader, MultiImageUploader } from "./image-uploader";
 
@@ -108,10 +109,10 @@ export function TasacionForm({ tasacion }: Props) {
   }, [direccion, ubicacionUnidad, superficieTotal, superficieMono, condicionVenta, mapaImageUrl, fotos, informeHtml, resultadoHtml, listaPreciosTitulo, tablas, tasacion.id, router]);
 
   return (
-    <div className="mx-auto max-w-5xl min-w-0 space-y-5 overflow-hidden">
+    <div className="mx-auto max-w-5xl min-w-0 space-y-3 overflow-hidden md:space-y-5">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <Link
             href="/tasaciones"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-text-muted transition-colors hover:bg-bg hover:text-text"
@@ -120,30 +121,30 @@ export function TasacionForm({ tasacion }: Props) {
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </Link>
-          <div>
-            <h1 className="font-display text-lg font-semibold text-text">{direccion || "Nueva tasación"}</h1>
+          <div className="min-w-0">
+            <h1 className="break-words font-display text-lg font-semibold text-text">{direccion || "Nueva tasación"}</h1>
             <p className="text-[11.5px] text-text-faint">Editando tasación</p>
           </div>
         </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+        <div className="flex items-center gap-2 sm:shrink-0">
           <button
             onClick={() => handleSave(false)}
             disabled={saving}
-            className="flex h-11 w-full items-center justify-center rounded-full border border-border bg-surface px-4 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg disabled:opacity-50 sm:w-auto"
+            className={`${headerAction} disabled:opacity-50`}
           >
             {saving ? "Guardando..." : "Guardar"}
           </button>
           <button
             onClick={() => handleSave(true)}
             disabled={saving}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-50 sm:w-auto"
+            className={`${headerPrimary} disabled:opacity-50`}
           >
             <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            Guardar y generar PDF
+            Guardar<span className="hidden sm:inline"> y generar</span> PDF
           </button>
         </div>
       </div>
@@ -272,7 +273,7 @@ export function TasacionForm({ tasacion }: Props) {
               value={listaPreciosTitulo?.replace(/^Lista de Precios\s*-\s*/i, "") ?? ""}
               onChange={(e) => setListaPreciosTitulo(`Lista de Precios - ${e.target.value}`)}
               placeholder="San Martin 870"
-              className="flex-1 bg-transparent px-1 py-2.5 text-sm text-text placeholder:text-text-faint focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent px-1 py-2.5 text-sm text-text placeholder:text-text-faint focus:outline-none"
             />
           </div>
         </div>

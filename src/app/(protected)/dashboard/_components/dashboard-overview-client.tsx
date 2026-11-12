@@ -309,7 +309,7 @@ function TabbedFeed({ data }: { data: DashboardOverview }) {
   return (
     <div className="rounded-[20px] border border-border bg-surface overflow-hidden">
       {/* Tab bar — sub-tabs suaves V4 */}
-      <div className="relative mx-3 mt-3 flex w-fit max-w-full gap-0.5 rounded-full bg-bg p-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="relative mx-3 mt-3 flex w-fit max-w-[calc(100%-1.5rem)] gap-0.5 rounded-full bg-bg p-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((tab) => (
           <motion.button
             key={tab.key}

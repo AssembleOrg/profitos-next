@@ -11,6 +11,7 @@ type Photo = { src: string; thumb: string; alt: string };
 export function Gallery({ photos }: { photos: Photo[] }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const track = useRef<HTMLDivElement>(null);
+  const thumbs = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [start, setStart] = useState(0);
   const [index, setIndex] = useState(0);
@@ -33,6 +34,11 @@ export function Gallery({ photos }: { photos: Photo[] }) {
     element.addEventListener("scroll", onScroll, { passive: true });
     return () => element.removeEventListener("scroll", onScroll);
   }, [open, start]);
+
+  // La miniatura de la foto actual siempre a la vista en la tira.
+  useEffect(() => {
+    thumbs.current?.querySelector<HTMLElement>('[aria-current="true"]')?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [index, open]);
 
   function go(delta: number) {
     const element = track.current;
@@ -109,6 +115,21 @@ export function Gallery({ photos }: { photos: Photo[] }) {
                 </figure>
               ))}
             </div>
+            {photos.length > 1 && (
+              <div ref={thumbs} className="jw-lightbox-thumbs">
+                {photos.map((photo, position) => (
+                  <button
+                    key={photo.src}
+                    type="button"
+                    aria-label={`Ver foto ${position + 1}`}
+                    aria-current={position === index ? "true" : undefined}
+                    onClick={() => go(position - index)}
+                  >
+                    <Image src={photo.thumb} alt="" fill sizes="96px" />
+                  </button>
+                ))}
+              </div>
+            )}
             <button type="button" className="jw-lightbox-prev" onClick={() => go(-1)} disabled={index === 0} aria-label="Foto anterior"><IconBack /></button>
             <button type="button" className="jw-lightbox-next" onClick={() => go(1)} disabled={index === photos.length - 1} aria-label="Foto siguiente"><IconArrow /></button>
           </>

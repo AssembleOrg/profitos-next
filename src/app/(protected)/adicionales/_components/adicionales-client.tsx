@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { PageHeader, headerPrimary } from "../../_components/page-header";
 import { Sheet } from "../../_components/sheet";
 import { formatARS } from "@/lib/rentals";
 import { CurrencyInput } from "../../alquileres/_components/currency-input";
@@ -42,29 +43,27 @@ export function AdicionalesClient({ initialItems }: Readonly<AdicionalesClientPr
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Adicionales</h1>
-          <p className="mt-1 text-[12.5px] text-text-faint">
-            Catálogo de conceptos que se suman a las cuotas (expensas, ABL, wifi, services, etc.).
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            setEditing(null);
-            setOpen(true);
-          }}
-          className="inline-flex h-11 items-center gap-2 self-start rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 sm:self-auto"
-        >
-          <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          Nuevo adicional
-        </button>
-      </header>
+    <div className="flex flex-col gap-3 md:gap-5">
+      <PageHeader
+        title="Adicionales"
+        subtitle="Catálogo de conceptos que se suman a las cuotas (expensas, ABL, wifi, services, etc.)."
+        actions={
+          <button
+            type="button"
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+            className={headerPrimary}
+          >
+            <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Nuevo<span className="hidden sm:inline"> adicional</span>
+          </button>
+        }
+      />
 
       {items.length === 0 ? (
         <p className="rounded-[20px] bg-bg px-6 py-8 text-center text-[12.5px] text-text-faint">
@@ -80,11 +79,11 @@ export function AdicionalesClient({ initialItems }: Readonly<AdicionalesClientPr
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
-                className="flex flex-col gap-2 rounded-[20px] border border-border bg-surface p-4 md:p-5"
+                className="flex min-w-0 flex-col gap-2 rounded-[20px] border border-border bg-surface p-3.5 md:p-5"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-display text-base font-semibold text-text">{it.name}</h3>
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${it.contractsCount > 0 ? "bg-sage-chip text-olive-light" : "bg-bg text-text-faint"}`}>
+                  <h3 className="min-w-0 break-words font-display text-base font-semibold text-text">{it.name}</h3>
+                  <span className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold ${it.contractsCount > 0 ? "bg-sage-chip text-olive-light" : "bg-bg text-text-faint"}`}>
                     {it.contractsCount} en uso
                   </span>
                 </div>

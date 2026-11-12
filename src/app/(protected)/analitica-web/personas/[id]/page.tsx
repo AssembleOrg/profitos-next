@@ -44,12 +44,12 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   const { visitor, timeline, topProperties } = person;
 
   return (
-    <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 pb-24 pt-4 md:px-6">
+    <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-3 md:gap-4">
       <Link href="/analitica-web?tab=personas" className="min-h-11 self-start py-2 text-[13.5px] font-medium text-text-muted hover:text-text">← Personas</Link>
       <header>
-        <h1 className="font-display text-[26px] font-semibold text-text">{visitor?.name ?? visitor?.email ?? `Anónimo ${decodeURIComponent(id).slice(0, 6)}`}</h1>
+        <h1 className="font-display text-[22px] font-semibold leading-tight text-text [overflow-wrap:anywhere] sm:text-[26px]">{visitor?.name ?? visitor?.email ?? `Anónimo ${decodeURIComponent(id).slice(0, 6)}`}</h1>
         {visitor ? (
-          <p className="mt-1 flex flex-wrap gap-x-3 text-[13.5px] text-text-muted">
+          <p className="mt-1 flex flex-wrap gap-x-3 text-[13.5px] text-text-muted [overflow-wrap:anywhere]">
             <span>{visitor.email}</span>
             {visitor.phone ? <a className="font-medium text-text underline underline-offset-2" href={`https://wa.me/${visitor.phone}`} target="_blank" rel="noreferrer">{formatArgentinePhone(visitor.phone)}</a> : <span>Sin celular</span>}
             <span>{visitor.logins} {visitor.logins === 1 ? "ingreso" : "ingresos"}</span>

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Pagination } from "../../_components/pagination";
+import { PageHeader, headerPrimary } from "../../_components/page-header";
 import { SelectField } from "@/components/ui/select-field";
 import { FirmaCard } from "./firma-card";
 import { FirmaDetailModal } from "./firma-detail-modal";
@@ -108,19 +109,15 @@ export function FirmasClient({
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Header */}
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Estado de firmas</h1>
-          <p className="mt-1 text-[12.5px] text-text-faint">
-            Seguimiento del proceso de cierre de cada propiedad. Todo el equipo lo ve y lo edita.
-          </p>
-        </div>
+    <div className="flex flex-col gap-3 md:gap-5">
+      <PageHeader
+        title="Estado de firmas"
+        subtitle="Seguimiento del proceso de cierre de cada propiedad. Todo el equipo lo ve y lo edita."
+        actions={
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
-          className="inline-flex h-11 items-center gap-2 self-start rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 sm:self-auto"
+          className={headerPrimary}
         >
           <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" />
@@ -128,7 +125,8 @@ export function FirmasClient({
           </svg>
           Nueva propuesta
         </button>
-      </header>
+        }
+      />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -140,7 +138,7 @@ export function FirmasClient({
 
       {/* Filters */}
       <div
-        className={`flex flex-col gap-3 rounded-[20px] border border-border bg-surface p-4 transition-opacity sm:flex-row sm:items-end ${pending ? "opacity-70" : ""}`}
+        className={`flex flex-col gap-3 rounded-[20px] border border-border bg-surface p-3.5 transition-opacity sm:flex-row md:p-4 sm:items-end ${pending ? "opacity-70" : ""}`}
       >
         <label className="flex flex-1 flex-col gap-1.5">
           <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
@@ -242,7 +240,7 @@ function KPICard({
   bg,
 }: Readonly<{ label: string; value: string; hint: string; tone: string; bg: string }>) {
   return (
-    <div className={`flex flex-col gap-1 rounded-[18px] p-4 ${bg}`}>
+    <div className={`flex flex-col gap-1 rounded-[18px] p-3.5 md:p-4 ${bg}`}>
       <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">{label}</p>
       <p className={`font-display text-2xl font-bold leading-none md:text-3xl ${tone}`}>{value}</p>
       <p className="text-[11px] text-text-faint">{hint}</p>

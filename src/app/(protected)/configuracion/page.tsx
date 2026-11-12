@@ -2,6 +2,7 @@
 
 import { useRolePreview, type Role } from "../_components/role-preview-context";
 import { useAccess } from "../_components/access-context";
+import { PageHeader } from "../_components/page-header";
 import { AccessManager } from "./_components/access-manager";
 
 const OPTIONS: { value: Role | null; label: string; description: string }[] = [
@@ -14,15 +15,12 @@ export default function ConfiguracionPage() {
   const { isAdmin } = useAccess();
 
   return (
-    <div className="flex flex-col gap-6 py-2">
-      <section>
-        <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Configuración</h1>
-        <p className="mt-1 text-[12.5px] text-text-faint">Preferencias de tu cuenta.</p>
-      </section>
+    <div className="flex flex-col gap-3 py-2 md:gap-5">
+      <PageHeader title="Configuración" subtitle="Preferencias de tu cuenta." />
 
       {isAdmin && <AccessManager />}
 
-      <section className="rounded-[20px] border border-border bg-surface p-4 md:p-5">
+      <section className="rounded-[20px] border border-border bg-surface p-3.5 md:p-5">
         <header className="mb-3">
           <h2 className="font-display text-base font-semibold text-text">Vista previa de roles</h2>
           <p className="mt-1 text-xs text-text-muted">

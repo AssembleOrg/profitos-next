@@ -47,6 +47,8 @@ const SUMMARY_SELECT = {
   roofedSurface: true,
   surface: true,
   age: true,
+  geoLat: true,
+  geoLong: true,
   coverImageUrl: true,
   photos: true,
   referenceCode: true,
@@ -77,6 +79,9 @@ export type PublicSummary = {
   reference: string | null;
   starred: boolean;
   updatedAt: string;
+  /** Coordenada redondeada (~100 m): la ubicación exacta no se publica. */
+  lat: number | null;
+  lng: number | null;
 };
 
 type RawPhoto = {
@@ -136,6 +141,8 @@ type SummaryRow = {
   roofedSurface: number | null;
   surface: number | null;
   age: number | null;
+  geoLat: number | null;
+  geoLong: number | null;
   coverImageUrl: string | null;
   photos: unknown;
   referenceCode: string | null;
@@ -193,6 +200,7 @@ function toSummary(row: SummaryRow): PublicSummary | null {
     reference: cleanReference(row.referenceCode),
     starred: (row.rawPayload as { is_starred_on_web?: unknown } | null)?.is_starred_on_web === true,
     updatedAt: (row.externalUpdatedAt ?? row.updatedAt).toISOString(),
+    ...publicCoords(row.geoLat, row.geoLong),
   };
 }
 
@@ -334,6 +342,12 @@ export function catalogOptions(items: PublicSummary[]) {
 }
 
 /** El mapa público nunca recibe la coordenada exacta: se redondea a unos 100 m. */
+/** Fuera de Argentina es un error de carga (ej. el signo cambiado): mejor sin mapa que en otro país. */
+function publicCoords(lat: number | null, lng: number | null): { lat: number | null; lng: number | null } {
+  const valid = lat !== null && lng !== null && lat > -55.5 && lat < -21 && lng > -74 && lng < -53;
+  return valid ? { lat: approximate(lat), lng: approximate(lng) } : { lat: null, lng: null };
+}
+
 function approximate(value: number | null): number | null {
   return value === null ? null : Number(value.toFixed(3));
 }
@@ -347,8 +361,6 @@ export type PublicDetail = PublicSummary & {
   disposition: string | null;
   expenses: number | null;
   roofedSurface: number | null;
-  lat: number | null;
-  lng: number | null;
 };
 
 function youtubeId(url: string): string | null {
@@ -387,8 +399,6 @@ export async function getPropertyByKey(key: string): Promise<PublicDetail | null
       orientation: true,
       disposition: true,
       expenses: true,
-      geoLat: true,
-      geoLong: true,
     },
   });
   if (!row) return null;
@@ -410,7 +420,5 @@ export async function getPropertyByKey(key: string): Promise<PublicDetail | null
     disposition: row.disposition,
     expenses: row.expenses && row.expenses > 0 ? row.expenses : null,
     roofedSurface: row.roofedSurface && row.roofedSurface > 0 ? row.roofedSurface : null,
-    lat: approximate(row.geoLat),
-    lng: approximate(row.geoLong),
   };
 }

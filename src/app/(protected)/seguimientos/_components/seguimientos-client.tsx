@@ -9,6 +9,7 @@ import { TimePicker } from "@/components/ui/time-picker";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
+import { PageHeader, headerPrimary } from "../../_components/page-header";
 import { formatDate as formatDateLib, formatDateTime as formatDateTimeLib } from "@/lib/datetime";
 import { MediaUploader, AttachmentPreview, type NoteAttachment } from "@/components/notes/media-uploader";
 import { useNoteSignedUrls } from "@/components/notes/use-signed-urls";
@@ -515,17 +516,14 @@ export function SeguimientosClient({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Seguimientos</h1>
-          <p className="text-[12.5px] text-text-faint">
-            {total} seguimiento{total !== 1 ? "s" : ""}{hasFilters ? " (filtrados)" : ""}
-          </p>
-        </div>
-        {isAdmin && (
+      <PageHeader
+        title="Seguimientos"
+        subtitle={<>{total} seguimiento{total !== 1 ? "s" : ""}{hasFilters ? " (filtrados)" : ""}</>}
+        actions={
+          isAdmin && (
           <button
             onClick={() => setCreateOpen(true)}
-            className="inline-flex h-11 items-center gap-2 self-start rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 sm:self-auto"
+            className={headerPrimary}
           >
             <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19" />
@@ -533,8 +531,9 @@ export function SeguimientosClient({
             </svg>
             Nuevo seguimiento
           </button>
-        )}
-      </div>
+          )
+        }
+      />
 
       <div className={`flex flex-col gap-2.5 transition-opacity ${pending ? "opacity-70" : ""}`}>
         {counters}
@@ -556,19 +555,19 @@ export function SeguimientosClient({
               className="h-10 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             {isAdmin && (
-              <SelectField value={filterAssignee} onChange={(e) => pushFilter("assignee", e.target.value)} className="h-10 !rounded-full text-[12.5px]" wrapperClassName="w-auto">
+              <SelectField value={filterAssignee} onChange={(e) => pushFilter("assignee", e.target.value)} className="h-10 !rounded-full text-[12.5px]" wrapperClassName="min-w-0 flex-1 sm:w-auto sm:flex-none">
                 <option value="">Todos los vendedores</option>
                 {assignableUsers.map((u) => <option key={u.id} value={u.id}>{userLabel(u)}</option>)}
               </SelectField>
             )}
             <button type="button" onClick={() => pushFilter("vencidos", filterVencidos ? "" : "1")}
-              className={`h-10 whitespace-nowrap rounded-full border px-4 text-[12.5px] font-bold transition-colors ${filterVencidos ? "border-danger bg-clay-chip text-danger" : "border-border bg-surface text-text-faint hover:text-text"}`}>
+              className={`h-10 shrink-0 whitespace-nowrap rounded-full border px-4 text-[12.5px] font-bold transition-colors ${filterVencidos ? "border-danger bg-clay-chip text-danger" : "border-border bg-surface text-text-faint hover:text-text"}`}>
               Vencidos
             </button>
             {hasFilters && (
-              <button type="button" onClick={() => startTransition(() => router.push(pathname))} className="px-2 text-[12.5px] font-semibold text-text-faint hover:text-text">
+              <button type="button" onClick={() => startTransition(() => router.push(pathname))} className="shrink-0 px-2 text-[12.5px] font-semibold text-text-faint hover:text-text">
                 Limpiar
               </button>
             )}

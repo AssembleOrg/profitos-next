@@ -21,7 +21,7 @@ const LABELS: Record<string, string> = {
 
 function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-surface p-4">
+    <div className="min-w-0 rounded-2xl border border-border bg-surface p-3.5 md:p-4">
       <p className="text-[12.5px] text-text-muted">{label}</p>
       <p className="mt-1 font-display text-[24px] font-bold tabular-nums text-text">{value}</p>
       {note && <p className="mt-0.5 text-[12px] text-text-faint">{note}</p>}
@@ -33,7 +33,7 @@ export function QualityTab({ data }: { data: Awaited<ReturnType<typeof getQualit
   const percent = (part: number, whole: number) => (whole ? `${Math.round((part / whole) * 100)}%` : "0%");
   const counted = data.total - data.bots - data.internal;
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 md:gap-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Último evento" value={data.lastEvent ? DateTime.fromISO(data.lastEvent).toFormat("dd/MM HH:mm") : "Sin datos"} note="Si queda viejo, algo dejó de registrar" />
         <Stat label="Eventos contados" value={counted.toLocaleString("es-AR")} note={`de ${data.total.toLocaleString("es-AR")} recibidos`} />

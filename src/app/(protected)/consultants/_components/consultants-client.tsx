@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Pagination } from "../../_components/pagination";
 import { Sheet } from "../../_components/sheet";
+import { PageHeader, headerPrimary } from "../../_components/page-header";
 import { WhatsAppLink } from "@/components/whatsapp-link";
 import { firstPhone } from "@/lib/whatsapp";
 import type { InboxMessage, InboxPortal } from "@/lib/messages/inbox";
@@ -508,27 +509,25 @@ export function ConsultantsClient({ items, deckItem, page, totalPages, total, li
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Últimos contactos</h1>
-          <p className="text-[12.5px] text-text-faint">
-            Central de mensajes de MercadoLibre, ZonaProp y ArgenProp · Mostrando {items.length} de {total}
-          </p>
-        </div>
-        {/* Repaso uno-por-uno de los nuevos (popup estilo Tinder) */}
-        {filters.estado === "nuevos" && items.length > 0 && (
+      <PageHeader
+        title="Últimos contactos"
+        subtitle={<>Central de mensajes de MercadoLibre, ZonaProp y ArgenProp · Mostrando {items.length} de {total}</>}
+        actions={
+        /* Repaso uno-por-uno de los nuevos (popup estilo Tinder) */
+        filters.estado === "nuevos" && items.length > 0 && (
           <button
             onClick={() => {
               setDeck(items);
               setDeckDone(0);
             }}
-            className="inline-flex items-center gap-1.5 self-start rounded-full bg-dark px-4 py-2 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 sm:self-auto"
+            className={headerPrimary}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
             Repasar nuevos ({total})
           </button>
-        )}
-      </div>
+        )
+        }
+      />
 
       {/* Toolbar de filtros — CRM-like. Compacta en mobile (barra + Sheet), extendida en desktop. */}
       <div className="flex flex-col gap-2.5">
@@ -575,14 +574,14 @@ export function ConsultantsClient({ items, deckItem, page, totalPages, total, li
 
         {/* Fila: Estado (scroll horizontal en mobile, wrap en desktop) + Portal (solo desktop) */}
         <div className="flex items-center gap-2 sm:flex-wrap">
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+          <div className="-mx-5 flex min-w-0 flex-1 gap-2 overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-none sm:flex-wrap sm:overflow-visible sm:px-0">
             {ESTADOS.map((e) => {
               const active = filters.estado === e.key;
               return (
                 <button
                   key={e.key}
                   onClick={() => pushParams((p) => p.set("estado", e.key))}
-                  className={`whitespace-nowrap rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${
+                  className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${
                     active ? "bg-dark text-dark-fg" : "border border-border bg-surface text-text-muted hover:bg-bg"
                   }`}
                 >

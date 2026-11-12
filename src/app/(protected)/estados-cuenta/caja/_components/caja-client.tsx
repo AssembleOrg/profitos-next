@@ -11,6 +11,7 @@ import { MovementFormModal } from "../../_components/movement-form-modal";
 import { MovementDetailModal } from "../../_components/movement-detail-modal";
 import { PendingList, type SerializedCategory } from "../../_components/estados-cuenta-client";
 import { TransferSheet } from "./transfer-sheet";
+import { PageHeader, headerAction, headerPrimary } from "../../../_components/page-header";
 
 interface Props {
   overview: CashOverview;
@@ -113,36 +114,24 @@ export function CajaClient({ overview, categories, currentUserId, isCostearOwner
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <Link href="/estados-cuenta" className="text-[12.5px] font-semibold text-text-faint hover:text-text">
-            ← Estados de cuenta
-          </Link>
-          <h1 className="mt-1 font-display text-[26px] font-semibold text-text md:text-[28px]">Caja y pendientes</h1>
-          <p className="mt-1 text-[12.5px] text-text-faint">
-            Dónde está la plata, qué falta cobrar y qué hay que pagar. La caja arrancó en 0: cuenta lo que se carga desde ahora.
-          </p>
-        </div>
-        {overview.isAdmin && (
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setTransferMode("adjust")}
-              className="inline-flex h-11 items-center rounded-full border border-border bg-surface px-4.5 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg"
-            >
-              Ajustar saldo
-            </button>
-            <button
-              type="button"
-              onClick={() => setTransferMode("transfer")}
-              className="inline-flex h-11 items-center rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
-            >
-              Retiro / mover plata
-            </button>
-          </div>
-        )}
-      </header>
+    <div className="flex flex-col gap-3 md:gap-5">
+      <PageHeader
+        back={{ href: "/estados-cuenta", label: "Estados de cuenta" }}
+        title="Caja y pendientes"
+        subtitle="Dónde está la plata, qué falta cobrar y qué hay que pagar. La caja arrancó en 0: cuenta lo que se carga desde ahora."
+        actions={
+          overview.isAdmin && (
+            <>
+              <button type="button" onClick={() => setTransferMode("adjust")} className={headerAction}>
+                Ajustar saldo
+              </button>
+              <button type="button" onClick={() => setTransferMode("transfer")} className={headerPrimary}>
+                Retiro / mover plata
+              </button>
+            </>
+          )
+        }
+      />
 
       {/* Bolsillos */}
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">

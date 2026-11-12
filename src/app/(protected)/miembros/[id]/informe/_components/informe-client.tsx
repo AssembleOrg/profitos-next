@@ -162,10 +162,10 @@ export function InformeClient({ memberId, from, to }: Props) {
   const estadoConfig = ESTADO_CONFIG[resumen.estadoGeneral];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 md:space-y-5">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3 md:gap-4">
           <Link
             href="/miembros"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-text-muted transition-colors hover:bg-bg hover:text-text"
@@ -174,11 +174,11 @@ export function InformeClient({ memberId, from, to }: Props) {
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             {member.avatarUrl ? (
-              <img src={member.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" referrerPolicy="no-referrer" />
+              <img src={member.avatarUrl} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />
             ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sand-chip font-display text-[13px] font-bold text-text-muted">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sand-chip font-display text-[13px] font-bold text-text-muted">
                 {member.email[0].toUpperCase()}
               </div>
             )}
@@ -186,7 +186,7 @@ export function InformeClient({ memberId, from, to }: Props) {
               <h1 className="truncate font-display text-lg font-semibold text-text">
                 {member.fullName ?? member.email}
               </h1>
-              <div className="flex items-center gap-1.5">
+              <div className="flex min-w-0 items-center gap-1.5">
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(member.email);
@@ -242,9 +242,9 @@ export function InformeClient({ memberId, from, to }: Props) {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`rounded-[20px] p-5 ${estadoConfig.bg}`}
+        className={`rounded-[20px] p-3.5 md:p-5 ${estadoConfig.bg}`}
       >
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className={`text-sm font-bold ${estadoConfig.color}`}>{estadoConfig.label}</span>
           <span className="text-xs text-text-muted">· {formatDate(data.dateRange.from)} — {formatDate(data.dateRange.to)}</span>
         </div>
@@ -285,9 +285,9 @@ export function InformeClient({ memberId, from, to }: Props) {
       </div>
 
       {/* Breakdowns */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4">
         {/* Seg. propiedades por estado */}
-        <div className="rounded-[20px] border border-border bg-surface p-4">
+        <div className="rounded-[20px] border border-border bg-surface p-3.5 md:p-4">
           <h3 className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Seg. propiedades por estado</h3>
           {Object.keys(breakdowns.segPropPorEstado).length === 0 ? (
             <p className="text-sm text-text-faint">Sin datos</p>
@@ -297,7 +297,7 @@ export function InformeClient({ memberId, from, to }: Props) {
                 <div key={status} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className={`h-2 w-2 rounded-full ${STATUS_COLORS[status] ?? "bg-text-muted"}`} />
-                    <span className="text-sm capitalize text-text">{status}</span>
+                    <span className="text-sm capitalize text-text">{status.replace(/_/g, " ")}</span>
                   </div>
                   <span className="text-sm font-medium text-text">{count}</span>
                 </div>
@@ -307,7 +307,7 @@ export function InformeClient({ memberId, from, to }: Props) {
         </div>
 
         {/* Acciones por tipo */}
-        <div className="rounded-[20px] border border-border bg-surface p-4">
+        <div className="rounded-[20px] border border-border bg-surface p-3.5 md:p-4">
           <h3 className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Acciones por tipo</h3>
           {Object.keys(breakdowns.accionesPorTipo).length === 0 ? (
             <p className="text-sm text-text-faint">Sin datos</p>
@@ -327,14 +327,14 @@ export function InformeClient({ memberId, from, to }: Props) {
       {/* Seguimientos de propiedades */}
       {data.seguimientosProp.length > 0 && (
         <div className="rounded-[20px] border border-border bg-surface">
-          <div className="border-b border-border px-5 py-3">
+          <div className="border-b border-border px-4 py-3 md:px-5">
             <h3 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
               Seguimientos de propiedades ({data.seguimientosProp.length})
             </h3>
           </div>
           <div className="divide-y divide-border/50">
             {data.seguimientosProp.map((s) => (
-              <div key={s.id} className="flex items-center justify-between px-5 py-3">
+              <div key={s.id} className="flex items-center justify-between gap-3 px-4 py-3 md:px-5">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-text">{s.property.address}</p>
                   <p className="text-xs text-text-muted">
@@ -343,9 +343,9 @@ export function InformeClient({ memberId, from, to }: Props) {
                     {s.dueDate && ` · Vence: ${formatDate(s.dueDate)}`}
                   </p>
                 </div>
-                <div className="ml-3 flex items-center gap-1.5">
+                <div className="flex shrink-0 items-center gap-1.5">
                   <span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS[s.status] ?? "bg-text-muted"}`} />
-                  <span className="text-xs capitalize text-text-muted">{s.status}</span>
+                  <span className="text-xs capitalize text-text-muted">{s.status.replace(/_/g, " ")}</span>
                 </div>
               </div>
             ))}
@@ -356,14 +356,14 @@ export function InformeClient({ memberId, from, to }: Props) {
       {/* Visitas */}
       {data.visitas.length > 0 && (
         <div className="rounded-[20px] border border-border bg-surface">
-          <div className="border-b border-border px-5 py-3">
+          <div className="border-b border-border px-4 py-3 md:px-5">
             <h3 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
               Visitas ({data.visitas.length})
             </h3>
           </div>
           <div className="divide-y divide-border/50">
             {data.visitas.map((v) => (
-              <div key={v.id} className="flex items-center justify-between px-5 py-3">
+              <div key={v.id} className="flex items-center justify-between gap-3 px-4 py-3 md:px-5">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-text">{v.title}</p>
                   <p className="text-xs text-text-muted">
@@ -372,7 +372,7 @@ export function InformeClient({ memberId, from, to }: Props) {
                     {" · "}{v.startTime} - {v.endTime}
                   </p>
                 </div>
-                <span className="ml-3 text-xs text-text-muted">{formatDate(v.date)}</span>
+                <span className="shrink-0 text-xs text-text-muted">{formatDate(v.date)}</span>
               </div>
             ))}
           </div>
@@ -382,17 +382,17 @@ export function InformeClient({ memberId, from, to }: Props) {
       {/* Clientes creados */}
       {data.clientes.length > 0 && (
         <div className="rounded-[20px] border border-border bg-surface">
-          <div className="border-b border-border px-5 py-3">
+          <div className="border-b border-border px-4 py-3 md:px-5">
             <h3 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
               Clientes creados ({data.clientes.length})
             </h3>
           </div>
           <div className="divide-y divide-border/50">
             {data.clientes.map((c) => (
-              <div key={c.id} className="flex items-center justify-between px-5 py-3">
+              <div key={c.id} className="flex items-center justify-between gap-3 px-4 py-3 md:px-5">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-text">{c.name}</p>
-                  <p className="text-xs text-text-muted">
+                  <p className="truncate text-xs text-text-muted">
                     {c.email ?? (c.phone ? (
                       <WhatsAppLink
                         phone={c.phone}
@@ -404,7 +404,7 @@ export function InformeClient({ memberId, from, to }: Props) {
                     {" · "}{c._count.visitas} visita{c._count.visitas !== 1 ? "s" : ""}
                   </p>
                 </div>
-                <span className="ml-3 text-xs text-text-muted">{formatDate(c.createdAt)}</span>
+                <span className="shrink-0 text-xs text-text-muted">{formatDate(c.createdAt)}</span>
               </div>
             ))}
           </div>
@@ -413,13 +413,13 @@ export function InformeClient({ memberId, from, to }: Props) {
 
       {/* Timeline */}
       <div className="rounded-[20px] border border-border bg-surface">
-        <div className="border-b border-border px-5 py-3">
+        <div className="border-b border-border px-4 py-3 md:px-5">
           <h3 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
             Actividad completa ({data.timeline.length})
           </h3>
         </div>
         {data.timeline.length === 0 ? (
-          <div className="px-5 py-8 text-center text-sm text-text-faint">
+          <div className="px-4 py-8 text-center text-sm text-text-faint md:px-5">
             Sin actividad en este período
           </div>
         ) : (
@@ -427,12 +427,12 @@ export function InformeClient({ memberId, from, to }: Props) {
             {data.timeline.map((item, i) => (
               <div
                 key={`${item.kind}-${i}`}
-                className="flex items-start gap-3 px-5 py-3"
+                className="flex flex-wrap items-start gap-x-3 gap-y-1 px-4 py-3 sm:flex-nowrap md:px-5"
               >
                 <span className={`mt-0.5 inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${TIMELINE_COLORS[item.kind] ?? "bg-bg text-text-muted"}`}>
                   {TIMELINE_LABELS[item.kind] ?? item.kind}
                 </span>
-                <div className="min-w-0 flex-1">
+                <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
                   <p className="truncate text-sm text-text">
                     <span className="font-medium">{item.entity}</span>
                     {item.description && (
@@ -446,7 +446,7 @@ export function InformeClient({ memberId, from, to }: Props) {
                     <p className="text-xs capitalize text-text-faint">{item.type}</p>
                   )}
                 </div>
-                <span className="shrink-0 text-xs text-text-muted">{formatDateTime(item.date)}</span>
+                <span className="ml-auto shrink-0 text-xs text-text-muted">{formatDateTime(item.date)}</span>
               </div>
             ))}
           </div>

@@ -24,7 +24,7 @@ export default async function RecibosPage({ searchParams }: Readonly<Props>) {
   ]);
   const issued = receipts.filter((r) => r.status === "emitido").length;
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-3 md:gap-5">
       <RentalsHeader tab="recibos" pendingProofs={pendingProofs} subtitle={`${issued} ${issued === 1 ? "recibo emitido" : "recibos emitidos"}${q ? " para la búsqueda" : ""}`} />
       <ReceiptsView books={books} receipts={receipts} month={month} kind={kind} status={status} q={q} />
     </div>

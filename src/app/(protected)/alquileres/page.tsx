@@ -20,7 +20,7 @@ export default async function AlquileresAgendaPage({ searchParams }: Readonly<Pr
   const count = data.dues.length;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-3 md:gap-5">
       <RentalsHeader
         tab="agenda"
         pendingProofs={data.pendingProofs}

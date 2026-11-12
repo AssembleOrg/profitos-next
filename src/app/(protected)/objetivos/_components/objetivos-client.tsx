@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { getAggregateKPIs, getCardProgress } from "@/lib/objectives";
 import { formatDate } from "@/lib/datetime";
 import { Pagination } from "../../_components/pagination";
+import { PageHeader, headerPrimary } from "../../_components/page-header";
 import { ObjetivoCard } from "./objetivo-card";
 import { CreateObjetivoModal } from "./create-modal";
 import { FiltersBar } from "./filters-bar";
@@ -88,23 +89,20 @@ export function ObjetivosClient({
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">
-            {isAdmin ? "Objetivos" : "Mis objetivos"}
-          </h1>
-          <p className="mt-1 text-[12.5px] text-text-faint">
-            {isAdmin
-              ? "Asigná y revisá los objetivos de cada empleado."
-              : "Marcá tus objetivos a medida que los vas cumpliendo."}
-          </p>
-        </div>
-        {isAdmin && (
+    <div className="flex flex-col gap-3 md:gap-5">
+      <PageHeader
+        title={isAdmin ? "Objetivos" : "Mis objetivos"}
+        subtitle={
+          isAdmin
+            ? "Asigná y revisá los objetivos de cada empleado."
+            : "Marcá tus objetivos a medida que los vas cumpliendo."
+        }
+        actions={
+          isAdmin && (
           <button
             type="button"
             onClick={openCreate}
-            className="inline-flex h-11 items-center gap-2 self-start rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 sm:self-auto"
+            className={headerPrimary}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
               <line x1="12" y1="5" x2="12" y2="19" />
@@ -112,8 +110,9 @@ export function ObjetivosClient({
             </svg>
             Nuevo objetivo
           </button>
-        )}
-      </header>
+          )
+        }
+      />
 
       <KPIStrip kpis={kpis} periodLabel={periodLabel} />
 

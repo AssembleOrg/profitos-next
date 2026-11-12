@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Spinner } from "../../../_components/spinner";
 import { Pagination } from "../../../_components/pagination";
+import { PageHeader, headerPrimary } from "../../../_components/page-header";
 import { formatDate } from "@/lib/datetime";
 
 interface Item {
@@ -58,19 +59,16 @@ export function HistorialClient({ items, page, totalPages, total, limit }: Props
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Historial de personas</h1>
-          <p className="mt-1 text-[12.5px] text-text-faint">
-            {total} consulta{total !== 1 ? "s" : ""} hecha{total !== 1 ? "s" : ""} desde Profitos
-          </p>
-        </div>
-        <Link
-          href="/personas"
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
-        >
-          <span className="text-accent">+</span> Nueva consulta
-        </Link>
+      <div className="mb-3 md:mb-6">
+        <PageHeader
+          title="Historial de personas"
+          subtitle={`${total} consulta${total !== 1 ? "s" : ""} hecha${total !== 1 ? "s" : ""} desde Profitos`}
+          actions={
+            <Link href="/personas" className={headerPrimary}>
+              <span className="text-accent">+</span> Nueva<span className="hidden sm:inline"> consulta</span>
+            </Link>
+          }
+        />
       </div>
 
       {items.length === 0 ? (

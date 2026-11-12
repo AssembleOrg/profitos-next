@@ -3,6 +3,7 @@ import Link from "next/link";
 import { catalogOptions, getCatalog, groupUnits } from "@/lib/web/catalog";
 import { DEVELOPMENTS } from "@/lib/web/developments";
 import { CONTACT, WEB_BASE } from "@/lib/web/format";
+import { CountUp } from "./_components/count-up";
 import { Developments } from "./_components/developments";
 import { HeroSlides, type HeroSlide } from "./_components/hero-slides";
 import { IconArrow } from "./_components/icons";
@@ -31,6 +32,7 @@ export default async function WebHome() {
     caption: `${item.address}, ${item.zone}${item.illustrative ? " · Imagen ilustrativa" : ""}`,
   }));
   const [lead, ...others] = featured;
+  const onSaleCount = catalog.filter((item) => item.operation === "venta").length;
 
   return (
     <>
@@ -47,11 +49,22 @@ export default async function WebHome() {
           {options.types.slice(0, 7).map(([type, count]) => (
             <Link key={type} href={`${WEB_BASE}/propiedades?tipo=${encodeURIComponent(type)}`}>
               <strong>{type}</strong>
-              <span>{count}</span>
+              <span><CountUp value={count} /></span>
             </Link>
           ))}
         </div>
       </nav>
+
+      {/* Solo cifras que salen del catálogo publicado: nada estimado ni redondeado para arriba. */}
+      <section className="jw-stats jw-wrap" aria-label="La inmobiliaria en números">
+        <dl>
+          <div><dt>Propiedades publicadas</dt><dd><CountUp value={catalog.length} /></dd></div>
+          <div><dt>En venta</dt><dd><CountUp value={onSaleCount} /></dd></div>
+          <div><dt>En alquiler</dt><dd><CountUp value={catalog.length - onSaleCount} /></dd></div>
+          <div><dt>Emprendimientos</dt><dd><CountUp value={DEVELOPMENTS.length} /></dd></div>
+        </dl>
+        <p>Propiedades en {options.zones.length} {options.zones.length === 1 ? "zona" : "zonas"} · Matrícula {CONTACT.license} · {CONTACT.address}</p>
+      </section>
 
       {lead && (
         <section className="jw-section jw-wrap">

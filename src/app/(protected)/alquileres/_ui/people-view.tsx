@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { PageHeader, headerPrimary } from "../../_components/page-header";
 import { Sheet } from "../../_components/sheet";
 import { PortalAccessSheet, type PortalAccessTarget } from "./portal-access-sheet";
 import { useReasonSheet } from "./reason-sheet";
@@ -69,22 +70,23 @@ export function PeopleView({ kind, rows, isAdmin }: { kind: Kind; rows: PersonRo
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-3 md:gap-5">
       {dialog}
-      <header className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold leading-tight text-text md:text-[28px]">{cfg.title}</h1>
-          <p className="mt-0.5 text-[12.5px] text-text-faint">
+      <PageHeader
+        title={cfg.title}
+        subtitle={
+          <>
             {rows.length} {rows.length === 1 ? cfg.singular : `${cfg.singular}s`}
             {kind === "inquilino" ? ` · ${rows.filter((r) => r.portal?.enabled).length} con acceso al portal` : ""}
-          </p>
-        </div>
-        <button type="button" className={btnPrimary} onClick={() => setEditing("new")}>
-          <IconPlus size={16} className="text-accent" />
-          <span className="hidden sm:inline">Nuevo {cfg.singular}</span>
-          <span className="sm:hidden">Nuevo</span>
-        </button>
-      </header>
+          </>
+        }
+        actions={
+          <button type="button" className={headerPrimary} onClick={() => setEditing("new")}>
+            <IconPlus size={16} className="text-accent" />
+            Nuevo<span className="hidden sm:inline"> {cfg.singular}</span>
+          </button>
+        }
+      />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex h-10 items-center gap-2 rounded-full border border-border bg-surface pl-4 pr-2 focus-within:border-accent sm:w-80">

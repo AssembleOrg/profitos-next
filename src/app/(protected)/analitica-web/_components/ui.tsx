@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export function Panel({ title, subtitle, children, action }: { title?: string; subtitle?: string; children: ReactNode; action?: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-border bg-surface p-4 md:p-5">
+    <section className="min-w-0 rounded-2xl border border-border bg-surface p-3.5 md:p-5">
       {(title || action) && (
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>

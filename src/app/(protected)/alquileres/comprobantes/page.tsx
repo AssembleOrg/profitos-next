@@ -24,7 +24,7 @@ export default async function ComprobantesPage({ searchParams }: Readonly<Props>
     counts.todos += g._count._all;
   }
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-3 md:gap-5">
       <RentalsHeader
         tab="comprobantes"
         pendingProofs={counts.pendiente}

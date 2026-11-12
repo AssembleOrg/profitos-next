@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Pagination } from "../../_components/pagination";
+import { PageHeader, headerAction } from "../../_components/page-header";
+import { FilterChip } from "../../_components/filter-bar";
 import { formatDateTime } from "@/lib/datetime";
 
 interface QuestionItem {
@@ -106,20 +108,20 @@ export function PreguntasClient({ items, page, totalPages, total, unansweredCoun
   const activeStatus = filters.status || "UNANSWERED";
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Preguntas MercadoLibre</h1>
-          <p className="text-sm text-text-muted">
+    <div className="flex flex-col gap-3 md:gap-5">
+      <PageHeader
+        title="Preguntas MercadoLibre"
+        subtitle={
+          <>
             {total} resultado{total !== 1 ? "s" : ""}
             {unansweredCount > 0 && ` · ${unansweredCount} sin responder`}
-          </p>
-        </div>
+          </>
+        }
+        actions={
         <button
           onClick={handleSync}
           disabled={syncing}
-          className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg disabled:opacity-50"
+          className={`${headerAction} disabled:opacity-50`}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
@@ -127,32 +129,27 @@ export function PreguntasClient({ items, page, totalPages, total, unansweredCoun
           </svg>
           {syncing ? "Sincronizando..." : "Traer de ML"}
         </button>
-      </div>
+        }
+      />
 
       {/* Filtros */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-1 rounded-full border border-border bg-surface p-1">
+        <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:px-0">
           {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setStatus(t.key)}
-              className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors ${
-                activeStatus === t.key ? "bg-dark font-bold text-dark-fg" : "text-text-muted hover:text-text"
-              }`}
-            >
+            <FilterChip key={t.key} active={activeStatus === t.key} onClick={() => setStatus(t.key)}>
               {t.label}
-            </button>
+            </FilterChip>
           ))}
         </div>
-        <div className="flex gap-2">
+        <div className="flex min-w-0 gap-2">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && applySearch()}
             placeholder="Buscar en preguntas…"
-            className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-[13px] text-text placeholder:text-text-faint focus:border-accent focus:outline-none sm:w-64"
+            className="h-11 w-full min-w-0 rounded-[14px] border border-border bg-surface px-3.5 text-[13px] text-text placeholder:text-text-faint focus:border-accent focus:outline-none sm:w-64"
           />
-          <button onClick={applySearch} className="inline-flex h-11 items-center rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90">
+          <button onClick={applySearch} className="inline-flex h-11 shrink-0 items-center rounded-full bg-dark px-5 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90">
             Buscar
           </button>
         </div>
@@ -166,7 +163,7 @@ export function PreguntasClient({ items, page, totalPages, total, unansweredCoun
       ) : (
         <div className="flex flex-col gap-3">
           {items.map((q) => (
-            <div key={q.id} className="rounded-[20px] border border-border bg-surface p-4">
+            <div key={q.id} className="rounded-[20px] border border-border bg-surface p-3.5 md:p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm text-text">{q.text}</p>

@@ -539,3 +539,85 @@
   .jw *, .jw *::before, .jw *::after { animation-duration: 0.01ms !important; animation-delay: 0ms !important; transition-duration: 0.01ms !important; }
   :root:has(.jw) { scroll-behavior: auto; }
 }
+
+/* Cifras que cuentan */
+/* relative: el texto para lector de pantalla (absoluto) no se escapa de las tiras con scroll. */
+.jw-count { position: relative; font-variant-numeric: tabular-nums; }
+.jw-stats { padding-block: 56px 0; }
+.jw-stats dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+.jw-stats dl > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 6px; min-width: 0; padding: 22px 24px; background: var(--surface); border-radius: var(--r-l); box-shadow: var(--shadow); }
+.jw-stats dd { font-family: var(--font-outfit), system-ui, sans-serif; font-size: clamp(2.25rem, 4vw, 3.5rem); font-weight: 600; line-height: 1; letter-spacing: -0.03em; }
+.jw-stats dt { font-size: 15px; color: var(--ink-2); }
+.jw-stats > p { margin-top: 16px; font-size: 14.5px; color: var(--ink-2); }
+.jw .jw-highlights { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.jw-highlights > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; min-width: 96px; padding: 12px 16px; border-radius: var(--r-m); background: var(--ground); }
+.jw-highlights dd { font-family: var(--font-outfit), system-ui, sans-serif; font-size: 28px; font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; }
+.jw-highlights dt { font-size: 13.5px; color: var(--ink-2); }
+
+/* Lista | Mapa */
+.jw-listing-head .jw-view { margin-left: auto; }
+.jw-seg a { display: inline-flex; flex: 1; align-items: center; justify-content: center; min-height: 36px; padding: 0 16px; border-radius: 8px; font-size: 14.5px; font-weight: 500; white-space: nowrap; transition: background-color 0.25s, box-shadow 0.25s, transform 0.25s var(--ease); }
+.jw-seg a[aria-current="page"] { background: #fff; font-weight: 600; box-shadow: 0 3px 8px rgb(0 0 0 / 0.12), 0 1px 1px rgb(0 0 0 / 0.04); }
+.jw-seg a:active { transform: scale(0.97); }
+.jw-map-list { height: min(72svh, 680px); border-radius: var(--r-l); box-shadow: var(--shadow); }
+.jw-pin { background: none; border: 0; }
+.jw-pin span { display: inline-block; translate: -50% -100%; padding: 5px 10px; border-radius: 999px; background: var(--black); color: #fff; font: 600 13px/1.2 var(--font-lexend), system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 12px rgb(0 0 0 / 0.25); transition: background-color 0.2s, scale 0.25s var(--ease); }
+.jw-pin:focus-visible span { background: var(--red); }
+/* Zoom lejano: puntos en vez de precios (se tocan igual y abren la tarjeta). */
+.jw-map-list[data-far="true"] .jw-pin span { width: 14px; height: 14px; padding: 0; overflow: hidden; font-size: 0; border: 2px solid #fff; translate: -50% -50%; }
+.jw-pin-popup .leaflet-popup-content-wrapper { padding: 0; overflow: hidden; border-radius: var(--r-m); box-shadow: 0 12px 32px rgb(0 0 0 / 0.22); }
+.jw-pin-popup .leaflet-popup-content { margin: 0; }
+.jw .jw-pin-card { display: grid; color: var(--ink); font-family: var(--font-lexend), system-ui, sans-serif; }
+.jw-pin-card img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #e5e5ea; }
+.jw-pin-card-body { display: grid; gap: 1px; padding: 10px 12px 12px; }
+.jw-pin-card strong { font-size: 16px; }
+.jw-pin-card span { font-size: 14px; }
+.jw-pin-card small { font-size: 13px; color: var(--ink-2); }
+
+/* Miniaturas en la galería a pantalla completa (solo compu) */
+.jw-lightbox-thumbs { position: absolute; inset: auto 0 calc(10px + var(--safe-b)) 0; z-index: 2; display: flex; justify-content: safe center; gap: 6px; padding: 4px 20px; overflow-x: auto; scrollbar-width: none; }
+.jw-lightbox-thumbs::-webkit-scrollbar { display: none; }
+.jw .jw-lightbox-thumbs button { position: relative; flex: none; width: 72px; height: 52px; overflow: hidden; border-radius: 8px; opacity: 0.45; outline: 2px solid transparent; outline-offset: 2px; transition: opacity 0.2s, outline-color 0.2s; }
+.jw .jw-lightbox-thumbs button[aria-current="true"] { opacity: 1; outline-color: #fff; }
+.jw-lightbox-thumbs img { object-fit: cover; }
+.jw-lightbox:has(.jw-lightbox-thumbs) .jw-lightbox-track img { padding-bottom: calc(82px + var(--safe-b)); }
+
+/* Rayita roja bajo los títulos de sección (se dibuja al aparecer donde hay soporte) */
+.jw-section-head h2::after { content: ""; display: block; width: 32px; height: 3px; margin-top: 12px; border-radius: 2px; background: var(--red); transform-origin: left; }
+
+@media (hover: hover) and (pointer: fine) {
+  .jw-pin:hover span { background: var(--red); scale: 1.06; }
+  .jw .jw-lightbox-thumbs button:hover { opacity: 0.8; }
+}
+
+@media (max-width: 900px) {
+  .jw-stats { padding-block: 32px 0; }
+  .jw-stats dl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .jw-stats dl > div { padding: 16px; }
+  /* Hasta 3 en una fila; con 4, de a 2. */
+  .jw-highlights > div { flex: 1 1 0; min-width: 0; padding: 10px 12px; }
+  .jw-highlights:has(> div:nth-child(4)) > div { flex-basis: calc(50% - 5px); }
+  .jw-highlights dt { font-size: 12.5px; }
+  .jw-map-list { height: 68svh; margin-inline: -16px; border-radius: 0; }
+  .jw-lightbox-thumbs { display: none; }
+  .jw-lightbox:has(.jw-lightbox-thumbs) .jw-lightbox-track img { padding-bottom: calc(24px + var(--safe-b)); }
+}
+
+/* Aparecer al bajar: solo CSS, una vez, y nada si se pidió reducir movimiento.
+   Se anima `translate` (no `transform`) para no pisar el hover de las tarjetas. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .jw-section-head h2, .jw-card, .jw-devs-list li, .jw-stats dl > div, .jw-split-copy { animation: jw-reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
+    .jw-section-head h2 { view-timeline: --jw-head; }
+    .jw-section-head h2::after { animation: jw-line linear both; animation-timeline: --jw-head; animation-range: entry 40% cover 35%; }
+    .jw-split-photo img { animation: jw-drift linear both; animation-timeline: view(); animation-range: cover; }
+    .jw-header { animation: jw-header-shade linear both; animation-timeline: scroll(root); animation-range: 0 160px; }
+    /* En las tiras que se deslizan de costado (celular) no hay scroll vertical que seguir. */
+    @media (max-width: 900px) { .jw-devs-list li { animation: none; } }
+    @media (max-width: 620px) { .jw-featured .jw-card { animation: none; } }
+  }
+}
+@keyframes jw-reveal { from { opacity: 0; translate: 0 18px; } }
+@keyframes jw-line { from { scale: 0 1; } }
+@keyframes jw-drift { from { translate: 0 -4%; scale: 1.1; } to { translate: 0 4%; scale: 1.1; } }
+@keyframes jw-header-shade { to { box-shadow: 0 10px 30px rgb(0 0 0 / 0.28); } }

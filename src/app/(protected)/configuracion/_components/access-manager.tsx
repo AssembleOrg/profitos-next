@@ -71,7 +71,7 @@ export function AccessManager() {
   });
 
   return (
-    <section className="rounded-[20px] border border-border bg-surface p-4 md:p-5">
+    <section className="rounded-[20px] border border-border bg-surface p-3.5 md:p-5">
       <header className="mb-4">
         <h2 className="font-display text-base font-semibold text-text">Acceso por usuario</h2>
         <p className="mt-1 text-xs text-text-muted">

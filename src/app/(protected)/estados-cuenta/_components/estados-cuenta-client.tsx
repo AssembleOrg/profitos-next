@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { now, formatDate } from "@/lib/datetime";
@@ -19,9 +18,12 @@ import {
 } from "@/lib/account";
 import { DatePicker } from "@/components/ui/date-picker";
 import { SelectField } from "@/components/ui/select-field";
+import Link from "next/link";
 import { MovementFormModal } from "./movement-form-modal";
 import { CategoryManagerModal } from "./category-manager-modal";
 import { MovementDetailModal } from "./movement-detail-modal";
+import { PageHeader, headerAction, headerPrimary } from "../../_components/page-header";
+import { FilterBar, FilterChip } from "../../_components/filter-bar";
 
 export interface SerializedCategory {
   id: string;
@@ -119,15 +121,16 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
     router.push(`${pathname}?${qs.toString()}`);
   }
 
-  function applyPreset(preset: "mes" | "mesPasado" | "anio" | "todo") {
-    const t = now();
-    if (preset === "mes") apply({ from: t.startOf("month").toISODate()!, to: t.toISODate()! });
-    else if (preset === "mesPasado") {
-      const p = t.minus({ months: 1 });
-      apply({ from: p.startOf("month").toISODate()!, to: p.endOf("month").toISODate()! });
-    } else if (preset === "anio") apply({ from: t.startOf("year").toISODate()!, to: t.toISODate()! });
-    else apply({ from: "2000-01-01", to: t.toISODate()! });
-  }
+  // Atajos de fecha: el que coincide con el rango aplicado queda marcado.
+  const t = now();
+  const lastMonth = t.minus({ months: 1 });
+  const presets = [
+    { label: "Este mes", from: t.startOf("month").toISODate()!, to: t.toISODate()! },
+    { label: "Mes pasado", from: lastMonth.startOf("month").toISODate()!, to: lastMonth.endOf("month").toISODate()! },
+    { label: "Este año", from: t.startOf("year").toISODate()!, to: t.toISODate()! },
+    { label: "Todo", from: "2000-01-01", to: t.toISODate()! },
+  ];
+  const activeFilters = [filters.type, filters.currency, filters.categoryId, filters.agentUserId, filters.isShared].filter((v) => v !== undefined).length;
 
   async function handleDelete(m: AccountMovement) {
     if (!confirm("¿Borrar este movimiento? Esta acción no se puede deshacer.")) return;
@@ -160,43 +163,35 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
   const expenseCategories = categories.filter((c) => c.kind === "expense");
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Header */}
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Estados de cuenta</h1>
-          <p className="mt-1 text-[12.5px] text-text-faint">{AREA_SUBTITLE[filters.area ?? "general"]}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/estados-cuenta/caja"
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4.5 text-[13.5px] font-semibold text-text transition-colors hover:bg-bg"
-          >
-            Caja y pendientes
-          </Link>
-          <button
-            type="button"
-            onClick={() => setCategoriesOpen(true)}
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-4.5 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg"
-          >
-            Categorías
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Nuevo movimiento
-          </button>
-        </div>
-      </header>
+    <div className="flex flex-col gap-3 md:gap-5">
+      <PageHeader
+        title="Estados de cuenta"
+        subtitle={AREA_SUBTITLE[filters.area ?? "general"]}
+        actions={
+          <>
+            <Link href="/estados-cuenta/caja" className={headerAction}>
+              Caja<span className="hidden sm:inline"> y pendientes</span>
+            </Link>
+            <button type="button" onClick={() => setCategoriesOpen(true)} className={headerAction}>
+              Categorías
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+              className={headerPrimary}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent" aria-hidden>
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Nuevo<span className="hidden sm:inline"> movimiento</span>
+            </button>
+          </>
+        }
+      />
 
       {/* Área: Administración / Ventas / General */}
       <nav aria-label="Área" className="flex w-full items-center gap-1 rounded-full border border-border bg-surface p-1 sm:w-fit">
@@ -214,7 +209,7 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
                   categoryId: undefined,
                 })
               }
-              className={`flex-1 rounded-full px-5 py-2 text-[13.5px] transition-colors sm:flex-none ${
+              className={`flex-1 rounded-full px-3 py-1.5 text-[12.5px] transition-colors sm:flex-none sm:px-5 sm:py-2 sm:text-[13.5px] ${
                 active ? "bg-dark font-bold text-dark-fg" : "font-semibold text-text-muted hover:text-text"
               }`}
             >
@@ -225,98 +220,105 @@ export function EstadosCuentaClient({ report, categories, agents, filters, isAdm
       </nav>
 
       {/* Filtros */}
-      <section className="flex flex-col gap-3 rounded-[20px] border border-border bg-surface p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <PresetButton onClick={() => applyPreset("mes")}>Este mes</PresetButton>
-          <PresetButton onClick={() => applyPreset("mesPasado")}>Mes pasado</PresetButton>
-          <PresetButton onClick={() => applyPreset("anio")}>Este año</PresetButton>
-          <PresetButton onClick={() => applyPreset("todo")}>Todo</PresetButton>
-          <div className="ml-auto inline-flex items-center gap-0.5 rounded-full border border-border bg-surface p-1">
-            <ViewTab active={filters.view === "rango"} onClick={() => apply({ view: "rango" })}>
-              Rango
-            </ViewTab>
-            <ViewTab active={filters.view === "mensual"} onClick={() => apply({ view: "mensual" })}>
-              Cierre mensual
-            </ViewTab>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-          <Field label="Desde">
-            <DatePicker value={filters.from} onChange={(iso) => apply({ from: iso })} className={selectClass} />
-          </Field>
-          <Field label="Hasta">
-            <DatePicker value={filters.to} onChange={(iso) => apply({ to: iso })} className={selectClass} />
-          </Field>
-          <Field label="Tipo">
-            <SelectField
-              value={filters.type ?? ""}
-              onChange={(e) => apply({ type: (e.target.value || undefined) as EntryType | undefined })}
-            >
-              <option value="">Todos</option>
-              <option value="income">Ingresos</option>
-              <option value="expense">Egresos</option>
-            </SelectField>
-          </Field>
-          <Field label="Moneda">
-            <SelectField
-              value={filters.currency ?? ""}
-              onChange={(e) => apply({ currency: (e.target.value || undefined) as Currency | undefined })}
-            >
-              <option value="">ARS y USD</option>
-              <option value="ARS">Solo ARS</option>
-              <option value="USD">Solo USD</option>
-            </SelectField>
-          </Field>
-          <Field label="Categoría">
-            <SelectField
-              value={filters.categoryId ?? ""}
-              onChange={(e) => apply({ categoryId: e.target.value || undefined })}
-            >
-              <option value="">Todas</option>
-              <optgroup label="Ingresos">
-                {filterCategories.filter((c) => c.kind === "income").map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Egresos">
-                {filterCategories.filter((c) => c.kind === "expense").map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </optgroup>
-            </SelectField>
-          </Field>
-          <Field label="Agente">
-            <SelectField
-              value={filters.agentUserId ?? ""}
-              onChange={(e) => apply({ agentUserId: e.target.value || undefined })}
-            >
-              <option value="">Todos</option>
-              {agents.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </SelectField>
-          </Field>
-          <Field label="Compartido">
-            <SelectField
-              value={filters.isShared === undefined ? "" : filters.isShared ? "1" : "0"}
-              onChange={(e) =>
-                apply({ isShared: e.target.value === "" ? undefined : e.target.value === "1" })
-              }
-            >
-              <option value="">Todos</option>
-              <option value="1">Solo compartidos</option>
-              <option value="0">No compartidos</option>
-            </SelectField>
-          </Field>
-        </div>
-      </section>
+      <FilterBar
+        activeCount={activeFilters}
+        onClear={() => apply({ type: undefined, currency: undefined, categoryId: undefined, agentUserId: undefined, isShared: undefined })}
+        chips={
+          <>
+            {presets.map((p) => (
+              <FilterChip key={p.label} active={filters.from === p.from && filters.to === p.to} onClick={() => apply({ from: p.from, to: p.to })}>
+                {p.label}
+              </FilterChip>
+            ))}
+            <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-border" />
+            <div className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-border bg-surface p-1 lg:ml-auto">
+              <ViewTab active={filters.view === "rango"} onClick={() => apply({ view: "rango" })}>
+                Rango
+              </ViewTab>
+              <ViewTab active={filters.view === "mensual"} onClick={() => apply({ view: "mensual" })}>
+                Cierre mensual
+              </ViewTab>
+            </div>
+          </>
+        }
+        fields={
+          <>
+      <Field label="Desde">
+        <DatePicker value={filters.from} onChange={(iso) => apply({ from: iso })} className={selectClass} />
+      </Field>
+      <Field label="Hasta">
+        <DatePicker value={filters.to} onChange={(iso) => apply({ to: iso })} className={selectClass} />
+      </Field>
+      <Field label="Tipo">
+        <SelectField
+          value={filters.type ?? ""}
+          onChange={(e) => apply({ type: (e.target.value || undefined) as EntryType | undefined })}
+        >
+          <option value="">Todos</option>
+          <option value="income">Ingresos</option>
+          <option value="expense">Egresos</option>
+        </SelectField>
+      </Field>
+      <Field label="Moneda">
+        <SelectField
+          value={filters.currency ?? ""}
+          onChange={(e) => apply({ currency: (e.target.value || undefined) as Currency | undefined })}
+        >
+          <option value="">ARS y USD</option>
+          <option value="ARS">Solo ARS</option>
+          <option value="USD">Solo USD</option>
+        </SelectField>
+      </Field>
+      <Field label="Categoría">
+        <SelectField
+          value={filters.categoryId ?? ""}
+          onChange={(e) => apply({ categoryId: e.target.value || undefined })}
+        >
+          <option value="">Todas</option>
+          <optgroup label="Ingresos">
+            {filterCategories.filter((c) => c.kind === "income").map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </optgroup>
+          <optgroup label="Egresos">
+            {filterCategories.filter((c) => c.kind === "expense").map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </optgroup>
+        </SelectField>
+      </Field>
+      <Field label="Agente">
+        <SelectField
+          value={filters.agentUserId ?? ""}
+          onChange={(e) => apply({ agentUserId: e.target.value || undefined })}
+        >
+          <option value="">Todos</option>
+          {agents.map((a) => (
+            <option key={a.id} value={a.id}>{a.name}</option>
+          ))}
+        </SelectField>
+      </Field>
+      <Field label="Compartido">
+        <SelectField
+          value={filters.isShared === undefined ? "" : filters.isShared ? "1" : "0"}
+          onChange={(e) =>
+            apply({ isShared: e.target.value === "" ? undefined : e.target.value === "1" })
+          }
+        >
+          <option value="">Todos</option>
+          <option value="1">Solo compartidos</option>
+          <option value="0">No compartidos</option>
+        </SelectField>
+      </Field>
+          </>
+        }
+      />
 
       {/* Resumen por moneda */}
       <section className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {report.byCurrency.map((cr) => (
-          <div key={cr.currency} className="rounded-[20px] border border-border bg-surface p-4">
-            <div className="mb-3 flex items-center justify-between">
+          <div key={cr.currency} className="rounded-[20px] border border-border bg-surface p-3.5 md:p-4">
+            <div className="mb-2 flex items-center justify-between md:mb-3">
               <h2 className="font-display text-base font-semibold text-text">Total en {cr.currency}</h2>
               <span className="rounded-lg bg-dark px-2 py-0.5 text-[10.5px] font-bold text-accent">{cr.currency}</span>
             </div>
@@ -548,16 +550,19 @@ export function PendingList({
                   {meta ? ` · ${meta}` : ""}
                 </p>
               </button>
-              <span className={`shrink-0 font-display text-sm font-bold tabular-nums ${tone}`}>
-                {formatMoney(r.amount, r.currency)}
-              </span>
-              <button
-                type="button"
-                onClick={() => onSettle(r)}
-                className="inline-flex h-9 shrink-0 items-center rounded-full bg-dark px-4 text-[12.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
-              >
-                {action}
-              </button>
+              {/* Celular: monto arriba y botón abajo, para dejarle ancho al texto. */}
+              <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                <span className={`font-display text-sm font-bold tabular-nums ${tone}`}>
+                  {formatMoney(r.amount, r.currency)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onSettle(r)}
+                  className="inline-flex h-8 items-center rounded-full bg-dark px-3.5 text-[12px] font-bold text-dark-fg transition-opacity hover:opacity-90 sm:h-9 sm:px-4 sm:text-[12.5px]"
+                >
+                  {action}
+                </button>
+              </div>
             </div>
           );
         })}
@@ -619,24 +624,12 @@ function Field({ label, children }: Readonly<{ label: string; children: React.Re
   );
 }
 
-function PresetButton({ onClick, children }: Readonly<{ onClick: () => void; children: React.ReactNode }>) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="rounded-full border border-border bg-surface px-3.5 py-1.5 text-[12px] font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text"
-    >
-      {children}
-    </button>
-  );
-}
-
 function ViewTab({ active, onClick, children }: Readonly<{ active: boolean; onClick: () => void; children: React.ReactNode }>) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-4 py-1.5 text-[12.5px] transition-colors ${
+      className={`whitespace-nowrap rounded-full px-3 py-1 text-[12.5px] transition-colors sm:px-4 ${
         active ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
       }`}
     >
@@ -727,7 +720,7 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
           <span className="truncate text-[13.5px] font-bold text-text">{m.categoryName ?? "Sin categoría"}</span>
           {isCostear && <CostearBadge />}
           {isRental && (
-            <span className="shrink-0 rounded-md bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint">
+            <span className="hidden shrink-0 rounded-md bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint sm:inline">
               Auto · alquiler
             </span>
           )}
@@ -737,7 +730,7 @@ function MovementRow({ m, onOpen }: Readonly<{ m: AccountMovement; onOpen: (m: A
             </span>
           )}
           {m.isShared && !isAgent && (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint">
+            <span className="hidden shrink-0 items-center gap-1 rounded-md bg-bg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-text-faint sm:inline-flex">
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>
               Compartido
             </span>

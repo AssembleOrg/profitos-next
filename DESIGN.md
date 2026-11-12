@@ -282,6 +282,18 @@ Una paleta de papel y tinta con un solo acento metálico y tres tierras para est
 
 Contenido sobre canvas crema con cards blancas. Patrón constante: cards apiladas en mobile, tabla en desktop (`md:`). Ritmo de 20px entre bloques (`gap-5`), 16px de padding de card en mobile y 20px desde md, 6px entre label y campo, 12px entre título de sección y contenido. Breakpoints de Tailwind: `sm` 640px (las hojas pasan de bottom sheet a diálogo centrado), `md` 768px (tablas, calendario de 7 columnas), `lg`/`xl` para columnas extra. En mobile el contenido reserva 96px + safe area para la barra flotante inferior.
 
+### Patrón de vista (todas las pantallas del sistema)
+
+Reglas que vienen del arreglo de responsive de Alquileres y Estados de cuenta. Cada vista nueva o tocada las sigue:
+
+- **Encabezado:** `PageHeader` (`src/app/(protected)/_components/page-header.tsx`). En el celular va el título a 22px y, debajo, una fila de acciones de 36px de alto (`headerAction`, y `headerPrimary` a la derecha). Desde `sm`, las acciones pasan a la derecha del título y a 44px. Las etiquetas largas se acortan en el celular (`Nuevo<span class="hidden sm:inline"> movimiento</span>`). Nunca tres botones de 44px en una fila de 343px.
+- **Filtros:** `FilterBar` + `FilterChip` (`_components/filter-bar.tsx`). Una sola fila de atajos que se desliza de costado y nunca baja de renglón; el atajo aplicado queda marcado. En el celular y la tablet, los campos van a una hoja "Filtros (n)" con "Limpiar filtros". Recién en `lg` se muestran en línea. Una grilla de 7 campos en el celular no.
+- **Ritmo:** `gap-3` entre bloques en el celular y `gap-5` desde `md`; padding de card de `p-3.5` en el celular y `p-4` desde `md`.
+- **Filas con monto + acción:** en el celular, el monto arriba y el botón abajo, en una columna a la derecha (`flex-col items-end`), para dejarle el ancho al texto. Los rótulos decorativos ("Auto · alquiler", "Compartido") se ocultan en el celular si ya están en la línea de detalle.
+- **Desborde:** el texto largo se corta con `truncate`/`line-clamp` dentro de un `min-w-0`, y los montos con `truncate` + `title`. Las grillas sin columnas en la base ya son de una columna que no se sale de la pantalla (regla en `globals.css`). En el `<main>` va `overflow-x-clip`, no `overflow-auto`, para que lo `sticky` funcione.
+- **Monedas:** nunca sumar ARS con USD. Los totales se muestran por moneda (`$ 2.708.000 · U$D 1.500`).
+- **Chequeo:** sin scroll de costado a 320, 375 y 1280px.
+
 Las vistas de trabajo se arman como "lista + detalle": en desktop, calendario mensual de 7 columnas a la izquierda y panel del día a la derecha; en mobile, tira de días deslizable con snap y agenda vertical. Las hojas complejas usan dos columnas (`1fr` + 340px) con la columna derecha sticky.
 
 ## Elevation & Depth

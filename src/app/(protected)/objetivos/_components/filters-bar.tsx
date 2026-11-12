@@ -53,7 +53,7 @@ export function FiltersBar({
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-[20px] border border-border bg-surface p-4 transition-opacity ${
+      className={`flex flex-col gap-3 rounded-[20px] border border-border bg-surface p-3.5 transition-opacity md:p-4 ${
         pending ? "opacity-70" : ""
       }`}
     >
@@ -77,14 +77,14 @@ export function FiltersBar({
           </label>
         )}
 
-        <label className="flex flex-col gap-1.5">
+        <label className="flex w-full flex-col gap-1.5 sm:w-auto">
           <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
             Desde
           </span>
           <DateField value={from} onChange={(iso) => update({ from: iso })} />
         </label>
 
-        <label className="flex flex-col gap-1.5">
+        <label className="flex w-full flex-col gap-1.5 sm:w-auto">
           <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-faint">
             Hasta
           </span>

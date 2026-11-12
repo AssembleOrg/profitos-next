@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import type { ContractDossier, DossierDue, PaymentDTO, ServiceProofDTO } from "@/lib/rentals/dto";
 import { formatReceiptNo } from "@/lib/rentals/money";
 import { CORRECTION_FREE_HOURS } from "@/lib/rentals/correction";
+import { headerAction, headerPrimary } from "../../_components/page-header";
 import { useSignedUrls } from "../_components/use-signed-urls";
 import { AttachmentPreview } from "../_components/media-uploader";
 import type { RentalAttachment } from "../_components/voice-recorder";
@@ -37,7 +38,6 @@ import {
   SectionTitle,
   api,
   btnGold,
-  btnPrimary,
   btnPrimarySm,
   btnSecondary,
   btnSecondarySm,
@@ -96,15 +96,15 @@ export function DossierView({ d, today }: { d: ContractDossier; today: string })
   const wa = waLink(d.tenant.phone);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-3 md:gap-5">
       <Link href="/alquileres/contratos" className="inline-flex w-fit items-center gap-1.5 text-[12.5px] font-semibold text-text-faint hover:text-text">
         <IconArrowLeft size={15} /> Contratos
       </Link>
 
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-4">
         <div className="min-w-0">
-          <h1 className="font-display text-[26px] font-semibold leading-tight text-text md:text-[30px]">{propertyLine(d.property.address, d.unit)}</h1>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-text-faint">
+          <h1 className="font-display text-[22px] font-semibold leading-tight text-text sm:text-[26px] md:text-[30px]">{propertyLine(d.property.address, d.unit)}</h1>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12.5px] text-text-faint sm:text-[13px]">
             <span>
               {[d.property.zone, d.property.city].filter(Boolean).join(", ") || "Sin localidad"} · {dateAR(d.startDate)} → {dateAR(d.endDate)}
             </span>
@@ -114,26 +114,27 @@ export function DossierView({ d, today }: { d: ContractDossier; today: string })
             <AdjustPill alert={d.status === "finalizado" ? "none" : d.adjustment.alert} />
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">
           {nextOpen && d.kind !== "temporal" && (
-            <button type="button" className={btnPrimary} onClick={() => setCollectDue(nextOpen.id)}>
+            <button type="button" className={`${headerPrimary} order-last lg:order-none`} onClick={() => setCollectDue(nextOpen.id)}>
               <IconReceipt size={16} className="text-accent" />
               Cobrar {monthLabel(nextOpen.dueDate.slice(0, 7)).toLowerCase()}
             </button>
           )}
           {nextOpen && d.kind === "temporal" && (
-            <button type="button" className={btnPrimary} onClick={() => setCollectDue(nextOpen.id)}>
+            <button type="button" className={`${headerPrimary} order-last lg:order-none`} onClick={() => setCollectDue(nextOpen.id)}>
               <IconReceipt size={16} className="text-accent" />
               Cobrar cuota {nextOpen.position}
             </button>
           )}
           {d.managed && d.status !== "finalizado" && (
-            <button type="button" className={btnSecondary} onClick={() => setAdjust(adjustTarget)}>
+            <button type="button" className={headerAction} onClick={() => setAdjust(adjustTarget)}>
               <IconTrend size={16} />
-              Aplicar aumento
+              <span className="sm:hidden">Aumento</span>
+              <span className="hidden sm:inline">Aplicar aumento</span>
             </button>
           )}
-          <Link href={`/alquileres/${d.id}/editar`} className={btnSecondary}>
+          <Link href={`/alquileres/${d.id}/editar`} className={headerAction}>
             <IconPencil size={16} />
             Condiciones
           </Link>
@@ -227,16 +228,16 @@ export function DossierView({ d, today }: { d: ContractDossier; today: string })
         <>
           <Ledger d={d} today={today} onCollect={setCollectDue} onEdit={setEditDue} onCorrect={openCorrect} onChanged={refresh} />
 
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="grid gap-3 md:gap-4 xl:grid-cols-2">
             <ProofsCard proofs={d.proofs} services={d.tenantServices} onAdd={() => setProofOpen(true)} onChanged={refresh} />
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 md:gap-4">
               <AdjustmentsCard d={d} onApply={() => setAdjust(adjustTarget)} />
               {(d.notes || (Array.isArray(d.attachments) && d.attachments.length > 0)) && <NotesCard d={d} />}
             </div>
           </div>
         </>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid gap-3 md:gap-4 xl:grid-cols-2">
           <OwnerManagedCard d={d} />
           {(d.notes || (Array.isArray(d.attachments) && d.attachments.length > 0)) && <NotesCard d={d} />}
         </div>
@@ -294,7 +295,7 @@ function PartyLines({ idType, idNumber, phone, email }: { idType: string | null;
 
 function Cond({ label, value, sub, big }: { label: string; value: string; sub?: string; big?: boolean }) {
   return (
-    <div className="min-w-0">
+    <div className={`min-w-0 ${big ? "col-span-2 sm:col-span-1" : ""}`}>
       <dt className="text-[12px] text-text-faint">{label}</dt>
       <dd className={big ? "font-display text-[20px] font-bold tabular-nums leading-tight text-text" : "text-[13px] font-semibold text-text"}>{value}</dd>
       {sub && <dd className="text-[11.5px] text-text-faint">{sub}</dd>}
@@ -382,7 +383,7 @@ function Ledger({
                 <DuePill status={due.status} />
               </button>
               <div className="mt-2 flex items-end justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="font-display text-[18px] font-bold tabular-nums text-text">{money(isSettled(due) ? due.collected : due.expected, d.currency)}</p>
                   <p className="text-[11.5px] text-text-faint">
                     {fee ? `Honorarios ${money(fee, d.currency)} · propietario ${money(owner, d.currency)}` : `Alquiler ${money(due.rent, d.currency)}`}
@@ -539,7 +540,7 @@ function DueDetail({
   onChanged: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-3 pl-5">
+    <div className="flex flex-col gap-3 md:pl-5">
       {due.payments.length === 0 ? (
         <p className="text-[12.5px] text-text-faint">Todavía no hay cobros en esta cuota.</p>
       ) : (
@@ -653,8 +654,8 @@ function PaymentRow({ p, dueId, currency, onCorrect, onChanged }: { p: PaymentDT
         {p.receipts.map((r) => {
           const label = formatReceiptNo(r.pointOfSale, r.number);
           return (
-            <span key={r.id} className={`inline-flex items-center gap-2 rounded-full border border-border py-1 pl-3 pr-1 text-[12px] ${r.status === "anulado" ? "bg-bg text-text-faint line-through" : "bg-surface text-text"}`}>
-              {r.bookKind === "inquilino" ? "Inquilino" : "Propietario"} {label}
+            <span key={r.id} className={`inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-[14px] border border-border py-1 pl-3 pr-1 text-[12px] sm:rounded-full ${r.status === "anulado" ? "bg-bg text-text-faint line-through" : "bg-surface text-text"}`}>
+              <span className="whitespace-nowrap">{r.bookKind === "inquilino" ? "Inquilino" : "Propietario"} {label}</span>
               {r.status === "emitido" ? (
                 <>
                   <ReceiptPrintLinks receiptId={r.id} />
@@ -872,7 +873,7 @@ function OwnerManagedCard({ d }: { d: ContractDossier }) {
       </p>
       <Link href={href} className={`${btnSecondary} mt-4 w-fit`}>
         <IconReceipt size={16} />
-        Registrar honorarios de la operación
+        Registrar honorarios<span className="hidden sm:inline"> de la operación</span>
       </Link>
     </Card>
   );

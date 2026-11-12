@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { PageHeader, headerPrimary } from "../../_components/page-header";
 import { Calendar, type CalendarEvent } from "./calendar";
 import { VisitaModal } from "./visita-modal";
 
@@ -35,26 +36,20 @@ export function AgendaClient({ events }: AgendaClientProps) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Agenda</h1>
-          <p className="text-[12.5px] text-text-faint">
-            Visitas, firmas y tasaciones programadas
-          </p>
-        </div>
-        <button
-          onClick={handleNew}
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90"
-        >
-          <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          Nueva visita
-        </button>
-      </div>
+    <div className="flex flex-col gap-3 md:gap-6">
+      <PageHeader
+        title="Agenda"
+        subtitle="Visitas, firmas y tasaciones programadas"
+        actions={
+          <button type="button" onClick={handleNew} className={headerPrimary}>
+            <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Nueva visita
+          </button>
+        }
+      />
 
       {/* Calendar */}
       <Calendar events={events} onEventClick={handleEventClick} />

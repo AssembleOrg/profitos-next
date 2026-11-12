@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Spinner } from "../../_components/spinner";
+import { headerAction } from "../../_components/page-header";
 
 interface Source {
   sourceKey: string;
@@ -159,16 +160,16 @@ export function PersonasClient({ configured }: { configured: boolean }) {
 
   return (
     <div>
-      <div className="mb-6 flex items-start justify-between gap-3">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Personas</h1>
+      <div className="mb-3 flex items-start justify-between gap-3 md:mb-6">
+        <div className="min-w-0">
+          <h1 className="font-display text-[22px] font-semibold leading-tight text-text sm:text-[26px] md:text-[28px]">Personas</h1>
           <p className="mt-1 text-[12.5px] text-text-faint">
             Informe de una persona por CUIT, CUIL o DNI. Buscamos en registros públicos y oficiales.
           </p>
         </div>
         <Link
           href="/personas/historial"
-          className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg"
+          className={headerAction}
         >
           Historial
         </Link>
@@ -204,7 +205,7 @@ export function PersonasClient({ configured }: { configured: boolean }) {
       {report && (
         <div className="space-y-4">
           {/* Cabecera del informe */}
-          <div className="rounded-[18px] border border-border bg-surface px-5 py-4">
+          <div className="rounded-[18px] border border-border bg-surface p-3.5 md:px-5 md:py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-display text-[18px] font-semibold text-text">

@@ -8,6 +8,7 @@ import type { DeviceSessionDTO } from "@/lib/auth/device-sessions";
 import { MAX_PHONES, whatsappLink, type ContactPhone } from "@/lib/auth/device-utils";
 import { signOut } from "@/app/login/actions";
 import type { MapPoint } from "./devices-map";
+import { PageHeader } from "../../_components/page-header";
 
 const DevicesMap = dynamic(() => import("./devices-map").then((m) => m.DevicesMap), {
   ssr: false,
@@ -64,7 +65,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 
 const inputCls =
   "h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none";
-const cardCls = "rounded-[20px] border border-border bg-surface p-4 md:p-5";
+const cardCls = "rounded-[20px] border border-border bg-surface p-3.5 md:p-5";
 const darkBtn =
   "inline-flex h-11 items-center justify-center gap-2 rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
 const ghostBtn =
@@ -239,7 +240,7 @@ function TelefonosCard({ initial, onSaved }: Readonly<{ initial: ContactPhone[];
                       className={`absolute left-0 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${r.whatsapp ? "translate-x-[18px]" : "translate-x-0.5"}`}
                     />
                   </span>
-                  Tiene WhatsApp
+                  <span className="whitespace-nowrap"><span className="hidden min-[360px]:inline">Tiene </span>WhatsApp</span>
                 </button>
                 <div className="flex items-center gap-1">
                   {wa && (
@@ -477,11 +478,8 @@ export function PerfilClient({ initial, initialSessions }: Readonly<Props>) {
   const [perfil, setPerfil] = useState(initial);
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4 py-2">
-      <section>
-        <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Mi perfil</h1>
-        <p className="mt-1 text-[12.5px] text-text-faint">Tu foto, cómo contactarte y dónde tenés la sesión abierta.</p>
-      </section>
+    <div className="mx-auto flex max-w-2xl flex-col gap-3 py-2 md:gap-4">
+      <PageHeader title="Mi perfil" subtitle="Tu foto, cómo contactarte y dónde tenés la sesión abierta." />
 
       <FotoCard perfil={perfil} onChange={(p) => setPerfil((x) => ({ ...x, ...p }))} />
       <TelefonosCard initial={perfil.phones} onSaved={(phones) => setPerfil((x) => ({ ...x, phones }))} />

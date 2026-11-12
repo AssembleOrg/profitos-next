@@ -123,7 +123,7 @@ function ManualChip() {
   return (
     <span
       title="Propiedad cargada manualmente"
-      className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-sand-chip px-2 py-0.5 text-[10px] font-bold text-warning"
+      className="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-sand-chip px-2 py-0.5 text-[10px] font-bold text-warning"
     >
       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 20h9" />
@@ -393,7 +393,7 @@ function MlChip({ status, permalink, externalDetail }: { status: string; permali
   const chip = (
     <span
       title={external ? `MercadoLibre: ${c.label}. ${externalDetail}` : `MercadoLibre: ${c.label}`}
-      className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${c.cls}`}
+      className={`inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${c.cls}`}
     >
       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 7h-9M14 17H5" />
@@ -440,7 +440,7 @@ function PortalChip({ portal, status, permalink }: { portal: string; status: str
   const chip = (
     <span
       title={`${ui.name}: ${c.label}`}
-      className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${c.cls}`}
+      className={`inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${c.cls}`}
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ui.dot }} aria-hidden />
       {ui.abbr} {c.label}
@@ -988,40 +988,40 @@ export function PropiedadesClient({
   const descValue: string | null = desc?.id === descId ? desc.text : isEdit ? null : "";
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 md:gap-5">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Propiedades</h1>
+        <div className="min-w-0">
+          <h1 className="font-display text-[22px] font-semibold leading-tight text-text sm:text-[26px] md:text-[28px]">Propiedades</h1>
           <p className="text-[12.5px] text-text-faint">
             Mostrando {properties.length} de {total} resultado{total !== 1 ? "s" : ""} · Total global: {totalAll}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:shrink-0 sm:gap-2">
           {isAdmin && (
             <button
               onClick={() => setAssignModalOpen(true)}
               title="Asignar seguimiento"
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-3 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg sm:px-4"
+              className="inline-flex h-9 items-center gap-2 rounded-full border border-border bg-surface px-3 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg sm:h-11 sm:px-4"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 11l3 3L22 4" />
                 <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
               </svg>
-              <span className="hidden sm:inline">Asignar seguimiento</span>
+              <span className="hidden xl:inline">Asignar seguimiento</span>
             </button>
           )}
           <button
             onClick={handleSyncMl}
             disabled={syncingMl}
             title="Sincronizar el estado de las publicaciones de MercadoLibre"
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-3 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg disabled:opacity-50 sm:px-4"
+            className="inline-flex h-9 items-center gap-2 rounded-full border border-border bg-surface px-3 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg disabled:opacity-50 sm:h-11 sm:px-4"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={syncingMl ? "animate-spin" : ""}>
               <path d="M21 12a9 9 0 11-2.64-6.36L21 8" />
               <polyline points="21 3 21 8 16 8" />
             </svg>
-            <span className="hidden sm:inline">{syncingMl ? "Sincronizando..." : "Sincronizar ML"}</span>
+            <span className="hidden xl:inline">{syncingMl ? "Sincronizando..." : "Sincronizar ML"}</span>
           </button>
           <button
             onClick={() => {
@@ -1029,7 +1029,7 @@ export function PropiedadesClient({
               window.open(`/api/reportes/portafolio/pdf${qs ? `?${qs}` : ""}`, "_blank");
             }}
             title="Exportar el portafolio (con los filtros actuales) a PDF: cada propiedad y en qué portal está publicada"
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface px-3 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg sm:px-4"
+            className="inline-flex h-9 items-center gap-2 rounded-full border border-border bg-surface px-3 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-bg active:bg-bg sm:h-11 sm:px-4"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -1037,12 +1037,12 @@ export function PropiedadesClient({
               <line x1="12" y1="18" x2="12" y2="12" />
               <polyline points="9 15 12 18 15 15" />
             </svg>
-            <span className="hidden sm:inline">Exportar PDF</span>
+            <span className="hidden xl:inline">Exportar PDF</span>
           </button>
-          <div className="inline-flex h-11 items-center gap-0.5 rounded-full border border-border bg-surface p-1">
+          <div className="inline-flex h-9 items-center gap-0.5 rounded-full border border-border bg-surface p-1 sm:h-11">
             <button
               onClick={() => setViewMode("list")}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] transition-colors ${
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] transition-colors sm:px-3.5 sm:py-1.5 ${
                 viewMode === "list" ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
               }`}
             >
@@ -1054,11 +1054,11 @@ export function PropiedadesClient({
                 <line x1="3" y1="12" x2="3.01" y2="12" />
                 <line x1="3" y1="18" x2="3.01" y2="18" />
               </svg>
-              <span className="hidden sm:inline">Lista</span>
+              <span className="hidden xl:inline">Lista</span>
             </button>
             <button
               onClick={() => setViewMode("map")}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] transition-colors ${
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] transition-colors sm:px-3.5 sm:py-1.5 ${
                 viewMode === "map" ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
               }`}
             >
@@ -1067,13 +1067,13 @@ export function PropiedadesClient({
                 <line x1="8" y1="2" x2="8" y2="18" />
                 <line x1="16" y1="6" x2="16" y2="22" />
               </svg>
-              <span className="hidden sm:inline">Mapa</span>
+              <span className="hidden xl:inline">Mapa</span>
             </button>
           </div>
           <button
             onClick={handleNew}
             title="Nueva propiedad"
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-dark px-3.5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 active:opacity-90 sm:px-5"
+            className="ml-auto inline-flex h-9 items-center gap-2 rounded-full bg-dark px-3.5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 active:opacity-90 sm:ml-0 sm:h-11 sm:px-5"
           >
             <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19" />
@@ -1085,7 +1085,7 @@ export function PropiedadesClient({
       </div>
 
       {/* Filters */}
-      <div className="rounded-[20px] border border-border bg-surface p-4 xl:border-0 xl:bg-transparent xl:p-0">
+      <div className="rounded-[20px] border border-border bg-surface p-3.5 md:p-4 xl:border-0 xl:bg-transparent xl:p-0">
 
         {/* Mobile: búsqueda + botón filtros siempre visibles */}
         <div className="flex gap-2 sm:hidden">
@@ -1355,7 +1355,7 @@ export function PropiedadesClient({
               className="cursor-pointer overflow-hidden rounded-[18px] border border-border bg-surface active:bg-bg"
             >
               <div className="p-3">
-                <div className="flex min-w-0 items-center gap-1.5">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
                   <p className="truncate text-[13.5px] font-bold leading-tight text-text">{p.address}</p>
                   {p.source === "manual" && <ManualChip />}
                   {p.mlPublication?.published && (
@@ -1433,7 +1433,7 @@ export function PropiedadesClient({
       {viewMode === "list" && (
         <div className="hidden sm:grid xl:hidden grid-cols-2 lg:grid-cols-3 gap-2">
           {properties.length === 0 ? (
-            <div className="col-span-3 rounded-[20px] bg-bg px-6 py-8 text-center text-[12.5px] text-text-faint">
+            <div className="col-span-full rounded-[20px] bg-bg px-6 py-8 text-center text-[12.5px] text-text-faint">
               No hay propiedades para los filtros seleccionados
             </div>
           ) : (
@@ -1445,7 +1445,7 @@ export function PropiedadesClient({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-1.5">
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
                       <p className="truncate text-[13.5px] font-bold text-text">{p.address}</p>
                       {p.source === "manual" && <ManualChip />}
                       {p.mlPublication?.published && (
@@ -1595,7 +1595,7 @@ export function PropiedadesClient({
                       <p className="text-[11.5px] text-text-faint">{p.publicationTitle ?? p.realAddress ?? "Sin título"}</p>
                     </td>
                     <td className="px-4 py-3.5 text-[13px] text-text-muted">{p.referenceCode ?? (p.externalId ? `#${p.externalId}` : "—")}</td>
-                    <td className="px-4 py-3.5 font-display text-[13.5px] font-bold text-text">
+                    <td className="whitespace-nowrap px-4 py-3.5 font-display text-[13.5px] font-bold text-text">
                       {p.operationPrice ? `${p.operationCurrency ?? "USD"} ${p.operationPrice.toLocaleString("es-AR")}` : "—"}
                     </td>
                     <td className="px-4 py-3.5 text-[13px] text-text-muted">{p.city ?? "—"}</td>

@@ -73,12 +73,13 @@ export function ReceiptsView({
   const totalOf = (kind: ReceiptListItem["bookKind"]) => {
     const sum = { ARS: 0, USD: 0 };
     for (const r of issued) if (r.bookKind === kind) sum[r.currency === "USD" ? "USD" : "ARS"] += r.amount ?? 0;
-    return [money(sum.ARS), sum.USD > 0 && money(sum.USD, "USD")].filter(Boolean).join(" · ");
+    // "$ 0" solo si no hay nada en ninguna moneda; un talonario solo en dólares no muestra "$ 0 · U$D …".
+    return [(sum.ARS > 0 || sum.USD === 0) && money(sum.ARS), sum.USD > 0 && money(sum.USD, "USD")].filter(Boolean).join(" · ");
   };
   const totals = { inquilino: totalOf("inquilino"), propietario: totalOf("propietario") };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 md:gap-4">
       {dialog}
       {/* Talonarios */}
       <div className="grid gap-3 md:grid-cols-2">
@@ -86,7 +87,7 @@ export function ReceiptsView({
           <section
             key={b.kind}
             aria-label={b.label}
-            className={`flex flex-col gap-3 rounded-[20px] p-4 md:p-5 ${b.kind === "inquilino" ? "bg-dark text-dark-fg" : "border border-border bg-surface"}`}
+            className={`flex flex-col gap-3 rounded-[20px] p-3.5 md:p-5 ${b.kind === "inquilino" ? "bg-dark text-dark-fg" : "border border-border bg-surface"}`}
           >
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -97,12 +98,12 @@ export function ReceiptsView({
               </div>
               {!b.configured && <Pill tone="bg-accent text-dark">Confirmar número</Pill>}
             </div>
-            <div className="flex items-end justify-between gap-3">
+            <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
               <div>
                 <p className={`text-[12px] ${b.kind === "inquilino" ? "text-dark-muted" : "text-text-faint"}`}>Próximo número</p>
-                <p className="font-display text-[26px] font-bold tabular-nums leading-tight">{formatReceiptNo(b.pointOfSale, b.nextNumber)}</p>
+                <p className="whitespace-nowrap font-display text-[22px] font-bold tabular-nums leading-tight sm:text-[26px]">{formatReceiptNo(b.pointOfSale, b.nextNumber)}</p>
               </div>
-              <p className={`text-right text-[12px] ${b.kind === "inquilino" ? "text-dark-muted" : "text-text-faint"}`}>
+              <p className={`ml-auto text-right text-[12px] ${b.kind === "inquilino" ? "text-dark-muted" : "text-text-faint"}`}>
                 {monthLabel(month)}
                 <br />
                 <span className={`font-display text-[14px] font-bold tabular-nums ${b.kind === "inquilino" ? "text-dark-fg" : "text-text"}`}>{totals[b.kind]}</span>
@@ -114,14 +115,15 @@ export function ReceiptsView({
                 onClick={() => setEditBook(b)}
                 className={b.kind === "inquilino" ? "inline-flex h-9 items-center gap-1.5 rounded-full bg-white/10 px-3.5 text-[12.5px] font-semibold text-dark-fg hover:bg-white/15" : btnSecondarySm}
               >
-                <IconPencil size={14} /> Cambiar numeración
+                <IconPencil size={14} /> <span className="sm:hidden">Numeración</span>
+                <span className="hidden sm:inline">Cambiar numeración</span>
               </button>
               <button
                 type="button"
                 onClick={() => setVoidBook(b)}
                 className={b.kind === "inquilino" ? "inline-flex h-9 items-center gap-1.5 rounded-full bg-white/10 px-3.5 text-[12.5px] font-semibold text-dark-fg hover:bg-white/15" : btnSecondarySm}
               >
-                <IconBan size={14} /> Anular un número
+                <IconBan size={14} /> Anular<span className="hidden sm:inline"> un</span> número
               </button>
             </div>
           </section>
@@ -138,7 +140,7 @@ export function ReceiptsView({
           <button type="button" aria-label="Mes siguiente" onClick={() => navigate({ mes: shiftMonth(month, 1) })} className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-text-muted hover:bg-bg">
             <IconChevronRight size={16} />
           </button>
-          <div role="radiogroup" aria-label="Talonario" className="ml-1 inline-flex items-center gap-0.5 rounded-full border border-border bg-surface p-1">
+          <div role="radiogroup" aria-label="Talonario" className="inline-flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full border border-border bg-surface p-1 [scrollbar-width:none] sm:ml-1">
             {[
               { v: "", l: "Todos" },
               { v: "inquilino", l: "Inquilino" },
@@ -153,7 +155,7 @@ export function ReceiptsView({
                   role="radio"
                   aria-checked={active}
                   onClick={() => navigate(o.v === "anulado" ? { estado: "anulado", tipo: null } : { tipo: o.v || null, estado: null })}
-                  className={`rounded-full px-3 py-1 text-[12px] ${active ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"}`}
+                  className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] sm:px-3 ${active ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"}`}
                 >
                   {o.l}
                 </button>
@@ -258,12 +260,12 @@ export function ReceiptsView({
                   <Pill tone={r.bookKind === "inquilino" ? "bg-sand-chip text-text" : "bg-sage-chip text-olive-light"}>{KIND_LABEL[r.bookKind]}</Pill>
                 </div>
                 <div className="mt-2 flex items-end justify-between gap-3">
-                  <p className="text-[12px] text-text-muted">
+                  <p className="min-w-0 text-[12px] text-text-muted">
                     {r.bookKind === "inquilino" ? r.tenantName : r.ownerName}
                     {r.period ? ` · ${r.period}` : ""}
                   </p>
                   {r.status === "emitido" ? (
-                    <div className="flex shrink-0 items-center gap-1.5">
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
                       <span className="font-display text-[14px] font-bold tabular-nums text-text">{r.amount ? money(r.amount, r.currency) : ""}</span>
                       <a href={`/api/alquileres/recibos/${r.id}/pdf`} target="_blank" rel="noreferrer" className="rounded-full bg-dark px-3 py-1 text-[11.5px] font-bold text-dark-fg">
                         PDF

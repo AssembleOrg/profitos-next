@@ -7,6 +7,7 @@ import { SPRING_SETTLE } from "@/lib/motion";
 import { toast } from "sonner";
 import { Sheet } from "../../_components/sheet";
 import { Pagination } from "../../_components/pagination";
+import { PageHeader, headerPrimary } from "../../_components/page-header";
 import { WhatsAppLink } from "@/components/whatsapp-link";
 
 export interface SerializedAgency {
@@ -92,20 +93,17 @@ export function InmobiliariasClient({
 
   return (
     <div className="flex flex-col gap-3">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-[26px] font-semibold text-text md:text-[28px]">Inmobiliarias</h1>
-          <p className="text-[12.5px] text-text-faint">
-            {total} inmobiliaria{total !== 1 ? "s" : ""} · otras agencias con las que se comparten movimientos
-          </p>
-        </div>
+      <PageHeader
+        title="Inmobiliarias"
+        subtitle={<>{total} inmobiliaria{total !== 1 ? "s" : ""} · otras agencias con las que se comparten movimientos</>}
+        actions={
         <button
           type="button"
           onClick={() => {
             setEditing(null);
             setFormOpen(true);
           }}
-          className="inline-flex h-11 items-center gap-2 self-start rounded-full bg-dark px-5 text-[13.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 sm:self-auto"
+          className={headerPrimary}
         >
           <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" />
@@ -113,7 +111,8 @@ export function InmobiliariasClient({
           </svg>
           Nueva inmobiliaria
         </button>
-      </header>
+        }
+      />
 
       <div className={`relative transition-opacity ${pending ? "opacity-70" : ""}`}>
         <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -184,7 +183,7 @@ export function InmobiliariasClient({
           </div>
 
           {/* Desktop table */}
-          <div className="hidden overflow-hidden rounded-[20px] border border-border bg-surface sm:block">
+          <div className="hidden overflow-x-auto rounded-[20px] border border-border bg-surface sm:block">
             <table className="w-full text-sm">
               <thead>
                 <tr>

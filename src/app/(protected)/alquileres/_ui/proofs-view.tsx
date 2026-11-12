@@ -23,7 +23,7 @@ export function ProofsView({ proofs, status, counts }: { proofs: ServiceProofDTO
   const urls = useSignedUrls(paths);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 md:gap-4">
       <nav aria-label="Estado de los comprobantes" className="-mx-5 flex gap-1.5 overflow-x-auto px-5 md:mx-0 md:px-0">
         {TABS.map((t) => {
           const active = t.v === status;
