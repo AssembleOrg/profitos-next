@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+/* Un `grid` sin `grid-cols-*` en la base (ej. `grid md:grid-cols-2`) arma una
+   columna implícita `auto` que crece al ancho del texto truncado o de las tiras
+   con scroll: en el celular la vista se sale de la pantalla y scrollea de costado.
+   Por defecto, una columna que nunca supera el contenedor. Cualquier grid-cols-* gana (layer utilities). */
+@layer base {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 :root {
   /* ══ V4 · Cálido Expresivo ══
      Fuente de verdad: pencil-new.pen (frame "V4 · Componentes" + tokens v4-*).

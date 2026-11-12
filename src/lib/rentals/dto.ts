@@ -76,6 +76,8 @@ export interface MonthSummary {
   fees: number;
   toOwners: number;
   counts: Record<RentalDueEffectiveStatus, number>;
+  /** Los montos de arriba son solo ARS; los contratos en dólares van acá aparte. */
+  usd: { collected: number; pending: number; overdue: number };
 }
 
 export interface AgendaMonth {
@@ -274,6 +276,8 @@ export interface ReceiptBookDTO {
 
 export interface ReceiptListItem extends ReceiptRef {
   contractId: string | null;
+  /** Moneda del contrato ("ARS" | "USD"); ARS si el recibo no tiene contrato. */
+  currency: string;
   propertyAddress: string | null;
   unit: string | null;
   tenantName: string | null;
