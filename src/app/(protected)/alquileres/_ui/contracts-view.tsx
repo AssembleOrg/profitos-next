@@ -165,7 +165,7 @@ export function ContractsView({
       ) : (
         <>
           {/* Desktop: tabla */}
-          <div className="hidden overflow-hidden rounded-[20px] border border-border bg-surface md:block">
+          <div className="hidden overflow-x-auto rounded-[20px] border border-border bg-surface md:block">
             <table className="w-full text-left">
               <thead>
                 <tr>

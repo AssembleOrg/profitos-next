@@ -1,18 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Figtree, Bricolage_Grotesque } from "next/font/google";
+import { Lexend, Outfit } from "next/font/google";
 import { Toaster } from "sonner";
 import { MotionProvider } from "./_components/motion-provider";
 import "./globals.css";
 
-const figtree = Figtree({
-  variable: "--font-figtree",
+const lexend = Lexend({
+  variable: "--font-lexend",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
 
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
   display: "swap",
@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${figtree.variable} ${bricolage.variable}`}>
+    <html lang="es" className={`${lexend.variable} ${outfit.variable}`}>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <MotionProvider>{children}</MotionProvider>
         <Toaster

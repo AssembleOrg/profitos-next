@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { Schibsted_Grotesk } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
 import { CONTACT, WEB_BASE, whatsappUrl } from "@/lib/web/format";
@@ -11,7 +10,6 @@ import { WhatsappFab } from "./_components/whatsapp-fab";
 import { Header } from "./_components/header";
 import "./web.css";
 
-const font = Schibsted_Grotesk({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--jw-font", display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "Juliana Profitos Propiedades | Venta y alquiler en Quilmes", template: "%s | Juliana Profitos Propiedades" },
@@ -26,7 +24,7 @@ const TYPES = ["Departamento", "Casa", "PH", "Local", "Oficina", "Terreno", "Gal
 
 export default function WebLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <div className={`jw ${font.variable}`}>
+    <div className="jw">
       <a href="#contenido" className="jw-skip">Saltar al contenido</a>
       <AccountProvider clientId={googleWebClientId()}>
       <Suspense><ActivityTracker /></Suspense>

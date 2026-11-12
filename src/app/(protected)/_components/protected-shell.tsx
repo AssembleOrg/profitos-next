@@ -32,7 +32,9 @@ function Shell({ avatarUrl, userName, greeting, children }: Readonly<Omit<Protec
       {/* Desktop: topbar pill flotante */}
       <Topbar avatarUrl={avatarUrl} role={effectiveRole} />
 
-      <main className="flex-1 overflow-auto">
+      {/* overflow-x-clip (no overflow-auto): recorta lo que desborda sin crear un
+          contenedor de scroll, así los `sticky` de adentro se pegan a la ventana. */}
+      <main className="min-w-0 flex-1 overflow-x-clip">
         <RolePreviewBanner />
 
         {/* Mobile: el saludo solo encabeza el dashboard; el resto de las páginas

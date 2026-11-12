@@ -27,48 +27,48 @@ colors:
   scrim: "rgba(20, 19, 15, 0.55)"
 typography:
   display:
-    fontFamily: "Bricolage Grotesque, Figtree, system-ui, sans-serif"
+    fontFamily: "Outfit, Lexend, system-ui, sans-serif"
     fontSize: "26px"
     fontWeight: 600
     lineHeight: 1.25
   figure-hero:
-    fontFamily: "Bricolage Grotesque, Figtree, system-ui, sans-serif"
+    fontFamily: "Outfit, Lexend, system-ui, sans-serif"
     fontSize: "40px"
     fontWeight: 700
     lineHeight: 1
     fontFeature: "\"tnum\""
   figure:
-    fontFamily: "Bricolage Grotesque, Figtree, system-ui, sans-serif"
+    fontFamily: "Outfit, Lexend, system-ui, sans-serif"
     fontSize: "26px"
     fontWeight: 700
     lineHeight: 1.25
     fontFeature: "\"tnum\""
   title:
-    fontFamily: "Bricolage Grotesque, Figtree, system-ui, sans-serif"
+    fontFamily: "Outfit, Lexend, system-ui, sans-serif"
     fontSize: "17px"
     fontWeight: 600
   headline:
-    fontFamily: "Bricolage Grotesque, Figtree, system-ui, sans-serif"
+    fontFamily: "Outfit, Lexend, system-ui, sans-serif"
     fontSize: "16px"
     fontWeight: 600
   body:
-    fontFamily: "Figtree, system-ui, sans-serif"
+    fontFamily: "Lexend, system-ui, sans-serif"
     fontSize: "13.5px"
     fontWeight: 400
   label:
-    fontFamily: "Figtree, system-ui, sans-serif"
+    fontFamily: "Lexend, system-ui, sans-serif"
     fontSize: "12.5px"
     fontWeight: 600
   caption:
-    fontFamily: "Figtree, system-ui, sans-serif"
+    fontFamily: "Lexend, system-ui, sans-serif"
     fontSize: "11.5px"
     fontWeight: 400
   pill:
-    fontFamily: "Figtree, system-ui, sans-serif"
+    fontFamily: "Lexend, system-ui, sans-serif"
     fontSize: "11px"
     fontWeight: 700
   overline:
-    fontFamily: "Figtree, system-ui, sans-serif"
+    fontFamily: "Lexend, system-ui, sans-serif"
     fontSize: "10.5px"
     fontWeight: 700
     letterSpacing: "0.12em"
@@ -208,7 +208,7 @@ components:
 
 **Creative North Star: "El escritorio de la inmobiliaria"**
 
-Un escritorio de oficina bien llevado: papel crema, carpetas blancas, tinta casi negra y un único dorado que marca lo que cambia. V4 · Cálido Expresivo es denso pero respirado; el trabajo se lee en cifras grandes en Bricolage Grotesque y todo lo demás habla en Figtree pequeño y preciso. La calidez viene de la paleta (crema, arena, arcilla, salvia), nunca de gradientes ni de decoración.
+Un escritorio de oficina bien llevado: papel crema, carpetas blancas, tinta casi negra y un único dorado que marca lo que cambia. V4 · Cálido Expresivo es denso pero respirado; el trabajo se lee en cifras grandes en Outfit y todo lo demás habla en Lexend pequeño y preciso. La calidez viene de la paleta (crema, arena, arcilla, salvia), nunca de gradientes ni de decoración.
 
 El sistema es operativo: el celular pesa tanto como la compu, por eso los controles son pills de 44px, las listas son cards en mobile y tablas en desktop, y los modales son hojas que suben desde abajo. Los estados se comunican con tints de fondo y texto del mismo matiz (salvia cobrado, arena a cobrar, arcilla vencido), no con bordes de color; los puntos de estado de 6px quedan para donde no entra un pill (tira de días, leyendas).
 
@@ -217,7 +217,7 @@ La superficie de alquileres extiende el mundo sin cambiar paleta ni tipografía:
 **Key Characteristics:**
 - Canvas crema, superficies blancas con borde cálido de 1px, sin sombras en reposo.
 - Un primario por pantalla: pill de tinta oscura con ícono dorado.
-- Bricolage Grotesque solo para títulos, días y cifras (siempre tabulares); Figtree para todo lo demás.
+- Outfit solo para títulos, días y cifras (siempre tabulares); Lexend para todo lo demás.
 - Estados como tint + texto del mismo matiz, en pills `rounded-full`.
 - Dorado reservado para lo que cambia o requiere atención: aumentos, foco, el día de hoy.
 
@@ -256,15 +256,15 @@ Una paleta de papel y tinta con un solo acento metálico y tres tierras para est
 
 ## Typography
 
-**Display Font:** Bricolage Grotesque (pesos 500-700; con Figtree de respaldo)
-**Body Font:** Figtree (pesos 300-700; con system-ui)
+**Display Font:** Outfit (pesos 500-700; con Lexend de respaldo)
+**Body Font:** Lexend (pesos 300-700; con system-ui)
 
-**Character:** Bricolage aporta el carácter expresivo y algo editorial en títulos y cifras; Figtree es la voz de trabajo, compacta y legible a 11-13.5px. La escala es fina y en pasos de medio punto, típica de una herramienta densa.
+**Character:** Outfit (geométrica, cercana a Poppins) aporta la cara de la marca en títulos y cifras; Lexend, diseñada para la legibilidad, es la voz de trabajo a 11-13.5px. La escala es fina y en pasos de medio punto, típica de una herramienta densa.
 
 ### Hierarchy
 - **Display** (600, 26px / 28px desde md, line-height 1.25): título de página ("Alquileres", "Hola, Juliana").
 - **Figure Hero** (700, 40px, line-height 1, tabular): la cifra protagonista de una card hero oscura (saldo del portal; `text-5xl` en el dashboard).
-- **Figure** (700, 26px, tabular): montos de talones y KPI; las cifras secundarias bajan a 15-16px manteniendo Bricolage bold tabular.
+- **Figure** (700, 26px, tabular): montos de talones y KPI; las cifras secundarias bajan a 15-16px manteniendo Outfit bold tabular.
 - **Title** (600, 17px): encabezado de hojas modales.
 - **Headline** (600, 16px; 14-15px en subsecciones): títulos de card y sección, días del calendario (16px tabular).
 - **Body** (400, 13.5px): celdas principales, conceptos, inputs (los inputs reales rinden a 16px por la regla anti-zoom de iOS).
@@ -274,7 +274,7 @@ Una paleta de papel y tinta con un solo acento metálico y tres tierras para est
 - **Overline** (700, 10.5px, 0.12em, MAYÚSCULAS): solo cabeceras de tabla, días de la semana del calendario y labels de KPI tiles.
 
 ### Named Rules
-**The Figures Are Display Rule.** Todo monto, número de día o cifra de KPI va en Bricolage con `tabular-nums`; los números nunca bailan al animar.
+**The Figures Are Display Rule.** Todo monto, número de día o cifra de KPI va en Outfit con `tabular-nums`; los números nunca bailan al animar.
 
 **The Overline-Only-In-Grids Rule.** Las mayúsculas espaciadas existen solo como cabecera de una grilla (tabla, semana, KPI) y en el wordmark de marca "JULIANA PROFITOS / Propiedades" (identidad, no tipografía de UI). No se usan como rótulo sobre títulos.
 
@@ -311,7 +311,7 @@ Táctiles y concretos: pills sólidas, sin gradientes.
 - **Secondary:** blanco con borde cálido, texto tinta media semibold; hover a canvas y texto tinta.
 - **Gold:** dorado con texto tinta, 36px; solo para aplicar un aumento.
 - **Danger:** arcilla con texto terracota (40px); confirmación fuerte en terracota sólida con texto blanco.
-- **Text / Link:** "Cancelar" en 13px tinta débil; link de acción en Bricolage 12.5px bold terracota con subrayado en hover.
+- **Text / Link:** "Cancelar" en 13px tinta débil; link de acción en Outfit 12.5px bold terracota con subrayado en hover.
 - **Focus / Disabled:** outline dorado 2px, offset 2px; deshabilitado al 50%.
 
 ### Chips (status pills)
@@ -341,28 +341,28 @@ Táctiles y concretos: pills sólidas, sin gradientes.
 - **Paginación:** círculos de 36px, activa en tinta.
 
 ### Sheets
-Hojas modales de Radix: en mobile suben desde abajo con 28px de radio superior, handle de 40x4px y hasta 92dvh; desde `sm` son diálogos centrados de 24px. Encabezado en Bricolage 17px; footer con borde superior, "Cancelar" de texto y primario pill.
+Hojas modales de Radix: en mobile suben desde abajo con 28px de radio superior, handle de 40x4px y hasta 92dvh; desde `sm` son diálogos centrados de 24px. Encabezado en Outfit 17px; footer con borde superior, "Cancelar" de texto y primario pill.
 
 ### Receipt Stub (talón con línea de corte)
-Cada recibo que se emite se dibuja como un talón de talonario: card de 18px, 16px de padding, título en Bricolage 14px, subtítulo en caption, número `N° 0001-` + input numérico en una pill embebida (crema sobre blanco, blanco al 10% sobre tinta). Una línea punteada de borde a borde con dos muescas circulares de 16px en el color de la superficie anfitriona separa el encabezado del monto; debajo, el titular en 12px y el monto en Figure (26px). El talón del inquilino es oscuro (tinta), el del propietario es blanco con borde; deshabilitado baja al 40%.
+Cada recibo que se emite se dibuja como un talón de talonario: card de 18px, 16px de padding, título en Outfit 14px, subtítulo en caption, número `N° 0001-` + input numérico en una pill embebida (crema sobre blanco, blanco al 10% sobre tinta). Una línea punteada de borde a borde con dos muescas circulares de 16px en el color de la superficie anfitriona separa el encabezado del monto; debajo, el titular en 12px y el monto en Figure (26px). El talón del inquilino es oscuro (tinta), el del propietario es blanco con borde; deshabilitado baja al 40%.
 
 ### Split Sheet (hoja de cobro)
-Dos columnas: conceptos y datos del cobro a la izquierda, a la derecha una columna sticky de 340px con los dos talones apilados. Entre ellos, un conector vertical punteado de 2px en borde firme sostiene la línea de honorarios: input pill de porcentaje, link terracota "usar N%" si se editó, y el descuento en Bricolage 14px bold terracota. Los montos se recalculan en vivo con una transición de 160-180ms (opacidad + 3-4px de desplazamiento).
+Dos columnas: conceptos y datos del cobro a la izquierda, a la derecha una columna sticky de 340px con los dos talones apilados. Entre ellos, un conector vertical punteado de 2px en borde firme sostiene la línea de honorarios: input pill de porcentaje, link terracota "usar N%" si se editó, y el descuento en Outfit 14px bold terracota. Los montos se recalculan en vivo con una transición de 160-180ms (opacidad + 3-4px de desplazamiento).
 
 ### Agenda Calendar
-Grilla de 7 columnas dentro de una card de 20px, celdas de 132px de alto mínimo separadas por bordes de 1px, fines de semana en crema al 40%, día seleccionado en arena al 60%. Número del día en Bricolage 16px dentro de un círculo de 32px: seleccionado en tinta, hoy con anillo dorado. Cada celda muestra hasta tres chips de 6px de radio, en este orden: aumentos (dorado sólido, texto tinta, bandera), vencimientos (tint por estado, dirección en 11px semibold + monto corto en 10.5px tabular), "+N más", y finales de contrato (borde punteado, texto tinta débil). En mobile se convierte en una tira de días de 48px de ancho con snap y puntos de estado de 6px.
+Grilla de 7 columnas dentro de una card de 20px, celdas de 132px de alto mínimo separadas por bordes de 1px, fines de semana en crema al 40%, día seleccionado en arena al 60%. Número del día en Outfit 16px dentro de un círculo de 32px: seleccionado en tinta, hoy con anillo dorado. Cada celda muestra hasta tres chips de 6px de radio, en este orden: aumentos (dorado sólido, texto tinta, bandera), vencimientos (tint por estado, dirección en 11px semibold + monto corto en 10.5px tabular), "+N más", y finales de contrato (borde punteado, texto tinta débil). En mobile se convierte en una tira de días de 48px de ancho con snap y puntos de estado de 6px.
 
 ### Month Summary Bar
-Una barra pill de 8px (12px desde `sm`) sobre crema, repartida en oliva (cobrado), dorado (a cobrar) y terracota (vencido), con la leyenda debajo: punto de 6px + label 11.5px + cifra en Bricolage. Anima el ancho en 400ms con `cubic-bezier(0.16, 1, 0.3, 1)`.
+Una barra pill de 8px (12px desde `sm`) sobre crema, repartida en oliva (cobrado), dorado (a cobrar) y terracota (vencido), con la leyenda debajo: punto de 6px + label 11.5px + cifra en Outfit. Anima el ancho en 400ms con `cubic-bezier(0.16, 1, 0.3, 1)`.
 
 ### Empty State
-Bloque crema de 20px, círculo arena de 48px con ícono dorado, título Bricolage 15px y texto 12.5px tinta débil, máximo `max-w-sm`.
+Bloque crema de 20px, círculo arena de 48px con ícono dorado, título Outfit 15px y texto 12.5px tinta débil, máximo `max-w-sm`.
 
 ## Do's and Don'ts
 
 ### Do:
 - **Do** usar los nombres de token de `globals.css` (`bg-surface`, `text-text-muted`, `bg-sand-chip`, `bg-dark`) en vez de hex sueltos.
-- **Do** poner toda cifra en Bricolage bold con `tabular-nums`.
+- **Do** poner toda cifra en Outfit bold con `tabular-nums`.
 - **Do** mantener un único primario oscuro por pantalla, con su ícono en dorado.
 - **Do** expresar estados con el mapeo tint + matiz de los pills (salvia cobrado, arena a cobrar, arcilla vencido).
 - **Do** usar el anillo de foco dorado (outline 2px, offset 2px) en todo control que no sea un campo; los campos cambian el borde a dorado.

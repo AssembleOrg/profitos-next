@@ -69,10 +69,13 @@ export function ReceiptsView({
   }
 
   const issued = receipts.filter((r) => r.status === "emitido");
-  const totals = {
-    inquilino: issued.filter((r) => r.bookKind === "inquilino").reduce((a, r) => a + (r.amount ?? 0), 0),
-    propietario: issued.filter((r) => r.bookKind === "propietario").reduce((a, r) => a + (r.amount ?? 0), 0),
+  // Total del mes por talonario, separado por moneda (no se suman dólares a pesos).
+  const totalOf = (kind: ReceiptListItem["bookKind"]) => {
+    const sum = { ARS: 0, USD: 0 };
+    for (const r of issued) if (r.bookKind === kind) sum[r.currency === "USD" ? "USD" : "ARS"] += r.amount ?? 0;
+    return [money(sum.ARS), sum.USD > 0 && money(sum.USD, "USD")].filter(Boolean).join(" · ");
   };
+  const totals = { inquilino: totalOf("inquilino"), propietario: totalOf("propietario") };
 
   return (
     <div className="flex flex-col gap-4">
@@ -102,7 +105,7 @@ export function ReceiptsView({
               <p className={`text-right text-[12px] ${b.kind === "inquilino" ? "text-dark-muted" : "text-text-faint"}`}>
                 {monthLabel(month)}
                 <br />
-                <span className={`font-display text-[14px] font-bold tabular-nums ${b.kind === "inquilino" ? "text-dark-fg" : "text-text"}`}>{money(totals[b.kind])}</span>
+                <span className={`font-display text-[14px] font-bold tabular-nums ${b.kind === "inquilino" ? "text-dark-fg" : "text-text"}`}>{totals[b.kind]}</span>
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -188,7 +191,7 @@ export function ReceiptsView({
         </Empty>
       ) : (
         <>
-          <div className="hidden overflow-hidden rounded-[20px] border border-border bg-surface md:block">
+          <div className="hidden overflow-x-auto rounded-[20px] border border-border bg-surface md:block">
             <table className="w-full text-left">
               <thead>
                 <tr>
@@ -220,7 +223,7 @@ export function ReceiptsView({
                     </td>
                     <td className="max-w-[200px] truncate px-4 py-3 text-[13px] text-text-muted">{r.bookKind === "inquilino" ? r.tenantName : r.ownerName}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-[13px] text-text-muted">{r.period ?? (r.voidReason ? <span className="italic">{r.voidReason}</span> : "—")}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right font-display text-[13.5px] font-bold tabular-nums">{r.amount ? money(r.amount) : "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right font-display text-[13.5px] font-bold tabular-nums">{r.amount ? money(r.amount, r.currency) : "—"}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">
                       {r.status === "emitido" ? (
                         <div className="flex items-center justify-end gap-1.5">
@@ -261,7 +264,7 @@ export function ReceiptsView({
                   </p>
                   {r.status === "emitido" ? (
                     <div className="flex shrink-0 items-center gap-1.5">
-                      <span className="font-display text-[14px] font-bold tabular-nums text-text">{r.amount ? money(r.amount) : ""}</span>
+                      <span className="font-display text-[14px] font-bold tabular-nums text-text">{r.amount ? money(r.amount, r.currency) : ""}</span>
                       <a href={`/api/alquileres/recibos/${r.id}/pdf`} target="_blank" rel="noreferrer" className="rounded-full bg-dark px-3 py-1 text-[11.5px] font-bold text-dark-fg">
                         PDF
                       </a>

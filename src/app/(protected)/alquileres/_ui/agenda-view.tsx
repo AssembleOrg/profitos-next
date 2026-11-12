@@ -31,6 +31,17 @@ import {
 
 type Filter = "todos" | "a_cobrar" | "vencidos" | "cobrados";
 
+/** Orden del día: primero lo atrasado, al final lo ya cobrado. */
+const URGENCY: Record<AgendaDue["status"], number> = { vencido: 0, parcial: 1, esperando: 2, pagado: 3, condonado: 4 };
+const isClosed = (d: AgendaDue) => d.status === "pagado" || d.status === "condonado";
+
+/** Lo que falta cobrar, por moneda (nunca se suman dólares a pesos): ["$ 2.708.000", "U$D 1.500"]. */
+function leftToCollect(dues: AgendaDue[]): string[] {
+  const left = { ARS: 0, USD: 0 };
+  for (const d of dues) if (!isClosed(d)) left[d.currency === "USD" ? "USD" : "ARS"] += Math.max(0, d.expected - d.collected);
+  return [left.ARS > 0 && money(left.ARS), left.USD > 0 && money(left.USD, "USD")].filter(Boolean) as string[];
+}
+
 const FILTERS: Array<{ value: Filter; label: string }> = [
   { value: "todos", label: "Todo" },
   { value: "a_cobrar", label: "A cobrar" },
@@ -124,6 +135,11 @@ export function AgendaView({ data, q }: { data: AgendaMonth; q: string }) {
 
   const s = data.summary;
   const total = Math.max(1, s.collected + s.pending + s.overdue);
+  const usdParts = [
+    s.usd.collected > 0 && `cobrado ${money(s.usd.collected, "USD")}`,
+    s.usd.pending > 0 && `a cobrar ${money(s.usd.pending, "USD")}`,
+    s.usd.overdue > 0 && `vencido ${money(s.usd.overdue, "USD")}`,
+  ].filter(Boolean) as string[];
   const refresh = () => router.refresh();
 
   return (
@@ -134,11 +150,11 @@ export function AgendaView({ data, q }: { data: AgendaMonth; q: string }) {
 
       {/* Barra de mes: navegación + búsqueda + filtros */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
           <button type="button" aria-label="Mes anterior" onClick={() => navigate({ mes: shiftMonth(data.month, -1) })} className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-text-muted hover:bg-bg hover:text-text">
             <IconChevronLeft size={18} />
           </button>
-          <h2 className="min-w-[150px] text-center font-display text-[20px] font-semibold text-text" aria-live="polite">
+          <h2 className="min-w-0 text-center font-display text-[18px] font-semibold leading-tight text-text sm:min-w-[150px] sm:text-[20px]" aria-live="polite">
             {monthLabel(data.month)}
           </h2>
           <button type="button" aria-label="Mes siguiente" onClick={() => navigate({ mes: shiftMonth(data.month, 1) })} className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-text-muted hover:bg-bg hover:text-text">
@@ -217,7 +233,7 @@ export function AgendaView({ data, q }: { data: AgendaMonth; q: string }) {
                 {f.dot && <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${f.dot}`} />}
                 {f.l}
               </dt>
-              <dd className={`font-display text-[15px] font-bold tabular-nums ${f.tone}`}>{money(f.v)}</dd>
+              <dd title={money(f.v)} className={`truncate font-display text-[15px] font-bold tabular-nums ${f.tone}`}>{money(f.v)}</dd>
             </div>
           ))}
         </dl>
@@ -238,6 +254,11 @@ export function AgendaView({ data, q }: { data: AgendaMonth; q: string }) {
           <Figure label="Honorarios" value={money(s.fees)} sub="Queda para la inmobiliaria" />
           <Figure label="A rendir" value={money(s.toOwners)} sub="Neto a propietarios" />
         </dl>
+        {usdParts.length > 0 && (
+          <p className="mt-2 text-[12px] text-text-faint sm:mt-3">
+            En dólares: <span className="font-semibold tabular-nums text-text-muted">{usdParts.join(" · ")}</span>
+          </p>
+        )}
         {data.overdueElsewhere > 0 && (
           <Link href="/alquileres/contratos?filtro=con_deuda" className="mt-3 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-terra hover:underline">
             <IconAlert size={14} />
@@ -262,13 +283,15 @@ export function AgendaView({ data, q }: { data: AgendaMonth; q: string }) {
           )}
         </Empty>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_460px]">
           <MonthGrid month={data.month} today={data.today} selected={selected} onSelect={setSelected} byDay={byDay} />
           <DayStrip month={data.month} today={data.today} selected={selected} onSelect={setSelected} byDay={byDay} />
           <DayPanel
             day={selected}
             today={data.today}
             entry={byDay.get(selected)}
+            dayDues={data.dues.filter((d) => d.dueDate === selected)}
+            paidOpen={filter === "cobrados"}
             onCollect={setCollectDue}
             onAdjust={(a) => setAdjustTarget(toTarget(a))}
             nextDays={[...byDay.keys()].filter((k) => k > selected).sort().slice(0, 3)}
@@ -391,7 +414,7 @@ function MonthGrid({
   while (cells.length % 7) cells.push(null);
 
   return (
-    <section aria-label={`Calendario de ${monthLabel(month)}`} className="hidden self-start overflow-hidden rounded-[20px] border border-border bg-surface md:block">
+    <section aria-label={`Calendario de ${monthLabel(month)}`} className="hidden self-start overflow-hidden lg:sticky lg:top-4 rounded-[20px] border border-border bg-surface md:block">
       <div className="grid grid-cols-7 border-b border-border">
         {WEEKDAYS.map((w) => (
           <div key={w} className="px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">
@@ -406,7 +429,9 @@ function MonthGrid({
           const isToday = day === today;
           const isSelected = day === selected;
           const adjustments = entry?.adjustments ?? [];
-          const visible = entry?.dues.slice(0, Math.max(1, 3 - adjustments.length)) ?? [];
+          // Máx. 2 aumentos y 3 chips por celda: una celda alta estira todo el calendario.
+          const shownAdj = adjustments.slice(0, 2);
+          const visible = [...(entry?.dues ?? [])].sort((a, b) => URGENCY[a.status] - URGENCY[b.status]).slice(0, Math.max(1, 3 - shownAdj.length));
           const extra = (entry?.dues.length ?? 0) - visible.length;
           const weekend = i % 7 >= 5;
           return (
@@ -433,7 +458,10 @@ function MonthGrid({
                   <span className="text-[10.5px] font-semibold tabular-nums text-text-faint">{entry.dues.length}</span>
                 ) : null}
               </span>
-              {adjustments.map((a) => (
+              {adjustments.length > shownAdj.length && (
+                <span className="px-1.5 text-[11px] font-semibold text-warning">+{adjustments.length - shownAdj.length} aumentos</span>
+              )}
+              {shownAdj.map((a) => (
                 <span key={a.contractId} className="flex min-w-0 items-center gap-1 rounded-md bg-accent px-1.5 py-1 text-[11px] font-bold text-dark">
                   <IconFlag size={11} className="shrink-0" />
                   <span className="truncate">{a.property.address}</span>
@@ -518,6 +546,8 @@ function DayPanel({
   day,
   today,
   entry,
+  dayDues,
+  paidOpen,
   onCollect,
   onAdjust,
   nextDays,
@@ -526,24 +556,51 @@ function DayPanel({
   day: string;
   today: string;
   entry: DayEntry | undefined;
+  /** Todos los vencimientos del día, sin filtrar: el total y el conteo no cambian con el filtro. */
+  dayDues: AgendaDue[];
+  /** Con el filtro "Cobrados" los cobrados se muestran abiertos. */
+  paidOpen: boolean;
   onCollect: (dueId: string) => void;
   onAdjust: (a: AgendaAdjustment) => void;
   nextDays: string[];
   onSelect: (d: string) => void;
 }) {
-  const dues = entry?.dues ?? [];
-  const totalDay = dues.reduce((acc, d) => acc + d.expected, 0);
+  const dues = [...(entry?.dues ?? [])].sort((a, b) => URGENCY[a.status] - URGENCY[b.status]);
+  const open = dues.filter((d) => !isClosed(d));
+  const closed = dues.filter(isClosed);
+  const leftParts = leftToCollect(dayDues);
+  const count = (pred: (d: AgendaDue) => boolean) => dayDues.filter(pred).length;
+  const tally = [
+    [count((d) => d.status === "vencido"), "vencido", "vencidos"],
+    [count((d) => d.status === "parcial"), "parcial", "parciales"],
+    [count((d) => d.status === "esperando"), "a vencer", "a vencer"],
+    [count(isClosed), "cobrado", "cobrados"],
+  ]
+    .filter(([n]) => (n as number) > 0)
+    .map(([n, one, many]) => `${n} ${n === 1 ? one : many}`);
   const empty = !dues.length && !entry?.adjustments.length && !entry?.endings.length;
   return (
-    <section aria-label={`Vencimientos del ${dayLong(day)}`} className="flex flex-col gap-3 lg:sticky lg:top-4 lg:self-start">
-      <div className="flex items-baseline justify-between gap-3 px-1">
-        <h3 className="font-display text-[18px] font-semibold text-text">
-          {day === today ? "Hoy, " : ""}
-          {day === today ? dayLong(day) : capitalize(dayLong(day))}
-        </h3>
-        {dues.length > 0 && <span className="shrink-0 font-display text-[14px] font-bold tabular-nums text-text-muted">{money(totalDay)}</span>}
+    <section aria-label={`Vencimientos del ${dayLong(day)}`} className="flex flex-col gap-3">
+      <div className="px-1">
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 className="min-w-0 font-display text-[18px] font-semibold text-text">
+            {day === today ? "Hoy, " : ""}
+            {day === today ? dayLong(day) : capitalize(dayLong(day))}
+          </h3>
+          {leftParts.length === 0 && dayDues.length > 0 && <span className="shrink-0 text-[12px] font-semibold text-olive-light">Todo cobrado</span>}
+          {leftParts.length > 0 && (
+            <span className="min-w-0 truncate text-right font-display text-[14px] font-bold tabular-nums text-text-muted" title={`Falta cobrar ${leftParts.join(" y ")}`}>
+              <span className="font-sans text-[11px] font-semibold text-text-faint">a cobrar </span>
+              {leftParts.join(" · ")}
+            </span>
+          )}
+        </div>
+        {tally.length > 0 && <p className="mt-0.5 text-[12px] text-text-faint">{tally.join(" · ")}</p>}
       </div>
 
+      {!!entry?.adjustments.length && (
+        <p className="-mb-1 px-1 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Aumentos de este día</p>
+      )}
       {entry?.adjustments.map((a) => (
         <article key={a.contractId} className="flex items-center gap-3 rounded-[18px] bg-dark p-3.5 text-dark-fg">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-accent">
@@ -552,7 +609,7 @@ function DayPanel({
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13.5px] font-bold">{propertyLine(a.property.address, a.unit)}</p>
             <p className="truncate text-[12px] text-dark-muted">
-              Aumenta por {a.index ?? "acuerdo"} · hoy {money(a.currentAmount, a.currency)}
+              Le toca aumento por {a.index ?? "acuerdo"} · hoy {money(a.currentAmount, a.currency)}
             </p>
           </div>
           <button type="button" onClick={() => onAdjust(a)} className={btnGold}>
@@ -561,9 +618,27 @@ function DayPanel({
         </article>
       ))}
 
-      {dues.map((d) => (
+      {open.map((d) => (
         <DueCard key={d.dueId} due={d} onCollect={() => onCollect(d.dueId)} />
       ))}
+
+      {closed.length > 0 &&
+        (open.length === 0 ? (
+          closed.map((d) => <DueCard key={d.dueId} due={d} onCollect={() => onCollect(d.dueId)} />)
+        ) : (
+          // key: al cambiar a "Cobrados" se vuelve a montar abierto.
+          <details key={String(paidOpen)} open={paidOpen} className="group">
+            <summary className="flex cursor-pointer list-none items-center justify-between rounded-[16px] border border-border bg-bg px-4 py-3 text-[13px] font-semibold text-text-muted [&::-webkit-details-marker]:hidden">
+              Cobrados ({closed.length})
+              <IconChevronRight size={16} className="transition-transform group-open:rotate-90" />
+            </summary>
+            <div className="mt-3 flex flex-col gap-3">
+              {closed.map((d) => (
+                <DueCard key={d.dueId} due={d} onCollect={() => onCollect(d.dueId)} />
+              ))}
+            </div>
+          </details>
+        ))}
 
       {entry?.endings.map((e) => (
         <article key={e.contractId} className="flex items-center justify-between gap-3 rounded-[18px] border border-dashed border-border-strong px-4 py-3">
@@ -579,7 +654,9 @@ function DayPanel({
 
       {empty && (
         <div className="rounded-[20px] bg-bg px-5 py-6 text-center">
-          <p className="font-display text-[15px] font-semibold text-text">Nada vence este día</p>
+          <p className="font-display text-[15px] font-semibold text-text">
+            {dayDues.length > 0 ? "Nada de este día coincide con el filtro" : "Nada vence este día"}
+          </p>
           {nextDays.length > 0 ? (
             <p className="mt-1 text-[12.5px] text-text-faint">
               Próximo:{" "}
@@ -618,9 +695,9 @@ function DueCard({ due, onCollect }: { due: AgendaDue; onCollect: () => void }) 
         <DuePill status={due.status} />
       </div>
       <div className="mt-2.5 flex items-end justify-between gap-3">
-        <div>
-          <p className="font-display text-[19px] font-bold tabular-nums leading-tight text-text">{money(canCollect ? remaining : due.collected, due.currency)}</p>
-          <p className="text-[11.5px] text-text-faint">
+        <div className="min-w-0">
+          <p className="truncate font-display text-[19px] font-bold tabular-nums leading-tight text-text">{money(canCollect ? remaining : due.collected, due.currency)}</p>
+          <p className="truncate text-[11.5px] text-text-faint">
             {due.status === "parcial" ? `Cobrado ${money(due.collected, due.currency)} de ${money(due.expected, due.currency)}` : `Cuota ${due.position} · honorarios ${due.feePercent}%`}
           </p>
         </div>
@@ -662,7 +739,7 @@ function RestOfMonth({ byDay, after, onSelect }: { byDay: Map<string, DayEntry>;
       <h3 className="mb-2 px-1 font-display text-[15px] font-semibold text-text">Lo que viene este mes</h3>
       <ul className="flex flex-col divide-y divide-border rounded-[18px] border border-border bg-surface">
         {days.map(([d, e]) => {
-          const total = e.dues.reduce((a, x) => a + Math.max(0, x.expected - x.collected), 0);
+          const total = leftToCollect(e.dues);
           return (
             <li key={d}>
               <button
@@ -682,7 +759,7 @@ function RestOfMonth({ byDay, after, onSelect }: { byDay: Map<string, DayEntry>;
                 </span>
                 <span className="flex shrink-0 items-center gap-1.5">
                   {e.adjustments.length > 0 && <IconFlag size={13} className="text-accent" />}
-                  {total > 0 && <span className="font-display text-[13.5px] font-bold tabular-nums text-text">{money(total)}</span>}
+                  {total.length > 0 && <span className="font-display text-[13.5px] font-bold tabular-nums text-text">{total.join(" · ")}</span>}
                 </span>
               </button>
             </li>

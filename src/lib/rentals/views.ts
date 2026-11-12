@@ -268,20 +268,37 @@ export async function getAgendaMonth(month: string, q?: string): Promise<AgendaM
       })
     : [];
 
-  const summary: MonthSummary = { expected: 0, collected: 0, overdue: 0, pending: 0, fees: 0, toOwners: 0, counts: emptyCounts() };
+  const summary: MonthSummary = {
+    expected: 0,
+    collected: 0,
+    overdue: 0,
+    pending: 0,
+    fees: 0,
+    toOwners: 0,
+    counts: emptyCounts(),
+    usd: { collected: 0, pending: 0, overdue: 0 },
+  };
 
   const agendaDues: AgendaDue[] = dues.map((d) => {
     const collected = sumPaid(d.transactions);
     const status = effective(d, d.contract.gracePeriodDays, collected);
-    summary.expected += d.expectedAmount;
-    summary.collected += collected;
-    summary.fees += d.transactions.reduce((a, t) => a + t.commissionAmount, 0);
-    summary.toOwners += d.transactions.reduce((a, t) => a + t.ownerAmount, 0);
     summary.counts[status]++;
     const remaining = Math.max(0, d.expectedAmount - collected);
     const late = status === "vencido" || (status === "parcial" && isoDate(d.dueDate) < today);
-    if (late) summary.overdue += remaining;
-    else if (status === "esperando" || status === "parcial") summary.pending += remaining;
+    const open = status === "esperando" || status === "parcial";
+    // No mezclar monedas: los dólares no se suman a los pesos.
+    if (d.contract.currency === "USD") {
+      summary.usd.collected += collected;
+      if (late) summary.usd.overdue += remaining;
+      else if (open) summary.usd.pending += remaining;
+    } else {
+      summary.expected += d.expectedAmount;
+      summary.collected += collected;
+      summary.fees += d.transactions.reduce((a, t) => a + t.commissionAmount, 0);
+      summary.toOwners += d.transactions.reduce((a, t) => a + t.ownerAmount, 0);
+      if (late) summary.overdue += remaining;
+      else if (open) summary.pending += remaining;
+    }
     const mine = proofs.filter((p) => p.contractId === d.contractId);
     return {
       dueId: d.id,
@@ -772,6 +789,7 @@ export async function listReceipts(opts: { month?: string; kind?: string; q?: st
       contract: {
         select: {
           unit: true,
+          currency: true,
           property: { select: { address: true } },
           tenant: { select: { fullName: true } },
           owner: { select: { fullName: true } },
@@ -784,6 +802,7 @@ export async function listReceipts(opts: { month?: string; kind?: string; q?: st
   return rows.map((r) => ({
     ...toReceiptRef(r),
     contractId: r.contractId,
+    currency: r.contract?.currency ?? "ARS",
     propertyAddress: r.contract?.property.address ?? null,
     unit: r.contract?.unit ?? null,
     tenantName: r.contract?.tenant.fullName ?? null,
