@@ -3,12 +3,16 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { formatExpiryLong } from "@/lib/signatures/reservation-expiry";
+import { custodyEnvelopes, type CustodyCurrency } from "@/lib/signatures/custody";
+import { isTerminalStatus } from "@/lib/signatures";
 import type { SerializedFirma } from "./types";
 import { serializeFromApi } from "./serialize";
 import {
   CALENDAR_HINT,
   CalendarCheck,
   calendarFailedMessage,
+  CustodySummary,
+  EnvelopeField,
   ExpiryPreview,
   ReinforcementToggle,
   sameTerm,
@@ -19,6 +23,9 @@ import {
 } from "./vigencia-fields";
 
 type Busy = null | "reserva" | "refuerzo" | "cal-reserva" | "cal-refuerzo";
+type EnvelopeDraft = { amount: number | null; currency: CustodyCurrency };
+
+const sameEnvelope = (a: EnvelopeDraft, b: EnvelopeDraft) => (a.amount ?? null) === (b.amount ?? null) && a.currency === b.currency;
 
 export function ReservationPanel({
   firma,
@@ -30,13 +37,23 @@ export function ReservationPanel({
   const [reservation, setReservation] = useState<TermDraft>(savedReservation);
   const [withReinforcement, setWithReinforcement] = useState(firma.hasReinforcement);
   const [reinforcement, setReinforcement] = useState<TermDraft>(savedReinforcement);
+  const savedReservationEnv: EnvelopeDraft = { amount: firma.reservationAmount, currency: firma.reservationCurrency };
+  const savedReinforcementEnv: EnvelopeDraft = { amount: firma.reinforcementAmount, currency: firma.reinforcementCurrency };
+  const [reservationEnv, setReservationEnv] = useState<EnvelopeDraft>(savedReservationEnv);
+  const [reinforcementEnv, setReinforcementEnv] = useState<EnvelopeDraft>(savedReinforcementEnv);
   const [busy, setBusy] = useState<Busy>(null);
 
   useEffect(() => {
     setReservation(termFromFirma(firma.reservationDate, firma.reservationTermDays, firma.reservationDayType));
     setWithReinforcement(firma.hasReinforcement);
     setReinforcement(termFromFirma(firma.reinforcementDate, firma.reinforcementTermDays, firma.reinforcementDayType));
+    setReservationEnv({ amount: firma.reservationAmount, currency: firma.reservationCurrency });
+    setReinforcementEnv({ amount: firma.reinforcementAmount, currency: firma.reinforcementCurrency });
   }, [
+    firma.reservationAmount,
+    firma.reservationCurrency,
+    firma.reinforcementAmount,
+    firma.reinforcementCurrency,
     firma.id,
     firma.reservationDate,
     firma.reservationTermDays,
@@ -47,10 +64,12 @@ export function ReservationPanel({
     firma.reinforcementDayType,
   ]);
 
-  const reservationDirty = !sameTerm(reservation, savedReservation);
+  const reservationTermDirty = !sameTerm(reservation, savedReservation);
+  const reservationEnvDirty = !sameEnvelope(reservationEnv, savedReservationEnv);
+  const reservationDirty = reservationTermDirty || reservationEnvDirty;
   const reinforcementDirty =
     withReinforcement !== firma.hasReinforcement ||
-    (withReinforcement && !sameTerm(reinforcement, savedReinforcement));
+    (withReinforcement && (!sameTerm(reinforcement, savedReinforcement) || !sameEnvelope(reinforcementEnv, savedReinforcementEnv)));
 
   async function patch(kind: Exclude<Busy, null>, payload: Record<string, unknown>, success: string) {
     setBusy(kind);
@@ -74,16 +93,24 @@ export function ReservationPanel({
   }
 
   function saveReservation() {
-    const problem = termError(reservation, "la reserva");
-    if (problem) return toast.error(problem);
+    if (reservationTermDirty) {
+      const problem = termError(reservation, "la reserva");
+      if (problem) return toast.error(problem);
+    }
     void patch(
       "reserva",
       {
-        reservationDate: reservation.date,
-        reservationTermDays: Number(reservation.termDays),
-        reservationDayType: reservation.dayType,
+        ...(reservationTermDirty && {
+          reservationDate: reservation.date,
+          reservationTermDays: Number(reservation.termDays),
+          reservationDayType: reservation.dayType,
+        }),
+        ...(reservationEnvDirty && {
+          reservationAmount: reservationEnv.amount,
+          reservationCurrency: reservationEnv.currency,
+        }),
       },
-      "Vigencia recalculada",
+      reservationTermDirty ? "Vigencia recalculada" : "Monto de la reserva guardado",
     );
   }
 
@@ -101,6 +128,8 @@ export function ReservationPanel({
         reinforcementDate: reinforcement.date,
         reinforcementTermDays: Number(reinforcement.termDays),
         reinforcementDayType: reinforcement.dayType,
+        reinforcementAmount: reinforcementEnv.amount,
+        reinforcementCurrency: reinforcementEnv.currency,
       },
       "Refuerzo guardado",
     );
@@ -130,6 +159,11 @@ export function ReservationPanel({
       </div>
 
       <div className="flex flex-col gap-3">
+        {firma.status === "refuerzo_realizado" && !firma.hasReinforcement && (
+          <p className="rounded-[12px] bg-surface px-3.5 py-2 text-[12px] font-semibold text-warning">
+            Está marcada como «Refuerzo realizado»: cargá abajo los datos del refuerzo.
+          </p>
+        )}
         <TermFields
           idPrefix={`firma-${firma.id}-reservation`}
           value={reservation}
@@ -137,12 +171,24 @@ export function ReservationPanel({
           dateLabel="Fecha de reserva"
           disabled={disabled}
         />
+        <EnvelopeField
+          label="Monto de la reserva (sobre 1)"
+          amount={reservationEnv.amount}
+          currency={reservationEnv.currency}
+          onChange={setReservationEnv}
+          disabled={disabled}
+        />
         {reservationDirty && (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="min-w-0 flex-1">
               <ExpiryPreview term={reservation} what="la reserva" />
             </div>
-            <SaveButton onClick={saveReservation} busy={busy === "reserva"} disabled={disabled} label="Recalcular" />
+            <SaveButton
+              onClick={saveReservation}
+              busy={busy === "reserva"}
+              disabled={disabled}
+              label={reservationTermDirty ? "Recalcular" : "Guardar monto"}
+            />
           </div>
         )}
         <CalendarCheck
@@ -168,6 +214,13 @@ export function ReservationPanel({
                 disabled={disabled}
               />
               <ExpiryPreview term={reinforcement} what="el refuerzo" />
+              <EnvelopeField
+                label="Monto del refuerzo (sobre 2)"
+                amount={reinforcementEnv.amount}
+                currency={reinforcementEnv.currency}
+                onChange={setReinforcementEnv}
+                disabled={disabled}
+              />
             </>
           )}
           {reinforcementDirty && (
@@ -191,6 +244,12 @@ export function ReservationPanel({
             />
           )}
         </div>
+      </div>
+      <div className="mt-3">
+        <CustodySummary
+          envelopes={custodyEnvelopes(firma)}
+          closed={isTerminalStatus(firma.status)}
+        />
       </div>
       <p className="mt-3 text-[10.5px] text-text-faint">
         Los días hábiles excluyen fines de semana, feriados nacionales, días no laborables con fines turísticos y el 14 de agosto (Día de Quilmes).

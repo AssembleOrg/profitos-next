@@ -22,13 +22,18 @@ import {
   CALENDAR_HINT,
   CalendarCheck,
   calendarFailedMessage,
+  CustodySummary,
   EMPTY_TERM,
+  EnvelopeField,
   ExpiryPreview,
   ReinforcementToggle,
   TermFields,
   termError,
   type TermDraft,
 } from "./vigencia-fields";
+import { PartyPicker } from "./party-picker";
+import type { FirmaClient } from "./types";
+import { custodyEnvelopes, type CustodyCurrency } from "@/lib/signatures/custody";
 
 export interface PropertyOption {
   id: string;
@@ -67,6 +72,10 @@ export function CreateFirmaModal({
   const [hasReinforcement, setHasReinforcement] = useState(false);
   const [reinforcement, setReinforcement] = useState<TermDraft>(EMPTY_TERM);
   const [reinforcementCalendar, setReinforcementCalendar] = useState(false);
+  const [reservationEnvelope, setReservationEnvelope] = useState<{ amount: number | null; currency: CustodyCurrency }>({ amount: null, currency: "USD" });
+  const [reinforcementEnvelope, setReinforcementEnvelope] = useState<{ amount: number | null; currency: CustodyCurrency }>({ amount: null, currency: "USD" });
+  const [buyer, setBuyer] = useState<FirmaClient | null>(null);
+  const [seller, setSeller] = useState<FirmaClient | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -87,6 +96,10 @@ export function CreateFirmaModal({
     setHasReinforcement(false);
     setReinforcement(EMPTY_TERM);
     setReinforcementCalendar(false);
+    setReservationEnvelope({ amount: null, currency: "USD" });
+    setReinforcementEnvelope({ amount: null, currency: "USD" });
+    setBuyer(null);
+    setSeller(null);
     setAttachments([]);
   }, [open, initialPropertyId]);
 
@@ -148,12 +161,18 @@ export function CreateFirmaModal({
           reservationTermDays: Number(reservation.termDays),
           reservationDayType: reservation.dayType,
           reservationCalendar,
+          reservationAmount: reservationEnvelope.amount,
+          reservationCurrency: reservationEnvelope.currency,
+          buyerClientId: buyer?.id ?? null,
+          sellerClientId: seller?.id ?? null,
           hasReinforcement,
           ...(hasReinforcement && {
             reinforcementDate: reinforcement.date,
             reinforcementTermDays: Number(reinforcement.termDays),
             reinforcementDayType: reinforcement.dayType,
             reinforcementCalendar,
+            reinforcementAmount: reinforcementEnvelope.amount,
+            reinforcementCurrency: reinforcementEnvelope.currency,
           }),
         }),
       });
@@ -304,6 +323,19 @@ export function CreateFirmaModal({
 
                     <div className="rounded-[16px] bg-bg p-4">
                       <div className="mb-3">
+                        <p className="text-[12.5px] font-bold text-text">Comprador y vendedor</p>
+                        <p className="mt-0.5 text-[11.5px] text-text-faint">
+                          Se eligen de Contactos. Si no están, se crean desde acá y quedan guardados.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <PartyPicker label="Comprador" value={buyer} onChange={setBuyer} />
+                        <PartyPicker label="Vendedor" value={seller} onChange={setSeller} />
+                      </div>
+                    </div>
+
+                    <div className="rounded-[16px] bg-bg p-4">
+                      <div className="mb-3">
                         <p className="text-[12.5px] font-bold text-text">Operación y honorarios</p>
                         <p className="mt-0.5 text-[11.5px] text-text-faint">
                           Si la operación es compartida, indicá con quién y qué % de nuestros honorarios le corresponde.
@@ -330,6 +362,12 @@ export function CreateFirmaModal({
                           dateLabel="Fecha de reserva"
                         />
                         <ExpiryPreview term={reservation} what="la reserva" />
+                        <EnvelopeField
+                          label="Monto de la reserva (sobre 1)"
+                          amount={reservationEnvelope.amount}
+                          currency={reservationEnvelope.currency}
+                          onChange={setReservationEnvelope}
+                        />
                         <CalendarCheck
                           checked={reservationCalendar}
                           onChange={setReservationCalendar}
@@ -351,6 +389,12 @@ export function CreateFirmaModal({
                               dateLabel="Fecha del refuerzo"
                             />
                             <ExpiryPreview term={reinforcement} what="el refuerzo" />
+                            <EnvelopeField
+                              label="Monto del refuerzo (sobre 2)"
+                              amount={reinforcementEnvelope.amount}
+                              currency={reinforcementEnvelope.currency}
+                              onChange={setReinforcementEnvelope}
+                            />
                             <CalendarCheck
                               checked={reinforcementCalendar}
                               onChange={setReinforcementCalendar}
@@ -358,6 +402,16 @@ export function CreateFirmaModal({
                             />
                           </>
                         )}
+
+                        <CustodySummary
+                          envelopes={custodyEnvelopes({
+                            reservationAmount: reservationEnvelope.amount,
+                            reservationCurrency: reservationEnvelope.currency,
+                            hasReinforcement,
+                            reinforcementAmount: reinforcementEnvelope.amount,
+                            reinforcementCurrency: reinforcementEnvelope.currency,
+                          })}
+                        />
                       </div>
                     </div>
 

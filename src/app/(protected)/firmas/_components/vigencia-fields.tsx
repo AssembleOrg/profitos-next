@@ -2,6 +2,9 @@
 
 import { DateField } from "../../_components/date-field";
 import { SelectField } from "@/components/ui/select-field";
+import { CurrencyInput } from "../../alquileres/_components/currency-input";
+import { formatMoney } from "@/lib/account";
+import { describeCustody, type CustodyCurrency, type Envelope } from "@/lib/signatures/custody";
 import {
   deLabel,
   formatExpiryLong,
@@ -196,4 +199,70 @@ export function calendarFailedMessage(failed: unknown): string | null {
   if (!Array.isArray(failed) || failed.length === 0) return null;
   const what = failed.length === 2 ? "los vencimientos" : failed[0] === "refuerzo" ? "el vencimiento del refuerzo" : "el vencimiento de la reserva";
   return `La propuesta quedó guardada, pero no pudimos agendar ${what} en Google Calendar. Cerrá sesión y volvé a entrar con Google, y probá de nuevo.`;
+}
+
+/** Monto que queda en un sobre cerrado (reserva = sobre 1, refuerzo = sobre 2). */
+export function EnvelopeField({
+  label,
+  amount,
+  currency,
+  onChange,
+  disabled,
+}: Readonly<{
+  label: string;
+  amount: number | null;
+  currency: CustodyCurrency;
+  onChange: (next: { amount: number | null; currency: CustodyCurrency }) => void;
+  disabled?: boolean;
+}>) {
+  return (
+    <div className="grid grid-cols-[1fr_auto] gap-3">
+      <label className="flex min-w-0 flex-col gap-1.5">
+        <span className="text-[11px] font-semibold text-text-muted">{label}</span>
+        <CurrencyInput value={amount} onChange={(v) => onChange({ amount: v, currency })} disabled={disabled} />
+      </label>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[11px] font-semibold text-text-muted">Moneda</span>
+        <div className="flex h-11 items-center gap-0.5 rounded-full border border-border bg-surface p-1" role="radiogroup" aria-label={`Moneda: ${label}`}>
+          {(["USD", "ARS"] as const).map((c) => (
+            <button
+              key={c}
+              type="button"
+              role="radio"
+              aria-checked={currency === c}
+              disabled={disabled}
+              onClick={() => onChange({ amount, currency: c })}
+              className={`rounded-full px-3 py-1.5 text-xs transition-colors ${
+                currency === c ? "bg-dark font-bold text-dark-fg" : "font-medium text-text-faint hover:text-text"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** "En resguardo: 2 sobres · US$ 3.000" con el detalle de cada sobre. */
+export function CustodySummary({
+  envelopes,
+  closed,
+}: Readonly<{ envelopes: Envelope[]; closed?: boolean }>) {
+  if (envelopes.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-1 rounded-[12px] border border-border bg-surface px-3.5 py-2.5">
+      <p className="text-[12.5px] text-text">
+        <span className="font-bold">{closed ? "Sobres" : "En resguardo"}:</span> {describeCustody(envelopes)}
+      </p>
+      <ul className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11.5px] text-text-muted">
+        {envelopes.map((e) => (
+          <li key={e.number}>
+            Sobre {e.number} ({e.kind === "reserva" ? "reserva" : "refuerzo"}): {formatMoney(e.amount, e.currency)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }

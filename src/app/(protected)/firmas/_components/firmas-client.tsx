@@ -21,6 +21,7 @@ const STATUS_PILL: Record<SignatureStatus, string> = {
   propuesta_enviada: "bg-info-chip text-info",
   propuesta_aceptada: "bg-sage-chip text-olive-light",
   propuesta_rechazada: "bg-clay-chip text-terra",
+  refuerzo_realizado: "bg-info-chip text-info",
   espera_informes: "bg-info-chip text-info",
   comunicacion_partes_finales: "bg-info-chip text-info",
   fecha_acordada: "bg-sand-chip text-warning",

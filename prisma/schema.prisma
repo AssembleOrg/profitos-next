@@ -294,6 +294,8 @@ model Client {
   user      User     @relation(fields: [userId], references: [id])
   visitas   Visit[]
   followUps PropertyFollowUp[]
+  buyerSignatures  SignatureProposal[] @relation("SignatureBuyer")
+  sellerSignatures SignatureProposal[] @relation("SignatureSeller")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -475,6 +477,19 @@ model SignatureProposal {
   reinforcementDayType    String?   @map("reinforcement_day_type") // business | calendar
   reinforcementExpiresAt  DateTime? @map("reinforcement_expires_at") @db.Date
 
+  // Sobres en resguardo: lo que dejó el comprador en la reserva (sobre 1) y en
+  // el refuerzo (sobre 2). ARS | USD
+  reservationAmount       Float?    @map("reservation_amount")
+  reservationCurrency     String    @default("USD") @map("reservation_currency")
+  reinforcementAmount     Float?    @map("reinforcement_amount")
+  reinforcementCurrency   String    @default("USD") @map("reinforcement_currency")
+
+  // Partes de la operación, vinculadas a Contactos.
+  buyerClientId   String?  @map("buyer_client_id")
+  buyerClient     Client?  @relation("SignatureBuyer", fields: [buyerClientId], references: [id], onDelete: SetNull)
+  sellerClientId  String?  @map("seller_client_id")
+  sellerClient    Client?  @relation("SignatureSeller", fields: [sellerClientId], references: [id], onDelete: SetNull)
+
   // Vencimientos agendados en el Google Calendar de quien tildó la opción.
   // El user_id es el dueño del calendario (para actualizar/borrar el evento).
   reservationCalendarEventId    String? @map("reservation_calendar_event_id")
@@ -522,6 +537,8 @@ model SignatureProposal {
   @@index([propertyId])
   @@index([status])
   @@index([createdByUserId])
+  @@index([buyerClientId])
+  @@index([sellerClientId])
   @@index([reservationExpiresAt])
   @@index([withColleague])
   @@map("jp_signature_proposals")

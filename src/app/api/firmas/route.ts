@@ -4,7 +4,8 @@ import { created, paginated } from "@/lib/api/response";
 import { parsePagination, buildPaginatedResult, paginationToSkip } from "@/lib/api/pagination";
 import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
-import { describeColleague, parseColleague, parseOperation, signatureInclude } from "@/lib/api/signatures";
+import { describeColleague, parseColleague, parseOperation, parsePartyClientId, signatureInclude } from "@/lib/api/signatures";
+import { parseEnvelopeAmount, toCustodyCurrency } from "@/lib/signatures/custody";
 import { syncSignatureReceivable } from "@/lib/api/signature-receivable";
 import { isSignatureStatus } from "@/lib/signatures";
 import {
@@ -123,6 +124,19 @@ export const POST = withHandler(async (request: NextRequest) => {
     throw new AppError(400, error instanceof Error ? error.message : "Datos de reserva inválidos");
   }
 
+  let reservationAmount: number | null;
+  let reinforcementAmount: number | null;
+  try {
+    reservationAmount = parseEnvelopeAmount((body as Record<string, unknown>).reservationAmount, "de la reserva");
+    reinforcementAmount = hasReinforcement === true
+      ? parseEnvelopeAmount((body as Record<string, unknown>).reinforcementAmount, "del refuerzo")
+      : null;
+  } catch (error) {
+    throw new AppError(400, error instanceof Error ? error.message : "Monto inválido");
+  }
+  const buyerClientId = await parsePartyClientId((body as Record<string, unknown>).buyerClientId, "Comprador");
+  const sellerClientId = await parsePartyClientId((body as Record<string, unknown>).sellerClientId, "Vendedor");
+
   let reinforcement: ResolvedTerm | null = null;
   if (hasReinforcement === true) {
     try {
@@ -174,6 +188,12 @@ export const POST = withHandler(async (request: NextRequest) => {
         reservationTermDays,
         reservationDayType,
         reservationExpiresAt,
+        reservationAmount,
+        reservationCurrency: toCustodyCurrency((body as Record<string, unknown>).reservationCurrency),
+        reinforcementAmount,
+        reinforcementCurrency: toCustodyCurrency((body as Record<string, unknown>).reinforcementCurrency),
+        buyerClientId: buyerClientId ?? null,
+        sellerClientId: sellerClientId ?? null,
         hasReinforcement: reinforcement !== null,
         reinforcementDate: reinforcement?.date ?? null,
         reinforcementTermDays: reinforcement?.termDays ?? null,

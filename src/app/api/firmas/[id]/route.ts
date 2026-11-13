@@ -9,6 +9,7 @@ import {
   getProposalOrThrow,
   parseColleague,
   parseOperation,
+  parsePartyClientId,
   signatureInclude,
   syncDateVisit,
 } from "@/lib/api/signatures";
@@ -30,6 +31,7 @@ import {
 } from "@/lib/signatures/reservation-expiry";
 import { removeExpiryEvents, syncExpiryCalendar, type CalendarWish } from "@/lib/api/reservation-calendar";
 import { resolvePublicOrigin } from "@/lib/server/public-origin";
+import { parseEnvelopeAmount, toCustodyCurrency } from "@/lib/signatures/custody";
 
 const DATE_FIELDS: SignatureDateField[] = ["dateProcessStarted", "dateAgreed", "dateKeysHandover"];
 
@@ -128,6 +130,7 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
         data.reinforcementTermDays = null;
         data.reinforcementDayType = null;
         data.reinforcementExpiresAt = null;
+        data.reinforcementAmount = null;
         reminderKinds.push("refuerzo");
         auditActions.push({ type: "reservation_update", description: "Sin refuerzo" });
       }
@@ -164,6 +167,45 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
         });
       }
     }
+  }
+
+  // Sobres en resguardo (montos opcionales, no recalculan nada).
+  const wantsReinforcementNow =
+    "hasReinforcement" in body ? body.hasReinforcement === true : proposal.hasReinforcement;
+  for (const env of [
+    { kind: "reserva", amountKey: "reservationAmount", currencyKey: "reservationCurrency", label: "Sobre 1 (reserva)", what: "de la reserva" },
+    { kind: "refuerzo", amountKey: "reinforcementAmount", currencyKey: "reinforcementCurrency", label: "Sobre 2 (refuerzo)", what: "del refuerzo" },
+  ] as const) {
+    if (!(env.amountKey in body) && !(env.currencyKey in body)) continue;
+    if (env.kind === "refuerzo" && !wantsReinforcementNow) continue;
+    let amount: number | null;
+    try {
+      amount = env.amountKey in body ? parseEnvelopeAmount(body[env.amountKey], env.what) : proposal[env.amountKey];
+    } catch (error) {
+      throw new AppError(400, error instanceof Error ? error.message : "Monto inválido");
+    }
+    const currency = env.currencyKey in body ? toCustodyCurrency(body[env.currencyKey]) : toCustodyCurrency(proposal[env.currencyKey]);
+    if (amount === proposal[env.amountKey] && currency === proposal[env.currencyKey]) continue;
+    data[env.amountKey] = amount;
+    data[env.currencyKey] = currency;
+    auditActions.push({
+      type: "reservation_update",
+      description: amount != null ? `${env.label}: ${formatMoney(amount, currency)}` : `${env.label}: sin monto`,
+    });
+  }
+
+  // Comprador / vendedor (vinculados a Contactos).
+  for (const party of [
+    { key: "buyerClientId", relation: "buyerClient", label: "Comprador" },
+    { key: "sellerClientId", relation: "sellerClient", label: "Vendedor" },
+  ] as const) {
+    const next = await parsePartyClientId(body[party.key], party.label);
+    if (next === undefined || next === proposal[party.key]) continue;
+    data[party.relation] = next ? { connect: { id: next } } : { disconnect: true };
+    const name = next
+      ? (await prisma.client.findUnique({ where: { id: next }, select: { name: true } }))?.name ?? "contacto"
+      : null;
+    auditActions.push({ type: "parties_update", description: name ? `${party.label}: ${name}` : `${party.label}: sin asignar` });
   }
 
   if (reminderKinds.length > 0) {

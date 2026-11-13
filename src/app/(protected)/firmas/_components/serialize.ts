@@ -1,6 +1,6 @@
 import type { Attachment, SignatureStatus } from "@/lib/signatures";
 import type { ReservationDayType } from "@/lib/signatures/reservation-expiry";
-import type { FirmaAction, FirmaColleague, FirmaOperation, FirmaProperty, FirmaUser, SerializedFirma } from "./types";
+import type { FirmaAction, FirmaClient, FirmaColleague, FirmaOperation, FirmaProperty, FirmaUser, SerializedFirma } from "./types";
 
 interface RawUser {
   id: string;
@@ -50,6 +50,12 @@ interface RawProposal {
   reinforcementTermDays?: number | null;
   reinforcementDayType?: string | null;
   reinforcementExpiresAt?: Date | null;
+  reservationAmount?: number | null;
+  reservationCurrency?: string;
+  reinforcementAmount?: number | null;
+  reinforcementCurrency?: string;
+  buyerClient?: FirmaClient | null;
+  sellerClient?: FirmaClient | null;
   reservationCalendarEventId?: string | null;
   reinforcementCalendarEventId?: string | null;
   dateProcessStarted: Date | null;
@@ -181,6 +187,12 @@ export function serializeProposal(raw: RawProposal): SerializedFirma {
     reinforcementTermDays: raw.reinforcementTermDays ?? null,
     reinforcementDayType: (raw.reinforcementDayType as ReservationDayType | null) ?? null,
     reinforcementExpiresAt: raw.reinforcementExpiresAt?.toISOString() ?? null,
+    reservationAmount: raw.reservationAmount ?? null,
+    reservationCurrency: raw.reservationCurrency === "ARS" ? "ARS" : "USD",
+    reinforcementAmount: raw.reinforcementAmount ?? null,
+    reinforcementCurrency: raw.reinforcementCurrency === "ARS" ? "ARS" : "USD",
+    buyer: raw.buyerClient ?? null,
+    seller: raw.sellerClient ?? null,
     reservationOnCalendar: !!raw.reservationCalendarEventId,
     reinforcementOnCalendar: !!raw.reinforcementCalendarEventId,
     dateProcessStarted: raw.dateProcessStarted?.toISOString() ?? null,

@@ -29,6 +29,7 @@ import {
   type OperationDraft,
 } from "./colleague-fields";
 import { ReservationPanel } from "./reservation-panel";
+import { PartiesPanel } from "./party-picker";
 
 interface FirmaDetailModalProps {
   open: boolean;
@@ -197,6 +198,8 @@ function DetailBody({
       <div>
         <div className="flex flex-col gap-6">
           <ReservationPanel firma={firma} onUpdated={onUpdated} />
+
+          <PartiesPanel firma={firma} onUpdated={onUpdated} />
 
           <ColleaguePanel firma={firma} onUpdated={onUpdated} />
 
@@ -603,6 +606,13 @@ function ActionBadge({ action }: { action: FirmaAction }) {
     return (
       <span className="rounded-full bg-sand-chip px-2 py-0.5 text-[10px] font-semibold text-warning">
         Reserva
+      </span>
+    );
+  }
+  if (action.type === "parties_update") {
+    return (
+      <span className="rounded-full bg-info-chip px-2 py-0.5 text-[10px] font-semibold text-info">
+        Partes
       </span>
     );
   }
