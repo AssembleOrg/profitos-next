@@ -43,7 +43,7 @@ export interface FirmaColleague {
 
 export interface FirmaAction {
   id: string;
-  type: "creation" | "nota" | "status_change" | "date_set" | "reservation_update" | "colleague_update" | "operation_update" | "parties_update";
+  type: "creation" | "nota" | "status_change" | "date_set" | "reservation_update" | "colleague_update" | "operation_update" | "parties_update" | "closure";
   fromStatus: SignatureStatus | null;
   toStatus: SignatureStatus | null;
   dateField: string | null;
@@ -81,6 +81,8 @@ export interface SerializedFirma {
   reservationCurrency: "USD" | "ARS";
   reinforcementAmount: number | null;
   reinforcementCurrency: "USD" | "ARS";
+  /** Operación cerrada (sale de la lista; filtro "Cerradas"). */
+  closedAt: string | null;
   buyer: FirmaClient | null;
   seller: FirmaClient | null;
   /** El vencimiento está agendado en Google Calendar. */

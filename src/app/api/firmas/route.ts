@@ -13,6 +13,8 @@ import {
   buildReservationReminderDates,
   isReservationDayType,
   resolveTerm,
+  parseDoneDate,
+  BEFORE_REINFORCEMENT_STATUSES,
   type ResolvedTerm,
 } from "@/lib/signatures/reservation-expiry";
 import { syncExpiryCalendar } from "@/lib/api/reservation-calendar";
@@ -140,14 +142,18 @@ export const POST = withHandler(async (request: NextRequest) => {
   const buyerClientId = await parsePartyClientId((body as Record<string, unknown>).buyerClientId, "Comprador");
   const sellerClientId = await parsePartyClientId((body as Record<string, unknown>).sellerClientId, "Vendedor");
 
+  // Refuerzo: el plazo corre desde la misma fecha que la reserva (la aceptación).
+  // `reinforcementDate` es la fecha en que se hizo (opcional).
   let reinforcement: ResolvedTerm | null = null;
+  let reinforcementDoneAt: Date | null = null;
   if (hasReinforcement === true) {
     try {
       reinforcement = resolveTerm(
-        { date: reinforcementDate, termDays: reinforcementTermDays, dayType: reinforcementDayType },
+        { date: reservationDate, termDays: reinforcementTermDays, dayType: reinforcementDayType },
         "el refuerzo",
         holidays,
       );
+      reinforcementDoneAt = parseDoneDate(reinforcementDate);
     } catch (error) {
       throw new AppError(400, error instanceof Error ? error.message : "Datos del refuerzo inválidos");
     }
@@ -158,7 +164,12 @@ export const POST = withHandler(async (request: NextRequest) => {
     if (!property) throw new AppError(404, "Propiedad no encontrada");
   }
 
-  const initialStatus = status && isSignatureStatus(status) ? status : "propuesta_enviada";
+  const requestedStatus = status && isSignatureStatus(status) ? status : "propuesta_enviada";
+  // Si ya se cargó que el refuerzo se hizo, arranca en "Refuerzo realizado".
+  const initialStatus =
+    reinforcementDoneAt && (BEFORE_REINFORCEMENT_STATUSES as readonly string[]).includes(requestedStatus)
+      ? "refuerzo_realizado"
+      : requestedStatus;
 
   const colleagueAgencyName = colleague.colleagueAgencyId
     ? (await prisma.agency.findUnique({ where: { id: colleague.colleagueAgencyId }, select: { name: true } }))?.name ?? null
@@ -199,14 +210,15 @@ export const POST = withHandler(async (request: NextRequest) => {
         buyerClientId: buyerClientId ?? null,
         sellerClientId: sellerClientId ?? null,
         hasReinforcement: reinforcement !== null,
-        reinforcementDate: reinforcement?.date ?? null,
+        reinforcementDate: reinforcementDoneAt,
         reinforcementTermDays: reinforcement?.termDays ?? null,
         reinforcementDayType: reinforcement?.dayType ?? null,
         reinforcementExpiresAt: reinforcement?.expiresAt ?? null,
         reservationReminders: {
           create: [
             ...buildReservationReminderDates(reservationExpiresAt, "reserva"),
-            ...(reinforcement ? buildReservationReminderDates(reinforcement.expiresAt, "refuerzo") : []),
+            // Avisos del plazo del refuerzo solo mientras no se hizo.
+            ...(reinforcement && !reinforcementDoneAt ? buildReservationReminderDates(reinforcement.expiresAt, "refuerzo") : []),
           ],
         },
         createdByUserId: auth.userId,
@@ -229,11 +241,12 @@ export const POST = withHandler(async (request: NextRequest) => {
 
   // Fuera de la transacción: Google puede tardar y no debe frenar el alta.
   let calendarFailed: string[] = [];
-  if (reservationCalendar === true || (reinforcement && reinforcementCalendar === true)) {
+  const wantsReinforcementEvent = !!reinforcement && !reinforcementDoneAt && reinforcementCalendar === true;
+  if (reservationCalendar === true || wantsReinforcementEvent) {
     const { failed } = await syncExpiryCalendar(
       proposal.id,
       auth.userId,
-      { reserva: reservationCalendar === true, refuerzo: reinforcementCalendar === true },
+      { reserva: reservationCalendar === true, refuerzo: wantsReinforcementEvent },
       resolvePublicOrigin(request.headers),
     );
     calendarFailed = failed;

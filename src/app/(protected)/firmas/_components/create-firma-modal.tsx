@@ -23,12 +23,14 @@ import {
   CalendarCheck,
   calendarFailedMessage,
   CustodySummary,
+  DoneDateField,
   EMPTY_TERM,
   EnvelopeField,
   ExpiryPreview,
   ReinforcementToggle,
   TermFields,
   termError,
+  plazoError,
   type TermDraft,
 } from "./vigencia-fields";
 import { PartyPicker } from "./party-picker";
@@ -72,6 +74,7 @@ export function CreateFirmaModal({
   const [hasReinforcement, setHasReinforcement] = useState(false);
   const [reinforcement, setReinforcement] = useState<TermDraft>(EMPTY_TERM);
   const [reinforcementCalendar, setReinforcementCalendar] = useState(false);
+  const [reinforcementDone, setReinforcementDone] = useState("");
   const [reservationEnvelope, setReservationEnvelope] = useState<{ amount: number | null; currency: CustodyCurrency }>({ amount: null, currency: "USD" });
   const [reinforcementEnvelope, setReinforcementEnvelope] = useState<{ amount: number | null; currency: CustodyCurrency }>({ amount: null, currency: "USD" });
   const [accepted, setAccepted] = useState(false);
@@ -97,6 +100,7 @@ export function CreateFirmaModal({
     setHasReinforcement(false);
     setReinforcement(EMPTY_TERM);
     setReinforcementCalendar(false);
+    setReinforcementDone("");
     setReservationEnvelope({ amount: null, currency: "USD" });
     setReinforcementEnvelope({ amount: null, currency: "USD" });
     setAccepted(false);
@@ -142,7 +146,7 @@ export function CreateFirmaModal({
       toast.error(reservationProblem);
       return;
     }
-    const reinforcementProblem = hasReinforcement ? termError(reinforcement, "el refuerzo") : null;
+    const reinforcementProblem = hasReinforcement ? plazoError(reinforcement) : null;
     if (reinforcementProblem) {
       toast.error(reinforcementProblem);
       return;
@@ -170,10 +174,11 @@ export function CreateFirmaModal({
           sellerClientId: seller?.id ?? null,
           hasReinforcement,
           ...(hasReinforcement && {
-            reinforcementDate: reinforcement.date,
+            // Fecha en que se hizo (opcional); el plazo corre desde la aceptación.
+            reinforcementDate: reinforcementDone || null,
             reinforcementTermDays: Number(reinforcement.termDays),
             reinforcementDayType: reinforcement.dayType,
-            reinforcementCalendar,
+            reinforcementCalendar: reinforcementCalendar && !reinforcementDone,
             reinforcementAmount: reinforcementEnvelope.amount,
             reinforcementCurrency: reinforcementEnvelope.currency,
           }),
@@ -377,7 +382,7 @@ export function CreateFirmaModal({
                       <div className="mb-3">
                         <p className="text-[12.5px] font-bold text-text">Vigencia de la reserva</p>
                         <p className="mt-0.5 text-[11.5px] text-text-faint">
-                          El vencimiento se calcula solo (los días hábiles no cuentan fines de semana ni feriados) y se avisa 15 días antes, 5 días antes y el día del vencimiento.
+                          Los días corren desde que se acepta la reserva. Se calcula igual que la calculadora del Colegio de Escribanos (sin fines de semana ni feriados) y se avisa 15 días antes, 5 días antes y el día del vencimiento.
                         </p>
                       </div>
                       <div className="flex flex-col gap-3">
@@ -385,9 +390,9 @@ export function CreateFirmaModal({
                           idPrefix="firma-reservation"
                           value={reservation}
                           onChange={setReservation}
-                          dateLabel="Fecha de reserva"
+                          dateLabel="Fecha de aceptación"
                         />
-                        <ExpiryPreview term={reservation} what="la reserva" />
+                        <ExpiryPreview term={reservation} kind="reserva" />
                         <EnvelopeField
                           label="Monto de la reserva (sobre 1)"
                           amount={reservationEnvelope.amount}
@@ -408,24 +413,34 @@ export function CreateFirmaModal({
 
                         {hasReinforcement && (
                           <>
+                            <p className="text-[11.5px] text-text-faint">
+                              Plazo que tiene el comprador para hacer el refuerzo, contado desde la aceptación.
+                            </p>
                             <TermFields
                               idPrefix="firma-reinforcement"
                               value={reinforcement}
                               onChange={setReinforcement}
-                              dateLabel="Fecha del refuerzo"
+                              dateLabel={null}
                             />
-                            <ExpiryPreview term={reinforcement} what="el refuerzo" />
+                            <ExpiryPreview term={{ ...reinforcement, date: reservation.date }} kind="refuerzo" />
+                            <DoneDateField
+                              idPrefix="firma-reinforcement"
+                              value={reinforcementDone}
+                              onChange={setReinforcementDone}
+                            />
                             <EnvelopeField
                               label="Monto del refuerzo (sobre 2)"
                               amount={reinforcementEnvelope.amount}
                               currency={reinforcementEnvelope.currency}
                               onChange={setReinforcementEnvelope}
                             />
-                            <CalendarCheck
-                              checked={reinforcementCalendar}
-                              onChange={setReinforcementCalendar}
-                              label="Agendar el vencimiento del refuerzo en mi Google Calendar"
-                            />
+                            {!reinforcementDone && (
+                              <CalendarCheck
+                                checked={reinforcementCalendar}
+                                onChange={setReinforcementCalendar}
+                                label="Agendar el último día para el refuerzo en mi Google Calendar"
+                              />
+                            )}
                           </>
                         )}
 

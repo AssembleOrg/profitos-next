@@ -55,6 +55,7 @@ interface RawProposal {
   reinforcementAmount?: number | null;
   reinforcementCurrency?: string;
   buyerClient?: FirmaClient | null;
+  closedAt?: Date | null;
   sellerClient?: FirmaClient | null;
   reservationCalendarEventId?: string | null;
   reinforcementCalendarEventId?: string | null;
@@ -191,6 +192,7 @@ export function serializeProposal(raw: RawProposal): SerializedFirma {
     reservationCurrency: raw.reservationCurrency === "ARS" ? "ARS" : "USD",
     reinforcementAmount: raw.reinforcementAmount ?? null,
     reinforcementCurrency: raw.reinforcementCurrency === "ARS" ? "ARS" : "USD",
+    closedAt: raw.closedAt?.toISOString() ?? null,
     buyer: raw.buyerClient ?? null,
     seller: raw.sellerClient ?? null,
     reservationOnCalendar: !!raw.reservationCalendarEventId,
@@ -237,6 +239,7 @@ export function serializeFromApi(raw: unknown): SerializedFirma {
     reservationExpiresAt: iso(r.reservationExpiresAt),
     reinforcementDate: iso(r.reinforcementDate),
     reinforcementExpiresAt: iso(r.reinforcementExpiresAt),
+    closedAt: iso(r.closedAt),
     dateProcessStarted: iso(r.dateProcessStarted),
     dateAgreed: iso(r.dateAgreed),
     dateKeysHandover: iso(r.dateKeysHandover),

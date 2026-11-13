@@ -30,6 +30,7 @@ import {
 } from "./colleague-fields";
 import { ReservationPanel } from "./reservation-panel";
 import { PartiesPanel } from "./party-picker";
+import { CloseOperationPanel } from "./close-operation";
 import { PendingProvider, usePendingChanges, useRegisterPending } from "./pending-changes";
 
 interface FirmaDetailModalProps {
@@ -266,6 +267,8 @@ function DetailBody({
 
           {/* Status & dates control panel */}
           <ControlPanel firma={firma} onUpdated={onUpdated} />
+
+          <CloseOperationPanel firma={firma} onUpdated={onUpdated} />
 
           {/* Original proposal data */}
           {(firma.title || firma.description || firma.attachments.length > 0) && (
@@ -676,6 +679,13 @@ function ActionBadge({ action }: { action: FirmaAction }) {
     return (
       <span className="rounded-full bg-sand-chip px-2 py-0.5 text-[10px] font-semibold text-warning">
         Reserva
+      </span>
+    );
+  }
+  if (action.type === "closure") {
+    return (
+      <span className="rounded-full bg-sage-chip px-2 py-0.5 text-[10px] font-semibold text-olive-light">
+        Cierre
       </span>
     );
   }

@@ -109,6 +109,14 @@ export function FirmasClient({
   }
 
   function handleUpdated(next: SerializedFirma) {
+    const viewingClosed = filters.status === "cerradas";
+    // Al cerrar (o reabrir) una operación sale de la vista actual.
+    if (Boolean(next.closedAt) !== viewingClosed) {
+      setFirmas((prev) => prev.filter((f) => f.id !== next.id));
+      setActive(null);
+      setDetailOpen(false);
+      return;
+    }
     setFirmas((prev) => prev.map((f) => (f.id === next.id ? next : f)));
     setActive((prev) => (prev?.id === next.id ? next : prev));
   }
@@ -183,12 +191,13 @@ export function FirmasClient({
             value={filters.status}
             onChange={(e) => updateFilters({ status: e.target.value })}
           >
-            <option value="">Todos los estados</option>
+            <option value="">Abiertas (todos los estados)</option>
             {SIGNATURE_STATUSES.map((s) => (
               <option key={s} value={s}>
                 {SIGNATURE_STATUS_LABEL[s]}
               </option>
             ))}
+            <option value="cerradas">Cerradas (operaciones terminadas)</option>
           </SelectField>
         </label>
 

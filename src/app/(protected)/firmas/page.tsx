@@ -35,7 +35,9 @@ export default async function FirmasPage({ searchParams }: Readonly<Props>) {
   const statusFilter = sp.status?.trim() ?? "";
   const propertyId = sp.propertyId?.trim() ?? "";
 
-  const where: Prisma.SignatureProposalWhereInput = {};
+  // Por defecto solo las abiertas; las cerradas (operación terminada) aparte.
+  const viewingClosed = statusFilter === "cerradas";
+  const where: Prisma.SignatureProposalWhereInput = { closedAt: viewingClosed ? { not: null } : null };
   if (statusFilter && isSignatureStatus(statusFilter)) where.status = statusFilter;
   if (propertyId) where.propertyId = propertyId;
   if (q) {

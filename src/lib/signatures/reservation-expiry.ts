@@ -44,6 +44,23 @@ export interface ResolvedTerm {
  * `label` arma los mensajes ("la reserva", "el refuerzo"). Lanza Error con un
  * mensaje listo para mostrar.
  */
+/**
+ * Fecha en que se hizo el refuerzo (opcional). null si viene vacía; error si
+ * no es YYYY-MM-DD.
+ */
+export function parseDoneDate(value: unknown): Date | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}/.test(value)) {
+    throw new Error("La fecha en que se hizo el refuerzo no es válida");
+  }
+  const d = new Date(`${value.slice(0, 10)}T00:00:00.000Z`);
+  if (Number.isNaN(d.getTime())) throw new Error("La fecha en que se hizo el refuerzo no es válida");
+  return d;
+}
+
+/** Estados en los que, al cargar que el refuerzo se hizo, se pasa a "Refuerzo realizado". */
+export const BEFORE_REINFORCEMENT_STATUSES = ["propuesta_enviada", "propuesta_aceptada"] as const;
+
 /** "de la reserva" / "del refuerzo". */
 export function deLabel(label: string): string {
   return label.startsWith("el ") ? `del ${label.slice(3)}` : `de ${label}`;

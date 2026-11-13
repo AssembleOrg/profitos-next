@@ -140,9 +140,17 @@ export function FirmaCard({ firma, onOpen }: Readonly<FirmaCardProps>) {
                 {formatDateOnly(firma.reservationExpiresAt)}
               </span>
             </div>
-            {firma.hasReinforcement && firma.reinforcementExpiresAt && (
+            {firma.hasReinforcement && firma.reinforcementDate && (
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10.5px] font-semibold text-text-muted">Refuerzo vigente hasta</span>
+                <span className="text-[10.5px] font-semibold text-text-muted">Refuerzo hecho el</span>
+                <span className="text-[11px] font-bold tabular-nums text-olive-light">
+                  {formatDateOnly(firma.reinforcementDate)}
+                </span>
+              </div>
+            )}
+            {firma.hasReinforcement && !firma.reinforcementDate && firma.reinforcementExpiresAt && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10.5px] font-semibold text-text-muted">Refuerzo hasta el</span>
                 <span className="text-[11px] font-bold tabular-nums text-warning">
                   {formatDateOnly(firma.reinforcementExpiresAt)}
                 </span>
