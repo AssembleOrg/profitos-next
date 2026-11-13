@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Sheet } from "../../_components/sheet";
-import { formatDate, formatDateOnly, formatRelative } from "@/lib/datetime";
+import { formatDate, formatRelative } from "@/lib/datetime";
 import {
   SIGNATURE_DATE_META,
   SIGNATURE_STATUSES,
@@ -28,11 +28,9 @@ import {
   type ColleagueDraft,
   type OperationDraft,
 } from "./colleague-fields";
-import {
-  RESERVATION_DAY_TYPE_LABEL,
-  RESERVATION_DAY_TYPES,
-  type ReservationDayType,
-} from "@/lib/signatures/reservation-expiry";
+import { ReservationPanel } from "./reservation-panel";
+import { PartiesPanel } from "./party-picker";
+import { PendingProvider, usePendingChanges, useRegisterPending } from "./pending-changes";
 
 interface FirmaDetailModalProps {
   open: boolean;
@@ -91,6 +89,26 @@ function FirmaDetailSheet({
 }: Readonly<FirmaDetailSheetProps>) {
   const statusStyle = SIGNATURE_STATUS_STYLE[firma.status];
   const canDelete = isAdmin || firma.createdByUser.id === currentUserId;
+  const pending = usePendingChanges();
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [savingAll, setSavingAll] = useState(false);
+
+  // Con cambios sin guardar no se cierra de una: se ofrece guardar o descartar.
+  function requestClose() {
+    if (pending.dirty) setConfirmClose(true);
+    else onClose();
+  }
+
+  async function saveAll(thenClose: boolean) {
+    setSavingAll(true);
+    try {
+      const ok = await pending.saveAll();
+      if (ok && thenClose) onClose();
+      if (ok) setConfirmClose(false);
+    } finally {
+      setSavingAll(false);
+    }
+  }
 
   async function handleDelete() {
     if (!confirm(`¿Eliminar esta propuesta? Esta acción es irreversible.`)) return;
@@ -108,7 +126,7 @@ function FirmaDetailSheet({
   return (
     <Sheet
       open={open}
-      onClose={onClose}
+      onClose={requestClose}
       maxWidth="sm:max-w-[820px]"
       title={
         <span className="flex items-center gap-2">
@@ -137,39 +155,79 @@ function FirmaDetailSheet({
         </span>
       }
       footer={
+        confirmClose ? (
+          <>
+            <span className="text-[12.5px] font-semibold text-warning">
+              <span className="hidden sm:inline">Tenés cambios sin guardar.</span>
+              <span className="sm:hidden">Sin guardar</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmClose(false);
+                  onClose();
+                }}
+                disabled={savingAll}
+                className="inline-flex h-10 items-center whitespace-nowrap rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text disabled:opacity-60"
+              >
+                Descartar
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveAll(true)}
+                disabled={savingAll}
+                className="inline-flex h-10 items-center whitespace-nowrap rounded-full bg-dark px-4 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-60"
+              >
+                {savingAll ? "Guardando…" : "Guardar y cerrar"}
+              </button>
+            </div>
+          </>
+        ) : (
         <>
-          <span className="text-[11.5px] text-text-faint">
+          <span className="hidden text-[11.5px] text-text-faint sm:inline">
             Creada por{" "}
             {firma.createdByUser.fullName?.trim() || firma.createdByUser.email.split("@")[0]} ·{" "}
             {formatRelative(firma.createdAt)}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2">
             {canDelete && (
               <button
                 type="button"
                 onClick={handleDelete}
                 className="inline-flex h-10 items-center rounded-full bg-clay-chip px-4 text-[13px] font-bold text-terra transition-opacity hover:opacity-90"
               >
-                Eliminar propuesta
+                Eliminar<span className="hidden sm:inline">&nbsp;propuesta</span>
               </button>
             )}
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               className="inline-flex h-10 items-center rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text"
             >
               Cerrar
             </button>
+            <button
+              type="button"
+              onClick={() => void saveAll(false)}
+              disabled={!pending.dirty || savingAll}
+              className="inline-flex h-10 items-center rounded-full bg-dark px-4 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {savingAll ? "Guardando…" : pending.dirty ? "Guardar cambios" : "Guardado"}
+            </button>
           </div>
         </>
+        )
       }
     >
-      <DetailBody
-        firma={firma}
-        currentUserId={currentUserId}
-        isAdmin={isAdmin}
-        onUpdated={onUpdated}
-      />
+      <PendingProvider registry={pending.registry}>
+        <DetailBody
+          firma={firma}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+          onUpdated={onUpdated}
+        />
+      </PendingProvider>
     </Sheet>
   );
 }
@@ -201,6 +259,8 @@ function DetailBody({
       <div>
         <div className="flex flex-col gap-6">
           <ReservationPanel firma={firma} onUpdated={onUpdated} />
+
+          <PartiesPanel firma={firma} onUpdated={onUpdated} />
 
           <ColleaguePanel firma={firma} onUpdated={onUpdated} />
 
@@ -273,99 +333,6 @@ function DetailBody({
   );
 }
 
-function ReservationPanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
-  const [reservationDate, setReservationDate] = useState(firma.reservationDate?.slice(0, 10) ?? "");
-  const [termDays, setTermDays] = useState(firma.reservationTermDays?.toString() ?? "");
-  const [dayType, setDayType] = useState<ReservationDayType>(firma.reservationDayType ?? "business");
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    setReservationDate(firma.reservationDate?.slice(0, 10) ?? "");
-    setTermDays(firma.reservationTermDays?.toString() ?? "");
-    setDayType(firma.reservationDayType ?? "business");
-  }, [firma.id, firma.reservationDate, firma.reservationTermDays, firma.reservationDayType]);
-
-  async function save() {
-    const parsedTerm = Number(termDays);
-    if (!reservationDate) return toast.error("Ingresá la fecha de la reserva");
-    if (!Number.isInteger(parsedTerm) || parsedTerm <= 0 || parsedTerm > 3650) {
-      return toast.error("Ingresá una vigencia válida en días");
-    }
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/firmas/${firma.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reservationDate,
-          reservationTermDays: parsedTerm,
-          reservationDayType: dayType,
-        }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body?.message ?? "Error");
-      onUpdated(serializeFromApi(body.data));
-      toast.success("Vigencia recalculada");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo actualizar la reserva");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <section className="rounded-[16px] bg-sand-chip p-4">
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h4 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Vigencia de la reserva</h4>
-          <p className="mt-1 text-[13px] font-bold text-text">
-            {firma.reservationExpiresAt
-              ? `Vigente hasta el ${formatDateOnly(firma.reservationExpiresAt)}`
-              : "Completá los datos de la reserva"}
-          </p>
-        </div>
-        <span className="rounded-full bg-surface px-2.5 py-1 text-[10.5px] font-semibold text-text-muted">
-          Avisos: 15 días · 5 días · vencimiento
-        </span>
-      </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_0.7fr_1fr_auto] sm:items-end">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-text-faint">Fecha de reserva</span>
-          <DateField value={reservationDate} onChange={setReservationDate} clearable={false} disabled={busy} />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-text-faint">Días</span>
-          <input
-            type="number"
-            min={1}
-            max={3650}
-            step={1}
-            value={termDays}
-            onChange={(e) => setTermDays(e.target.value)}
-            disabled={busy}
-            className="h-11 rounded-[14px] border border-border bg-surface px-3.5 text-sm tabular-nums text-text focus:border-border-strong focus:outline-none disabled:opacity-50"
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-text-faint">Tipo</span>
-          <SelectField value={dayType} onChange={(e) => setDayType(e.target.value as ReservationDayType)} disabled={busy} className="h-11">
-            {RESERVATION_DAY_TYPES.map((type) => <option key={type} value={type}>{RESERVATION_DAY_TYPE_LABEL[type]}</option>)}
-          </SelectField>
-        </label>
-        <button
-          type="button"
-          onClick={save}
-          disabled={busy}
-          className="h-11 rounded-full bg-dark px-4 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-60"
-        >
-          {busy ? "Guardando…" : "Recalcular"}
-        </button>
-      </div>
-      <p className="mt-2 text-[10.5px] text-text-faint">Los días hábiles excluyen fines de semana, feriados nacionales y el 14 de agosto (Día de Quilmes).</p>
-    </section>
-  );
-}
-
 function ColleaguePanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
   const [draft, setDraft] = useState<ColleagueDraft>(() => draftFromColleague(firma.colleague));
   const [operation, setOperation] = useState<OperationDraft>(() => draftFromOperation(firma.operation));
@@ -381,11 +348,17 @@ function ColleaguePanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
     JSON.stringify(operation) !== JSON.stringify(draftFromOperation(firma.operation));
   const collected = firma.operation.receivable === "collected";
 
-  async function save() {
+  async function save(): Promise<boolean> {
     const colleaguePart = colleaguePayload(draft);
-    if (typeof colleaguePart === "string") return toast.error(colleaguePart);
+    if (typeof colleaguePart === "string") {
+      toast.error(colleaguePart);
+      return false;
+    }
     const operationPart = operationPayload(operation);
-    if (typeof operationPart === "string") return toast.error(operationPart);
+    if (typeof operationPart === "string") {
+      toast.error(operationPart);
+      return false;
+    }
     const payload = { ...colleaguePart, ...operationPart };
     setBusy(true);
     try {
@@ -398,12 +371,15 @@ function ColleaguePanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
       if (!res.ok) throw new Error(body?.message ?? "Error");
       onUpdated(serializeFromApi(body.data));
       toast.success(collected ? "Guardado (los honorarios ya estaban cobrados: no cambian)" : "Operación guardada");
+      return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo guardar");
+      return false;
     } finally {
       setBusy(false);
     }
   }
+  useRegisterPending("operacion", dirty, save);
 
   return (
     <section className="rounded-[16px] border border-border bg-surface p-4">
@@ -423,7 +399,7 @@ function ColleaguePanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
         {dirty && (
           <button
             type="button"
-            onClick={save}
+            onClick={() => void save()}
             disabled={busy}
             className="h-9 rounded-full bg-dark px-4 text-[12.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-60"
           >
@@ -700,6 +676,13 @@ function ActionBadge({ action }: { action: FirmaAction }) {
     return (
       <span className="rounded-full bg-sand-chip px-2 py-0.5 text-[10px] font-semibold text-warning">
         Reserva
+      </span>
+    );
+  }
+  if (action.type === "parties_update") {
+    return (
+      <span className="rounded-full bg-info-chip px-2 py-0.5 text-[10px] font-semibold text-info">
+        Partes
       </span>
     );
   }

@@ -294,6 +294,8 @@ model Client {
   user      User     @relation(fields: [userId], references: [id])
   visitas   Visit[]
   followUps PropertyFollowUp[]
+  buyerSignatures  SignatureProposal[] @relation("SignatureBuyer")
+  sellerSignatures SignatureProposal[] @relation("SignatureSeller")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -468,6 +470,33 @@ model SignatureProposal {
   reservationDayType     String?   @map("reservation_day_type") // business | calendar
   reservationExpiresAt   DateTime? @map("reservation_expires_at") @db.Date
 
+  // Refuerzo de la reserva (opcional): mismo esquema de vigencia que la reserva.
+  hasReinforcement        Boolean   @default(false) @map("has_reinforcement")
+  reinforcementDate       DateTime? @map("reinforcement_date") @db.Date
+  reinforcementTermDays   Int?      @map("reinforcement_term_days")
+  reinforcementDayType    String?   @map("reinforcement_day_type") // business | calendar
+  reinforcementExpiresAt  DateTime? @map("reinforcement_expires_at") @db.Date
+
+  // Sobres en resguardo: lo que dejó el comprador en la reserva (sobre 1) y en
+  // el refuerzo (sobre 2). ARS | USD
+  reservationAmount       Float?    @map("reservation_amount")
+  reservationCurrency     String    @default("USD") @map("reservation_currency")
+  reinforcementAmount     Float?    @map("reinforcement_amount")
+  reinforcementCurrency   String    @default("USD") @map("reinforcement_currency")
+
+  // Partes de la operación, vinculadas a Contactos.
+  buyerClientId   String?  @map("buyer_client_id")
+  buyerClient     Client?  @relation("SignatureBuyer", fields: [buyerClientId], references: [id], onDelete: SetNull)
+  sellerClientId  String?  @map("seller_client_id")
+  sellerClient    Client?  @relation("SignatureSeller", fields: [sellerClientId], references: [id], onDelete: SetNull)
+
+  // Vencimientos agendados en el Google Calendar de quien tildó la opción.
+  // El user_id es el dueño del calendario (para actualizar/borrar el evento).
+  reservationCalendarEventId    String? @map("reservation_calendar_event_id")
+  reservationCalendarUserId     String? @map("reservation_calendar_user_id")
+  reinforcementCalendarEventId  String? @map("reinforcement_calendar_event_id")
+  reinforcementCalendarUserId   String? @map("reinforcement_calendar_user_id")
+
   // Fechas relevantes (todas opcionales)
   dateProcessStarted DateTime?                 @map("date_process_started") // espera_informes
   dateAgreed         DateTime?                 @map("date_agreed")          // fecha_acordada
@@ -508,6 +537,8 @@ model SignatureProposal {
   @@index([propertyId])
   @@index([status])
   @@index([createdByUserId])
+  @@index([buyerClientId])
+  @@index([sellerClientId])
   @@index([reservationExpiresAt])
   @@index([withColleague])
   @@map("jp_signature_proposals")
@@ -517,11 +548,13 @@ model SignatureReservationReminder {
   id           String            @id @default(cuid())
   proposalId   String            @map("proposal_id")
   proposal     SignatureProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  // reserva | refuerzo
+  kind         String            @default("reserva")
   offsetDays   Int               @map("offset_days") // 15 | 5 | 0
   scheduledFor DateTime          @map("scheduled_for") @db.Date
   createdAt    DateTime          @default(now()) @map("created_at")
 
-  @@unique([proposalId, offsetDays])
+  @@unique([proposalId, kind, offsetDays])
   @@index([scheduledFor])
   @@map("jp_signature_reservation_reminders")
 }
@@ -1235,4 +1268,31 @@ model CashTransfer {
   @@index([toFund])
   @@index([fromFund])
   @@map("jp_cash_transfers")
+}
+
+// Feriados según la calculadora del Colegio de Escribanos (PBA). Ver
+// src/lib/holidays. El worker los refresca los lunes (mes actual + siguiente).
+model Holiday {
+  day         DateTime @id @db.Date
+  description String
+  source      String   @default("colegio")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("jp_holidays")
+}
+
+model HolidaySync {
+  id           String   @id @default(cuid())
+  ranAt        DateTime @default(now()) @map("ran_at")
+  rangeFrom    DateTime @map("range_from") @db.Date
+  rangeTo      DateTime @map("range_to") @db.Date
+  ok           Boolean
+  added        Json?
+  removed      Json?
+  recalculated Int      @default(0)
+  error        String?
+
+  @@index([ranAt])
+  @@map("jp_holiday_syncs")
 }

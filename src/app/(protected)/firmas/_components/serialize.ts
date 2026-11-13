@@ -1,6 +1,6 @@
 import type { Attachment, SignatureStatus } from "@/lib/signatures";
 import type { ReservationDayType } from "@/lib/signatures/reservation-expiry";
-import type { FirmaAction, FirmaColleague, FirmaOperation, FirmaProperty, FirmaUser, SerializedFirma } from "./types";
+import type { FirmaAction, FirmaClient, FirmaColleague, FirmaOperation, FirmaProperty, FirmaUser, SerializedFirma } from "./types";
 
 interface RawUser {
   id: string;
@@ -45,6 +45,19 @@ interface RawProposal {
   reservationTermDays: number | null;
   reservationDayType: string | null;
   reservationExpiresAt: Date | null;
+  hasReinforcement?: boolean;
+  reinforcementDate?: Date | null;
+  reinforcementTermDays?: number | null;
+  reinforcementDayType?: string | null;
+  reinforcementExpiresAt?: Date | null;
+  reservationAmount?: number | null;
+  reservationCurrency?: string;
+  reinforcementAmount?: number | null;
+  reinforcementCurrency?: string;
+  buyerClient?: FirmaClient | null;
+  sellerClient?: FirmaClient | null;
+  reservationCalendarEventId?: string | null;
+  reinforcementCalendarEventId?: string | null;
   dateProcessStarted: Date | null;
   dateAgreed: Date | null;
   dateKeysHandover: Date | null;
@@ -169,6 +182,19 @@ export function serializeProposal(raw: RawProposal): SerializedFirma {
     reservationTermDays: raw.reservationTermDays,
     reservationDayType: raw.reservationDayType as ReservationDayType | null,
     reservationExpiresAt: raw.reservationExpiresAt?.toISOString() ?? null,
+    hasReinforcement: raw.hasReinforcement === true,
+    reinforcementDate: raw.reinforcementDate?.toISOString() ?? null,
+    reinforcementTermDays: raw.reinforcementTermDays ?? null,
+    reinforcementDayType: (raw.reinforcementDayType as ReservationDayType | null) ?? null,
+    reinforcementExpiresAt: raw.reinforcementExpiresAt?.toISOString() ?? null,
+    reservationAmount: raw.reservationAmount ?? null,
+    reservationCurrency: raw.reservationCurrency === "ARS" ? "ARS" : "USD",
+    reinforcementAmount: raw.reinforcementAmount ?? null,
+    reinforcementCurrency: raw.reinforcementCurrency === "ARS" ? "ARS" : "USD",
+    buyer: raw.buyerClient ?? null,
+    seller: raw.sellerClient ?? null,
+    reservationOnCalendar: !!raw.reservationCalendarEventId,
+    reinforcementOnCalendar: !!raw.reinforcementCalendarEventId,
     dateProcessStarted: raw.dateProcessStarted?.toISOString() ?? null,
     dateAgreed: raw.dateAgreed?.toISOString() ?? null,
     dateKeysHandover: raw.dateKeysHandover?.toISOString() ?? null,
@@ -209,6 +235,8 @@ export function serializeFromApi(raw: unknown): SerializedFirma {
     accountEntries: (r.accountEntries as { status: string; type?: string }[]) ?? [],
     reservationDate: iso(r.reservationDate),
     reservationExpiresAt: iso(r.reservationExpiresAt),
+    reinforcementDate: iso(r.reinforcementDate),
+    reinforcementExpiresAt: iso(r.reinforcementExpiresAt),
     dateProcessStarted: iso(r.dateProcessStarted),
     dateAgreed: iso(r.dateAgreed),
     dateKeysHandover: iso(r.dateKeysHandover),

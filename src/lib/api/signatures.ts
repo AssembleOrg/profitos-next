@@ -20,6 +20,8 @@ export const signatureInclude = {
     },
   },
   colleagueAgency: { select: { id: true, name: true } },
+  buyerClient: { select: { id: true, name: true, phone: true, email: true } },
+  sellerClient: { select: { id: true, name: true, phone: true, email: true } },
   accountEntries: { select: { status: true, type: true } },
   createdByUser: { select: { id: true, email: true, fullName: true, avatarUrl: true } },
   actions: {
@@ -29,6 +31,19 @@ export const signatureInclude = {
     },
   },
 } satisfies Prisma.SignatureProposalInclude;
+
+/**
+ * Comprador / vendedor: id de un contacto existente, o null para quitarlo.
+ * `undefined` = el body no lo trae (no se toca).
+ */
+export async function parsePartyClientId(value: unknown, label: string): Promise<string | null | undefined> {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  if (typeof value !== "string") throw new AppError(400, `${label} inválido`);
+  const client = await prisma.client.findUnique({ where: { id: value }, select: { id: true } });
+  if (!client) throw new AppError(400, `${label}: el contacto no existe`);
+  return client.id;
+}
 
 export interface ColleagueData {
   withColleague: boolean;

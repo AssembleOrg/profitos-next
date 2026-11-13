@@ -18,13 +18,22 @@ import {
   type ColleagueDraft,
   type OperationDraft,
 } from "./colleague-fields";
-import { DateField } from "../../_components/date-field";
-import { SelectField } from "@/components/ui/select-field";
 import {
-  RESERVATION_DAY_TYPE_LABEL,
-  RESERVATION_DAY_TYPES,
-  type ReservationDayType,
-} from "@/lib/signatures/reservation-expiry";
+  CALENDAR_HINT,
+  CalendarCheck,
+  calendarFailedMessage,
+  CustodySummary,
+  EMPTY_TERM,
+  EnvelopeField,
+  ExpiryPreview,
+  ReinforcementToggle,
+  TermFields,
+  termError,
+  type TermDraft,
+} from "./vigencia-fields";
+import { PartyPicker } from "./party-picker";
+import type { FirmaClient } from "./types";
+import { custodyEnvelopes, type CustodyCurrency } from "@/lib/signatures/custody";
 
 export interface PropertyOption {
   id: string;
@@ -58,9 +67,16 @@ export function CreateFirmaModal({
   const [operation, setOperation] = useState<OperationDraft>(EMPTY_OPERATION);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [reservationDate, setReservationDate] = useState("");
-  const [reservationTermDays, setReservationTermDays] = useState("");
-  const [reservationDayType, setReservationDayType] = useState<ReservationDayType>("business");
+  const [reservation, setReservation] = useState<TermDraft>(EMPTY_TERM);
+  const [reservationCalendar, setReservationCalendar] = useState(false);
+  const [hasReinforcement, setHasReinforcement] = useState(false);
+  const [reinforcement, setReinforcement] = useState<TermDraft>(EMPTY_TERM);
+  const [reinforcementCalendar, setReinforcementCalendar] = useState(false);
+  const [reservationEnvelope, setReservationEnvelope] = useState<{ amount: number | null; currency: CustodyCurrency }>({ amount: null, currency: "USD" });
+  const [reinforcementEnvelope, setReinforcementEnvelope] = useState<{ amount: number | null; currency: CustodyCurrency }>({ amount: null, currency: "USD" });
+  const [accepted, setAccepted] = useState(false);
+  const [buyer, setBuyer] = useState<FirmaClient | null>(null);
+  const [seller, setSeller] = useState<FirmaClient | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -76,9 +92,16 @@ export function CreateFirmaModal({
     setOperation(EMPTY_OPERATION);
     setTitle("");
     setDescription("");
-    setReservationDate("");
-    setReservationTermDays("");
-    setReservationDayType("business");
+    setReservation(EMPTY_TERM);
+    setReservationCalendar(false);
+    setHasReinforcement(false);
+    setReinforcement(EMPTY_TERM);
+    setReinforcementCalendar(false);
+    setReservationEnvelope({ amount: null, currency: "USD" });
+    setReinforcementEnvelope({ amount: null, currency: "USD" });
+    setAccepted(false);
+    setBuyer(null);
+    setSeller(null);
     setAttachments([]);
   }, [open, initialPropertyId]);
 
@@ -114,13 +137,14 @@ export function CreateFirmaModal({
       toast.error(operationData);
       return;
     }
-    if (!reservationDate) {
-      toast.error("Ingresá la fecha de la reserva");
+    const reservationProblem = termError(reservation, "la reserva");
+    if (reservationProblem) {
+      toast.error(reservationProblem);
       return;
     }
-    const termDays = Number(reservationTermDays);
-    if (!Number.isInteger(termDays) || termDays <= 0 || termDays > 3650) {
-      toast.error("Ingresá una vigencia válida en días");
+    const reinforcementProblem = hasReinforcement ? termError(reinforcement, "el refuerzo") : null;
+    if (reinforcementProblem) {
+      toast.error(reinforcementProblem);
       return;
     }
     setSubmitting(true);
@@ -135,15 +159,34 @@ export function CreateFirmaModal({
           title: title.trim() || null,
           description: description.trim() || null,
           attachments,
-          reservationDate,
-          reservationTermDays: termDays,
-          reservationDayType,
+          reservationDate: reservation.date,
+          reservationTermDays: Number(reservation.termDays),
+          reservationDayType: reservation.dayType,
+          reservationCalendar,
+          reservationAmount: reservationEnvelope.amount,
+          reservationCurrency: reservationEnvelope.currency,
+          status: accepted ? "propuesta_aceptada" : "propuesta_enviada",
+          buyerClientId: buyer?.id ?? null,
+          sellerClientId: seller?.id ?? null,
+          hasReinforcement,
+          ...(hasReinforcement && {
+            reinforcementDate: reinforcement.date,
+            reinforcementTermDays: Number(reinforcement.termDays),
+            reinforcementDayType: reinforcement.dayType,
+            reinforcementCalendar,
+            reinforcementAmount: reinforcementEnvelope.amount,
+            reinforcementCurrency: reinforcementEnvelope.currency,
+          }),
         }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message ?? "Error");
       onCreated(serializeFromApi(body.data));
-      toast.success("Propuesta creada");
+      const calendarProblem = calendarFailedMessage(body.data?.calendarFailed);
+      if (calendarProblem) toast.warning(calendarProblem, { duration: 10000 });
+      else toast.success(reservationCalendar || (hasReinforcement && reinforcementCalendar)
+        ? "Propuesta creada y agendada en Google Calendar"
+        : "Propuesta creada");
       onOpenChange(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo crear");
@@ -283,6 +326,19 @@ export function CreateFirmaModal({
 
                     <div className="rounded-[16px] bg-bg p-4">
                       <div className="mb-3">
+                        <p className="text-[12.5px] font-bold text-text">Comprador y vendedor</p>
+                        <p className="mt-0.5 text-[11.5px] text-text-faint">
+                          Se eligen de Contactos. Si no están, se crean desde acá y quedan guardados.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <PartyPicker label="Comprador" value={buyer} onChange={setBuyer} />
+                        <PartyPicker label="Vendedor" value={seller} onChange={setSeller} />
+                      </div>
+                    </div>
+
+                    <div className="rounded-[16px] bg-bg p-4">
+                      <div className="mb-3">
                         <p className="text-[12.5px] font-bold text-text">Operación y honorarios</p>
                         <p className="mt-0.5 text-[11.5px] text-text-faint">
                           Si la operación es compartida, indicá con quién y qué % de nuestros honorarios le corresponde.
@@ -295,49 +351,93 @@ export function CreateFirmaModal({
                     </div>
 
                     <div className="rounded-[16px] bg-bg p-4">
+                      <p className="mb-2 text-[12.5px] font-bold text-text">¿La propuesta ya fue aceptada?</p>
+                      <div className="flex items-center gap-0.5 rounded-full border border-border bg-surface p-1" role="radiogroup" aria-label="¿La propuesta ya fue aceptada?">
+                        {[
+                          { v: false, label: "Todavía no" },
+                          { v: true, label: "Sí, aceptada" },
+                        ].map((opt) => (
+                          <button
+                            key={opt.label}
+                            type="button"
+                            role="radio"
+                            aria-checked={accepted === opt.v}
+                            onClick={() => setAccepted(opt.v)}
+                            className={`flex-1 rounded-full px-4 py-2 text-[13px] transition-colors ${
+                              accepted === opt.v ? "bg-dark font-bold text-dark-fg" : "font-semibold text-text-muted hover:text-text"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[16px] bg-bg p-4">
                       <div className="mb-3">
                         <p className="text-[12.5px] font-bold text-text">Vigencia de la reserva</p>
                         <p className="mt-0.5 text-[11.5px] text-text-faint">
-                          El vencimiento se calcula automáticamente y se avisará 15 días antes, 5 días antes y el día del vencimiento.
+                          El vencimiento se calcula solo (los días hábiles no cuentan fines de semana ni feriados) y se avisa 15 días antes, 5 días antes y el día del vencimiento.
                         </p>
                       </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        <label className="flex flex-col gap-1.5">
-                          <span className="text-[11px] font-semibold text-text-muted">Fecha de reserva *</span>
-                          <DateField
-                            id="firma-reservation-date"
-                            value={reservationDate}
-                            onChange={setReservationDate}
-                            clearable={false}
-                          />
-                        </label>
-                        <label className="flex flex-col gap-1.5">
-                          <span className="text-[11px] font-semibold text-text-muted">Cantidad de días *</span>
-                          <input
-                            id="firma-reservation-term"
-                            type="number"
-                            inputMode="numeric"
-                            min={1}
-                            max={3650}
-                            step={1}
-                            value={reservationTermDays}
-                            onChange={(e) => setReservationTermDays(e.target.value)}
-                            placeholder="Ej. 90"
-                            className="h-11 w-full rounded-[14px] border border-border bg-surface px-3.5 text-sm tabular-nums text-text placeholder:text-text-faint focus:border-border-strong focus:outline-none"
-                          />
-                        </label>
-                        <label className="flex flex-col gap-1.5">
-                          <span className="text-[11px] font-semibold text-text-muted">Tipo de días *</span>
-                          <SelectField
-                            value={reservationDayType}
-                            onChange={(e) => setReservationDayType(e.target.value as ReservationDayType)}
-                            className="h-11"
-                          >
-                            {RESERVATION_DAY_TYPES.map((type) => (
-                              <option key={type} value={type}>{RESERVATION_DAY_TYPE_LABEL[type]}</option>
-                            ))}
-                          </SelectField>
-                        </label>
+                      <div className="flex flex-col gap-3">
+                        <TermFields
+                          idPrefix="firma-reservation"
+                          value={reservation}
+                          onChange={setReservation}
+                          dateLabel="Fecha de reserva"
+                        />
+                        <ExpiryPreview term={reservation} what="la reserva" />
+                        <EnvelopeField
+                          label="Monto de la reserva (sobre 1)"
+                          amount={reservationEnvelope.amount}
+                          currency={reservationEnvelope.currency}
+                          onChange={setReservationEnvelope}
+                        />
+                        <CalendarCheck
+                          checked={reservationCalendar}
+                          onChange={setReservationCalendar}
+                          label="Agendar el vencimiento de la reserva en mi Google Calendar"
+                          hint={CALENDAR_HINT}
+                        />
+
+                        <div className="mt-1 border-t border-border pt-4">
+                          <p className="mb-2 text-[12.5px] font-bold text-text">¿Con refuerzo?</p>
+                          <ReinforcementToggle value={hasReinforcement} onChange={setHasReinforcement} />
+                        </div>
+
+                        {hasReinforcement && (
+                          <>
+                            <TermFields
+                              idPrefix="firma-reinforcement"
+                              value={reinforcement}
+                              onChange={setReinforcement}
+                              dateLabel="Fecha del refuerzo"
+                            />
+                            <ExpiryPreview term={reinforcement} what="el refuerzo" />
+                            <EnvelopeField
+                              label="Monto del refuerzo (sobre 2)"
+                              amount={reinforcementEnvelope.amount}
+                              currency={reinforcementEnvelope.currency}
+                              onChange={setReinforcementEnvelope}
+                            />
+                            <CalendarCheck
+                              checked={reinforcementCalendar}
+                              onChange={setReinforcementCalendar}
+                              label="Agendar el vencimiento del refuerzo en mi Google Calendar"
+                            />
+                          </>
+                        )}
+
+                        <CustodySummary
+                          envelopes={custodyEnvelopes({
+                            reservationAmount: reservationEnvelope.amount,
+                            reservationCurrency: reservationEnvelope.currency,
+                            hasReinforcement,
+                            reinforcementAmount: reinforcementEnvelope.amount,
+                            reinforcementCurrency: reinforcementEnvelope.currency,
+                          })}
+                        />
                       </div>
                     </div>
 

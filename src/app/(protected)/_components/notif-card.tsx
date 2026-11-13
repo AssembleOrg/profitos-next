@@ -106,9 +106,9 @@ function NotifBody({ item }: Readonly<{ item: NotificationItem }>) {
             {item.property?.address ?? "Reserva de propiedad"}
           </p>
           <p className="mt-0.5 text-xs font-semibold text-warning">
-            {item.daysBefore === 0
-              ? "La reserva vence hoy"
-              : `La reserva vence en ${item.daysBefore} días`}
+            {`${item.expiryKind === "refuerzo" ? "El refuerzo" : "La reserva"} vence ${
+              item.daysBefore === 0 ? "hoy" : `en ${item.daysBefore} días`
+            }`}
             {item.expiresAt ? ` · ${formatDateOnly(item.expiresAt)}` : ""}
           </p>
         </>

@@ -30,7 +30,11 @@ export function formatDate(date: Date | string) {
  * almanaque" (vencimientos, fecha contable, fecha de visita), no para instantes.
  */
 export function formatDateOnly(date: Date | string) {
-  const dt = typeof date === "string" ? fromISO(date) : DateTime.fromJSDate(date, { zone: "utc" });
+  // Igual para string y Date: el día de la medianoche UTC guardada. Antes el
+  // string ("2027-01-15T00:00:00.000Z") se pasaba a GMT-3 y mostraba el 14.
+  const dt = typeof date === "string"
+    ? DateTime.fromISO(date, { zone: "utc" })
+    : DateTime.fromJSDate(date, { zone: "utc" });
   return dt.toFormat(VISUAL_DATE_FORMAT);
 }
 

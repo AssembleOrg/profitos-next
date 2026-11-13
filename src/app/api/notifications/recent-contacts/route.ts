@@ -134,6 +134,7 @@ export const GET = withHandler(async (request) => {
       take: limit * 3,
       select: {
         id: true,
+        kind: true,
         offsetDays: true,
         scheduledFor: true,
         createdAt: true,
@@ -141,6 +142,7 @@ export const GET = withHandler(async (request) => {
           select: {
             id: true,
             reservationExpiresAt: true,
+            reinforcementExpiresAt: true,
             property: { select: { id: true, address: true } },
             createdByUser: { select: { id: true, fullName: true, email: true } },
           },
@@ -283,7 +285,10 @@ export const GET = withHandler(async (request) => {
         createdAt: item.createdAt.toISOString(),
         proposalId: item.proposal.id,
         daysBefore: item.offsetDays,
-        expiresAt: item.proposal.reservationExpiresAt?.toISOString() ?? null,
+        expiryKind: item.kind === "refuerzo" ? ("refuerzo" as const) : ("reserva" as const),
+        expiresAt:
+          (item.kind === "refuerzo" ? item.proposal.reinforcementExpiresAt : item.proposal.reservationExpiresAt)
+            ?.toISOString() ?? null,
         property: item.proposal.property,
         createdByUser: item.proposal.createdByUser,
       },

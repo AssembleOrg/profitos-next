@@ -4,14 +4,20 @@ import { created, paginated } from "@/lib/api/response";
 import { parsePagination, buildPaginatedResult, paginationToSkip } from "@/lib/api/pagination";
 import { prisma } from "@/lib/prisma/client";
 import { getAuthContext } from "@/lib/api/auth";
-import { describeColleague, parseColleague, parseOperation, signatureInclude } from "@/lib/api/signatures";
+import { describeColleague, parseColleague, parseOperation, parsePartyClientId, signatureInclude } from "@/lib/api/signatures";
+import { parseEnvelopeAmount, toCustodyCurrency } from "@/lib/signatures/custody";
 import { syncSignatureReceivable } from "@/lib/api/signature-receivable";
 import { isSignatureStatus } from "@/lib/signatures";
 import {
   calculateReservationExpiration,
   buildReservationReminderDates,
   isReservationDayType,
+  resolveTerm,
+  type ResolvedTerm,
 } from "@/lib/signatures/reservation-expiry";
+import { syncExpiryCalendar } from "@/lib/api/reservation-calendar";
+import { resolvePublicOrigin } from "@/lib/server/public-origin";
+import { loadHolidayCalendar } from "@/lib/holidays/server";
 import type { Prisma } from "@/generated/prisma/client";
 
 export const GET = withHandler(async (request: NextRequest) => {
@@ -67,6 +73,12 @@ export const POST = withHandler(async (request: NextRequest) => {
     reservationDate,
     reservationTermDays,
     reservationDayType,
+    hasReinforcement,
+    reinforcementDate,
+    reinforcementTermDays,
+    reinforcementDayType,
+    reservationCalendar,
+    reinforcementCalendar,
   } = body as {
     propertyId?: string;
     /** Inmueble en cartera de un colega (no publicado): solo la dirección. */
@@ -78,6 +90,14 @@ export const POST = withHandler(async (request: NextRequest) => {
     reservationDate?: string;
     reservationTermDays?: number;
     reservationDayType?: string;
+    /** Con refuerzo: además de la reserva, el refuerzo con su propia vigencia. */
+    hasReinforcement?: boolean;
+    reinforcementDate?: string;
+    reinforcementTermDays?: number;
+    reinforcementDayType?: string;
+    /** Agendar el vencimiento en el Google Calendar de quien carga. */
+    reservationCalendar?: boolean;
+    reinforcementCalendar?: boolean;
   };
 
   // Si el inmueble lo tiene en cartera un colega no está publicado: se crea una
@@ -94,15 +114,43 @@ export const POST = withHandler(async (request: NextRequest) => {
     throw new AppError(400, "Seleccioná si la vigencia se expresa en días hábiles o corridos");
   }
 
+  const holidays = await loadHolidayCalendar();
   let reservationExpiresAt: Date;
   try {
     reservationExpiresAt = calculateReservationExpiration(
       reservationDate,
       reservationTermDays!,
       reservationDayType,
+      holidays,
     );
   } catch (error) {
     throw new AppError(400, error instanceof Error ? error.message : "Datos de reserva inválidos");
+  }
+
+  let reservationAmount: number | null;
+  let reinforcementAmount: number | null;
+  try {
+    reservationAmount = parseEnvelopeAmount((body as Record<string, unknown>).reservationAmount, "de la reserva");
+    reinforcementAmount = hasReinforcement === true
+      ? parseEnvelopeAmount((body as Record<string, unknown>).reinforcementAmount, "del refuerzo")
+      : null;
+  } catch (error) {
+    throw new AppError(400, error instanceof Error ? error.message : "Monto inválido");
+  }
+  const buyerClientId = await parsePartyClientId((body as Record<string, unknown>).buyerClientId, "Comprador");
+  const sellerClientId = await parsePartyClientId((body as Record<string, unknown>).sellerClientId, "Vendedor");
+
+  let reinforcement: ResolvedTerm | null = null;
+  if (hasReinforcement === true) {
+    try {
+      reinforcement = resolveTerm(
+        { date: reinforcementDate, termDays: reinforcementTermDays, dayType: reinforcementDayType },
+        "el refuerzo",
+        holidays,
+      );
+    } catch (error) {
+      throw new AppError(400, error instanceof Error ? error.message : "Datos del refuerzo inválidos");
+    }
   }
 
   if (propertyId) {
@@ -144,8 +192,22 @@ export const POST = withHandler(async (request: NextRequest) => {
         reservationTermDays,
         reservationDayType,
         reservationExpiresAt,
+        reservationAmount,
+        reservationCurrency: toCustodyCurrency((body as Record<string, unknown>).reservationCurrency),
+        reinforcementAmount,
+        reinforcementCurrency: toCustodyCurrency((body as Record<string, unknown>).reinforcementCurrency),
+        buyerClientId: buyerClientId ?? null,
+        sellerClientId: sellerClientId ?? null,
+        hasReinforcement: reinforcement !== null,
+        reinforcementDate: reinforcement?.date ?? null,
+        reinforcementTermDays: reinforcement?.termDays ?? null,
+        reinforcementDayType: reinforcement?.dayType ?? null,
+        reinforcementExpiresAt: reinforcement?.expiresAt ?? null,
         reservationReminders: {
-          create: buildReservationReminderDates(reservationExpiresAt),
+          create: [
+            ...buildReservationReminderDates(reservationExpiresAt, "reserva"),
+            ...(reinforcement ? buildReservationReminderDates(reinforcement.expiresAt, "refuerzo") : []),
+          ],
         },
         createdByUserId: auth.userId,
         actions: {
@@ -162,8 +224,21 @@ export const POST = withHandler(async (request: NextRequest) => {
     });
     // Honorarios "a cobrar" en estados de cuenta (si ya hay valor y %).
     await syncSignatureReceivable(createdProposal.id, tx);
-    return tx.signatureProposal.findUniqueOrThrow({ where: { id: createdProposal.id }, include: signatureInclude });
+    return createdProposal;
   });
 
-  return created(proposal, "Propuesta creada correctamente", path);
+  // Fuera de la transacción: Google puede tardar y no debe frenar el alta.
+  let calendarFailed: string[] = [];
+  if (reservationCalendar === true || (reinforcement && reinforcementCalendar === true)) {
+    const { failed } = await syncExpiryCalendar(
+      proposal.id,
+      auth.userId,
+      { reserva: reservationCalendar === true, refuerzo: reinforcementCalendar === true },
+      resolvePublicOrigin(request.headers),
+    );
+    calendarFailed = failed;
+  }
+
+  const fresh = await prisma.signatureProposal.findUniqueOrThrow({ where: { id: proposal.id }, include: signatureInclude });
+  return created({ ...fresh, calendarFailed }, "Propuesta creada correctamente", path);
 });

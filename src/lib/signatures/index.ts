@@ -4,6 +4,7 @@ export const SIGNATURE_STATUSES = [
   "propuesta_enviada",
   "propuesta_aceptada",
   "propuesta_rechazada",
+  "refuerzo_realizado",
   "espera_informes",
   "comunicacion_partes_finales",
   "fecha_acordada",
@@ -20,6 +21,7 @@ export const SIGNATURE_STATUS_LABEL: Record<SignatureStatus, string> = {
   propuesta_enviada: "Propuesta enviada",
   propuesta_aceptada: "Propuesta aceptada",
   propuesta_rechazada: "Propuesta rechazada",
+  refuerzo_realizado: "Refuerzo realizado",
   espera_informes: "Espera de informes",
   comunicacion_partes_finales: "Comunicación de partes",
   fecha_acordada: "Fecha acordada",
@@ -30,6 +32,7 @@ export const SIGNATURE_STATUS_SHORT: Record<SignatureStatus, string> = {
   propuesta_enviada: "Enviada",
   propuesta_aceptada: "Aceptada",
   propuesta_rechazada: "Rechazada",
+  refuerzo_realizado: "Refuerzo",
   espera_informes: "Informes",
   comunicacion_partes_finales: "Partes",
   fecha_acordada: "Fecha",
@@ -43,7 +46,7 @@ export const SIGNATURE_STATUS_STYLE: Record<
   SignatureStatus,
   { dot: string; chip: string; line: string }
 > = {
-  // Flujo de 7 pasos: los intermedios usan `info` (en curso) y el sage queda
+  // Flujo de 8 pasos: los intermedios usan `info` (en curso) y el sage queda
   // reservado para aceptación/cierre. Ver docs/design.md § Mapa de estados.
   // `chip` son pills V4 (sin borde): tinte + texto semántico.
   propuesta_enviada: {
@@ -60,6 +63,11 @@ export const SIGNATURE_STATUS_STYLE: Record<
     dot: "bg-terra",
     chip: "bg-clay-chip text-terra",
     line: "bg-terra/40",
+  },
+  refuerzo_realizado: {
+    dot: "bg-info",
+    chip: "bg-info-chip text-info",
+    line: "bg-info/40",
   },
   espera_informes: {
     dot: "bg-info",

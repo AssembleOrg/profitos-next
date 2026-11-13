@@ -43,7 +43,7 @@ export interface FirmaColleague {
 
 export interface FirmaAction {
   id: string;
-  type: "creation" | "nota" | "status_change" | "date_set" | "reservation_update" | "colleague_update" | "operation_update";
+  type: "creation" | "nota" | "status_change" | "date_set" | "reservation_update" | "colleague_update" | "operation_update" | "parties_update";
   fromStatus: SignatureStatus | null;
   toStatus: SignatureStatus | null;
   dateField: string | null;
@@ -51,6 +51,13 @@ export interface FirmaAction {
   attachments: Attachment[];
   createdByUser: FirmaUser;
   createdAt: string;
+}
+
+export interface FirmaClient {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
 }
 
 export interface SerializedFirma {
@@ -64,6 +71,21 @@ export interface SerializedFirma {
   reservationTermDays: number | null;
   reservationDayType: ReservationDayType | null;
   reservationExpiresAt: string | null;
+  hasReinforcement: boolean;
+  reinforcementDate: string | null;
+  reinforcementTermDays: number | null;
+  reinforcementDayType: ReservationDayType | null;
+  reinforcementExpiresAt: string | null;
+  /** Sobres en resguardo: monto de la reserva (sobre 1) y del refuerzo (sobre 2). */
+  reservationAmount: number | null;
+  reservationCurrency: "USD" | "ARS";
+  reinforcementAmount: number | null;
+  reinforcementCurrency: "USD" | "ARS";
+  buyer: FirmaClient | null;
+  seller: FirmaClient | null;
+  /** El vencimiento está agendado en Google Calendar. */
+  reservationOnCalendar: boolean;
+  reinforcementOnCalendar: boolean;
   dateProcessStarted: string | null;
   dateAgreed: string | null;
   dateKeysHandover: string | null;

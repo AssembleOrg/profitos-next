@@ -8,8 +8,10 @@ import {
   SIGNATURE_STATUS_LABEL,
   SIGNATURE_STATUS_SHORT,
   SIGNATURE_STATUS_STYLE,
+  isTerminalStatus,
   type SignatureStatus,
 } from "@/lib/signatures";
+import { custodyEnvelopes, describeCustody } from "@/lib/signatures/custody";
 import type { SerializedFirma } from "./types";
 
 interface FirmaCardProps {
@@ -20,6 +22,7 @@ interface FirmaCardProps {
 const ORDERED_STATUSES: SignatureStatus[] = [
   "propuesta_enviada",
   "propuesta_aceptada",
+  "refuerzo_realizado",
   "espera_informes",
   "comunicacion_partes_finales",
   "fecha_acordada",
@@ -37,6 +40,7 @@ function buildTimelineHistory(actions: SerializedFirma["actions"]): Set<Signatur
 export function FirmaCard({ firma, onOpen }: Readonly<FirmaCardProps>) {
   const statusStyle = SIGNATURE_STATUS_STYLE[firma.status];
   const isRejected = firma.status === "propuesta_rechazada";
+  const custody = describeCustody(custodyEnvelopes(firma));
   const visitedSet = buildTimelineHistory(firma.actions);
   visitedSet.add(firma.status);
 
@@ -129,12 +133,48 @@ export function FirmaCard({ firma, onOpen }: Readonly<FirmaCardProps>) {
         )}
 
         {firma.reservationExpiresAt && (
-          <div className="flex items-center justify-between gap-2 rounded-xl bg-sand-chip px-2.5 py-2">
-            <span className="text-[10.5px] font-semibold text-text-muted">Reserva vigente hasta</span>
-            <span className="text-[11px] font-bold tabular-nums text-warning">
-              {formatDateOnly(firma.reservationExpiresAt)}
-            </span>
+          <div className="flex flex-col gap-1 rounded-xl bg-sand-chip px-2.5 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10.5px] font-semibold text-text-muted">Reserva vigente hasta</span>
+              <span className="text-[11px] font-bold tabular-nums text-warning">
+                {formatDateOnly(firma.reservationExpiresAt)}
+              </span>
+            </div>
+            {firma.hasReinforcement && firma.reinforcementExpiresAt && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10.5px] font-semibold text-text-muted">Refuerzo vigente hasta</span>
+                <span className="text-[11px] font-bold tabular-nums text-warning">
+                  {formatDateOnly(firma.reinforcementExpiresAt)}
+                </span>
+              </div>
+            )}
+            {custody && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10.5px] font-semibold text-text-muted">
+                  {isTerminalStatus(firma.status) ? "Sobres" : "En resguardo"}
+                </span>
+                <span className="text-[11px] font-bold tabular-nums text-text">{custody}</span>
+              </div>
+            )}
           </div>
+        )}
+
+        {(firma.buyer || firma.seller) && (
+          <p className="line-clamp-2 text-[11.5px] text-text-muted">
+            {firma.buyer && (
+              <>
+                <span className="text-text-faint">Comprador: </span>
+                {firma.buyer.name}
+              </>
+            )}
+            {firma.buyer && firma.seller && " · "}
+            {firma.seller && (
+              <>
+                <span className="text-text-faint">Vendedor: </span>
+                {firma.seller.name}
+              </>
+            )}
+          </p>
         )}
 
         {/* Mini timeline */}
