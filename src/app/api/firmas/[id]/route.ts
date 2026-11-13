@@ -24,7 +24,12 @@ import {
   calculateReservationExpiration,
   buildReservationReminderDates,
   isReservationDayType,
+  resolveTerm,
+  RESERVATION_DAY_TYPE_LABEL,
+  type ExpiryKind,
 } from "@/lib/signatures/reservation-expiry";
+import { removeExpiryEvents, syncExpiryCalendar, type CalendarWish } from "@/lib/api/reservation-calendar";
+import { resolvePublicOrigin } from "@/lib/server/public-origin";
 
 const DATE_FIELDS: SignatureDateField[] = ["dateProcessStarted", "dateAgreed", "dateKeysHandover"];
 
@@ -67,6 +72,10 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
     data.attachments = (body.attachments as Prisma.InputJsonValue) ?? null;
   }
 
+  // Avisos (15 días, 5 días, el día): se reemplazan por tipo de vencimiento.
+  const reminderKinds: ExpiryKind[] = [];
+  const reminderCreates: ReturnType<typeof buildReservationReminderDates> = [];
+
   // La vigencia se actualiza como una unidad y el vencimiento siempre se
   // recalcula en backend (nunca se acepta una fecha derivada del cliente).
   const reservationKeys = ["reservationDate", "reservationTermDays", "reservationDayType"];
@@ -99,15 +108,77 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
     data.reservationTermDays = rawTerm as number;
     data.reservationDayType = rawType;
     data.reservationExpiresAt = expiresAt;
-    data.reservationReminders = {
-      deleteMany: {},
-      create: buildReservationReminderDates(expiresAt),
-    };
+    reminderKinds.push("reserva");
+    reminderCreates.push(...buildReservationReminderDates(expiresAt, "reserva"));
     auditActions.push({
       type: "reservation_update",
       description: `Reserva vigente hasta ${expiresAt.toISOString().slice(0, 10)} (${rawTerm} ${rawType === "business" ? "días hábiles" : "días corridos"})`,
     });
   }
+
+  // Refuerzo: también como una unidad. Sin refuerzo = se limpian sus datos y avisos.
+  const reinforcementKeys = ["hasReinforcement", "reinforcementDate", "reinforcementTermDays", "reinforcementDayType"];
+  const reinforcementTouched = reinforcementKeys.some((key) => key in body);
+  if (reinforcementTouched) {
+    const wantsReinforcement = "hasReinforcement" in body ? body.hasReinforcement === true : proposal.hasReinforcement;
+    if (!wantsReinforcement) {
+      if (proposal.hasReinforcement) {
+        data.hasReinforcement = false;
+        data.reinforcementDate = null;
+        data.reinforcementTermDays = null;
+        data.reinforcementDayType = null;
+        data.reinforcementExpiresAt = null;
+        reminderKinds.push("refuerzo");
+        auditActions.push({ type: "reservation_update", description: "Sin refuerzo" });
+      }
+    } else {
+      let term;
+      try {
+        term = resolveTerm(
+          {
+            date: "reinforcementDate" in body ? body.reinforcementDate : proposal.reinforcementDate,
+            termDays: "reinforcementTermDays" in body ? body.reinforcementTermDays : proposal.reinforcementTermDays,
+            dayType: "reinforcementDayType" in body ? body.reinforcementDayType : proposal.reinforcementDayType,
+          },
+          "el refuerzo",
+        );
+      } catch (error) {
+        throw new AppError(400, error instanceof Error ? error.message : "Datos del refuerzo inválidos");
+      }
+      const same =
+        proposal.hasReinforcement &&
+        proposal.reinforcementDate?.getTime() === term.date.getTime() &&
+        proposal.reinforcementTermDays === term.termDays &&
+        proposal.reinforcementDayType === term.dayType;
+      if (!same) {
+        data.hasReinforcement = true;
+        data.reinforcementDate = term.date;
+        data.reinforcementTermDays = term.termDays;
+        data.reinforcementDayType = term.dayType;
+        data.reinforcementExpiresAt = term.expiresAt;
+        reminderKinds.push("refuerzo");
+        reminderCreates.push(...buildReservationReminderDates(term.expiresAt, "refuerzo"));
+        auditActions.push({
+          type: "reservation_update",
+          description: `Refuerzo vigente hasta ${term.expiresAt.toISOString().slice(0, 10)} (${term.termDays} ${RESERVATION_DAY_TYPE_LABEL[term.dayType].toLowerCase()})`,
+        });
+      }
+    }
+  }
+
+  if (reminderKinds.length > 0) {
+    data.reservationReminders = {
+      deleteMany: { kind: { in: reminderKinds } },
+      ...(reminderCreates.length > 0 && { create: reminderCreates }),
+    };
+  }
+
+  // Tildes de Google Calendar (true = agendar, false = sacar del calendario).
+  const calendarWish: CalendarWish = {};
+  if (typeof body.reservationCalendar === "boolean") calendarWish.reserva = body.reservationCalendar;
+  if (typeof body.reinforcementCalendar === "boolean") calendarWish.refuerzo = body.reinforcementCalendar;
+  const calendarTouched =
+    reminderKinds.length > 0 || calendarWish.reserva !== undefined || calendarWish.refuerzo !== undefined;
 
   // Operación con colega: se actualiza como una unidad.
   if ("withColleague" in body) {
@@ -218,7 +289,11 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
   }
 
   if (Object.keys(data).length === 0 && auditActions.length === 0) {
-    return ok(proposal, "Sin cambios", path);
+    if (!calendarTouched) return ok(proposal, "Sin cambios", path);
+    // Solo se tildó/destildó el calendario.
+    const { failed } = await syncExpiryCalendar(proposal.id, auth.userId, calendarWish, resolvePublicOrigin(request.headers));
+    const fresh = await getProposalOrThrow(proposal.id);
+    return ok({ ...fresh, calendarFailed: failed }, "Propuesta actualizada correctamente", path);
   }
 
   const updated = await prisma.signatureProposal.update({
@@ -243,9 +318,20 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
 
   // Recalcula (o borra si se rechazó) los honorarios "a cobrar".
   await syncSignatureReceivable(updated.id);
+
+  // Mueve/crea/borra los vencimientos en Google Calendar si cambió algo de eso.
+  let calendarFailed: ExpiryKind[] = [];
+  if (calendarTouched) {
+    ({ failed: calendarFailed } = await syncExpiryCalendar(
+      updated.id,
+      auth.userId,
+      calendarWish,
+      resolvePublicOrigin(request.headers),
+    ));
+  }
   const fresh = await getProposalOrThrow(updated.id);
 
-  return ok(fresh, "Propuesta actualizada correctamente", path);
+  return ok({ ...fresh, calendarFailed }, "Propuesta actualizada correctamente", path);
 });
 
 export const DELETE = withHandler(async (request: NextRequest, context) => {
@@ -265,6 +351,9 @@ export const DELETE = withHandler(async (request: NextRequest, context) => {
   if (visitIds.length > 0) {
     await prisma.visit.deleteMany({ where: { id: { in: visitIds } } });
   }
+
+  // Vencimientos agendados en Google Calendar.
+  await removeExpiryEvents(proposal);
 
   // Los honorarios pendientes se van con la firma; los ya cobrados quedan.
   await prisma.accountEntry.deleteMany({ where: { signatureProposalId: id, status: "pending" } });

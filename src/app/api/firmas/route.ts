@@ -11,7 +11,11 @@ import {
   calculateReservationExpiration,
   buildReservationReminderDates,
   isReservationDayType,
+  resolveTerm,
+  type ResolvedTerm,
 } from "@/lib/signatures/reservation-expiry";
+import { syncExpiryCalendar } from "@/lib/api/reservation-calendar";
+import { resolvePublicOrigin } from "@/lib/server/public-origin";
 import type { Prisma } from "@/generated/prisma/client";
 
 export const GET = withHandler(async (request: NextRequest) => {
@@ -67,6 +71,12 @@ export const POST = withHandler(async (request: NextRequest) => {
     reservationDate,
     reservationTermDays,
     reservationDayType,
+    hasReinforcement,
+    reinforcementDate,
+    reinforcementTermDays,
+    reinforcementDayType,
+    reservationCalendar,
+    reinforcementCalendar,
   } = body as {
     propertyId?: string;
     /** Inmueble en cartera de un colega (no publicado): solo la dirección. */
@@ -78,6 +88,14 @@ export const POST = withHandler(async (request: NextRequest) => {
     reservationDate?: string;
     reservationTermDays?: number;
     reservationDayType?: string;
+    /** Con refuerzo: además de la reserva, el refuerzo con su propia vigencia. */
+    hasReinforcement?: boolean;
+    reinforcementDate?: string;
+    reinforcementTermDays?: number;
+    reinforcementDayType?: string;
+    /** Agendar el vencimiento en el Google Calendar de quien carga. */
+    reservationCalendar?: boolean;
+    reinforcementCalendar?: boolean;
   };
 
   // Si el inmueble lo tiene en cartera un colega no está publicado: se crea una
@@ -103,6 +121,18 @@ export const POST = withHandler(async (request: NextRequest) => {
     );
   } catch (error) {
     throw new AppError(400, error instanceof Error ? error.message : "Datos de reserva inválidos");
+  }
+
+  let reinforcement: ResolvedTerm | null = null;
+  if (hasReinforcement === true) {
+    try {
+      reinforcement = resolveTerm(
+        { date: reinforcementDate, termDays: reinforcementTermDays, dayType: reinforcementDayType },
+        "el refuerzo",
+      );
+    } catch (error) {
+      throw new AppError(400, error instanceof Error ? error.message : "Datos del refuerzo inválidos");
+    }
   }
 
   if (propertyId) {
@@ -144,8 +174,16 @@ export const POST = withHandler(async (request: NextRequest) => {
         reservationTermDays,
         reservationDayType,
         reservationExpiresAt,
+        hasReinforcement: reinforcement !== null,
+        reinforcementDate: reinforcement?.date ?? null,
+        reinforcementTermDays: reinforcement?.termDays ?? null,
+        reinforcementDayType: reinforcement?.dayType ?? null,
+        reinforcementExpiresAt: reinforcement?.expiresAt ?? null,
         reservationReminders: {
-          create: buildReservationReminderDates(reservationExpiresAt),
+          create: [
+            ...buildReservationReminderDates(reservationExpiresAt, "reserva"),
+            ...(reinforcement ? buildReservationReminderDates(reinforcement.expiresAt, "refuerzo") : []),
+          ],
         },
         createdByUserId: auth.userId,
         actions: {
@@ -162,8 +200,21 @@ export const POST = withHandler(async (request: NextRequest) => {
     });
     // Honorarios "a cobrar" en estados de cuenta (si ya hay valor y %).
     await syncSignatureReceivable(createdProposal.id, tx);
-    return tx.signatureProposal.findUniqueOrThrow({ where: { id: createdProposal.id }, include: signatureInclude });
+    return createdProposal;
   });
 
-  return created(proposal, "Propuesta creada correctamente", path);
+  // Fuera de la transacción: Google puede tardar y no debe frenar el alta.
+  let calendarFailed: string[] = [];
+  if (reservationCalendar === true || (reinforcement && reinforcementCalendar === true)) {
+    const { failed } = await syncExpiryCalendar(
+      proposal.id,
+      auth.userId,
+      { reserva: reservationCalendar === true, refuerzo: reinforcementCalendar === true },
+      resolvePublicOrigin(request.headers),
+    );
+    calendarFailed = failed;
+  }
+
+  const fresh = await prisma.signatureProposal.findUniqueOrThrow({ where: { id: proposal.id }, include: signatureInclude });
+  return created({ ...fresh, calendarFailed }, "Propuesta creada correctamente", path);
 });

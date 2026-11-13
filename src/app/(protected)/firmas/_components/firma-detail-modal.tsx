@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Sheet } from "../../_components/sheet";
-import { formatDate, formatDateOnly, formatRelative } from "@/lib/datetime";
+import { formatDate, formatRelative } from "@/lib/datetime";
 import {
   SIGNATURE_DATE_META,
   SIGNATURE_STATUSES,
@@ -28,11 +28,7 @@ import {
   type ColleagueDraft,
   type OperationDraft,
 } from "./colleague-fields";
-import {
-  RESERVATION_DAY_TYPE_LABEL,
-  RESERVATION_DAY_TYPES,
-  type ReservationDayType,
-} from "@/lib/signatures/reservation-expiry";
+import { ReservationPanel } from "./reservation-panel";
 
 interface FirmaDetailModalProps {
   open: boolean;
@@ -270,99 +266,6 @@ function DetailBody({
           />
         </div>
       </div>
-  );
-}
-
-function ReservationPanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
-  const [reservationDate, setReservationDate] = useState(firma.reservationDate?.slice(0, 10) ?? "");
-  const [termDays, setTermDays] = useState(firma.reservationTermDays?.toString() ?? "");
-  const [dayType, setDayType] = useState<ReservationDayType>(firma.reservationDayType ?? "business");
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    setReservationDate(firma.reservationDate?.slice(0, 10) ?? "");
-    setTermDays(firma.reservationTermDays?.toString() ?? "");
-    setDayType(firma.reservationDayType ?? "business");
-  }, [firma.id, firma.reservationDate, firma.reservationTermDays, firma.reservationDayType]);
-
-  async function save() {
-    const parsedTerm = Number(termDays);
-    if (!reservationDate) return toast.error("Ingresá la fecha de la reserva");
-    if (!Number.isInteger(parsedTerm) || parsedTerm <= 0 || parsedTerm > 3650) {
-      return toast.error("Ingresá una vigencia válida en días");
-    }
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/firmas/${firma.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reservationDate,
-          reservationTermDays: parsedTerm,
-          reservationDayType: dayType,
-        }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body?.message ?? "Error");
-      onUpdated(serializeFromApi(body.data));
-      toast.success("Vigencia recalculada");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo actualizar la reserva");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <section className="rounded-[16px] bg-sand-chip p-4">
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h4 className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-faint">Vigencia de la reserva</h4>
-          <p className="mt-1 text-[13px] font-bold text-text">
-            {firma.reservationExpiresAt
-              ? `Vigente hasta el ${formatDateOnly(firma.reservationExpiresAt)}`
-              : "Completá los datos de la reserva"}
-          </p>
-        </div>
-        <span className="rounded-full bg-surface px-2.5 py-1 text-[10.5px] font-semibold text-text-muted">
-          Avisos: 15 días · 5 días · vencimiento
-        </span>
-      </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_0.7fr_1fr_auto] sm:items-end">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-text-faint">Fecha de reserva</span>
-          <DateField value={reservationDate} onChange={setReservationDate} clearable={false} disabled={busy} />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-text-faint">Días</span>
-          <input
-            type="number"
-            min={1}
-            max={3650}
-            step={1}
-            value={termDays}
-            onChange={(e) => setTermDays(e.target.value)}
-            disabled={busy}
-            className="h-11 rounded-[14px] border border-border bg-surface px-3.5 text-sm tabular-nums text-text focus:border-border-strong focus:outline-none disabled:opacity-50"
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-text-faint">Tipo</span>
-          <SelectField value={dayType} onChange={(e) => setDayType(e.target.value as ReservationDayType)} disabled={busy} className="h-11">
-            {RESERVATION_DAY_TYPES.map((type) => <option key={type} value={type}>{RESERVATION_DAY_TYPE_LABEL[type]}</option>)}
-          </SelectField>
-        </label>
-        <button
-          type="button"
-          onClick={save}
-          disabled={busy}
-          className="h-11 rounded-full bg-dark px-4 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-60"
-        >
-          {busy ? "Guardando…" : "Recalcular"}
-        </button>
-      </div>
-      <p className="mt-2 text-[10.5px] text-text-faint">Los días hábiles excluyen fines de semana, feriados nacionales y el 14 de agosto (Día de Quilmes).</p>
-    </section>
   );
 }
 

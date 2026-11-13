@@ -237,6 +237,68 @@ export async function updateCalendarEvent(
   return { error };
 }
 
+/* ------------------------------------------------------------------ */
+/*  Eventos de día completo (vencimientos)                             */
+/* ------------------------------------------------------------------ */
+
+export interface AllDayEventInput {
+  title: string;
+  description?: string;
+  date: string; // "2027-01-11"
+  location?: string;
+  /** Recordatorios en minutos antes del inicio del día (máx. 4 semanas en Google). */
+  reminderMinutes?: number[];
+}
+
+export function buildAllDayEventBody(input: AllDayEventInput) {
+  const [y, m, d] = input.date.slice(0, 10).split("-").map(Number);
+  // En Google el fin de un evento de día completo es exclusivo: el día siguiente.
+  const next = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+  const overrides = (input.reminderMinutes ?? [])
+    .filter((min) => Number.isInteger(min) && min >= 0 && min <= 40320)
+    .slice(0, 5)
+    .map((minutes) => ({ method: "popup", minutes }));
+  return {
+    summary: input.title,
+    description: input.description ?? undefined,
+    location: input.location ?? undefined,
+    start: { date: input.date.slice(0, 10) },
+    end: { date: next },
+    transparency: "transparent", // no marca al usuario como ocupado
+    // Si lo borraron a mano en Google pero sigue tildado en Profitos, vuelve.
+    status: "confirmed",
+    reminders: overrides.length > 0 ? { useDefault: false, overrides } : { useDefault: true },
+  };
+}
+
+export async function createAllDayEvent(
+  accessToken: string,
+  input: AllDayEventInput
+): Promise<{ eventId: string | null; error: string | null }> {
+  const { data, error } = await calendarFetch<GoogleCalendarEvent>(
+    accessToken,
+    "/calendars/primary/events",
+    { method: "POST", body: JSON.stringify(buildAllDayEventBody(input)) }
+  );
+  if (error || !data) return { eventId: null, error };
+  return { eventId: data.id, error: null };
+}
+
+/** Actualiza un evento de día completo. `notFound` = el usuario lo borró a mano en Google. */
+export async function updateAllDayEvent(
+  accessToken: string,
+  eventId: string,
+  input: AllDayEventInput
+): Promise<{ error: string | null; notFound: boolean }> {
+  const { error } = await calendarFetch<GoogleCalendarEvent>(
+    accessToken,
+    `/calendars/primary/events/${encodeURIComponent(eventId)}`,
+    { method: "PATCH", body: JSON.stringify(buildAllDayEventBody(input)) }
+  );
+  const notFound = !!error && /\b(404|410)\b/.test(error);
+  return { error, notFound };
+}
+
 export async function deleteCalendarEvent(
   accessToken: string,
   eventId: string

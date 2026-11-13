@@ -64,6 +64,14 @@ export interface SerializedFirma {
   reservationTermDays: number | null;
   reservationDayType: ReservationDayType | null;
   reservationExpiresAt: string | null;
+  hasReinforcement: boolean;
+  reinforcementDate: string | null;
+  reinforcementTermDays: number | null;
+  reinforcementDayType: ReservationDayType | null;
+  reinforcementExpiresAt: string | null;
+  /** El vencimiento está agendado en Google Calendar. */
+  reservationOnCalendar: boolean;
+  reinforcementOnCalendar: boolean;
   dateProcessStarted: string | null;
   dateAgreed: string | null;
   dateKeysHandover: string | null;

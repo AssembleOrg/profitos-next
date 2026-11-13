@@ -10,12 +10,102 @@ export const RESERVATION_DAY_TYPE_LABEL: Record<ReservationDayType, string> = {
 
 export const RESERVATION_REMINDER_OFFSETS = [15, 5, 0] as const;
 
-export function buildReservationReminderDates(expiresAt: Date) {
+/** Qué vence: la reserva o su refuerzo. */
+export const EXPIRY_KINDS = ["reserva", "refuerzo"] as const;
+export type ExpiryKind = (typeof EXPIRY_KINDS)[number];
+
+export const EXPIRY_KIND_LABEL: Record<ExpiryKind, string> = {
+  reserva: "Reserva",
+  refuerzo: "Refuerzo",
+};
+
+export function isExpiryKind(value: unknown): value is ExpiryKind {
+  return typeof value === "string" && (EXPIRY_KINDS as readonly string[]).includes(value);
+}
+
+export function buildReservationReminderDates(expiresAt: Date, kind: ExpiryKind = "reserva") {
   const expiry = DateTime.fromJSDate(expiresAt, { zone: "utc" }).startOf("day");
   return RESERVATION_REMINDER_OFFSETS.map((offsetDays) => ({
+    kind,
     offsetDays,
     scheduledFor: expiry.minus({ days: offsetDays }).toJSDate(),
   }));
+}
+
+export interface ResolvedTerm {
+  date: Date;
+  termDays: number;
+  dayType: ReservationDayType;
+  expiresAt: Date;
+}
+
+/**
+ * Valida fecha + cantidad + tipo de días y calcula el vencimiento.
+ * `label` arma los mensajes ("la reserva", "el refuerzo"). Lanza Error con un
+ * mensaje listo para mostrar.
+ */
+/** "de la reserva" / "del refuerzo". */
+export function deLabel(label: string): string {
+  return label.startsWith("el ") ? `del ${label.slice(3)}` : `de ${label}`;
+}
+
+export function resolveTerm(
+  input: { date: unknown; termDays: unknown; dayType: unknown },
+  label: string,
+): ResolvedTerm {
+  const { date, termDays, dayType } = input;
+  if (!(typeof date === "string" || date instanceof Date) || (typeof date === "string" && !date.trim())) {
+    throw new Error(`Ingresá la fecha ${deLabel(label)}`);
+  }
+  if (!Number.isInteger(termDays) || (termDays as number) <= 0 || (termDays as number) > 3650) {
+    throw new Error(`La vigencia ${deLabel(label)} debe ser un número entero entre 1 y 3650`);
+  }
+  if (!isReservationDayType(dayType)) {
+    throw new Error(`Elegí si la vigencia ${deLabel(label)} es en días hábiles o corridos`);
+  }
+  const expiresAt = calculateReservationExpiration(
+    typeof date === "string" ? date.slice(0, 10) : date,
+    termDays as number,
+    dayType,
+  );
+  const parsedDate = date instanceof Date ? date : new Date(`${date.slice(0, 10)}T00:00:00.000Z`);
+  return { date: parsedDate, termDays: termDays as number, dayType, expiresAt };
+}
+
+/**
+ * Vencimiento para mostrar mientras se completa el formulario. Devuelve null si
+ * los datos todavía no alcanzan (sin fecha, días vacíos, etc.). El backend
+ * siempre recalcula: esto es solo una vista previa.
+ */
+export function previewExpiration(
+  date: string,
+  termDays: string | number,
+  dayType: ReservationDayType,
+): Date | null {
+  const term = typeof termDays === "number" ? termDays : Number(termDays);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date.slice(0, 10)) || !Number.isInteger(term) || term <= 0 || term > 3650) {
+    return null;
+  }
+  try {
+    return calculateReservationExpiration(date.slice(0, 10), term, dayType);
+  } catch {
+    return null;
+  }
+}
+
+/** "lunes 11 de enero de 2027" para una fecha pura (medianoche UTC). */
+export function formatExpiryLong(date: Date | string): string {
+  const dt = typeof date === "string"
+    ? DateTime.fromISO(date.slice(0, 10), { zone: "utc" })
+    : DateTime.fromJSDate(date, { zone: "utc" });
+  return dt.setLocale("es").toFormat("cccc d 'de' LLLL 'de' yyyy");
+}
+
+/** Fechas de los avisos (15 días, 5 días, el día) en dd/MM para la vista previa. */
+export function reminderDatesShort(expiresAt: Date): string[] {
+  return buildReservationReminderDates(expiresAt).map((r) =>
+    DateTime.fromJSDate(r.scheduledFor, { zone: "utc" }).toFormat("dd/MM"),
+  );
 }
 
 export function isReservationDayType(value: unknown): value is ReservationDayType {

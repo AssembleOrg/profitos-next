@@ -468,6 +468,20 @@ model SignatureProposal {
   reservationDayType     String?   @map("reservation_day_type") // business | calendar
   reservationExpiresAt   DateTime? @map("reservation_expires_at") @db.Date
 
+  // Refuerzo de la reserva (opcional): mismo esquema de vigencia que la reserva.
+  hasReinforcement        Boolean   @default(false) @map("has_reinforcement")
+  reinforcementDate       DateTime? @map("reinforcement_date") @db.Date
+  reinforcementTermDays   Int?      @map("reinforcement_term_days")
+  reinforcementDayType    String?   @map("reinforcement_day_type") // business | calendar
+  reinforcementExpiresAt  DateTime? @map("reinforcement_expires_at") @db.Date
+
+  // Vencimientos agendados en el Google Calendar de quien tildó la opción.
+  // El user_id es el dueño del calendario (para actualizar/borrar el evento).
+  reservationCalendarEventId    String? @map("reservation_calendar_event_id")
+  reservationCalendarUserId     String? @map("reservation_calendar_user_id")
+  reinforcementCalendarEventId  String? @map("reinforcement_calendar_event_id")
+  reinforcementCalendarUserId   String? @map("reinforcement_calendar_user_id")
+
   // Fechas relevantes (todas opcionales)
   dateProcessStarted DateTime?                 @map("date_process_started") // espera_informes
   dateAgreed         DateTime?                 @map("date_agreed")          // fecha_acordada
@@ -517,11 +531,13 @@ model SignatureReservationReminder {
   id           String            @id @default(cuid())
   proposalId   String            @map("proposal_id")
   proposal     SignatureProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  // reserva | refuerzo
+  kind         String            @default("reserva")
   offsetDays   Int               @map("offset_days") // 15 | 5 | 0
   scheduledFor DateTime          @map("scheduled_for") @db.Date
   createdAt    DateTime          @default(now()) @map("created_at")
 
-  @@unique([proposalId, offsetDays])
+  @@unique([proposalId, kind, offsetDays])
   @@index([scheduledFor])
   @@map("jp_signature_reservation_reminders")
 }

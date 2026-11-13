@@ -39,6 +39,8 @@ export interface NotificationItem {
   // kind "listing_issue": aviso con un error nuevo en el portal (panel de Difusión)
   issue?: string | null;
   daysBefore?: number;
+  /** reservation_expiry: qué vence (la reserva o su refuerzo). */
+  expiryKind?: "reserva" | "refuerzo";
   expiresAt?: string | null;
 }
 
