@@ -5,6 +5,7 @@ import { SelectField } from "@/components/ui/select-field";
 import { CurrencyInput } from "../../alquileres/_components/currency-input";
 import { formatMoney } from "@/lib/account";
 import { describeCustody, type CustodyCurrency, type Envelope } from "@/lib/signatures/custody";
+import { useHolidayCalendar } from "./holidays-context";
 import {
   deLabel,
   formatExpiryLong,
@@ -103,7 +104,8 @@ export function TermFields({
 
 /** "Vence el lunes 11 de enero de 2027 …": se actualiza mientras se escribe. */
 export function ExpiryPreview({ term, what }: Readonly<{ term: TermDraft; what: string }>) {
-  const expiresAt = previewExpiration(term.date, term.termDays, term.dayType);
+  const holidays = useHolidayCalendar();
+  const expiresAt = previewExpiration(term.date, term.termDays, term.dayType, holidays);
   if (!expiresAt) {
     return (
       <p className="rounded-[12px] bg-surface px-3.5 py-2 text-[12px] text-text-faint">

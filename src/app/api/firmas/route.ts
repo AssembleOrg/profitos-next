@@ -17,6 +17,7 @@ import {
 } from "@/lib/signatures/reservation-expiry";
 import { syncExpiryCalendar } from "@/lib/api/reservation-calendar";
 import { resolvePublicOrigin } from "@/lib/server/public-origin";
+import { loadHolidayCalendar } from "@/lib/holidays/server";
 import type { Prisma } from "@/generated/prisma/client";
 
 export const GET = withHandler(async (request: NextRequest) => {
@@ -113,12 +114,14 @@ export const POST = withHandler(async (request: NextRequest) => {
     throw new AppError(400, "Seleccioná si la vigencia se expresa en días hábiles o corridos");
   }
 
+  const holidays = await loadHolidayCalendar();
   let reservationExpiresAt: Date;
   try {
     reservationExpiresAt = calculateReservationExpiration(
       reservationDate,
       reservationTermDays!,
       reservationDayType,
+      holidays,
     );
   } catch (error) {
     throw new AppError(400, error instanceof Error ? error.message : "Datos de reserva inválidos");
@@ -143,6 +146,7 @@ export const POST = withHandler(async (request: NextRequest) => {
       reinforcement = resolveTerm(
         { date: reinforcementDate, termDays: reinforcementTermDays, dayType: reinforcementDayType },
         "el refuerzo",
+        holidays,
       );
     } catch (error) {
       throw new AppError(400, error instanceof Error ? error.message : "Datos del refuerzo inválidos");

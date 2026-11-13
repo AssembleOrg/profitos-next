@@ -7,6 +7,7 @@ import { FirmasClient } from "./_components/firmas-client";
 import { serializeProposal } from "./_components/serialize";
 import { signatureInclude } from "@/lib/api/signatures";
 import { HIDDEN_PROPERTY_SOURCES } from "@/lib/domain/types";
+import { latestHolidayNotice, loadHolidayCalendar } from "@/lib/holidays/server";
 
 const PAGE_SIZE = 20;
 
@@ -46,7 +47,7 @@ export default async function FirmasPage({ searchParams }: Readonly<Props>) {
   }
 
 
-  const [items, total, kpiBuckets, properties] = await Promise.all([
+  const [items, total, kpiBuckets, properties, holidays, lastHolidaySync] = await Promise.all([
     prisma.signatureProposal.findMany({
       where,
       include: signatureInclude,
@@ -65,6 +66,9 @@ export default async function FirmasPage({ searchParams }: Readonly<Props>) {
       orderBy: [{ address: "asc" }],
       take: 500,
     }),
+    loadHolidayCalendar(),
+    // Último chequeo de feriados con cambios (se muestra una semana).
+    latestHolidayNotice(),
   ]);
 
   const serialized = items.map(serializeProposal);
@@ -92,6 +96,8 @@ export default async function FirmasPage({ searchParams }: Readonly<Props>) {
       currentUserId={user.id}
       properties={properties}
       filters={{ q, status: statusFilter, propertyId }}
+      holidays={holidays}
+      holidayNotice={lastHolidaySync}
       kpis={{
         total: kpiTotal,
         inProgress: kpiInProgress,

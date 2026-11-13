@@ -15,6 +15,8 @@ import {
   type SignatureStatus,
 } from "@/lib/signatures";
 import type { SerializedFirma } from "./types";
+import type { HolidayCalendar } from "@/lib/signatures/reservation-expiry";
+import { HolidaysProvider } from "./holidays-context";
 
 /** Pills de estado V4 (tinte por estado). */
 const STATUS_PILL: Record<SignatureStatus, string> = {
@@ -28,7 +30,16 @@ const STATUS_PILL: Record<SignatureStatus, string> = {
   entrega_llaves: "bg-sage-chip text-olive-light",
 };
 
+export interface HolidayNotice {
+  ranAt: string;
+  added: { day: string; description: string }[];
+  removed: { day: string; description: string }[];
+  recalculated: number;
+}
+
 interface FirmasClientProps {
+  holidays: HolidayCalendar | null;
+  holidayNotice: HolidayNotice | null;
   initialFirmas: SerializedFirma[];
   page: number;
   totalPages: number;
@@ -51,6 +62,8 @@ interface FirmasClientProps {
 }
 
 export function FirmasClient({
+  holidays,
+  holidayNotice,
   initialFirmas,
   page,
   totalPages,
@@ -110,6 +123,7 @@ export function FirmasClient({
   }
 
   return (
+    <HolidaysProvider calendar={holidays}>
     <div className="flex flex-col gap-3 md:gap-5">
       <PageHeader
         title="Estado de firmas"
@@ -128,6 +142,8 @@ export function FirmasClient({
         </button>
         }
       />
+
+      {holidayNotice && <HolidayNoticeBanner notice={holidayNotice} />}
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -229,6 +245,30 @@ export function FirmasClient({
         onUpdated={handleUpdated}
         onDeleted={handleDeleted}
       />
+    </div>
+    </HolidaysProvider>
+  );
+}
+
+const dmy = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/");
+
+/** Aviso de la semana: el Colegio cambió feriados y se movieron vencimientos. */
+function HolidayNoticeBanner({ notice }: Readonly<{ notice: HolidayNotice }>) {
+  const all = [
+    ...notice.added.map((h) => `se sumó ${h.description} (${dmy(h.day)})`),
+    ...notice.removed.map((h) => `se quitó ${h.description} (${dmy(h.day)})`),
+  ];
+  const parts = all.length > 4 ? [...all.slice(0, 4), `y ${all.length - 4} más`] : all;
+  return (
+    <div className="rounded-[16px] bg-sand-chip px-4 py-3 text-[12.5px] text-text" role="status">
+      <p className="font-bold">Cambiaron los feriados del Colegio de Escribanos</p>
+      <p className="mt-0.5 text-text-muted">
+        {parts.length > 0 ? `${parts.join(" · ")}. ` : ""}
+        {notice.recalculated > 0
+          ? `Se recalcularon ${notice.recalculated} ${notice.recalculated === 1 ? "vencimiento" : "vencimientos"} (avisos y Google Calendar incluidos).`
+          : "Ningún vencimiento cambió."}{" "}
+        Chequeo del {dmy(notice.ranAt)}.
+      </p>
     </div>
   );
 }

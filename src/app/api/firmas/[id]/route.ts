@@ -31,6 +31,7 @@ import {
 } from "@/lib/signatures/reservation-expiry";
 import { removeExpiryEvents, syncExpiryCalendar, type CalendarWish } from "@/lib/api/reservation-calendar";
 import { resolvePublicOrigin } from "@/lib/server/public-origin";
+import { loadHolidayCalendar } from "@/lib/holidays/server";
 import { parseEnvelopeAmount, toCustodyCurrency } from "@/lib/signatures/custody";
 
 const DATE_FIELDS: SignatureDateField[] = ["dateProcessStarted", "dateAgreed", "dateKeysHandover"];
@@ -98,7 +99,7 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
 
     let expiresAt: Date;
     try {
-      expiresAt = calculateReservationExpiration(rawDate, rawTerm as number, rawType);
+      expiresAt = calculateReservationExpiration(rawDate, rawTerm as number, rawType, await loadHolidayCalendar());
     } catch (error) {
       throw new AppError(400, error instanceof Error ? error.message : "Datos de reserva inválidos");
     }
@@ -144,6 +145,7 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
             dayType: "reinforcementDayType" in body ? body.reinforcementDayType : proposal.reinforcementDayType,
           },
           "el refuerzo",
+          await loadHolidayCalendar(),
         );
       } catch (error) {
         throw new AppError(400, error instanceof Error ? error.message : "Datos del refuerzo inválidos");

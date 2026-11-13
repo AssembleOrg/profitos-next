@@ -21,6 +21,7 @@ import {
   termFromFirma,
   type TermDraft,
 } from "./vigencia-fields";
+import { useRegisterPending } from "./pending-changes";
 
 type Busy = null | "reserva" | "refuerzo" | "cal-reserva" | "cal-refuerzo";
 type EnvelopeDraft = { amount: number | null; currency: CustodyCurrency };
@@ -71,7 +72,7 @@ export function ReservationPanel({
     withReinforcement !== firma.hasReinforcement ||
     (withReinforcement && (!sameTerm(reinforcement, savedReinforcement) || !sameEnvelope(reinforcementEnv, savedReinforcementEnv)));
 
-  async function patch(kind: Exclude<Busy, null>, payload: Record<string, unknown>, success: string) {
+  async function patch(kind: Exclude<Busy, null>, payload: Record<string, unknown>, success: string): Promise<boolean> {
     setBusy(kind);
     try {
       const res = await fetch(`/api/firmas/${firma.id}`, {
@@ -85,19 +86,24 @@ export function ReservationPanel({
       const calendarProblem = calendarFailedMessage(body.data?.calendarFailed);
       if (calendarProblem) toast.warning(calendarProblem, { duration: 10000 });
       else toast.success(success);
+      return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo guardar");
+      return false;
     } finally {
       setBusy(null);
     }
   }
 
-  function saveReservation() {
+  async function saveReservation(): Promise<boolean> {
     if (reservationTermDirty) {
       const problem = termError(reservation, "la reserva");
-      if (problem) return toast.error(problem);
+      if (problem) {
+        toast.error(problem);
+        return false;
+      }
     }
-    void patch(
+    return patch(
       "reserva",
       {
         ...(reservationTermDirty && {
@@ -114,14 +120,14 @@ export function ReservationPanel({
     );
   }
 
-  function saveReinforcement() {
-    if (!withReinforcement) {
-      void patch("refuerzo", { hasReinforcement: false }, "Refuerzo quitado");
-      return;
-    }
+  async function saveReinforcement(): Promise<boolean> {
+    if (!withReinforcement) return patch("refuerzo", { hasReinforcement: false }, "Refuerzo quitado");
     const problem = termError(reinforcement, "el refuerzo");
-    if (problem) return toast.error(problem);
-    void patch(
+    if (problem) {
+      toast.error(problem);
+      return false;
+    }
+    return patch(
       "refuerzo",
       {
         hasReinforcement: true,
@@ -134,6 +140,9 @@ export function ReservationPanel({
       "Refuerzo guardado",
     );
   }
+
+  useRegisterPending("reserva", reservationDirty, saveReservation);
+  useRegisterPending("refuerzo", reinforcementDirty, saveReinforcement);
 
   const disabled = busy !== null;
 
@@ -184,7 +193,7 @@ export function ReservationPanel({
               <ExpiryPreview term={reservation} what="la reserva" />
             </div>
             <SaveButton
-              onClick={saveReservation}
+              onClick={() => void saveReservation()}
               busy={busy === "reserva"}
               disabled={disabled}
               label={reservationTermDirty ? "Recalcular" : "Guardar monto"}
@@ -226,7 +235,7 @@ export function ReservationPanel({
           {reinforcementDirty && (
             <div className="flex justify-end">
               <SaveButton
-                onClick={saveReinforcement}
+                onClick={() => void saveReinforcement()}
                 busy={busy === "refuerzo"}
                 disabled={disabled}
                 label={withReinforcement ? "Guardar refuerzo" : "Quitar refuerzo"}

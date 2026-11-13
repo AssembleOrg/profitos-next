@@ -19,6 +19,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { WebSocketServer } from "ws";
 import { prisma } from "@/lib/prisma/client";
+import { mondayHolidaysDue } from "@/lib/holidays/schedule";
 import { runScraperLeads, PORTAL_TIMEOUT_MESSAGE } from "@/lib/scraper/run";
 import { processPendingPublishJobs } from "@/lib/publish/portales";
 import { verifyReloginToken } from "@/lib/scraper/relogin-token";
@@ -459,6 +460,42 @@ async function runArgenpropListingSync(): Promise<void> {
 }
 setTimeout(() => void runArgenpropListingSync(), 45_000);
 setInterval(() => void runArgenpropListingSync(), AP_LISTING_SYNC_MS);
+
+// Feriados del Colegio de Escribanos (vencimientos de reservas): los lunes desde
+// las 8:00 (hora AR), una vez por lunes; si falla reintenta a la hora siguiente.
+// Lo hace la web (/api/cron/feriados) porque mueve eventos de Google Calendar.
+const HOLIDAYS_CHECK_MS = 60 * 60_000;
+let holidaysWarned = false;
+async function maybeSyncHolidays(): Promise<void> {
+  try {
+    const lastOk = await prisma.holidaySync.findFirst({ where: { ok: true }, orderBy: { ranAt: "desc" }, select: { ranAt: true } });
+    if (!mondayHolidaysDue(new Date(), lastOk?.ranAt ?? null)) return;
+    const host = process.env.PROFITOS_WEB_URL ?? (process.env.RAILWAY_SERVICE_PROFITOS_NEXT_URL ? `https://${process.env.RAILWAY_SERVICE_PROFITOS_NEXT_URL}` : null);
+    const secret = process.env.CRON_SECRET;
+    if (!host || !secret) {
+      if (!holidaysWarned) console.warn("[worker] feriados: falta PROFITOS_WEB_URL/RAILWAY_SERVICE_PROFITOS_NEXT_URL o CRON_SECRET");
+      holidaysWarned = true;
+      return;
+    }
+    const res = await fetch(`${host.replace(/\/+$/, "")}/api/cron/feriados`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${secret}` },
+      signal: AbortSignal.timeout(5 * 60_000),
+    });
+    const body = (await res.json().catch(() => null)) as { message?: string; data?: { added?: unknown[]; removed?: unknown[]; recalculated?: unknown[] } } | null;
+    if (!res.ok) {
+      console.warn(`[worker] feriados: la web respondió ${res.status} ${body?.message ?? ""}`);
+      return;
+    }
+    console.log(
+      `[worker] feriados OK: +${body?.data?.added?.length ?? 0} −${body?.data?.removed?.length ?? 0}, ${body?.data?.recalculated?.length ?? 0} vencimientos recalculados`,
+    );
+  } catch (e) {
+    console.warn("[worker] feriados falló:", e instanceof Error ? e.message : e);
+  }
+}
+setTimeout(() => void maybeSyncHolidays(), 60_000);
+setInterval(() => void maybeSyncHolidays(), HOLIDAYS_CHECK_MS);
 
 async function shutdown() {
   await cancelReloginSession().catch(() => {});

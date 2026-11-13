@@ -30,6 +30,7 @@ import {
 } from "./colleague-fields";
 import { ReservationPanel } from "./reservation-panel";
 import { PartiesPanel } from "./party-picker";
+import { PendingProvider, usePendingChanges, useRegisterPending } from "./pending-changes";
 
 interface FirmaDetailModalProps {
   open: boolean;
@@ -88,6 +89,26 @@ function FirmaDetailSheet({
 }: Readonly<FirmaDetailSheetProps>) {
   const statusStyle = SIGNATURE_STATUS_STYLE[firma.status];
   const canDelete = isAdmin || firma.createdByUser.id === currentUserId;
+  const pending = usePendingChanges();
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [savingAll, setSavingAll] = useState(false);
+
+  // Con cambios sin guardar no se cierra de una: se ofrece guardar o descartar.
+  function requestClose() {
+    if (pending.dirty) setConfirmClose(true);
+    else onClose();
+  }
+
+  async function saveAll(thenClose: boolean) {
+    setSavingAll(true);
+    try {
+      const ok = await pending.saveAll();
+      if (ok && thenClose) onClose();
+      if (ok) setConfirmClose(false);
+    } finally {
+      setSavingAll(false);
+    }
+  }
 
   async function handleDelete() {
     if (!confirm(`¿Eliminar esta propuesta? Esta acción es irreversible.`)) return;
@@ -105,7 +126,7 @@ function FirmaDetailSheet({
   return (
     <Sheet
       open={open}
-      onClose={onClose}
+      onClose={requestClose}
       maxWidth="sm:max-w-[820px]"
       title={
         <span className="flex items-center gap-2">
@@ -134,39 +155,79 @@ function FirmaDetailSheet({
         </span>
       }
       footer={
+        confirmClose ? (
+          <>
+            <span className="text-[12.5px] font-semibold text-warning">
+              <span className="hidden sm:inline">Tenés cambios sin guardar.</span>
+              <span className="sm:hidden">Sin guardar</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmClose(false);
+                  onClose();
+                }}
+                disabled={savingAll}
+                className="inline-flex h-10 items-center whitespace-nowrap rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text disabled:opacity-60"
+              >
+                Descartar
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveAll(true)}
+                disabled={savingAll}
+                className="inline-flex h-10 items-center whitespace-nowrap rounded-full bg-dark px-4 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-60"
+              >
+                {savingAll ? "Guardando…" : "Guardar y cerrar"}
+              </button>
+            </div>
+          </>
+        ) : (
         <>
-          <span className="text-[11.5px] text-text-faint">
+          <span className="hidden text-[11.5px] text-text-faint sm:inline">
             Creada por{" "}
             {firma.createdByUser.fullName?.trim() || firma.createdByUser.email.split("@")[0]} ·{" "}
             {formatRelative(firma.createdAt)}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2">
             {canDelete && (
               <button
                 type="button"
                 onClick={handleDelete}
                 className="inline-flex h-10 items-center rounded-full bg-clay-chip px-4 text-[13px] font-bold text-terra transition-opacity hover:opacity-90"
               >
-                Eliminar propuesta
+                Eliminar<span className="hidden sm:inline">&nbsp;propuesta</span>
               </button>
             )}
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               className="inline-flex h-10 items-center rounded-full border border-border bg-surface px-4 text-[13px] font-semibold text-text-muted transition-colors hover:bg-bg hover:text-text"
             >
               Cerrar
             </button>
+            <button
+              type="button"
+              onClick={() => void saveAll(false)}
+              disabled={!pending.dirty || savingAll}
+              className="inline-flex h-10 items-center rounded-full bg-dark px-4 text-[13px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {savingAll ? "Guardando…" : pending.dirty ? "Guardar cambios" : "Guardado"}
+            </button>
           </div>
         </>
+        )
       }
     >
-      <DetailBody
-        firma={firma}
-        currentUserId={currentUserId}
-        isAdmin={isAdmin}
-        onUpdated={onUpdated}
-      />
+      <PendingProvider registry={pending.registry}>
+        <DetailBody
+          firma={firma}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+          onUpdated={onUpdated}
+        />
+      </PendingProvider>
     </Sheet>
   );
 }
@@ -287,11 +348,17 @@ function ColleaguePanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
     JSON.stringify(operation) !== JSON.stringify(draftFromOperation(firma.operation));
   const collected = firma.operation.receivable === "collected";
 
-  async function save() {
+  async function save(): Promise<boolean> {
     const colleaguePart = colleaguePayload(draft);
-    if (typeof colleaguePart === "string") return toast.error(colleaguePart);
+    if (typeof colleaguePart === "string") {
+      toast.error(colleaguePart);
+      return false;
+    }
     const operationPart = operationPayload(operation);
-    if (typeof operationPart === "string") return toast.error(operationPart);
+    if (typeof operationPart === "string") {
+      toast.error(operationPart);
+      return false;
+    }
     const payload = { ...colleaguePart, ...operationPart };
     setBusy(true);
     try {
@@ -304,12 +371,15 @@ function ColleaguePanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
       if (!res.ok) throw new Error(body?.message ?? "Error");
       onUpdated(serializeFromApi(body.data));
       toast.success(collected ? "Guardado (los honorarios ya estaban cobrados: no cambian)" : "Operación guardada");
+      return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo guardar");
+      return false;
     } finally {
       setBusy(false);
     }
   }
+  useRegisterPending("operacion", dirty, save);
 
   return (
     <section className="rounded-[16px] border border-border bg-surface p-4">
@@ -329,7 +399,7 @@ function ColleaguePanel({ firma, onUpdated }: Readonly<ControlPanelProps>) {
         {dirty && (
           <button
             type="button"
-            onClick={save}
+            onClick={() => void save()}
             disabled={busy}
             className="h-9 rounded-full bg-dark px-4 text-[12.5px] font-bold text-dark-fg transition-opacity hover:opacity-90 disabled:opacity-60"
           >

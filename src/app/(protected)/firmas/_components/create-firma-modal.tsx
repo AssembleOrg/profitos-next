@@ -74,6 +74,7 @@ export function CreateFirmaModal({
   const [reinforcementCalendar, setReinforcementCalendar] = useState(false);
   const [reservationEnvelope, setReservationEnvelope] = useState<{ amount: number | null; currency: CustodyCurrency }>({ amount: null, currency: "USD" });
   const [reinforcementEnvelope, setReinforcementEnvelope] = useState<{ amount: number | null; currency: CustodyCurrency }>({ amount: null, currency: "USD" });
+  const [accepted, setAccepted] = useState(false);
   const [buyer, setBuyer] = useState<FirmaClient | null>(null);
   const [seller, setSeller] = useState<FirmaClient | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -98,6 +99,7 @@ export function CreateFirmaModal({
     setReinforcementCalendar(false);
     setReservationEnvelope({ amount: null, currency: "USD" });
     setReinforcementEnvelope({ amount: null, currency: "USD" });
+    setAccepted(false);
     setBuyer(null);
     setSeller(null);
     setAttachments([]);
@@ -163,6 +165,7 @@ export function CreateFirmaModal({
           reservationCalendar,
           reservationAmount: reservationEnvelope.amount,
           reservationCurrency: reservationEnvelope.currency,
+          status: accepted ? "propuesta_aceptada" : "propuesta_enviada",
           buyerClientId: buyer?.id ?? null,
           sellerClientId: seller?.id ?? null,
           hasReinforcement,
@@ -344,6 +347,29 @@ export function CreateFirmaModal({
                       <div className="flex flex-col gap-4">
                         <ColleagueFields value={colleague} onChange={setColleague} />
                         <OperationFields value={operation} onChange={setOperation} colleague={colleague} />
+                      </div>
+                    </div>
+
+                    <div className="rounded-[16px] bg-bg p-4">
+                      <p className="mb-2 text-[12.5px] font-bold text-text">¿La propuesta ya fue aceptada?</p>
+                      <div className="flex items-center gap-0.5 rounded-full border border-border bg-surface p-1" role="radiogroup" aria-label="¿La propuesta ya fue aceptada?">
+                        {[
+                          { v: false, label: "Todavía no" },
+                          { v: true, label: "Sí, aceptada" },
+                        ].map((opt) => (
+                          <button
+                            key={opt.label}
+                            type="button"
+                            role="radio"
+                            aria-checked={accepted === opt.v}
+                            onClick={() => setAccepted(opt.v)}
+                            className={`flex-1 rounded-full px-4 py-2 text-[13px] transition-colors ${
+                              accepted === opt.v ? "bg-dark font-bold text-dark-fg" : "font-semibold text-text-muted hover:text-text"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
 
