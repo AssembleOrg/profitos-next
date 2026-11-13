@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<base href="/web/olmo/">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>OLMO Residencias · Recorrido 360</title>
+<meta name="description" content="OLMO Residencias: recorrido 360 en 8K por el frente, el hall, un departamento del piso 7 y la azotea con pileta.">
+<meta name="theme-color" content="#16130f">
+<meta property="og:title" content="OLMO Residencias · Recorrido 360">
+<meta property="og:description" content="Siete pisos frente al parque. Recorré el edificio en 360.">
+<meta property="og:image" content="https://profitos-next-production.up.railway.app/web/olmo/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2316130f'/%3E%3Ccircle cx='16' cy='16' r='7.5' fill='none' stroke='%23e9dfcf' stroke-width='2.4'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css?v=1">
+</head>
+<body>
+<div id="pano" aria-label="Vista 360"></div>
+
+<header class="top">
+  <div class="brand">
+    <span class="mark">OLMO</span>
+    <span class="tag">Residencias</span>
+  </div>
+  <div class="where" aria-live="polite">
+    <strong id="title"></strong><span id="sub"></span>
+  </div>
+  <nav class="tools">
+    <button id="b-plan" type="button" title="Planta del departamento">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM4 12h7M11 4v5M11 12v8M15 12h5"/></svg><span>Planta</span>
+    </button>
+    <button id="b-spin" type="button" title="Giro automático" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5"/></svg><span>Girar</span>
+    </button>
+    <button id="b-full" type="button" title="Pantalla completa">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Ampliar</span>
+    </button>
+  </nav>
+</header>
+
+<button class="step prev" id="b-prev" type="button" aria-label="Ambiente anterior">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+</button>
+<button class="step next" id="b-next" type="button" aria-label="Ambiente siguiente">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+</button>
+
+<p class="hint" id="hint">Arrastrá para mirar alrededor</p>
+
+<footer class="strip" id="strip" aria-label="Ambientes"></footer>
+
+<div class="modal" id="plan" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="plan-h">
+    <div class="sheet-head">
+      <div>
+        <h2 id="plan-h">Departamento · Piso 7</h2>
+        <p>75 m² cubiertos + 16 m² de terraza · 1 dormitorio en suite</p>
+      </div>
+      <button id="b-close" type="button" aria-label="Cerrar planta">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="plan-wrap">
+      <div class="plan" id="plan-box">
+        <img src="planta.webp" alt="Planta del departamento" decoding="async">
+        <div class="north" aria-hidden="true"><i></i>N</div>
+      </div>
+    </div>
+    <p class="sheet-foot">Tocá un punto para ir a ese ambiente.</p>
+  </div>
+</div>
+
+<div class="veil" id="veil"><span class="mark">OLMO</span><span class="tag">Residencias</span></div>
+
+<script src="marzipano.js"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>

@@ -39,6 +39,19 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Recorrido 360 de OLMO Residencias: sitio estático en public/web/olmo.
+  async rewrites() {
+    return [{ source: "/web/olmo", destination: "/web/olmo/index.html" }];
+  },
+  async headers() {
+    // Solo las imágenes versionadas (?v=) llevan caché larga; el index y el
+    // código se revalidan siempre para que un cambio se vea al instante.
+    const immutable = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
+    return [
+      { source: "/web/olmo/tiles/:path*", headers: immutable },
+      { source: "/web/olmo/thumbs/:path*", headers: immutable },
+    ];
+  },
 };
 
 export default nextConfig;
