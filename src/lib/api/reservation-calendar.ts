@@ -54,11 +54,13 @@ function slot(p: ProposalForCalendar, kind: ExpiryKind) {
       ownerId: p.reservationCalendarUserId,
     };
   }
+  // Plazo del refuerzo: corre desde la aceptación (fecha de la reserva). Si ya
+  // se hizo (reinforcementDate), no hay nada que vencer.
   return {
-    start: p.reinforcementDate,
+    start: p.reservationDate,
     termDays: p.reinforcementTermDays,
     dayType: p.reinforcementDayType,
-    expiresAt: p.hasReinforcement ? p.reinforcementExpiresAt : null,
+    expiresAt: p.hasReinforcement && !p.reinforcementDate ? p.reinforcementExpiresAt : null,
     eventId: p.reinforcementCalendarEventId,
     ownerId: p.reinforcementCalendarUserId,
   };
@@ -70,17 +72,20 @@ function dmy(date: Date): string {
 
 function eventInput(p: ProposalForCalendar, kind: ExpiryKind, origin?: string): AllDayEventInput {
   const s = slot(p, kind);
-  const what = kind === "reserva" ? "la reserva" : "el refuerzo";
   const address = p.property.address;
   const dayLabel = isReservationDayType(s.dayType) ? RESERVATION_DAY_TYPE_LABEL[s.dayType].toLowerCase() : "días";
   const lines = [
-    s.start && s.termDays ? `${kind === "reserva" ? "Reserva" : "Refuerzo"} del ${dmy(s.start)} por ${s.termDays} ${dayLabel}.` : null,
-    `Vence el ${formatExpiryLong(s.expiresAt!)}.`,
+    kind === "reserva"
+      ? s.start && s.termDays ? `Reserva aceptada el ${dmy(s.start)}, vigencia de ${s.termDays} ${dayLabel}.` : null
+      : s.start && s.termDays ? `El comprador tiene ${s.termDays} ${dayLabel} desde la aceptación (${dmy(s.start)}) para hacer el refuerzo.` : null,
+    kind === "reserva"
+      ? `Vence el ${formatExpiryLong(s.expiresAt!)}.`
+      : `Último día para el refuerzo: ${formatExpiryLong(s.expiresAt!)}.`,
     p.title ? `Propuesta: ${p.title}` : null,
     origin ? `${origin}/firmas?propertyId=${encodeURIComponent(p.propertyId)}` : "Profitos · Estado de firmas",
   ].filter(Boolean);
   return {
-    title: `Vence ${what} — ${address}`,
+    title: kind === "reserva" ? `Vence la reserva — ${address}` : `Vence el plazo del refuerzo — ${address}`,
     description: lines.join("\n"),
     date: s.expiresAt!.toISOString().slice(0, 10),
     location: address,

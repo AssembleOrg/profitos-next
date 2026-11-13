@@ -40,6 +40,17 @@ export function termError(term: TermDraft, what: string): string | null {
   return null;
 }
 
+/** Plazo del refuerzo: solo días (la fecha es la de la aceptación). */
+export function plazoError(term: TermDraft): string | null {
+  const n = Number(term.termDays);
+  if (!Number.isInteger(n) || n <= 0 || n > 3650) return "Ingresá cuántos días tiene el comprador para hacer el refuerzo";
+  return null;
+}
+
+export function samePlazo(a: TermDraft, b: TermDraft): boolean {
+  return Number(a.termDays) === Number(b.termDays) && a.dayType === b.dayType;
+}
+
 export function sameTerm(a: TermDraft, b: TermDraft): boolean {
   return a.date === b.date && Number(a.termDays) === Number(b.termDays) && a.dayType === b.dayType;
 }
@@ -54,21 +65,24 @@ export function TermFields({
   idPrefix: string;
   value: TermDraft;
   onChange: (next: TermDraft) => void;
-  dateLabel: string;
+  /** null = sin fecha propia (plazo del refuerzo: corre desde la aceptación). */
+  dateLabel: string | null;
   disabled?: boolean;
 }>) {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[11px] font-semibold text-text-muted">{dateLabel} *</span>
-        <DateField
-          id={`${idPrefix}-date`}
-          value={value.date}
-          onChange={(date) => onChange({ ...value, date })}
-          clearable={false}
-          disabled={disabled}
-        />
-      </label>
+    <div className={`grid grid-cols-1 gap-3 ${dateLabel ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+      {dateLabel && (
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[11px] font-semibold text-text-muted">{dateLabel} *</span>
+          <DateField
+            id={`${idPrefix}-date`}
+            value={value.date}
+            onChange={(date) => onChange({ ...value, date })}
+            clearable={false}
+            disabled={disabled}
+          />
+        </label>
+      )}
       <label className="flex flex-col gap-1.5">
         <span className="text-[11px] font-semibold text-text-muted">Cantidad de días *</span>
         <input
@@ -102,25 +116,62 @@ export function TermFields({
   );
 }
 
-/** "Vence el lunes 11 de enero de 2027 …": se actualiza mientras se escribe. */
-export function ExpiryPreview({ term, what }: Readonly<{ term: TermDraft; what: string }>) {
+/**
+ * Vista previa mientras se escribe. Reserva: "La reserva vence el …".
+ * Refuerzo: "El comprador tiene hasta el … para hacer el refuerzo" (contado
+ * desde la fecha de aceptación, que viene en `term.date`).
+ */
+export function ExpiryPreview({ term, kind }: Readonly<{ term: TermDraft; kind: "reserva" | "refuerzo" }>) {
   const holidays = useHolidayCalendar();
   const expiresAt = previewExpiration(term.date, term.termDays, term.dayType, holidays);
   if (!expiresAt) {
     return (
       <p className="rounded-[12px] bg-surface px-3.5 py-2 text-[12px] text-text-faint">
-        Completá la fecha y los días para ver hasta cuándo vale {what}.
+        {kind === "reserva"
+          ? "Completá la fecha de aceptación y los días para ver hasta cuándo vale la reserva."
+          : term.date
+            ? "Completá los días para ver hasta cuándo tiene el comprador para hacer el refuerzo."
+            : "Primero completá la fecha de aceptación de la reserva: el plazo del refuerzo corre desde ahí."}
       </p>
     );
   }
+  // Solo los avisos que caen después de la fecha de inicio (plazos cortos).
+  const startKey = term.date.slice(0, 10);
   const [d15, d5] = reminderDatesShort(expiresAt);
+  const [k15, k5] = [15, 5].map((n) => new Date(expiresAt.getTime() - n * 86_400_000).toISOString().slice(0, 10));
+  const avisos = [k15 > startKey ? d15 : null, k5 > startKey ? d5 : null].filter(Boolean) as string[];
+  const days = `${term.termDays} ${RESERVATION_DAY_TYPE_LABEL[term.dayType].toLowerCase()}`;
   return (
     <p className="rounded-[12px] bg-surface px-3.5 py-2 text-[12px] text-text-muted" aria-live="polite">
-      {what.charAt(0).toUpperCase() + what.slice(1)} vence el{" "}
+      {kind === "reserva" ? "La reserva vence el " : "El comprador tiene hasta el "}
       <span className="font-bold text-warning">{formatExpiryLong(expiresAt)}</span>
+      {kind === "refuerzo" ? " para hacer el refuerzo" : ""}
       {" · "}
-      {term.termDays} {RESERVATION_DAY_TYPE_LABEL[term.dayType].toLowerCase()} · avisos el {d15}, el {d5} y ese día
+      {days}
+      {kind === "refuerzo" ? " desde la aceptación" : ""} · {avisosText(avisos)}
     </p>
+  );
+}
+
+/** "avisos el 31/12, el 10/01 y ese día" / "aviso ese día". */
+function avisosText(dates: string[]): string {
+  const items = [...dates.map((d) => `el ${d}`), "ese día"];
+  if (items.length === 1) return "aviso ese día";
+  return `avisos ${items.slice(0, -1).join(", ")} y ${items[items.length - 1]}`;
+}
+
+/** Fecha en que se hizo el refuerzo (opcional): con fecha se apagan los avisos del plazo. */
+export function DoneDateField({
+  idPrefix,
+  value,
+  onChange,
+  disabled,
+}: Readonly<{ idPrefix: string; value: string; onChange: (next: string) => void; disabled?: boolean }>) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-[11px] font-semibold text-text-muted">Fecha en que se hizo el refuerzo (si ya se hizo)</span>
+      <DateField id={`${idPrefix}-done`} value={value} onChange={onChange} disabled={disabled} />
+    </label>
   );
 }
 

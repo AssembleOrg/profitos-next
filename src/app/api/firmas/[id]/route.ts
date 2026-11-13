@@ -16,6 +16,7 @@ import {
 import {
   SIGNATURE_DATE_META,
   isSignatureStatus,
+  isTerminalStatus,
   type SignatureDateField,
 } from "@/lib/signatures";
 import type { Prisma } from "@/generated/prisma/client";
@@ -26,6 +27,8 @@ import {
   buildReservationReminderDates,
   isReservationDayType,
   resolveTerm,
+  parseDoneDate,
+  BEFORE_REINFORCEMENT_STATUSES,
   RESERVATION_DAY_TYPE_LABEL,
   type ExpiryKind,
 } from "@/lib/signatures/reservation-expiry";
@@ -82,6 +85,7 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
   // La vigencia se actualiza como una unidad y el vencimiento siempre se
   // recalcula en backend (nunca se acepta una fecha derivada del cliente).
   const reservationKeys = ["reservationDate", "reservationTermDays", "reservationDayType"];
+  let newReservationDate: Date | null = null;
   if (reservationKeys.some((key) => key in body)) {
     const rawDate = "reservationDate" in body ? body.reservationDate : proposal.reservationDate;
     const rawTerm = "reservationTermDays" in body ? body.reservationTermDays : proposal.reservationTermDays;
@@ -108,6 +112,7 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
       ? rawDate
       : new Date(`${rawDate.slice(0, 10)}T00:00:00.000Z`);
     data.reservationDate = parsedDate;
+    newReservationDate = parsedDate;
     data.reservationTermDays = rawTerm as number;
     data.reservationDayType = rawType;
     data.reservationExpiresAt = expiresAt;
@@ -119,11 +124,14 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
     });
   }
 
-  // Refuerzo: también como una unidad. Sin refuerzo = se limpian sus datos y avisos.
+  // Refuerzo: el plazo corre desde la fecha de la reserva (la aceptación), así
+  // que se recalcula si cambia el plazo o esa fecha. `reinforcementDate` es la
+  // fecha en que se hizo: con fecha cargada se apagan los avisos y el evento.
   const reinforcementKeys = ["hasReinforcement", "reinforcementDate", "reinforcementTermDays", "reinforcementDayType"];
   const reinforcementTouched = reinforcementKeys.some((key) => key in body);
-  if (reinforcementTouched) {
-    const wantsReinforcement = "hasReinforcement" in body ? body.hasReinforcement === true : proposal.hasReinforcement;
+  const wantsReinforcement = "hasReinforcement" in body ? body.hasReinforcement === true : proposal.hasReinforcement;
+  let reinforcementJustDone = false;
+  if (reinforcementTouched || (newReservationDate && proposal.hasReinforcement)) {
     if (!wantsReinforcement) {
       if (proposal.hasReinforcement) {
         data.hasReinforcement = false;
@@ -136,37 +144,60 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
         auditActions.push({ type: "reservation_update", description: "Sin refuerzo" });
       }
     } else {
+      const baseDate = newReservationDate ?? proposal.reservationDate;
       let term;
+      let doneAt: Date | null;
       try {
+        if (!baseDate) throw new Error("Cargá primero la fecha de la reserva: el plazo del refuerzo corre desde ahí");
         term = resolveTerm(
           {
-            date: "reinforcementDate" in body ? body.reinforcementDate : proposal.reinforcementDate,
+            date: baseDate,
             termDays: "reinforcementTermDays" in body ? body.reinforcementTermDays : proposal.reinforcementTermDays,
             dayType: "reinforcementDayType" in body ? body.reinforcementDayType : proposal.reinforcementDayType,
           },
           "el refuerzo",
           await loadHolidayCalendar(),
         );
+        doneAt = "reinforcementDate" in body ? parseDoneDate(body.reinforcementDate) : proposal.reinforcementDate;
       } catch (error) {
         throw new AppError(400, error instanceof Error ? error.message : "Datos del refuerzo inválidos");
       }
-      const same =
-        proposal.hasReinforcement &&
-        proposal.reinforcementDate?.getTime() === term.date.getTime() &&
-        proposal.reinforcementTermDays === term.termDays &&
-        proposal.reinforcementDayType === term.dayType;
-      if (!same) {
+      const termChanged =
+        !proposal.hasReinforcement ||
+        proposal.reinforcementTermDays !== term.termDays ||
+        proposal.reinforcementDayType !== term.dayType ||
+        proposal.reinforcementExpiresAt?.getTime() !== term.expiresAt.getTime();
+      const doneChanged = (proposal.reinforcementDate?.getTime() ?? null) !== (doneAt?.getTime() ?? null);
+      if (termChanged || doneChanged) {
         data.hasReinforcement = true;
-        data.reinforcementDate = term.date;
         data.reinforcementTermDays = term.termDays;
         data.reinforcementDayType = term.dayType;
         data.reinforcementExpiresAt = term.expiresAt;
+        data.reinforcementDate = doneAt;
         reminderKinds.push("refuerzo");
-        reminderCreates.push(...buildReservationReminderDates(term.expiresAt, "refuerzo"));
-        auditActions.push({
-          type: "reservation_update",
-          description: `Refuerzo vigente hasta ${term.expiresAt.toISOString().slice(0, 10)} (${term.termDays} ${RESERVATION_DAY_TYPE_LABEL[term.dayType].toLowerCase()})`,
-        });
+        if (!doneAt) reminderCreates.push(...buildReservationReminderDates(term.expiresAt, "refuerzo"));
+        if (termChanged) {
+          auditActions.push({
+            type: "reservation_update",
+            description: `Plazo del refuerzo: hasta el ${term.expiresAt.toISOString().slice(0, 10)} (${term.termDays} ${RESERVATION_DAY_TYPE_LABEL[term.dayType].toLowerCase()} desde la aceptación)`,
+          });
+        }
+        if (doneChanged) {
+          auditActions.push({
+            type: "reservation_update",
+            description: doneAt
+              ? `Refuerzo hecho el ${doneAt.toISOString().slice(0, 10)}`
+              : "Refuerzo: se borró la fecha en que se hizo (vuelven los avisos del plazo)",
+          });
+        }
+        if (doneAt && !proposal.reinforcementDate) {
+          reinforcementJustDone = true;
+          // Si todavía estaba en propuesta, pasa sola a "Refuerzo realizado".
+          if (!("status" in body) && (BEFORE_REINFORCEMENT_STATUSES as readonly string[]).includes(proposal.status)) {
+            data.status = "refuerzo_realizado";
+            auditActions.push({ type: "status_change", fromStatus: proposal.status, toStatus: "refuerzo_realizado" });
+          }
+        }
       }
     }
   }
@@ -217,10 +248,41 @@ export const PATCH = withHandler(async (request: NextRequest, context) => {
     };
   }
 
+  // Cerrar la operación: sale de la lista y pasa a Entrega de llaves. Antes
+  // tienen que estar cobrados los honorarios (se cobran con el formulario de
+  // Estados de cuenta desde el mismo cierre).
+  let closingNow = false;
+  if (body.close === true && !proposal.closedAt) {
+    const pendingIncome = await prisma.accountEntry.count({
+      where: { signatureProposalId: proposal.id, status: "pending", type: "income" },
+    });
+    if (pendingIncome > 0) throw new AppError(409, "Primero registrá el cobro de los honorarios");
+    data.closedAt = new Date();
+    data.closedByUserId = auth.userId;
+    closingNow = true;
+    if (!("status" in body) && !(isSignatureStatus(proposal.status) && isTerminalStatus(proposal.status))) {
+      data.status = "entrega_llaves";
+      auditActions.push({ type: "status_change", fromStatus: proposal.status, toStatus: "entrega_llaves" });
+    }
+    auditActions.push({ type: "closure", description: "Operación cerrada" });
+  }
+  if (body.reopen === true && proposal.closedAt) {
+    data.closedAt = null;
+    data.closedByUserId = null;
+    auditActions.push({ type: "closure", description: "Operación reabierta" });
+  }
+
   // Tildes de Google Calendar (true = agendar, false = sacar del calendario).
   const calendarWish: CalendarWish = {};
   if (typeof body.reservationCalendar === "boolean") calendarWish.reserva = body.reservationCalendar;
   if (typeof body.reinforcementCalendar === "boolean") calendarWish.refuerzo = body.reinforcementCalendar;
+  // Refuerzo hecho: ya no hace falta el evento del plazo.
+  if (reinforcementJustDone) calendarWish.refuerzo = false;
+  // Operación cerrada: se sacan los vencimientos del calendario.
+  if (closingNow) {
+    calendarWish.reserva = false;
+    calendarWish.refuerzo = false;
+  }
   const calendarTouched =
     reminderKinds.length > 0 || calendarWish.reserva !== undefined || calendarWish.refuerzo !== undefined;
 

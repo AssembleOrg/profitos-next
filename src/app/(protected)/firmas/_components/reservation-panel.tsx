@@ -12,10 +12,13 @@ import {
   CalendarCheck,
   calendarFailedMessage,
   CustodySummary,
+  DoneDateField,
   EnvelopeField,
   ExpiryPreview,
   ReinforcementToggle,
   sameTerm,
+  samePlazo,
+  plazoError,
   TermFields,
   termError,
   termFromFirma,
@@ -38,6 +41,9 @@ export function ReservationPanel({
   const [reservation, setReservation] = useState<TermDraft>(savedReservation);
   const [withReinforcement, setWithReinforcement] = useState(firma.hasReinforcement);
   const [reinforcement, setReinforcement] = useState<TermDraft>(savedReinforcement);
+  // Fecha en que se hizo el refuerzo (el plazo corre desde la aceptación).
+  const savedDone = firma.reinforcementDate?.slice(0, 10) ?? "";
+  const [reinforcementDone, setReinforcementDone] = useState(savedDone);
   const savedReservationEnv: EnvelopeDraft = { amount: firma.reservationAmount, currency: firma.reservationCurrency };
   const savedReinforcementEnv: EnvelopeDraft = { amount: firma.reinforcementAmount, currency: firma.reinforcementCurrency };
   const [reservationEnv, setReservationEnv] = useState<EnvelopeDraft>(savedReservationEnv);
@@ -48,6 +54,7 @@ export function ReservationPanel({
     setReservation(termFromFirma(firma.reservationDate, firma.reservationTermDays, firma.reservationDayType));
     setWithReinforcement(firma.hasReinforcement);
     setReinforcement(termFromFirma(firma.reinforcementDate, firma.reinforcementTermDays, firma.reinforcementDayType));
+    setReinforcementDone(firma.reinforcementDate?.slice(0, 10) ?? "");
     setReservationEnv({ amount: firma.reservationAmount, currency: firma.reservationCurrency });
     setReinforcementEnv({ amount: firma.reinforcementAmount, currency: firma.reinforcementCurrency });
   }, [
@@ -70,7 +77,10 @@ export function ReservationPanel({
   const reservationDirty = reservationTermDirty || reservationEnvDirty;
   const reinforcementDirty =
     withReinforcement !== firma.hasReinforcement ||
-    (withReinforcement && (!sameTerm(reinforcement, savedReinforcement) || !sameEnvelope(reinforcementEnv, savedReinforcementEnv)));
+    (withReinforcement &&
+      (!samePlazo(reinforcement, savedReinforcement) ||
+        reinforcementDone !== savedDone ||
+        !sameEnvelope(reinforcementEnv, savedReinforcementEnv)));
 
   async function patch(kind: Exclude<Busy, null>, payload: Record<string, unknown>, success: string): Promise<boolean> {
     setBusy(kind);
@@ -122,7 +132,11 @@ export function ReservationPanel({
 
   async function saveReinforcement(): Promise<boolean> {
     if (!withReinforcement) return patch("refuerzo", { hasReinforcement: false }, "Refuerzo quitado");
-    const problem = termError(reinforcement, "el refuerzo");
+    if (!firma.reservationDate && !reservation.date) {
+      toast.error("Primero cargá la fecha de aceptación: el plazo del refuerzo corre desde ahí");
+      return false;
+    }
+    const problem = plazoError(reinforcement);
     if (problem) {
       toast.error(problem);
       return false;
@@ -131,13 +145,13 @@ export function ReservationPanel({
       "refuerzo",
       {
         hasReinforcement: true,
-        reinforcementDate: reinforcement.date,
+        reinforcementDate: reinforcementDone || null,
         reinforcementTermDays: Number(reinforcement.termDays),
         reinforcementDayType: reinforcement.dayType,
         reinforcementAmount: reinforcementEnv.amount,
         reinforcementCurrency: reinforcementEnv.currency,
       },
-      "Refuerzo guardado",
+      reinforcementDone && !savedDone ? "Refuerzo hecho: se apagaron los avisos del plazo" : "Refuerzo guardado",
     );
   }
 
@@ -156,9 +170,14 @@ export function ReservationPanel({
               ? `Vigente hasta el ${formatExpiryLong(firma.reservationExpiresAt)}`
               : "Completá los datos de la reserva"}
           </p>
-          {firma.hasReinforcement && firma.reinforcementExpiresAt && (
+          {firma.hasReinforcement && firma.reinforcementDate && (
+            <p className="mt-0.5 text-[12px] font-semibold text-olive-light">
+              Refuerzo hecho el {formatExpiryLong(firma.reinforcementDate)}
+            </p>
+          )}
+          {firma.hasReinforcement && !firma.reinforcementDate && firma.reinforcementExpiresAt && (
             <p className="mt-0.5 text-[12px] font-semibold text-text-muted">
-              Refuerzo hasta el {formatExpiryLong(firma.reinforcementExpiresAt)}
+              Refuerzo: el comprador tiene hasta el {formatExpiryLong(firma.reinforcementExpiresAt)}
             </p>
           )}
         </div>
@@ -177,7 +196,7 @@ export function ReservationPanel({
           idPrefix={`firma-${firma.id}-reservation`}
           value={reservation}
           onChange={setReservation}
-          dateLabel="Fecha de reserva"
+          dateLabel="Fecha de aceptación"
           disabled={disabled}
         />
         <EnvelopeField
@@ -190,7 +209,7 @@ export function ReservationPanel({
         {reservationDirty && (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="min-w-0 flex-1">
-              <ExpiryPreview term={reservation} what="la reserva" />
+              <ExpiryPreview term={reservation} kind="reserva" />
             </div>
             <SaveButton
               onClick={() => void saveReservation()}
@@ -215,14 +234,23 @@ export function ReservationPanel({
           <ReinforcementToggle value={withReinforcement} onChange={setWithReinforcement} disabled={disabled} />
           {withReinforcement && (
             <>
+              <p className="text-[11.5px] text-text-faint">
+                Plazo que tiene el comprador para hacer el refuerzo, contado desde la aceptación.
+              </p>
               <TermFields
                 idPrefix={`firma-${firma.id}-reinforcement`}
                 value={reinforcement}
                 onChange={setReinforcement}
-                dateLabel="Fecha del refuerzo"
+                dateLabel={null}
                 disabled={disabled}
               />
-              <ExpiryPreview term={reinforcement} what="el refuerzo" />
+              <ExpiryPreview term={{ ...reinforcement, date: reservation.date }} kind="refuerzo" />
+              <DoneDateField
+                idPrefix={`firma-${firma.id}-reinforcement`}
+                value={reinforcementDone}
+                onChange={setReinforcementDone}
+                disabled={disabled}
+              />
               <EnvelopeField
                 label="Monto del refuerzo (sobre 2)"
                 amount={reinforcementEnv.amount}
@@ -242,14 +270,14 @@ export function ReservationPanel({
               />
             </div>
           )}
-          {firma.hasReinforcement && !reinforcementDirty && (
+          {firma.hasReinforcement && !firma.reinforcementDate && !reinforcementDirty && (
             <CalendarCheck
               checked={firma.reinforcementOnCalendar}
               onChange={(next) =>
                 void patch("cal-refuerzo", { reinforcementCalendar: next }, next ? "Refuerzo agendado en Google Calendar" : "Sacado de Google Calendar")
               }
               disabled={disabled}
-              label={busy === "cal-refuerzo" ? "Guardando…" : "Vencimiento del refuerzo en Google Calendar"}
+              label={busy === "cal-refuerzo" ? "Guardando…" : "Último día para el refuerzo en Google Calendar"}
             />
           )}
         </div>

@@ -470,7 +470,9 @@ model SignatureProposal {
   reservationDayType     String?   @map("reservation_day_type") // business | calendar
   reservationExpiresAt   DateTime? @map("reservation_expires_at") @db.Date
 
-  // Refuerzo de la reserva (opcional): mismo esquema de vigencia que la reserva.
+  // Refuerzo (opcional): el comprador tiene N días desde la aceptación
+  // (reservationDate) para hacerlo → reinforcementExpiresAt = último día.
+  // reinforcementDate = fecha en que se hizo (null = todavía no).
   hasReinforcement        Boolean   @default(false) @map("has_reinforcement")
   reinforcementDate       DateTime? @map("reinforcement_date") @db.Date
   reinforcementTermDays   Int?      @map("reinforcement_term_days")
@@ -483,6 +485,10 @@ model SignatureProposal {
   reservationCurrency     String    @default("USD") @map("reservation_currency")
   reinforcementAmount     Float?    @map("reinforcement_amount")
   reinforcementCurrency   String    @default("USD") @map("reinforcement_currency")
+
+  // Operación cerrada: sale de la lista (filtro "Cerradas"); honorarios cobrados.
+  closedAt        DateTime? @map("closed_at")
+  closedByUserId  String?   @map("closed_by_user_id")
 
   // Partes de la operación, vinculadas a Contactos.
   buyerClientId   String?  @map("buyer_client_id")
@@ -539,6 +545,7 @@ model SignatureProposal {
   @@index([createdByUserId])
   @@index([buyerClientId])
   @@index([sellerClientId])
+  @@index([closedAt])
   @@index([reservationExpiresAt])
   @@index([withColleague])
   @@map("jp_signature_proposals")

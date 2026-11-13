@@ -166,8 +166,9 @@ export async function recalculateOpenExpiries(): Promise<{ recalculated: Recalcu
   for (const p of proposals) {
     const slots = [
       { kind: "reserva" as const, start: p.reservationDate, term: p.reservationTermDays, type: p.reservationDayType, current: p.reservationExpiresAt },
-      ...(p.hasReinforcement
-        ? [{ kind: "refuerzo" as const, start: p.reinforcementDate, term: p.reinforcementTermDays, type: p.reinforcementDayType, current: p.reinforcementExpiresAt }]
+      // Plazo del refuerzo: desde la aceptación (fecha de la reserva); si ya se hizo, no se toca.
+      ...(p.hasReinforcement && !p.reinforcementDate
+        ? [{ kind: "refuerzo" as const, start: p.reservationDate, term: p.reinforcementTermDays, type: p.reinforcementDayType, current: p.reinforcementExpiresAt }]
         : []),
     ];
     const changes: RecalculatedExpiry[] = [];
@@ -201,7 +202,7 @@ export async function recalculateOpenExpiries(): Promise<{ recalculated: Recalcu
             proposalId: p.id,
             type: "reservation_update",
             description: `Recalculado automáticamente por cambio de feriados (Colegio de Escribanos): ${
-              c.kind === "reserva" ? "la reserva" : "el refuerzo"
+              c.kind === "reserva" ? "la reserva" : "el plazo del refuerzo"
             } vence el ${c.after.split("-").reverse().join("/")} (antes ${c.before.split("-").reverse().join("/")})`,
             createdByUserId: p.createdByUserId,
           },
